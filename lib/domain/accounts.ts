@@ -1,4 +1,4 @@
-import type { Account } from "@/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 
 export type AccountTotals = {
   totalBalance: number;
@@ -31,4 +31,38 @@ export function getAccountTotals(accounts: Account[]): AccountTotals {
       },
     },
   );
+}
+
+function getBalanceDelta(transaction: Transaction): number {
+  switch (transaction.type) {
+    case "income":
+      return transaction.amount;
+    case "expense":
+    case "savings_contribution":
+    case "debt_payment":
+      return -Math.abs(transaction.amount);
+    case "transfer":
+      return transaction.amount;
+    default:
+      return 0;
+  }
+}
+
+export function reconcileAccountBalances(
+  accounts: Account[],
+  transactions: Transaction[],
+): Account[] {
+  const deltas = new Map<string, number>();
+
+  for (const transaction of transactions) {
+    deltas.set(
+      transaction.accountId,
+      (deltas.get(transaction.accountId) ?? 0) + getBalanceDelta(transaction),
+    );
+  }
+
+  return accounts.map((account) => ({
+    ...account,
+    balance: account.openingBalance + (deltas.get(account.id) ?? 0),
+  }));
 }

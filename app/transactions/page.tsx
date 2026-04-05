@@ -1,11 +1,10 @@
 import { AppShell } from "@/components/app-shell";
-import { ModulePage } from "@/components/module-page";
-import { moduleDetails } from "@/lib/data";
+import { TransactionsWorkspace } from "@/components/transactions-workspace";
 
 export default function TransactionsPage() {
   return (
     <AppShell>
-      <ModulePage detail={moduleDetails.transactions} />
+      <TransactionsWorkspace />
     </AppShell>
   );
 }
