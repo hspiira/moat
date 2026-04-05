@@ -86,7 +86,7 @@ export function LearnWorkspace() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Learn Uganda</h1>
           <p className="text-sm text-muted-foreground">
-            Official and research-grade sources behind this app's Uganda-first assumptions.
+            Official and research-grade sources behind this app&apos;s Uganda-first assumptions.
           </p>
         </div>
         <div className="text-right text-sm text-muted-foreground">
