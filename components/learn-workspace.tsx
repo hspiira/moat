@@ -79,6 +79,7 @@ export function LearnWorkspace() {
   }, [resources]);
 
   const topicEntries = Object.entries(resourcesByTopic);
+  const topicToneClasses = ["moat-panel-yellow", "moat-panel-lilac", "moat-panel-mint"];
 
   return (
     <div className="grid gap-5">
@@ -89,8 +90,10 @@ export function LearnWorkspace() {
             Official and research-grade sources behind this app&apos;s Uganda-first assumptions.
           </p>
         </div>
-        <div className="text-right text-sm text-muted-foreground">
-          <div className="font-medium text-foreground">{resources.length}</div>
+        <div className="moat-panel-yellow border border-border/20 px-4 py-3 text-right text-sm text-muted-foreground">
+          <div className="text-2xl font-semibold tracking-tight text-foreground">
+            {resources.length}
+          </div>
           <div className="text-xs">sources</div>
         </div>
       </div>
@@ -125,26 +128,62 @@ export function LearnWorkspace() {
 
       {!isLoading ? (
         <div className="grid gap-5">
-          {topicEntries.map(([topic, topicResources]) => {
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Card className="moat-panel-yellow border-border/20 shadow-none">
+              <CardContent className="grid gap-2 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Official first
+                </div>
+                <div className="text-3xl font-semibold tracking-tight">Verify before you move money</div>
+              </CardContent>
+            </Card>
+            <Card className="moat-panel-lilac border-border/20 shadow-none">
+              <CardContent className="grid gap-2 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Product research
+                </div>
+                <div className="text-3xl font-semibold tracking-tight">Use data, not promises</div>
+              </CardContent>
+            </Card>
+            <Card className="moat-panel-mint border-border/20 shadow-none">
+              <CardContent className="grid gap-2 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Guidance boundary
+                </div>
+                <div className="text-3xl font-semibold tracking-tight">Education, not hot picks</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {topicEntries.map(([topic, topicResources], index) => {
             const copy = topicCopy[topic] ?? {
               title: topic,
               summary: "Reference material.",
             };
+            const toneClass = topicToneClasses[index % topicToneClasses.length];
 
             return (
-              <Card key={topic} className="border-border/40 shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-base">{copy.title}</CardTitle>
-                  <CardDescription>{copy.summary}</CardDescription>
+              <Card key={topic} className="border-border/20 shadow-none">
+                <CardHeader className={`${toneClass} gap-2 border-b border-border/20`}>
+                  <CardTitle className="text-lg">{copy.title}</CardTitle>
+                  <CardDescription className="max-w-3xl text-foreground/75">
+                    {copy.summary}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-2 md:grid-cols-2">
-                  {topicResources.map((resource) => (
+                <CardContent className="grid gap-2 p-5 md:grid-cols-2">
+                  {topicResources.map((resource, resourceIndex) => (
                     <a
                       key={resource.id}
                       href={resource.url}
                       rel="noreferrer"
                       target="_blank"
-                      className="flex items-start justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-4 py-3 transition-colors hover:border-border/70 hover:bg-muted/50"
+                      className={`flex items-start justify-between gap-3 border px-4 py-3 transition-colors hover:border-foreground/30 ${
+                        resourceIndex === 0
+                          ? "moat-panel-sage border-border/20"
+                          : resourceIndex % 2 === 0
+                            ? "moat-panel-mint border-border/20"
+                            : "bg-muted/20 border-border/20"
+                      }`}
                     >
                       <div>
                         <div className="text-sm font-medium text-foreground">

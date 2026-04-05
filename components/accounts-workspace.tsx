@@ -170,25 +170,27 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
-                <CardDescription>Total balance</CardDescription>
-                <CardTitle className="text-xl">
+          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr_1fr]">
+            <Card className="moat-panel-sage border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
+                <CardDescription className="text-foreground/65">Total balance</CardDescription>
+                <CardTitle className="text-4xl tracking-tight">
                   {formatCurrency(accountTotals.totalBalance)}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
+            <Card className="moat-panel-yellow border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
                 <CardDescription>Active accounts</CardDescription>
-                <CardTitle className="text-xl">{accountTotals.activeAccounts}</CardTitle>
+                <CardTitle className="text-3xl tracking-tight">
+                  {accountTotals.activeAccounts}
+                </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
+            <Card className="moat-panel-mint border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
                 <CardDescription>Account types set up</CardDescription>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-3xl tracking-tight">
                   {
                     defaultAccountTypes.filter(
                       (type) => accountTotals.accountsByType[type] > 0,
@@ -200,7 +202,7 @@ export function AccountsWorkspace() {
             </Card>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
             <AccountForm
               accountTypes={defaultAccountTypes}
               form={accountForm}

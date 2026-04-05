@@ -217,32 +217,61 @@ export function GoalsWorkspace() {
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <GoalForm
-            accounts={accounts}
-            goalTypes={defaultGoalTypes}
-            form={goalForm}
-            editingId={editingGoalId}
-            isSubmitting={isSubmitting}
-            lastSavedAt={lastSavedAt}
-            successMessage={successMessage}
-            emergencyFundSuggestion={emergencyFundSuggestion}
-            onFormChange={setGoalForm}
-            onSubmit={(e) => void handleGoalSubmit(e)}
-            onCancelEdit={() => {
-              setEditingGoalId(null);
-              setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
-            }}
-          />
+        <>
+          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+            <Card className="moat-panel-mint border-border/20 shadow-none">
+              <CardContent className="grid gap-3 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Suggested emergency moat
+                </div>
+                <div className="text-4xl font-semibold tracking-tight">
+                  {formatCurrency(emergencyFundSuggestion)}
+                </div>
+                <p className="max-w-lg text-sm leading-6 text-foreground/75">
+                  Based on three months of current outflow. Use it as a planning floor, not a ceiling.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="moat-panel-yellow border-border/20 shadow-none">
+              <CardContent className="grid gap-2 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Active goals
+                </div>
+                <div className="text-4xl font-semibold tracking-tight">{goals.length}</div>
+                <div className="text-sm text-foreground/75">
+                  Prioritise buffers first, then longer-dated ambitions.
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <GoalList
-            accounts={accounts}
-            goals={goals}
-            isSubmitting={isSubmitting}
-            onEdit={beginGoalEdit}
-            onDelete={(id) => void handleDeleteGoal(id)}
-          />
-        </div>
+          <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+            <GoalForm
+              accounts={accounts}
+              goalTypes={defaultGoalTypes}
+              form={goalForm}
+              editingId={editingGoalId}
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+              emergencyFundSuggestion={emergencyFundSuggestion}
+              onFormChange={setGoalForm}
+              onSubmit={(e) => void handleGoalSubmit(e)}
+              onCancelEdit={() => {
+                setEditingGoalId(null);
+                setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
+              }}
+            />
+
+            <GoalList
+              accounts={accounts}
+              goals={goals}
+              isSubmitting={isSubmitting}
+              onEdit={beginGoalEdit}
+              onDelete={(id) => void handleDeleteGoal(id)}
+            />
+          </div>
+        </>
       ) : null}
     </div>
   );

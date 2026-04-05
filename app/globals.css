@@ -49,6 +49,12 @@
 
 :root {
     color-scheme: light;
+    --moat-surface-yellow: oklch(0.9 0.14 98);
+    --moat-surface-lilac: oklch(0.8 0.06 307);
+    --moat-surface-mint: oklch(0.94 0.08 136);
+    --moat-surface-sage: oklch(0.71 0.024 141);
+    --moat-surface-olive: oklch(0.47 0.018 142);
+    --moat-surface-ink: oklch(0.21 0.01 56);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.147 0.004 49.25);
     --popover: oklch(1 0 0);
@@ -85,6 +91,12 @@
 
 .dark {
     color-scheme: dark;
+    --moat-surface-yellow: oklch(0.34 0.07 98);
+    --moat-surface-lilac: oklch(0.34 0.045 307);
+    --moat-surface-mint: oklch(0.31 0.05 136);
+    --moat-surface-sage: oklch(0.28 0.02 141);
+    --moat-surface-olive: oklch(0.24 0.015 142);
+    --moat-surface-ink: oklch(0.17 0.005 56);
     --background: oklch(0.147 0.004 49.25);
     --foreground: oklch(0.985 0.001 106.423);
     --card: oklch(0.216 0.006 56.043);
@@ -116,6 +128,40 @@
     --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.553 0.013 58.071);
+}
+
+@layer components {
+  .moat-panel-yellow {
+    background: var(--moat-surface-yellow);
+  }
+
+  .moat-panel-lilac {
+    background: var(--moat-surface-lilac);
+  }
+
+  .moat-panel-mint {
+    background: var(--moat-surface-mint);
+  }
+
+  .moat-panel-sage {
+    background: var(--moat-surface-sage);
+  }
+
+  .moat-panel-olive {
+    background: var(--moat-surface-olive);
+  }
+
+  .moat-panel-ink {
+    background: var(--moat-surface-ink);
+  }
+
+  .moat-pie {
+    background: conic-gradient(
+      from 180deg,
+      var(--color-chart-2) 0deg 260deg,
+      color-mix(in oklch, var(--color-chart-2) 24%, white) 260deg 360deg
+    );
+  }
 }
 
 @layer base {

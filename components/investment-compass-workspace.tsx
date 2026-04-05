@@ -267,18 +267,18 @@ export function InvestmentCompassWorkspace() {
         <>
           {monthlyOutflow > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card className="border-border/40 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Monthly outflow baseline</CardDescription>
-                  <CardTitle className="text-xl tabular-nums">
+              <Card className="moat-panel-sage border-border/20 shadow-none">
+                <CardHeader className="gap-2 p-5">
+                  <CardDescription className="text-foreground/72">Monthly outflow baseline</CardDescription>
+                  <CardTitle className="text-xl tabular-nums text-foreground">
                     {formatCurrency(monthlyOutflow)}
                   </CardTitle>
                 </CardHeader>
               </Card>
-              <Card className="border-border/40 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Emergency coverage</CardDescription>
-                  <CardTitle className="text-xl">
+              <Card className="moat-panel-mint border-border/20 shadow-none">
+                <CardHeader className="gap-2 p-5">
+                  <CardDescription className="text-foreground/72">Emergency coverage</CardDescription>
+                  <CardTitle className="text-xl text-foreground">
                     {emergencyFundMonthsCovered.toFixed(1)} month
                     {emergencyFundMonthsCovered !== 1 ? "s" : ""}
                   </CardTitle>
@@ -288,14 +288,14 @@ export function InvestmentCompassWorkspace() {
           ) : null}
 
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <Card className="border-border/40 shadow-none">
-              <CardHeader>
-                <CardTitle className="text-base">Your investment profile</CardTitle>
-                <CardDescription>
+            <Card className="gap-0 pt-0 border-border/20 shadow-none">
+              <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
+                <CardTitle className="text-base text-foreground">Your investment profile</CardTitle>
+                <CardDescription className="text-foreground/72 leading-6">
                   Update these settings to see how guidance changes.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-5">
                 <form className="grid gap-4" onSubmit={handleSubmit}>
                   <LocalSaveFeedback
                     isSubmitting={isSubmitting}
@@ -409,7 +409,7 @@ export function InvestmentCompassWorkspace() {
             </Card>
 
             <div className="grid gap-4 content-start">
-              <Card className="border-border/40 shadow-none">
+              <Card className="moat-panel-lilac border-border/20 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base">Suggested product classes</CardTitle>
                   <CardDescription>

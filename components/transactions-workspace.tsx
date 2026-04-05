@@ -247,12 +247,14 @@ export function TransactionsWorkspace() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
           <p className="text-sm text-muted-foreground">
-            Record income, expenses, transfers, and savings contributions.
+            Record income, expenses, transfers, and savings in one clean stream.
           </p>
         </div>
         {transactions.length > 0 ? (
-          <div className="text-right text-sm text-muted-foreground">
-            <div className="font-medium text-foreground">{transactions.length}</div>
+          <div className="moat-panel-yellow border border-border/20 px-4 py-3 text-right text-sm text-muted-foreground">
+            <div className="text-2xl font-semibold tracking-tight text-foreground">
+              {transactions.length}
+            </div>
             <div className="text-xs">recorded</div>
           </div>
         ) : null}
@@ -284,7 +286,7 @@ export function TransactionsWorkspace() {
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
           <TransactionForm
             accounts={accounts}
             categories={categories}

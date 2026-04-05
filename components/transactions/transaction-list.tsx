@@ -37,12 +37,10 @@ export function TransactionList({
   onDelete,
 }: Props) {
   return (
-    <Card className="border-border/40 shadow-none">
+    <Card className="border-border/20 shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">Recorded transactions</CardTitle>
-        <CardDescription>
-          Transfer pairs are shown as individual records. Non-transfer entries can be edited.
-        </CardDescription>
+        <CardTitle className="text-base">Recent transactions</CardTitle>
+        <CardDescription>Transfers appear as paired records.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
         {transactions.length === 0 ? (
@@ -50,7 +48,7 @@ export function TransactionList({
             No transactions yet.
           </div>
         ) : (
-          transactions.map((transaction) => {
+          transactions.map((transaction, index) => {
             const account = accounts.find((a) => a.id === transaction.accountId);
             const category = categories.find((c) => c.id === transaction.categoryId);
             const isTransfer = transaction.type === "transfer";
@@ -58,15 +56,21 @@ export function TransactionList({
             return (
               <div
                 key={transaction.id}
-                className="rounded-md border border-border/40 bg-muted/30 px-3 py-3"
+                className={`border px-3 py-3 ${
+                  index === 0
+                    ? "moat-panel-mint border-border/20"
+                    : index % 2 === 0
+                      ? "moat-panel-sage border-border/20"
+                      : "bg-muted/20 border-border/20"
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium tabular-nums text-foreground">
+                      <span className="text-base font-semibold tabular-nums text-foreground">
                         {formatCurrency(Math.abs(transaction.amount))}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                         {transactionTypeLabels[transaction.type]}
                       </span>
                     </div>

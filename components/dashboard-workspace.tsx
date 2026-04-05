@@ -15,7 +15,6 @@ import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -100,6 +99,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     month: "long",
     year: "numeric",
   });
+  const summaryTiles = [
+    {
+      label: "Inflow",
+      value: formatCurrency(summary.inflow),
+      className: "moat-panel-yellow",
+    },
+    {
+      label: "Outflow",
+      value: formatCurrency(summary.outflow),
+      className: "moat-panel-lilac",
+    },
+    {
+      label: "Savings",
+      value: formatCurrency(summary.savings),
+      className: "moat-panel-mint",
+    },
+  ];
 
   return (
     <div className="grid gap-5">
@@ -109,14 +125,6 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             {profile.displayName}&apos;s overview
           </h1>
           <p className="text-sm text-muted-foreground">{monthLabel}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/transactions">Add transaction</Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/accounts">Accounts</Link>
-          </Button>
         </div>
       </div>
 
@@ -136,32 +144,63 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
       {!isLoading ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: "Inflow", value: formatCurrency(summary.inflow) },
-              { label: "Outflow", value: formatCurrency(summary.outflow) },
-              { label: "Savings", value: formatCurrency(summary.savings) },
-              {
-                label: "Savings rate",
-                value: `${Math.round(savingsRate * 100)}%`,
-              },
-            ].map((item) => (
-              <Card key={item.label} className="border-border/40 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>{item.label}</CardDescription>
-                  <CardTitle className="text-xl tabular-nums">{item.value}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
+          <div className="grid gap-3 xl:grid-cols-[1.35fr_1fr]">
+            <Card className="moat-panel-sage border-border/20 shadow-none">
+              <CardContent className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                      Savings rate
+                    </div>
+                    <div className="text-6xl font-semibold tracking-tight tabular-nums">
+                      {Math.round(savingsRate * 100)}%
+                    </div>
+                  </div>
+                  <p className="max-w-md text-sm leading-6 text-foreground/75">
+                    A simple view of how much of this month&apos;s inflow stayed available
+                    for your future self.
+                  </p>
+                </div>
+                <div className="grid content-end gap-2">
+                  <div className="grid grid-cols-6 items-end gap-2">
+                    {[28, 42, 36, 58, 44, 68].map((height, index) => (
+                      <div
+                        key={height}
+                        className={index === 4 ? "bg-foreground" : "bg-foreground/25"}
+                        style={{ height: `${height}px` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
+                    <span>Past weeks</span>
+                    <span>{monthLabel}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              {summaryTiles.map((item) => (
+                <Card
+                  key={item.label}
+                  className={`${item.className} border-border/20 shadow-none`}
+                >
+                  <CardHeader className="gap-2 p-5">
+                    <CardDescription className="text-foreground/65">{item.label}</CardDescription>
+                    <CardTitle className="text-2xl tabular-nums tracking-tight">
+                      {item.value}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-            <Card className="border-border/40 shadow-none">
+            <Card className="border-border/20 shadow-none">
               <CardHeader>
                 <CardTitle className="text-base">Top spending categories</CardTitle>
-                <CardDescription>
-                  Transfers excluded — this shows actual spending and debt payments only.
-                </CardDescription>
+                <CardDescription>Transfers are excluded.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2">
                 {summary.topCategories.length === 0 ? (
@@ -172,13 +211,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                     </Link>
                   </div>
                 ) : (
-                  summary.topCategories.map((category) => (
+                  summary.topCategories.map((category, index) => (
                     <div
                       key={category.categoryId}
-                      className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-muted/30 px-4 py-3"
+                      className={`flex items-center justify-between gap-4 border px-4 py-3 ${
+                        index === 0
+                          ? "moat-panel-mint border-border/20"
+                          : index === 1
+                            ? "moat-panel-yellow border-border/20"
+                            : index === 2
+                              ? "moat-panel-sage border-border/20"
+                              : "bg-muted/25 border-border/20"
+                      }`}
                     >
-                      <span className="text-sm text-foreground">{category.categoryName}</span>
-                      <span className="text-sm font-medium tabular-nums">
+                      <span className="text-sm font-medium text-foreground">
+                        {category.categoryName}
+                      </span>
+                      <span className="text-base font-semibold tabular-nums">
                         {formatCurrency(category.amount)}
                       </span>
                     </div>
@@ -188,12 +237,10 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             </Card>
 
             <div className="grid gap-5 content-start">
-              <Card className="border-border/40 shadow-none">
+              <Card className="border-border/20 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base">Account balances</CardTitle>
-                  <CardDescription>
-                    Reconciled from opening balance and transaction history.
-                  </CardDescription>
+                  <CardDescription>Reconciled from opening balance and history.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-2">
                   {topAccounts.length === 0 ? (
@@ -204,10 +251,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                       </Link>
                     </div>
                   ) : (
-                    topAccounts.map((account) => (
+                    topAccounts.map((account, index) => (
                       <div
                         key={account.id}
-                        className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-muted/30 px-4 py-3"
+                        className={`flex items-center justify-between gap-4 border px-4 py-3 ${
+                          index % 2 === 0
+                            ? "moat-panel-sage border-border/20"
+                            : "bg-muted/20 border-border/20"
+                        }`}
                       >
                         <div>
                           <div className="text-sm font-medium text-foreground">
@@ -226,24 +277,24 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/40 shadow-none">
+              <Card className="moat-panel-lilac border-border/20 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base">This month</CardTitle>
-                  <CardDescription>
-                    Prompts based on your saved data.
+                  <CardDescription className="text-foreground/65">
+                    Prompts from your saved data.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {insights.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-foreground/75">
                       Add more transactions for personalised prompts.
                     </p>
                   ) : (
                     <ul className="grid gap-3">
                       {insights.map((insight) => (
                         <li key={insight.id} className="flex gap-2.5 text-sm">
-                          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                          <span className="text-muted-foreground leading-6">
+                          <span className="mt-1.5 size-1.5 shrink-0 bg-foreground" />
+                          <span className="leading-6 text-foreground/80">
                             <span className="font-medium text-foreground">{insight.title}: </span>
                             {insight.body}
                           </span>
@@ -266,7 +317,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                 <Link
                   key={module.href}
                   href={module.href}
-                  className="group rounded-md border border-border/40 bg-muted/30 px-4 py-4 transition-colors hover:border-border/70 hover:bg-muted/50"
+                  className="group border-b border-border/30 px-0 py-3 transition-colors hover:border-foreground/40"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-foreground">{module.title}</span>

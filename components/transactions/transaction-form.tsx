@@ -85,18 +85,18 @@ export function TransactionForm({
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
 
   return (
-    <Card className="border-border/40 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
+        <CardTitle className="text-lg text-foreground">
           {editingId ? "Edit transaction" : "Add transaction"}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-foreground/72 leading-6">
           {editingId
             ? "Update this transaction."
-            : "Record a single money event against an account."}
+            : "Record one money event against one account."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
           <LocalSaveFeedback
             isSubmitting={isSubmitting}

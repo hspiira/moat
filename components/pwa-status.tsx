@@ -93,20 +93,25 @@ export function PwaStatus() {
     }
   }
 
+  const shouldShowInstall = Boolean(installPrompt) && !isInstalled;
+  const shouldShowStatus =
+    !isOnline || !isInstalled || lastLocalSave !== null || shouldShowInstall;
+
+  if (!shouldShowStatus) {
+    return null;
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/30 pb-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={isOnline ? "outline" : "secondary"}>
-          {isOnline ? "Online" : "Offline mode"}
-        </Badge>
-        <Badge variant="outline">Saved locally</Badge>
-        {isInstalled ? <Badge variant="outline">Installed</Badge> : null}
+        {!isOnline ? <Badge variant="secondary">Offline mode</Badge> : null}
+        {!isInstalled ? <Badge variant="outline">Saved locally</Badge> : null}
         {lastLocalSave ? (
           <span className="text-xs text-muted-foreground">{lastLocalSave.message}</span>
         ) : null}
       </div>
 
-      {installPrompt && !isInstalled ? (
+      {shouldShowInstall ? (
         <Button size="sm" variant="outline" onClick={() => void handleInstall()}>
           {isInstalling ? "Installing..." : "Install app"}
         </Button>

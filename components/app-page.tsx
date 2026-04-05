@@ -21,6 +21,9 @@ type AppHeroCardProps = {
   description: string;
   actions?: ReactNode;
   aside?: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  asideClassName?: string;
 };
 
 type AppSectionHeadingProps = {
@@ -38,10 +41,18 @@ export function AppHeroCard({
   description,
   actions,
   aside,
+  className,
+  contentClassName,
+  asideClassName,
 }: AppHeroCardProps) {
   return (
-    <Card className="border-border/40 bg-background/95 shadow-none">
-      <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.9fr] lg:p-8">
+    <Card className={cn("border-border/20 bg-background shadow-none", className)}>
+      <CardContent
+        className={cn(
+          "grid gap-6 p-6 lg:grid-cols-[1.4fr_0.9fr] lg:p-8",
+          contentClassName,
+        )}
+      >
         <div className="space-y-5">
           {badge ? (
             <Badge className="bg-primary/10 text-primary hover:bg-primary/10">{badge}</Badge>
@@ -58,7 +69,7 @@ export function AppHeroCard({
         </div>
 
         {aside ? (
-          <Card className="border-border/40 bg-muted/35 shadow-none">
+          <Card className={cn("border-border/20 bg-muted/35 shadow-none", asideClassName)}>
             <CardContent className="p-0">{aside}</CardContent>
           </Card>
         ) : null}

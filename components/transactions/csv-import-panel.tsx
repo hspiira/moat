@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 
 import { categoryMatchesType } from "./transaction-form";
 
@@ -306,16 +305,18 @@ export function CsvImportPanel({
   }
 
   const validImportCount = importPreview.filter((r) => r.issues.length === 0).length;
+  const duplicateCount = importPreview.filter((r) => r.duplicate).length;
+  const previewRows = importPreview.slice(0, 6);
 
   return (
-    <Card className="border-border/40 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">CSV import</CardTitle>
-        <CardDescription>
-          Upload a CSV statement, map columns, preview rows, then confirm.
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <CardHeader className="moat-panel-lilac min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
+        <CardTitle className="text-lg text-foreground">CSV import</CardTitle>
+        <CardDescription className="text-foreground/72 leading-6">
+          Upload, map, review, then confirm.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="grid gap-4 p-5 pt-6">
         <Input
           accept=".csv,text/csv"
           type="file"
@@ -325,166 +326,215 @@ export function CsvImportPanel({
 
         {csvHeaders.length > 0 ? (
           <>
-            <div className="grid gap-3 md:grid-cols-2">
-              {(
-                [
-                  ["date", "Date column"],
-                  ["amount", "Amount column"],
-                  ["note", "Note column"],
-                  ["type", "Type column"],
-                  ["category", "Category column"],
-                  ["account", "Account column"],
-                ] as [CsvFieldKey, string][]
-              ).map(([field, label]) => (
-                <div key={field} className="grid gap-1.5">
-                  <Label className="text-xs">{label}</Label>
-                  <Select
-                    value={csvMappings[field] || "__none__"}
-                    onValueChange={(v) =>
-                      setCsvMappings((c) => ({
-                        ...c,
-                        [field]: v === "__none__" ? "" : v,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Not mapped" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Not mapped</SelectItem>
-                      {csvHeaders.map((header) => (
-                        <SelectItem key={`${field}:${header}`} value={header}>
-                          {header}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="grid gap-1.5">
-                <Label className="text-xs">Default type</Label>
-                <Select
-                  value={defaultImportType}
-                  onValueChange={(v) => {
-                    const nextType = v as Exclude<TransactionType, "transfer">;
-                    setDefaultImportType(nextType);
-                    setDefaultImportCategoryId(
-                      categories.find((c) => categoryMatchesType(c, nextType))?.id ?? "",
-                    );
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Expense</SelectItem>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="savings_contribution">Savings</SelectItem>
-                    <SelectItem value="debt_payment">Debt payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label className="text-xs">Default account</Label>
-                <Select
-                  value={defaultImportAccountId || "__none__"}
-                  onValueChange={(v) => setDefaultImportAccountId(v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {accounts.map((a) => (
-                      <SelectItem key={`import-acct:${a.id}`} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label className="text-xs">Default category</Label>
-                <Select
-                  value={defaultImportCategoryId || "__none__"}
-                  onValueChange={(v) => setDefaultImportCategoryId(v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {importCategories.map((c) => (
-                      <SelectItem key={`import-cat:${c.id}`} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              {importName} · {validImportCount} valid row
-              {validImportCount !== 1 ? "s" : ""} ·{" "}
-              {importPreview.filter((r) => r.duplicate).length} likely duplicates
-            </p>
-
-            <div className="grid gap-2">
-              {importPreview.slice(0, 6).map((row) => {
-                const account = accounts.find((a) => a.id === row.accountId);
-                const category = categories.find((c) => c.id === row.categoryId);
-
-                return (
-                  <div
-                    key={row.id}
-                    className={[
-                      "rounded-md border px-3 py-2.5 text-sm",
-                      row.issues.length > 0
-                        ? "border-destructive/30 bg-destructive/5"
-                        : "border-border/40 bg-muted/30",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Row {row.rowIndex}</span>
-                      <span className="font-medium tabular-nums">
-                        {Number.isFinite(row.amount) ? formatCurrency(row.amount) : "—"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {row.occurredOn || "no date"}
-                      </span>
+            <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+              <Card className="border-border/20 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">1. Map columns</CardTitle>
+                  <CardDescription>Match your CSV headings to Moat fields.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2">
+                  {(
+                    [
+                      ["date", "Date column"],
+                      ["amount", "Amount column"],
+                      ["note", "Note column"],
+                      ["type", "Type column"],
+                      ["category", "Category column"],
+                      ["account", "Account column"],
+                    ] as [CsvFieldKey, string][]
+                  ).map(([field, label]) => (
+                    <div key={field} className="grid gap-1.5">
+                      <Label className="text-xs">{label}</Label>
+                      <Select
+                        value={csvMappings[field] || "__none__"}
+                        onValueChange={(v) =>
+                          setCsvMappings((c) => ({
+                            ...c,
+                            [field]: v === "__none__" ? "" : v,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Not mapped" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Not mapped</SelectItem>
+                          {csvHeaders.map((header) => (
+                            <SelectItem key={`${field}:${header}`} value={header}>
+                              {header}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      {account?.name ?? "—"} · {category?.name ?? "—"}
-                    </div>
-                    {row.issues.length > 0 ? (
-                      <div className="mt-1 text-xs text-destructive">
-                        {row.issues.join(" · ")}
-                      </div>
-                    ) : null}
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="moat-panel-yellow border-border/20 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-foreground">2. Fill gaps</CardTitle>
+                  <CardDescription className="text-foreground/72">
+                    Set defaults for rows that do not carry enough information.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Default type</Label>
+                    <Select
+                      value={defaultImportType}
+                      onValueChange={(v) => {
+                        const nextType = v as Exclude<TransactionType, "transfer">;
+                        setDefaultImportType(nextType);
+                        setDefaultImportCategoryId(
+                          categories.find((c) => categoryMatchesType(c, nextType))?.id ?? "",
+                        );
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="savings_contribution">Savings</SelectItem>
+                        <SelectItem value="debt_payment">Debt payment</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                );
-              })}
+
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Default account</Label>
+                    <Select
+                      value={defaultImportAccountId || "__none__"}
+                      onValueChange={(v) => setDefaultImportAccountId(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {accounts.map((a) => (
+                          <SelectItem key={`import-acct:${a.id}`} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Default category</Label>
+                    <Select
+                      value={defaultImportCategoryId || "__none__"}
+                      onValueChange={(v) => setDefaultImportCategoryId(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {importCategories.map((c) => (
+                          <SelectItem key={`import-cat:${c.id}`} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                disabled={isImporting || validImportCount === 0}
-                onClick={() => void handleImportConfirm()}
-              >
-                {isImporting ? "Importing..." : `Import ${validImportCount} rows`}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={clearCsv}>
-                Clear
-              </Button>
+            <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+              <Card className="moat-panel-mint border-border/20 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-foreground">3. Review import</CardTitle>
+                  <CardDescription className="text-foreground/72">
+                    {importName} · {validImportCount} valid row
+                    {validImportCount !== 1 ? "s" : ""} · {duplicateCount} likely duplicates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="border border-border/20 bg-background/60 px-3 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                        Valid rows
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold tracking-tight">
+                        {validImportCount}
+                      </div>
+                    </div>
+                    <div className="border border-border/20 bg-background/60 px-3 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                        Duplicates
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold tracking-tight">
+                        {duplicateCount}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={isImporting || validImportCount === 0}
+                      onClick={() => void handleImportConfirm()}
+                    >
+                      {isImporting ? "Importing..." : `Import ${validImportCount} rows`}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={clearCsv}>
+                      Clear
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/20 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Preview</CardTitle>
+                  <CardDescription>First six rows after mapping and fallback rules.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  {previewRows.map((row, index) => {
+                    const account = accounts.find((a) => a.id === row.accountId);
+                    const category = categories.find((c) => c.id === row.categoryId);
+
+                    return (
+                      <div
+                        key={row.id}
+                        className={`border px-3 py-3 text-sm ${
+                          row.issues.length > 0
+                            ? "border-destructive/30 bg-destructive/5"
+                            : index === 0
+                              ? "moat-panel-sage border-border/20"
+                              : index % 2 === 0
+                                ? "moat-panel-mint border-border/20"
+                                : "bg-muted/20 border-border/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                            Row {row.rowIndex}
+                          </span>
+                          <span className="text-base font-semibold tabular-nums">
+                            {Number.isFinite(row.amount) ? formatCurrency(row.amount) : "—"}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {row.occurredOn || "no date"} · {account?.name ?? "—"} ·{" "}
+                          {category?.name ?? "—"}
+                        </div>
+                        {row.issues.length > 0 ? (
+                          <div className="mt-1.5 text-xs text-destructive">
+                            {row.issues.join(" · ")}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
             </div>
           </>
         ) : null}

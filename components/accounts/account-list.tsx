@@ -30,12 +30,10 @@ export function AccountList({ accounts, onEdit }: Props) {
   const active = accounts.filter((a) => !a.isArchived);
 
   return (
-    <Card className="border-border/40 shadow-none">
+    <Card className="border-border/20 shadow-none">
       <CardHeader>
         <CardTitle className="text-base">Your accounts</CardTitle>
-        <CardDescription>
-          All accounts reconciled from opening balance and transaction history.
-        </CardDescription>
+        <CardDescription>Reconciled from opening balance and history.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {active.length === 0 ? (
@@ -43,35 +41,42 @@ export function AccountList({ accounts, onEdit }: Props) {
             No accounts yet. Add your first account to get started.
           </div>
         ) : (
-          active.map((account) => (
-            <Card key={account.id} className="border-border/40 bg-muted/30 shadow-none">
-              <CardContent className="px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium text-foreground">{account.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {accountTypeLabels[account.type]}
-                      {account.institutionName ? ` · ${account.institutionName}` : ""}
-                    </div>
+          active.map((account, index) => (
+            <div
+              key={account.id}
+              className={`border px-4 py-4 ${
+                index === 0
+                  ? "moat-panel-mint border-border/20"
+                  : index % 2 === 0
+                    ? "moat-panel-sage border-border/20"
+                    : "bg-muted/20 border-border/20"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium text-foreground">{account.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {accountTypeLabels[account.type]}
+                    {account.institutionName ? ` · ${account.institutionName}` : ""}
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() => onEdit(account)}
-                  >
-                    Edit
-                  </Button>
                 </div>
-                <Separator className="my-3" />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Balance</span>
-                  <span className="font-medium tabular-nums">
-                    {formatCurrency(account.balance)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => onEdit(account)}
+                >
+                  Edit
+                </Button>
+              </div>
+              <Separator className="my-3 bg-border/50" />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Balance</span>
+                <span className="text-base font-semibold tabular-nums">
+                  {formatCurrency(account.balance)}
+                </span>
+              </div>
+            </div>
           ))
         )}
       </CardContent>

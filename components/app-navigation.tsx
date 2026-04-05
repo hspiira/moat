@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -58,9 +59,14 @@ const mobileSecondaryNav = ["/accounts", "/learn"] as const;
 function AppBrand() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <span className="inline-flex h-11 w-11 items-center justify-center bg-primary text-base font-semibold text-primary-foreground">
-        M
-      </span>
+      <Image
+        src="/icons/logo.svg"
+        alt="Moat logo"
+        width={44}
+        height={44}
+        className="h-11 w-11"
+        priority
+      />
       <span>
         <span className="block text-base font-semibold tracking-tight text-foreground">
           Moat
@@ -202,7 +208,6 @@ export function AppNavigation() {
   const { resolvedTheme, setTheme } = useTheme();
   const activeItem =
     navItems.find((item) => isActiveRoute(pathname, item.href)) ?? navItems[0];
-  const ActiveIcon = navIcons[activeItem.href];
 
   function toggleTheme() {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
@@ -213,9 +218,14 @@ export function AppNavigation() {
       <Card className="sticky top-0 z-40 border-x-0 border-t-0 border-border/30 bg-background/92 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:hidden">
         <CardContent className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center bg-muted text-foreground">
-              <ActiveIcon className="h-4 w-4" />
-            </span>
+            <Image
+              src="/icons/logo.svg"
+              alt="Moat logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0"
+              priority
+            />
             <div className="min-w-0">
               <div className="truncate text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Moat
@@ -302,10 +312,9 @@ export function AppNavigation() {
         <Separator className="bg-border/50" />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden">
-        <Card className="w-full max-w-sm border-border/30 bg-background/96 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/88">
-          <CardContent className="px-2 py-2">
-            <nav className="grid grid-cols-5 gap-1">
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-[backdrop-filter]:bg-background/88 lg:hidden">
+        <div className="px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))] pt-1">
+          <nav className="grid grid-cols-5 gap-1">
           {mobilePrimaryNav.map((href) => {
             const item = navItems.find((entry) => entry.href === href);
             if (!item) {
@@ -321,7 +330,7 @@ export function AppNavigation() {
                 asChild
                 variant={isActive ? "secondary" : "ghost"}
                 className={[
-                  "h-auto min-h-13 flex-col gap-0.5 px-2 py-1.5 text-center text-[11px] font-medium shadow-none",
+                  "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
                   isActive
                     ? "text-foreground dark:text-cyan-100"
                     : "text-muted-foreground",
@@ -330,7 +339,7 @@ export function AppNavigation() {
                 <Link href={item.href} aria-current={isActive ? "page" : undefined}>
                   <span
                     className={[
-                      "inline-flex h-7 w-11 items-center justify-center transition-colors",
+                      "inline-flex h-6 w-10 items-center justify-center transition-colors",
                       isActive
                         ? "text-primary dark:text-cyan-300"
                         : "bg-transparent",
@@ -349,18 +358,17 @@ export function AppNavigation() {
             trigger={
               <Button
                 variant="ghost"
-                className="h-auto min-h-13 flex-col gap-0.5 px-2 py-1.5 text-center text-[11px] font-medium text-muted-foreground shadow-none"
+                className="h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium text-muted-foreground shadow-none"
               >
-                <span className="inline-flex h-7 w-11 items-center justify-center">
+                <span className="inline-flex h-6 w-10 items-center justify-center">
                   <IconPlus className="h-4 w-4" />
                 </span>
                 <span className="leading-none">More</span>
               </Button>
             }
           />
-            </nav>
-          </CardContent>
-        </Card>
+          </nav>
+        </div>
       </div>
     </>
   );
