@@ -22,6 +22,27 @@ export type GoalType =
   | "education"
   | "house_construction";
 
+export type CategoryKind = "income" | "expense" | "savings" | "transfer";
+
+export type SalaryCycle = "month_end" | "mid_month" | "custom";
+
+export type IncomeType = "salary" | "salary_plus_side_income" | "services";
+
+export type RiskComfort = "low" | "moderate" | "high";
+
+export type LiquidityNeed = "immediate" | "near_term" | "long_term";
+
+export type GuidanceLevel = "starter" | "standard" | "detailed";
+
+export type InstitutionType =
+  | "bank"
+  | "mobile_money"
+  | "sacco"
+  | "fund_manager"
+  | "regulator"
+  | "exchange"
+  | "other";
+
 export type ProductHighlight = {
   label: string;
   value: string;
@@ -85,23 +106,32 @@ export type UserProfile = {
   id: string;
   displayName: string;
   currency: "UGX";
-  salaryCycle: "month_end" | "mid_month" | "custom";
-  primaryIncomeType: "salary" | "salary_plus_side_income" | "services";
-  riskComfort: "low" | "moderate" | "high";
+  salaryCycle: SalaryCycle;
+  primaryIncomeType: IncomeType;
+  riskComfort: RiskComfort;
   investmentHorizonMonths: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Account = {
   id: string;
+  userId: string;
   name: string;
   type: AccountType;
   institutionName?: string;
+  institutionType?: InstitutionType;
+  openingBalance: number;
   balance: number;
   notes?: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Transaction = {
   id: string;
+  userId: string;
   accountId: string;
   type: TransactionType;
   amount: number;
@@ -109,17 +139,23 @@ export type Transaction = {
   categoryId: string;
   note?: string;
   transferGroupId?: string;
+  importBatchId?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Category = {
   id: string;
+  userId: string;
   name: string;
-  kind: "income" | "expense" | "savings" | "transfer";
+  kind: CategoryKind;
   isDefault: boolean;
+  createdAt: string;
 };
 
 export type Goal = {
   id: string;
+  userId: string;
   name: string;
   goalType: GoalType;
   targetAmount: number;
@@ -127,6 +163,30 @@ export type Goal = {
   targetDate: string;
   priority: number;
   linkedAccountId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BudgetTarget = {
+  id: string;
+  userId: string;
+  month: string;
+  categoryId: string;
+  targetAmount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InvestmentProfile = {
+  id: string;
+  userId: string;
+  timeHorizonMonths: number;
+  liquidityNeed: LiquidityNeed;
+  riskComfort: RiskComfort;
+  goalFocus: GoalType | "general_wealth";
+  guidanceLevel: GuidanceLevel;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ResourceLink = {
@@ -136,4 +196,52 @@ export type ResourceLink = {
   url: string;
   topic: string;
   isOfficial: boolean;
+};
+
+export type MonthlyInsight = {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  priority: 1 | 2 | 3;
+  month: string;
+};
+
+export type ImportBatch = {
+  id: string;
+  userId: string;
+  sourceName: string;
+  importedAt: string;
+  rowCount: number;
+};
+
+export type MonthSummary = {
+  inflow: number;
+  outflow: number;
+  savings: number;
+  transfers: number;
+  net: number;
+  topCategories: {
+    categoryId: string;
+    categoryName: string;
+    amount: number;
+  }[];
+};
+
+export type GoalContributionPlan = {
+  goalId: string;
+  targetAmount: number;
+  currentAmount: number;
+  remainingAmount: number;
+  monthsRemaining: number;
+  monthlyContribution: number;
+  isBehindSchedule: boolean;
+};
+
+export type InvestmentGuidance = {
+  recommendedProducts: string[];
+  warnings: string[];
+  rationale: string[];
+  shouldPrioritizeEmergencyFund: boolean;
+  shouldPrioritizeDebtRepayment: boolean;
 };
