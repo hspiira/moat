@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
+
 import { AmountIndicator } from "@/components/amount-indicator";
-import type { Account } from "@/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 import { accountTypeLabels } from "./account-form";
+import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
@@ -24,10 +27,11 @@ function formatCurrency(amount: number) {
 
 type Props = {
   accounts: Account[];
+  transactions: Transaction[];
   onEdit: (account: Account) => void;
 };
 
-export function AccountList({ accounts, onEdit }: Props) {
+export function AccountList({ accounts, transactions, onEdit }: Props) {
   const active = accounts.filter((a) => !a.isArchived);
 
   return (
@@ -61,14 +65,19 @@ export function AccountList({ accounts, onEdit }: Props) {
                     {account.institutionName ? ` · ${account.institutionName}` : ""}
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => onEdit(account)}
-                >
-                  Edit
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                    <Link href={`/accounts/${encodeURIComponent(account.id)}`}>Ledger</Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => onEdit(account)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               </div>
               <Separator className="my-3 bg-border/50" />
               <div className="flex items-center justify-between text-sm">
@@ -78,6 +87,13 @@ export function AccountList({ accounts, onEdit }: Props) {
                   sign={account.balance < 0 ? "negative" : "none"}
                   value={formatCurrency(account.balance)}
                   className="text-base font-semibold"
+                />
+              </div>
+              <div className="mt-3">
+                <AccountBalanceBreakdown
+                  account={account}
+                  transactions={transactions}
+                  compact
                 />
               </div>
             </div>

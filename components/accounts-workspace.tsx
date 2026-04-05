@@ -4,10 +4,14 @@ import { startTransition, useEffect, useState } from "react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { AmountIndicator } from "@/components/amount-indicator";
-import { getAccountTotals, normalizeOpeningBalance } from "@/lib/domain/accounts";
+import {
+  getAccountTotals,
+  normalizeOpeningBalance,
+  reconcileAccountBalances,
+} from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { Account, AccountType } from "@/lib/types";
+import type { Account, AccountType, Transaction } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -22,6 +26,7 @@ import {
   defaultAccountForm,
 } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
+import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 
 const repositories = createIndexedDbRepositories();
 
@@ -45,6 +50,7 @@ export function AccountsWorkspace() {
     { id: string } | null
   >(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accountForm, setAccountForm] = useState<AccountFormState>(defaultAccountForm);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,10 +68,15 @@ export function AccountsWorkspace() {
       setProfile(nextProfile);
 
       if (nextProfile) {
-        const nextAccounts = await repositories.accounts.listByUser(nextProfile.id);
-        setAccounts(nextAccounts);
+        const [nextAccounts, nextTransactions] = await Promise.all([
+          repositories.accounts.listByUser(nextProfile.id),
+          repositories.transactions.listByUser(nextProfile.id),
+        ]);
+        setAccounts(reconcileAccountBalances(nextAccounts, nextTransactions));
+        setTransactions(nextTransactions);
       } else {
         setAccounts([]);
+        setTransactions([]);
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load accounts.");
@@ -125,15 +136,52 @@ export function AccountsWorkspace() {
     }
   }
 
+  async function handleRepairAccounts(
+    repairs: { accountId: string; openingBalance: number }[],
+  ) {
+    if (!profile || repairs.length === 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const timestamp = new Date().toISOString();
+
+      await Promise.all(
+        repairs.map(async ({ accountId, openingBalance }) => {
+          const existing = accounts.find((account) => account.id === accountId);
+          if (!existing) return;
+
+          await repositories.accounts.upsert({
+            ...existing,
+            openingBalance,
+            balance: openingBalance,
+            updatedAt: timestamp,
+          });
+        }),
+      );
+
+      const message = "Opening balances repaired locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
+      await loadWorkspace();
+    } catch (repairError) {
+      setError(repairError instanceof Error ? repairError.message : "Unable to repair accounts.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   function beginAccountEdit(account: Account) {
     setEditingAccountId(account.id);
-      setAccountForm({
-        name: account.name,
-        type: account.type,
-        institutionName: account.institutionName ?? "",
-        openingBalance: String(Math.abs(account.openingBalance)),
-        notes: account.notes ?? "",
-      });
+    setAccountForm({
+      name: account.name,
+      type: account.type,
+      institutionName: account.institutionName ?? "",
+      openingBalance: String(Math.abs(account.openingBalance)),
+      notes: account.notes ?? "",
+    });
   }
 
   const accountTotals = getAccountTotals(accounts);
@@ -174,6 +222,13 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
+          <RepairAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onRepair={handleRepairAccounts}
+          />
+
           <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr_1fr]">
             <Card className="moat-panel-sage border-border/20 shadow-none">
               <CardHeader className="gap-2 p-5">
@@ -227,7 +282,7 @@ export function AccountsWorkspace() {
               }}
             />
 
-            <AccountList accounts={accounts} onEdit={beginAccountEdit} />
+            <AccountList accounts={accounts} transactions={transactions} onEdit={beginAccountEdit} />
           </div>
         </>
       ) : null}

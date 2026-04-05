@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
+import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,10 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { modulePreviews } from "@/lib/data";
-import {
-  getAccountBalanceBreakdown,
-  reconcileAccountBalances,
-} from "@/lib/domain/accounts";
+import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
@@ -588,58 +586,39 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                     </div>
                   ) : (
                     topAccounts.map((account, index) => (
-                      (() => {
-                        const breakdown = getAccountBalanceBreakdown(account, transactions);
-
-                        return (
-                          <div
-                            key={account.id}
-                            className={`grid gap-2 border px-4 py-3 ${
-                              index % 2 === 0
-                                ? "moat-panel-sage border-border/20"
-                                : "bg-muted/20 border-border/20"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div>
-                                <div className="text-sm font-medium text-foreground">{account.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {account.type.replaceAll("_", " ")}
-                                </div>
-                              </div>
-                              <AmountIndicator
-                                tone={account.balance < 0 ? "negative" : "neutral"}
-                                sign={account.balance < 0 ? "negative" : "none"}
-                                value={formatCurrency(account.balance)}
-                                className="text-sm font-medium"
-                              />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-foreground/65">
-                              <span>
-                                Opening{" "}
-                                <AmountIndicator
-                                  tone={breakdown.openingBalance < 0 ? "negative" : "neutral"}
-                                  sign={breakdown.openingBalance < 0 ? "negative" : "none"}
-                                  value={formatCurrency(Math.abs(breakdown.openingBalance))}
-                                  className="text-[11px] font-medium"
-                                />
-                              </span>
-                              <span>
-                                Movement{" "}
-                                <AmountIndicator
-                                  tone={breakdown.movement < 0 ? "negative" : breakdown.movement > 0 ? "positive" : "neutral"}
-                                  sign={breakdown.movement < 0 ? "negative" : breakdown.movement > 0 ? "positive" : "none"}
-                                  value={formatCurrency(Math.abs(breakdown.movement))}
-                                  className="text-[11px] font-medium"
-                                />
-                              </span>
-                              {account.type !== "debt" && breakdown.openingBalance < 0 ? (
-                                <span className="text-destructive">Check opening balance</span>
-                              ) : null}
+                      <div
+                        key={account.id}
+                        className={`grid gap-2 border px-4 py-3 ${
+                          index % 2 === 0
+                            ? "moat-panel-sage border-border/20"
+                            : "bg-muted/20 border-border/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <div className="text-sm font-medium text-foreground">{account.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {account.type.replaceAll("_", " ")}
                             </div>
                           </div>
-                        );
-                      })()
+                          <div className="flex items-center gap-2">
+                            <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                              <Link href={`/accounts/${encodeURIComponent(account.id)}`}>Ledger</Link>
+                            </Button>
+                            <AmountIndicator
+                              tone={account.balance < 0 ? "negative" : "neutral"}
+                              sign={account.balance < 0 ? "negative" : "none"}
+                              value={formatCurrency(account.balance)}
+                              className="text-sm font-medium"
+                            />
+                          </div>
+                        </div>
+                        <AccountBalanceBreakdown
+                          account={account}
+                          transactions={transactions}
+                          compact
+                        />
+                      </div>
                     ))
                   )}
                 </CardContent>
