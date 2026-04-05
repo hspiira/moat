@@ -1,12 +1,14 @@
 # Uganda Finance App Technical Architecture
 
-| Field | Value |
-| --- | --- |
-| Document Version | 1.0 |
-| Status | Draft |
-| Owner | TBD |
-| Last Updated | 2026-04-05 |
-| Related Docs | `docs/uganda-finance-mvp-blueprint.md`, `docs/uganda-finance-prd.md` |
+
+| Field            | Value                                                                |
+| ---------------- | -------------------------------------------------------------------- |
+| Document Version | 1.0                                                                  |
+| Status           | Draft                                                                |
+| Owner            | Piira                                                                |
+| Last Updated     | 2026-04-05                                                           |
+| Related Docs     | `docs/uganda-finance-mvp-blueprint.md`, `docs/uganda-finance-prd.md` |
+
 
 ## Architecture Summary
 

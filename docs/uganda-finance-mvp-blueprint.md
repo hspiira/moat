@@ -1,13 +1,15 @@
 # Uganda Finance App MVP Blueprint
 
-| Field | Value |
-| --- | --- |
-| Document Version | 1.0 |
-| Status | Draft foundation document |
-| Owner | TBD |
-| Last Updated | 2026-04-05 |
-| Primary Market | Uganda |
-| Product Stage | Pre-build / documentation baseline |
+
+| Field            | Value                              |
+| ---------------- | ---------------------------------- |
+| Document Version | 1.0                                |
+| Status           | Draft foundation document          |
+| Owner            | Piira                              |
+| Last Updated     | 2026-04-05                         |
+| Primary Market   | Uganda                             |
+| Product Stage    | Pre-build / documentation baseline |
+
 
 ## Executive Summary
 
@@ -969,3 +971,4 @@ The next documentation and product work should proceed in this order:
 3. Design low-fidelity wireframes for onboarding, dashboard, transactions, goals, Investment Compass, and Learn Uganda.
 4. Define the first CSV import template and field mapping rules.
 5. Establish a compliance/content review checklist for all investment-related guidance copy.
+

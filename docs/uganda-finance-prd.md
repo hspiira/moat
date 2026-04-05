@@ -1,12 +1,14 @@
 # Uganda Finance App PRD
 
-| Field | Value |
-| --- | --- |
-| Document Version | 1.0 |
-| Status | Draft |
-| Owner | TBD |
-| Last Updated | 2026-04-05 |
-| Based On | `docs/uganda-finance-mvp-blueprint.md` |
+
+| Field            | Value                                  |
+| ---------------- | -------------------------------------- |
+| Document Version | 1.0                                    |
+| Status           | Draft                                  |
+| Owner            | Piira                                  |
+| Last Updated     | 2026-04-05                             |
+| Based On         | `docs/uganda-finance-mvp-blueprint.md` |
+
 
 ## Product Summary
 
@@ -284,3 +286,4 @@ The first release is optimized for a young salaried Ugandan who:
 - whether data is local-first, server-backed, or hybrid in alpha
 - whether users can attach a goal to a specific account in v1 UI
 - whether reminders are in-app only or also push/email later
+
