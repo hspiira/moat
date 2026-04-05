@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  IconBook2,
   IconBuildingBank,
   IconCompass,
   IconHome2,
   IconMenu2,
   IconMoon,
   IconPlus,
+  IconSchool,
   IconSun,
   IconTargetArrow,
   IconTransfer,
@@ -41,7 +41,7 @@ const navIcons: Record<string, Icon> = {
   "/transactions": IconTransfer,
   "/goals": IconTargetArrow,
   "/investment-compass": IconCompass,
-  "/learn": IconBook2,
+  "/learn": IconSchool,
 };
 
 function isActiveRoute(pathname: string, href: string) {
@@ -58,7 +58,7 @@ const mobileSecondaryNav = ["/accounts", "/learn"] as const;
 function AppBrand() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-sm shadow-primary/20">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">
         M
       </span>
       <span>
@@ -120,7 +120,7 @@ export function AppNavigation() {
 
   return (
     <>
-      <Card className="sticky top-0 z-40 border-border/60 bg-background/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+      <Card className="sticky top-0 z-40 border-border/40 bg-background/90 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
         <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
           <AppBrand />
           <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export function AppNavigation() {
                   variant="outline"
                   size="icon"
                   aria-label="Open quick actions"
-                  className="h-10 w-10 rounded-2xl border-border/60"
+                  className="h-10 w-10 rounded-2xl border-border/40"
                 >
                   <IconMenu2 className="h-4 w-4" />
                 </Button>
@@ -149,25 +149,19 @@ export function AppNavigation() {
             </Sheet>
             <ThemeToggle
               onClick={toggleTheme}
-              className="h-10 w-10 rounded-2xl border-border/60"
+              className="h-10 w-10 rounded-2xl border-border/40"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card className="hidden lg:sticky lg:top-6 lg:block lg:w-72 lg:self-start lg:border-border/60 lg:bg-card/90 lg:shadow-sm">
-        <CardHeader className="gap-4">
-          <div className="flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-40 hidden bg-background/92 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:block">
+        <div className="flex items-center gap-4 py-1">
+          <div className="shrink-0">
             <AppBrand />
-            <ThemeToggle
-              onClick={toggleTheme}
-              className="h-10 w-10 rounded-2xl border-border/60"
-            />
           </div>
-        </CardHeader>
-        <Separator />
-        <CardContent className="grid gap-2 p-3">
-          <nav className="grid gap-2">
+          <nav className="min-w-0 flex-1">
+            <div className="grid grid-cols-6 gap-1">
             {navItems.map((item) => {
               const isActive = isActiveRoute(pathname, item.href);
               const IconComponent = navIcons[item.href];
@@ -176,37 +170,46 @@ export function AppNavigation() {
                 <Button
                   key={item.href}
                   asChild
-                  variant={isActive ? "secondary" : "ghost"}
-                  className="h-auto justify-start rounded-[1.5rem] px-4 py-3"
+                  variant="ghost"
+                  className={[
+                    "h-10 w-full rounded-none border-b-2 px-2.5 text-sm shadow-none",
+                    isActive
+                      ? "border-b-primary text-foreground dark:border-b-cyan-400 dark:text-cyan-100"
+                      : "border-b-transparent text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
                 >
                   <Link href={item.href}>
-                    <span className="flex items-start gap-3">
+                    <span className="flex w-full items-center gap-2.5">
                     <span
                       className={[
-                        "mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors",
+                        "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
                         isActive
-                          ? "border-primary/20 bg-primary text-primary-foreground"
-                          : "border-border/60 bg-background text-muted-foreground group-hover:text-foreground",
+                          ? "text-primary dark:text-cyan-300"
+                          : "text-muted-foreground",
                       ].join(" ")}
                     >
-                      <IconComponent className="h-4 w-4" />
+                      <IconComponent className="h-3.5 w-3.5" />
                     </span>
-                    <span className="min-w-0 text-left">
-                      <span className="block text-sm font-medium">{item.label}</span>
-                      <span className="mt-1 block text-xs leading-5 opacity-75">
-                        {item.description}
-                      </span>
-                    </span>
+                    <span className="min-w-0 truncate text-left font-medium">{item.label}</span>
                     </span>
                   </Link>
                 </Button>
               );
             })}
+            </div>
           </nav>
-        </CardContent>
-      </Card>
 
-      <Card className="fixed inset-x-2 bottom-2 z-50 border-border/70 bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden">
+          <div className="flex shrink-0 items-center">
+            <ThemeToggle
+              onClick={toggleTheme}
+              className="h-10 w-10 rounded-2xl border-border/30"
+            />
+          </div>
+        </div>
+        <Separator className="bg-border/50" />
+      </div>
+
+      <Card className="fixed inset-x-2 bottom-2 z-50 border-border/40 bg-background/95 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden">
         <CardContent className="px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
           <nav className="mx-auto grid max-w-4xl grid-cols-5 gap-1">
           {mobilePrimaryNav.map((href) => {
@@ -250,7 +253,7 @@ export function AppNavigation() {
                 </SheetDescription>
               </SheetHeader>
               <div className="grid gap-6 px-6">
-                <Card className="border-border/60 shadow-none">
+                <Card className="border-border/40 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Quick actions</CardTitle>
                   </CardHeader>
@@ -258,7 +261,7 @@ export function AppNavigation() {
                     <QuickActionLinks />
                   </CardContent>
                 </Card>
-                <Card className="border-border/60 shadow-none">
+                <Card className="border-border/40 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">More places</CardTitle>
                   </CardHeader>
@@ -294,7 +297,7 @@ export function AppNavigation() {
                     })}
                   </CardContent>
                 </Card>
-                <Card className="border-border/60 shadow-none">
+                <Card className="border-border/40 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Theme</CardTitle>
                   </CardHeader>
@@ -304,7 +307,7 @@ export function AppNavigation() {
                     </div>
                     <ThemeToggle
                       onClick={toggleTheme}
-                      className="h-10 w-10 rounded-2xl border-border/60"
+                      className="h-10 w-10 rounded-2xl border-border/40"
                     />
                   </CardContent>
                 </Card>

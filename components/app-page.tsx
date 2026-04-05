@@ -40,7 +40,7 @@ export function AppHeroCard({
   aside,
 }: AppHeroCardProps) {
   return (
-    <Card className="border-border/70 bg-background/95 shadow-lg shadow-primary/5">
+    <Card className="border-border/40 bg-background/95 shadow-none">
       <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.9fr] lg:p-8">
         <div className="space-y-5">
           {badge ? (
@@ -58,7 +58,7 @@ export function AppHeroCard({
         </div>
 
         {aside ? (
-          <Card className="border-border/70 bg-muted/35 shadow-none">
+          <Card className="border-border/40 bg-muted/35 shadow-none">
             <CardContent className="p-0">{aside}</CardContent>
           </Card>
         ) : null}

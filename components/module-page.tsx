@@ -54,7 +54,7 @@ export function ModulePage({ detail }: ModulePageProps) {
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-border/70 bg-background/90">
+        <Card className="border-border/40 bg-background/90 shadow-none">
           <CardHeader>
             <CardTitle>Current implementation scope</CardTitle>
             <CardDescription className="leading-7">
@@ -86,7 +86,7 @@ export function ModulePage({ detail }: ModulePageProps) {
         </Card>
 
         <div className="grid gap-6">
-          <Card className="border-border/70 bg-background/90">
+          <Card className="border-border/40 bg-background/90 shadow-none">
             <CardHeader>
               <CardTitle>Acceptance gates</CardTitle>
             </CardHeader>
@@ -102,7 +102,7 @@ export function ModulePage({ detail }: ModulePageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-dashed border-border/80 bg-background/70 shadow-none">
+          <Card className="border-dashed border-border/50 bg-background/70 shadow-none">
             <CardHeader>
               <CardTitle>Linked issue</CardTitle>
               <CardDescription>{detail.issueSummary}</CardDescription>

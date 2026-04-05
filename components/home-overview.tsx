@@ -62,7 +62,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
         />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {modulePreviews.map((module) => (
-            <Card key={module.href} className="border-border/40 bg-muted/30 shadow-none">
+            <Card key={module.href} className="border-border/30 bg-muted/30 shadow-none">
               <CardContent className="p-0">
                 <Button
                   asChild
