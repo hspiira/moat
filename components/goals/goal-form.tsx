@@ -1,6 +1,6 @@
 "use client";
 
-import type { Account, Goal, GoalType } from "@/lib/types";
+import type { Account, GoalType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,

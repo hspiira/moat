@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { AppAsideIntro, AppHeroCard, AppPage } from "@/components/app-page";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,42 +18,28 @@ type ModulePageProps = {
 
 export function ModulePage({ detail }: ModulePageProps) {
   return (
-    <div className="grid gap-6">
-      <Card className="border-border/70 bg-background/95 shadow-lg shadow-primary/5">
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.5fr_0.9fr] lg:p-8">
-          <div className="space-y-5">
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
-              {detail.eyebrow}
-            </Badge>
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                {detail.title}
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                {detail.description}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild>
-                <Link href={detail.primaryCta.href}>{detail.primaryCta.label}</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={detail.secondaryCta.href}>{detail.secondaryCta.label}</Link>
-              </Button>
-            </div>
-          </div>
-
-          <Card className="border-border/70 bg-muted/35 shadow-none">
-            <CardHeader>
-              <Badge variant="outline" className="w-fit bg-background/70">
-                Route intent
-              </Badge>
-              <CardTitle>{detail.intentTitle}</CardTitle>
-              <CardDescription className="leading-7">
-                {detail.intentSummary}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+    <AppPage>
+      <AppHeroCard
+        badge={detail.eyebrow}
+        title={detail.title}
+        description={detail.description}
+        actions={
+          <>
+            <Button asChild>
+              <Link href={detail.primaryCta.href}>{detail.primaryCta.label}</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={detail.secondaryCta.href}>{detail.secondaryCta.label}</Link>
+            </Button>
+          </>
+        }
+        aside={
+          <AppAsideIntro
+            badge="Route intent"
+            title={detail.intentTitle}
+            description={detail.intentSummary}
+          >
+            <div className="p-6 pt-0">
               <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
                 {detail.intentBullets.map((bullet) => (
                   <li className="flex gap-2" key={bullet}>
@@ -62,13 +48,13 @@ export function ModulePage({ detail }: ModulePageProps) {
                   </li>
                 ))}
               </ul>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+            </div>
+          </AppAsideIntro>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="border-border/70 bg-background/90">
+        <Card className="border-border/40 bg-background/90 shadow-none">
           <CardHeader>
             <CardTitle>Current implementation scope</CardTitle>
             <CardDescription className="leading-7">
@@ -100,7 +86,7 @@ export function ModulePage({ detail }: ModulePageProps) {
         </Card>
 
         <div className="grid gap-6">
-          <Card className="border-border/70 bg-background/90">
+          <Card className="border-border/40 bg-background/90 shadow-none">
             <CardHeader>
               <CardTitle>Acceptance gates</CardTitle>
             </CardHeader>
@@ -116,7 +102,7 @@ export function ModulePage({ detail }: ModulePageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-dashed border-border/80 bg-background/70 shadow-none">
+          <Card className="border-dashed border-border/50 bg-background/70 shadow-none">
             <CardHeader>
               <CardTitle>Linked issue</CardTitle>
               <CardDescription>{detail.issueSummary}</CardDescription>
@@ -134,6 +120,6 @@ export function ModulePage({ detail }: ModulePageProps) {
           </Card>
         </div>
       </div>
-    </div>
+    </AppPage>
   );
 }

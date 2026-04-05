@@ -1,6 +1,6 @@
 "use client";
 
-import type { Account, AccountType } from "@/lib/types";
+import type { AccountType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
