@@ -1,11 +1,13 @@
 # Uganda Finance MVP Pilot Readiness Checklist
 
-| Field | Value |
-| --- | --- |
-| Status | Draft |
-| Owner | `TBD` |
-| Last updated | 2026-04-05 |
-| Related issue | `#10` |
+
+| Field         | Value      |
+| ------------- | ---------- |
+| Status        | Draft      |
+| Owner         | `Piira`    |
+| Last updated  | 2026-04-05 |
+| Related issue | `#10`      |
+
 
 ## Purpose
 
@@ -98,3 +100,4 @@ Pause the pilot if any of these happen repeatedly:
   - better onboarding defaults
   - richer goal planning
   - institution verification depth
+

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
 import { getMonthSummary } from "@/lib/domain/summaries";
+import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type {
   Goal,
   InvestmentProfile,
@@ -16,7 +16,6 @@ import type {
   Transaction,
   UserProfile,
 } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +24,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const repositories = createIndexedDbRepositories();
 
@@ -44,15 +52,15 @@ const defaultForm: InvestmentProfileFormState = {
   guidanceLevel: "starter",
 };
 
-const goalFocusOptions: InvestmentProfile["goalFocus"][] = [
-  "general_wealth",
-  "emergency_fund",
-  "rent_buffer",
-  "school_fees",
-  "land_savings",
-  "business_capital",
-  "education",
-  "house_construction",
+const goalFocusOptions: { value: InvestmentProfile["goalFocus"]; label: string }[] = [
+  { value: "general_wealth", label: "General wealth" },
+  { value: "emergency_fund", label: "Emergency fund" },
+  { value: "rent_buffer", label: "Rent buffer" },
+  { value: "school_fees", label: "School fees" },
+  { value: "land_savings", label: "Land savings" },
+  { value: "business_capital", label: "Business capital" },
+  { value: "education", label: "Education" },
+  { value: "house_construction", label: "House / Construction" },
 ];
 
 function buildTimestamp() {
@@ -71,32 +79,19 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-function labelGoalFocus(goalFocus: InvestmentProfile["goalFocus"]) {
-  if (goalFocus === "general_wealth") {
-    return "General wealth";
-  }
-
-  return goalFocus.replaceAll("_", " ");
-}
-
 function getEmergencyFundMonthsCovered(
   goals: Goal[],
   transactions: Transaction[],
   month: string,
 ) {
-  const emergencyGoal =
-    goals.find((goal) => goal.goalType === "emergency_fund") ?? null;
+  const emergencyGoal = goals.find((g) => g.goalType === "emergency_fund") ?? null;
   const monthSummary = getMonthSummary(transactions, [], month);
-
-  if (!emergencyGoal || monthSummary.outflow <= 0) {
-    return 0;
-  }
-
+  if (!emergencyGoal || monthSummary.outflow <= 0) return 0;
   return emergencyGoal.currentAmount / monthSummary.outflow;
 }
 
 function hasHighCostDebt(transactions: Transaction[]) {
-  return transactions.some((transaction) => transaction.type === "debt_payment");
+  return transactions.some((t) => t.type === "debt_payment");
 }
 
 function buildProfileForm(profile: InvestmentProfile): InvestmentProfileFormState {
@@ -152,9 +147,7 @@ export function InvestmentCompassWorkspace() {
       setTransactions(storedTransactions);
     } catch (loadError) {
       setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load investment compass.",
+        loadError instanceof Error ? loadError.message : "Unable to load Investment Compass.",
       );
     } finally {
       setIsLoading(false);
@@ -179,13 +172,8 @@ export function InvestmentCompassWorkspace() {
 
   const guidance = useMemo(() => {
     const activeProfile =
-      investmentProfile ??
-      (profile ? createBootstrapState(profile).investmentProfile : null);
-
-    if (!activeProfile) {
-      return null;
-    }
-
+      investmentProfile ?? (profile ? createBootstrapState(profile).investmentProfile : null);
+    if (!activeProfile) return null;
     return getInvestmentGuidance({
       profile: activeProfile,
       emergencyFundMonthsCovered,
@@ -194,17 +182,12 @@ export function InvestmentCompassWorkspace() {
   }, [emergencyFundMonthsCovered, investmentProfile, profile, transactions]);
 
   const regulatedResources = resources.filter(
-    (resource) =>
-      resource.topic === "regulated-investing" ||
-      resource.topic === "institution-verification",
+    (r) => r.topic === "regulated-investing" || r.topic === "institution-verification",
   );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!profile) {
-      return;
-    }
+    if (!profile) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -228,272 +211,266 @@ export function InvestmentCompassWorkspace() {
       setForm(buildProfileForm(nextProfile));
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Unable to save investment profile.",
+        submitError instanceof Error ? submitError.message : "Unable to save investment profile.",
       );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const hasSetup = Boolean(profile);
-
   return (
-    <div className="grid gap-6">
-      <Card className="border-border/70 bg-background/95 shadow-lg shadow-primary/5">
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.45fr_0.85fr] lg:p-8">
-          <div className="space-y-4">
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
-              Issue #9
-            </Badge>
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                Investment Compass
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                This route converts saved profile, goal, and transaction data into
-                rule-based investing guidance for Uganda. It does not give stock
-                picks or guaranteed-return advice.
-              </p>
-            </div>
-          </div>
-
-          <Card className="border-border/70 bg-muted/35 shadow-none">
-            <CardHeader>
-              <Badge variant="outline" className="w-fit bg-background/70">
-                Current signals
-              </Badge>
-              <CardTitle>
-                {formatCurrency(monthlyOutflow)} monthly outflow baseline
-              </CardTitle>
-              <CardDescription className="leading-7">
-                Emergency coverage currently sits at{" "}
-                {emergencyFundMonthsCovered.toFixed(1)} month(s). Guidance is
-                adjusted from these saved numbers.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <div>Tracked goals: {goals.length}</div>
-              <div>Debt repayment records found: {hasHighCostDebt(transactions) ? "Yes" : "No"}</div>
-              <div>Regulated source links: {regulatedResources.length}</div>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+    <div className="grid gap-5">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Investment Compass</h1>
+        <p className="text-sm text-muted-foreground">
+          Rule-based guidance for Uganda. No stock picks, no guaranteed returns.
+        </p>
+      </div>
 
       {error ? (
         <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-6 py-5 text-sm text-destructive">
-            {error}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {!hasSetup && !isLoading ? (
-        <Card className="border-border/70 bg-background/90">
-          <CardContent className="grid gap-4 px-6 py-8 text-sm leading-7 text-muted-foreground">
-            <div>
-              Complete onboarding first so the compass can read your time horizon,
-              goals, and transaction history.
-            </div>
-            <div>
-              <Button asChild>
-                <Link href="/accounts">Set up profile and accounts</Link>
-              </Button>
-            </div>
-          </CardContent>
+          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
         </Card>
       ) : null}
 
       {isLoading ? (
-        <Card className="border-border/70 bg-background/90">
-          <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-            Loading investment compass...
+        <Card className="border-border/40 shadow-none">
+          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
+            Loading guidance...
           </CardContent>
         </Card>
       ) : null}
 
-      {hasSetup && !isLoading && investmentProfile && guidance ? (
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <Card className="border-border/70 bg-background/90">
-            <CardHeader>
-              <CardTitle>Investment profile</CardTitle>
-              <CardDescription className="leading-7">
-                Persist the user&apos;s planning stance here. The guidance engine
-                reads this profile together with goals and transaction history.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="grid gap-4" onSubmit={handleSubmit}>
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Time horizon in months</span>
-                  <input
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    inputMode="numeric"
-                    min="1"
-                    value={form.timeHorizonMonths}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        timeHorizonMonths: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </label>
+      {!isLoading && !profile ? (
+        <Card className="border-border/40 shadow-none">
+          <CardContent className="grid gap-4 px-5 py-8 text-sm text-muted-foreground">
+            <p>
+              Complete onboarding so the compass can read your time horizon, goals, and
+              transaction history.
+            </p>
+            <Button asChild size="sm">
+              <Link href="/onboarding">Set up your profile</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Liquidity need</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    value={form.liquidityNeed}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        liquidityNeed: event.target.value as LiquidityNeed,
-                      }))
-                    }
-                  >
-                    <option value="immediate">Immediate</option>
-                    <option value="near_term">Near term</option>
-                    <option value="long_term">Long term</option>
-                  </select>
-                </label>
+      {!isLoading && profile && investmentProfile && guidance ? (
+        <>
+          {monthlyOutflow > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Card className="border-border/40 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardDescription>Monthly outflow baseline</CardDescription>
+                  <CardTitle className="text-xl tabular-nums">
+                    {formatCurrency(monthlyOutflow)}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card className="border-border/40 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardDescription>Emergency coverage</CardDescription>
+                  <CardTitle className="text-xl">
+                    {emergencyFundMonthsCovered.toFixed(1)} month
+                    {emergencyFundMonthsCovered !== 1 ? "s" : ""}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : null}
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Risk comfort</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    value={form.riskComfort}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        riskComfort: event.target.value as RiskComfort,
-                      }))
-                    }
-                  >
-                    <option value="low">Low</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="high">High</option>
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Goal focus</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    value={form.goalFocus}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        goalFocus: event.target.value as InvestmentProfile["goalFocus"],
-                      }))
-                    }
-                  >
-                    {goalFocusOptions.map((goalFocus) => (
-                      <option key={goalFocus} value={goalFocus}>
-                        {labelGoalFocus(goalFocus)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Guidance detail</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    value={form.guidanceLevel}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        guidanceLevel: event.target.value as InvestmentProfile["guidanceLevel"],
-                      }))
-                    }
-                  >
-                    <option value="starter">Starter</option>
-                    <option value="standard">Standard</option>
-                    <option value="detailed">Detailed</option>
-                  </select>
-                </label>
-
-                <Button disabled={isSubmitting} type="submit">
-                  {isSubmitting ? "Saving..." : "Save investment profile"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-6">
-            <Card className="border-border/70 bg-background/90">
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <Card className="border-border/40 shadow-none">
               <CardHeader>
-                <CardTitle>Recommended product classes</CardTitle>
-                <CardDescription className="leading-7">
-                  These are categories of regulated or capital-preserving options,
-                  not personalized security recommendations.
+                <CardTitle className="text-base">Your investment profile</CardTitle>
+                <CardDescription>
+                  Update these settings to see how guidance changes.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3">
-                {guidance.recommendedProducts.map((product) => (
-                  <Card key={product} className="border-border/70 bg-muted/35 shadow-none">
-                    <CardContent className="px-4 py-4 text-sm text-foreground">
-                      {product}
-                    </CardContent>
-                  </Card>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/70 bg-background/90">
-              <CardHeader>
-                <CardTitle>Why the engine is saying this</CardTitle>
-                <CardDescription className="leading-7">
-                  The guidance is driven by the stored time horizon, liquidity need,
-                  emergency coverage, and debt signals.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 text-sm leading-7 text-muted-foreground">
-                {guidance.rationale.map((item) => (
-                  <div key={item}>{item}</div>
-                ))}
-                {guidance.warnings.length > 0 ? (
-                  <div className="grid gap-3 rounded-lg border border-amber-300/40 bg-amber-100/20 px-4 py-4 text-amber-950 dark:text-amber-100">
-                    {guidance.warnings.map((warning) => (
-                      <div key={warning}>{warning}</div>
-                    ))}
+              <CardContent>
+                <form className="grid gap-4" onSubmit={handleSubmit}>
+                  <div className="grid gap-2">
+                    <Label htmlFor="time-horizon">Time horizon (months)</Label>
+                    <Input
+                      id="time-horizon"
+                      inputMode="numeric"
+                      min="1"
+                      value={form.timeHorizonMonths}
+                      onChange={(e) =>
+                        setForm((c) => ({ ...c, timeHorizonMonths: e.target.value }))
+                      }
+                      required
+                    />
                   </div>
-                ) : null}
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="liquidity-need">Liquidity need</Label>
+                    <Select
+                      value={form.liquidityNeed}
+                      onValueChange={(v) =>
+                        setForm((c) => ({ ...c, liquidityNeed: v as LiquidityNeed }))
+                      }
+                    >
+                      <SelectTrigger id="liquidity-need">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="immediate">Immediate</SelectItem>
+                        <SelectItem value="near_term">Near term</SelectItem>
+                        <SelectItem value="long_term">Long term</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="risk-comfort">Risk comfort</Label>
+                    <Select
+                      value={form.riskComfort}
+                      onValueChange={(v) =>
+                        setForm((c) => ({ ...c, riskComfort: v as RiskComfort }))
+                      }
+                    >
+                      <SelectTrigger id="risk-comfort">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="moderate">Moderate</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="goal-focus">Goal focus</Label>
+                    <Select
+                      value={form.goalFocus}
+                      onValueChange={(v) =>
+                        setForm((c) => ({
+                          ...c,
+                          goalFocus: v as InvestmentProfile["goalFocus"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="goal-focus">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {goalFocusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="guidance-level">Guidance detail</Label>
+                    <Select
+                      value={form.guidanceLevel}
+                      onValueChange={(v) =>
+                        setForm((c) => ({
+                          ...c,
+                          guidanceLevel: v as InvestmentProfile["guidanceLevel"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="guidance-level">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="starter">Starter</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="detailed">Detailed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button disabled={isSubmitting} type="submit" size="sm">
+                    {isSubmitting ? "Saving..." : "Update profile"}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 
-            <Card className="border-border/70 bg-background/90">
-              <CardHeader>
-                <CardTitle>Regulated Uganda sources</CardTitle>
-                <CardDescription className="leading-7">
-                  Verify institutions before committing funds. Use official sources
-                  before any scheme, SACCO, or fund manager claim.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                {regulatedResources.map((resource) => (
-                  <a
-                    key={resource.id}
-                    className="rounded-lg border border-border bg-muted/35 px-4 py-4 text-sm transition hover:border-primary/50 hover:bg-primary/5"
-                    href={resource.url}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-foreground">{resource.title}</div>
-                      {resource.isOfficial ? <Badge variant="outline">Official</Badge> : null}
+            <div className="grid gap-4 content-start">
+              <Card className="border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Suggested product classes</CardTitle>
+                  <CardDescription>
+                    These are regulated or capital-preserving categories — not specific
+                    product recommendations.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  {guidance.recommendedProducts.map((product) => (
+                    <div
+                      key={product}
+                      className="rounded-md border border-border/40 bg-muted/30 px-4 py-3 text-sm text-foreground"
+                    >
+                      {product}
                     </div>
-                    <div className="mt-1 text-muted-foreground">{resource.sourceName}</div>
-                  </a>
-                ))}
-              </CardContent>
-            </Card>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Why this guidance</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm leading-6 text-muted-foreground">
+                  {guidance.rationale.map((item) => (
+                    <p key={item}>{item}</p>
+                  ))}
+                  {guidance.warnings.length > 0 ? (
+                    <div className="mt-1 grid gap-2 rounded-md border border-amber-300/40 bg-amber-50/60 px-4 py-3 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                      {guidance.warnings.map((warning) => (
+                        <p key={warning} className="text-sm">
+                          {warning}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              {regulatedResources.length > 0 ? (
+                <Card className="border-border/40 shadow-none">
+                  <CardHeader>
+                    <CardTitle className="text-base">Regulated Uganda sources</CardTitle>
+                    <CardDescription>
+                      Verify institutions through official channels before committing funds.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-2">
+                    {regulatedResources.map((resource) => (
+                      <a
+                        key={resource.id}
+                        href={resource.url}
+                        rel="noreferrer"
+                        target="_blank"
+                        className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-border/70 hover:bg-muted/50"
+                      >
+                        <div>
+                          <div className="font-medium text-foreground">{resource.title}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {resource.sourceName}
+                          </div>
+                        </div>
+                        {resource.isOfficial ? (
+                          <span className="shrink-0 rounded border border-border/40 px-2 py-0.5 text-xs text-muted-foreground">
+                            Official
+                          </span>
+                        ) : null}
+                      </a>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

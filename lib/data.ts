@@ -10,33 +10,33 @@ import type {
 export const navItems: NavItem[] = [
   {
     href: "/",
-    label: "Overview",
-    description: "Issue map, route overview, and milestone context.",
+    label: "Dashboard",
+    description: "Monthly overview and spending summary.",
   },
   {
     href: "/accounts",
     label: "Accounts",
-    description: "Manual account setup and balance foundations.",
+    description: "Track cash, mobile money, bank, SACCO, and debt.",
   },
   {
     href: "/transactions",
     label: "Transactions",
-    description: "Money movement, categories, transfers, and imports.",
+    description: "Record income, expenses, transfers, and savings.",
   },
   {
     href: "/goals",
     label: "Goals",
-    description: "Emergency fund and goal planning surfaces.",
+    description: "Emergency fund and savings goal tracking.",
   },
   {
     href: "/investment-compass",
-    label: "Investment Compass",
-    description: "Deterministic guidance and local product framing.",
+    label: "Compass",
+    description: "Rule-based guidance for Uganda investments.",
   },
   {
     href: "/learn",
-    label: "Learn Uganda",
-    description: "Curated official sources and literacy content.",
+    label: "Learn",
+    description: "Official Uganda finance sources and references.",
   },
 ];
 
@@ -157,32 +157,32 @@ export const modulePreviews: ModulePreview[] = [
   {
     href: "/accounts",
     title: "Accounts",
-    summary: "Manual account setup for cash, mobile money, banks, SACCOs, debt, and investment containers.",
-    stage: "Issue #4 input",
+    summary: "Track balances across cash, mobile money, bank, SACCO, and debt accounts.",
+    stage: "Active",
   },
   {
     href: "/transactions",
     title: "Transactions",
-    summary: "Transaction and CSV surfaces that will carry category, transfer, and import logic.",
-    stage: "Issues #5-#7 input",
+    summary: "Record income, expenses, savings contributions, and transfers.",
+    stage: "Active",
   },
   {
     href: "/goals",
     title: "Goals",
-    summary: "Goal and emergency-fund pages ready for the moat-building flows in iteration 3.",
-    stage: "Issue #8 input",
+    summary: "Set savings targets and track emergency fund progress.",
+    stage: "Active",
   },
   {
     href: "/investment-compass",
     title: "Investment Compass",
-    summary: "Dedicated guidance route for time horizon and suitability rules.",
-    stage: "Issue #9 input",
+    summary: "Rule-based guidance matched to your time horizon and liquidity needs.",
+    stage: "Active",
   },
   {
     href: "/learn",
     title: "Learn Uganda",
-    summary: "A distinct educational route for local official sources and reference content.",
-    stage: "Issue #9 input",
+    summary: "Official sources for regulated investing and institution verification.",
+    stage: "Active",
   },
 ];
 

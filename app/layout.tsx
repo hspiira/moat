@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme-provider";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Moat",
-  description: "Moat is a personal finance app scaffold",
+  title: "Moat — Personal Finance",
+  description: "Track your money, build your financial moat.",
 };
 
 export default function RootLayout({
@@ -16,8 +17,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", "font-sans", geist.variable)}>
-      <body>{children}</body>
+    <html lang="en" className={cn(geist.variable)} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

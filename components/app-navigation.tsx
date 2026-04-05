@@ -2,40 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { IconMoon, IconSun } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { navItems } from "@/lib/data";
 
 export function AppNavigation() {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  function toggleTheme() {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }
 
   return (
-    <Card className="border-border/70 bg-background/95 shadow-lg shadow-primary/5">
-      <CardContent className="flex flex-col gap-5 px-4 py-4 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
+    <Card className="border-border/40 bg-card shadow-none">
+      <CardContent className="flex flex-col gap-4 px-4 py-4 sm:px-5">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-base font-semibold tracking-tight text-foreground">
               Moat
-            </Badge>
-            <div>
-              <p className="text-lg font-semibold tracking-tight">
-                Routed app shell for issue #2
-              </p>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Home, accounts, transactions, goals, Investment Compass, and Learn
-                Uganda now have dedicated surfaces.
-              </p>
-            </div>
-          </div>
+            </span>
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              — Personal finance
+            </span>
+          </Link>
 
-          <Button asChild variant="outline">
-            <Link href="/">Back to overview</Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            {mounted && resolvedTheme === "dark" ? (
+              <IconSun className="h-4 w-4" />
+            ) : (
+              <IconMoon className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
-        <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+        <nav className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
 
@@ -44,14 +60,14 @@ export function AppNavigation() {
                 key={item.href}
                 href={item.href}
                 className={[
-                  "rounded-lg border px-3 py-3 transition-colors",
+                  "rounded-md border px-3 py-2.5 text-sm transition-colors",
                   isActive
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border/70 bg-background/75 text-muted-foreground hover:bg-muted",
+                    ? "border-border/60 bg-muted text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-muted/50 hover:text-foreground",
                 ].join(" ")}
               >
-                <div className="text-sm font-medium text-foreground">{item.label}</div>
-                <div className="mt-1 text-xs leading-5">{item.description}</div>
+                <div className="font-medium">{item.label}</div>
+                <div className="mt-0.5 text-xs leading-4 opacity-70">{item.description}</div>
               </Link>
             );
           })}
