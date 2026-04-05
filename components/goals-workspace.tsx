@@ -8,7 +8,6 @@ import { applyGoalTransactions, getGoalContributionPlan } from "@/lib/domain/goa
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Goal, GoalType, Transaction, UserProfile } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +16,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 const repositories = createIndexedDbRepositories();
@@ -56,12 +64,18 @@ function getCurrentMonth() {
 }
 
 function sortGoals(goals: Goal[]) {
-  return [...goals].sort((left, right) => left.priority - right.priority);
+  return [...goals].sort((a, b) => a.priority - b.priority);
 }
 
-function labelGoalType(goalType: GoalType) {
-  return goalType.replaceAll("_", " ");
-}
+const goalTypeLabels: Record<GoalType, string> = {
+  emergency_fund: "Emergency Fund",
+  rent_buffer: "Rent Buffer",
+  school_fees: "School Fees",
+  land_savings: "Land Savings",
+  business_capital: "Business Capital",
+  education: "Education",
+  house_construction: "House / Construction",
+};
 
 export function GoalsWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -103,13 +117,13 @@ export function GoalsWorkspace() {
       setAccounts(reconciledAccounts);
       setGoals(hydratedGoals);
       setTransactions(storedTransactions);
-      setGoalForm((current) => ({
-        ...current,
-        linkedAccountId: current.linkedAccountId || reconciledAccounts[0]?.id || "",
+      setGoalForm((c) => ({
+        ...c,
+        linkedAccountId: c.linkedAccountId || reconciledAccounts[0]?.id || "",
       }));
     } catch (loadError) {
       setError(
-        loadError instanceof Error ? loadError.message : "Unable to load goals workspace.",
+        loadError instanceof Error ? loadError.message : "Unable to load goals.",
       );
     } finally {
       setIsLoading(false);
@@ -128,14 +142,11 @@ export function GoalsWorkspace() {
     [currentMonth, transactions],
   );
   const emergencyFundSuggestion = monthlySummary.outflow * 3;
-  const emergencyFundGoal = goals.find((goal) => goal.goalType === "emergency_fund") ?? null;
+  const emergencyFundGoal = goals.find((g) => g.goalType === "emergency_fund") ?? null;
 
   async function handleGoalSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!profile) {
-      return;
-    }
+    if (!profile) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -150,23 +161,22 @@ export function GoalsWorkspace() {
         name: goalForm.name.trim(),
         goalType: goalForm.goalType,
         targetAmount: Number(goalForm.targetAmount),
-        currentAmount: goals.find((goal) => goal.id === goalId)?.currentAmount ?? 0,
+        currentAmount: goals.find((g) => g.id === goalId)?.currentAmount ?? 0,
         targetDate: goalForm.targetDate,
         priority: Number(goalForm.priority),
         linkedAccountId: goalForm.linkedAccountId || undefined,
-        createdAt: goals.find((goal) => goal.id === goalId)?.createdAt ?? timestamp,
+        createdAt: goals.find((g) => g.id === goalId)?.createdAt ?? timestamp,
         updatedAt: timestamp,
       };
 
       await repositories.goals.upsert(nextGoal);
-      setGoalForm({
-        ...defaultGoalForm,
-        linkedAccountId: accounts[0]?.id ?? "",
-      });
+      setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save goal.");
+      setError(
+        submitError instanceof Error ? submitError.message : "Unable to save goal.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -187,248 +197,220 @@ export function GoalsWorkspace() {
   async function handleDeleteGoal(goalId: string) {
     setIsSubmitting(true);
     setError(null);
-
     try {
       await repositories.goals.remove(goalId);
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
-        setGoalForm({
-          ...defaultGoalForm,
-          linkedAccountId: accounts[0]?.id ?? "",
-        });
+        setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       }
       await loadWorkspace();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete goal.");
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Unable to delete goal.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const hasSetup = Boolean(profile);
-
   return (
-    <div className="grid gap-6">
-      <Card className="border-border/70 bg-background/95 shadow-lg shadow-primary/5">
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.45fr_0.85fr] lg:p-8">
-          <div className="space-y-4">
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
-              Issue #8
-            </Badge>
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                Goals and emergency fund planning
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                This route now tracks target-based goals, calculates monthly
-                contribution plans, and treats the emergency fund as the first
-                financial moat priority.
-              </p>
-            </div>
-          </div>
-
-          <Card className="border-border/70 bg-muted/35 shadow-none">
-            <CardHeader>
-              <Badge variant="outline" className="w-fit bg-background/70">
-                Emergency fund
-              </Badge>
-              <CardTitle>
-                {emergencyFundGoal
-                  ? formatCurrency(emergencyFundGoal.currentAmount)
-                  : "No emergency fund goal yet"}
-              </CardTitle>
-              <CardDescription className="leading-7">
-                Suggested emergency fund target based on this month&apos;s tracked
-                outflow: {formatCurrency(emergencyFundSuggestion)}.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <div>Tracked goals: {goals.length}</div>
-              <div>Saved accounts available: {accounts.length}</div>
-              <div>Current month outflow: {formatCurrency(monthlySummary.outflow)}</div>
+    <div className="grid gap-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Goals</h1>
+          <p className="text-sm text-muted-foreground">
+            Set targets, track progress, and build your financial moat.
+          </p>
+        </div>
+        {emergencyFundGoal ? (
+          <Card className="border-border/40 bg-muted/30 shadow-none">
+            <CardContent className="px-4 py-3 text-sm">
+              <div className="text-xs text-muted-foreground">Emergency fund</div>
+              <div className="font-medium tabular-nums">
+                {formatCurrency(emergencyFundGoal.currentAmount)}
+              </div>
             </CardContent>
           </Card>
-        </CardContent>
-      </Card>
+        ) : null}
+      </div>
 
       {error ? (
         <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-6 py-5 text-sm text-destructive">
-            {error}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {!hasSetup && !isLoading ? (
-        <Card className="border-border/70 bg-background/90">
-          <CardContent className="px-6 py-8 text-sm leading-7 text-muted-foreground">
-            Complete onboarding and record some account or transaction data before
-            setting goals.
-          </CardContent>
+          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
         </Card>
       ) : null}
 
       {isLoading ? (
-        <Card className="border-border/70 bg-background/90">
-          <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-            Loading goals workspace...
+        <Card className="border-border/40 shadow-none">
+          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
+            Loading goals...
           </CardContent>
         </Card>
       ) : null}
 
-      {hasSetup && !isLoading ? (
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <Card className="border-border/70 bg-background/90">
+      {!isLoading && !profile ? (
+        <Card className="border-border/40 shadow-none">
+          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
+            Complete onboarding before setting goals.{" "}
+            <a href="/onboarding" className="underline underline-offset-4 hover:text-foreground">
+              Set up your profile
+            </a>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!isLoading && profile ? (
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <Card className="border-border/40 shadow-none">
             <CardHeader>
-              <CardTitle>{editingGoalId ? "Edit goal" : "Create goal"}</CardTitle>
-              <CardDescription className="leading-7">
-                Goals persist through the repository layer and progress is hydrated
-                from savings contribution transactions.
+              <CardTitle className="text-base">
+                {editingGoalId ? "Edit goal" : "New goal"}
+              </CardTitle>
+              <CardDescription>
+                {goalForm.goalType === "emergency_fund"
+                  ? `Suggested target based on 3x monthly outflow: ${formatCurrency(emergencyFundSuggestion)}`
+                  : "Set a target amount and deadline for this goal."}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleGoalSubmit}>
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Goal name</span>
-                  <input
-                    className="rounded-lg border border-border bg-background px-3 py-2"
+                <div className="grid gap-2">
+                  <Label htmlFor="goal-name">Goal name</Label>
+                  <Input
+                    id="goal-name"
                     value={goalForm.name}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
+                    onChange={(e) => setGoalForm((c) => ({ ...c, name: e.target.value }))}
+                    placeholder="e.g. Emergency savings"
                     required
                   />
-                </label>
+                </div>
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Goal type</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
+                <div className="grid gap-2">
+                  <Label htmlFor="goal-type">Goal type</Label>
+                  <Select
                     value={goalForm.goalType}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        goalType: event.target.value as GoalType,
-                      }))
+                    onValueChange={(value) =>
+                      setGoalForm((c) => ({ ...c, goalType: value as GoalType }))
                     }
                   >
-                    {defaultGoalTypes.map((goalType) => (
-                      <option key={goalType} value={goalType}>
-                        {labelGoalType(goalType)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <SelectTrigger id="goal-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {defaultGoalTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {goalTypeLabels[type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Target amount</span>
-                  <input
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    inputMode="decimal"
-                    value={goalForm.targetAmount}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        targetAmount: event.target.value,
-                      }))
-                    }
-                    required
-                  />
-                </label>
+                <div className="grid gap-2">
+                  <Label htmlFor="target-amount">Target amount (UGX)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="target-amount"
+                      inputMode="decimal"
+                      value={goalForm.targetAmount}
+                      onChange={(e) =>
+                        setGoalForm((c) => ({ ...c, targetAmount: e.target.value }))
+                      }
+                      required
+                    />
+                    {goalForm.goalType === "emergency_fund" && emergencyFundSuggestion > 0 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() =>
+                          setGoalForm((c) => ({
+                            ...c,
+                            targetAmount: String(Math.round(emergencyFundSuggestion)),
+                          }))
+                        }
+                      >
+                        Use suggested
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Target date</span>
-                  <input
-                    className="rounded-lg border border-border bg-background px-3 py-2"
+                <div className="grid gap-2">
+                  <Label htmlFor="target-date">Target date</Label>
+                  <Input
+                    id="target-date"
                     type="date"
                     value={goalForm.targetDate}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        targetDate: event.target.value,
-                      }))
+                    onChange={(e) =>
+                      setGoalForm((c) => ({ ...c, targetDate: e.target.value }))
                     }
                     required
                   />
-                </label>
+                </div>
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Priority</span>
-                  <input
-                    className="rounded-lg border border-border bg-background px-3 py-2"
+                <div className="grid gap-2">
+                  <Label htmlFor="goal-priority">Priority (1 = highest)</Label>
+                  <Input
+                    id="goal-priority"
                     inputMode="numeric"
                     min="1"
                     max="10"
                     value={goalForm.priority}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        priority: event.target.value,
-                      }))
+                    onChange={(e) =>
+                      setGoalForm((c) => ({ ...c, priority: e.target.value }))
                     }
                     required
                   />
-                </label>
+                </div>
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium">Linked savings account</span>
-                  <select
-                    className="rounded-lg border border-border bg-background px-3 py-2"
-                    value={goalForm.linkedAccountId}
-                    onChange={(event) =>
-                      setGoalForm((current) => ({
-                        ...current,
-                        linkedAccountId: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Any account</option>
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {accounts.length > 0 ? (
+                  <div className="grid gap-2">
+                    <Label htmlFor="linked-account">Linked savings account</Label>
+                    <Select
+                      value={goalForm.linkedAccountId || "__none__"}
+                      onValueChange={(value) =>
+                        setGoalForm((c) => ({
+                          ...c,
+                          linkedAccountId: value === "__none__" ? "" : value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="linked-account">
+                        <SelectValue placeholder="Any account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Any account</SelectItem>
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
 
-                <div className="flex flex-wrap gap-3">
-                  <Button disabled={isSubmitting} type="submit">
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={isSubmitting} type="submit" size="sm">
                     {isSubmitting
                       ? "Saving..."
                       : editingGoalId
                         ? "Update goal"
                         : "Create goal"}
                   </Button>
-                  {goalForm.goalType === "emergency_fund" ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setGoalForm((current) => ({
-                          ...current,
-                          targetAmount: String(Math.round(emergencyFundSuggestion)),
-                        }))
-                      }
-                    >
-                      Use suggested emergency target
-                    </Button>
-                  ) : null}
                   {editingGoalId ? (
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
                       onClick={() => {
                         setEditingGoalId(null);
-                        setGoalForm({
-                          ...defaultGoalForm,
-                          linkedAccountId: accounts[0]?.id ?? "",
-                        });
+                        setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
                       }}
                     >
-                      Cancel edit
+                      Cancel
                     </Button>
                   ) : null}
                 </div>
@@ -436,87 +418,100 @@ export function GoalsWorkspace() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-background/90">
+          <Card className="border-border/40 shadow-none">
             <CardHeader>
-              <CardTitle>Goal plans</CardTitle>
-              <CardDescription className="leading-7">
-                Monthly contribution targets are recalculated from the saved goal
-                definition and current savings-linked progress.
+              <CardTitle className="text-base">Your goals</CardTitle>
+              <CardDescription>
+                Monthly contribution targets are calculated from target, deadline, and current progress.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid gap-3">
               {goals.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-4 py-10 text-sm text-muted-foreground">
-                  No goals created yet.
+                <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+                  No goals yet. Create your first goal to start building.
                 </div>
               ) : (
                 goals.map((goal) => {
                   const plan = getGoalContributionPlan(goal);
-                  const linkedAccount = accounts.find(
-                    (account) => account.id === goal.linkedAccountId,
-                  );
+                  const linkedAccount = accounts.find((a) => a.id === goal.linkedAccountId);
+                  const progressPercent =
+                    goal.targetAmount > 0
+                      ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100))
+                      : 0;
 
                   return (
-                    <Card key={goal.id} className="border-border/70 bg-muted/35 shadow-none">
-                      <CardHeader className="space-y-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">{labelGoalType(goal.goalType)}</Badge>
-                              <span className="text-sm font-medium text-foreground">
-                                {goal.name}
-                              </span>
+                    <Card
+                      key={goal.id}
+                      className="border-border/40 bg-muted/30 shadow-none"
+                    >
+                      <CardContent className="px-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <div className="text-sm font-medium text-foreground">
+                              {goal.name}
                             </div>
-                            <CardDescription className="leading-6">
-                              Priority {goal.priority}
-                              {linkedAccount ? ` • ${linkedAccount.name}` : " • any savings account"}
-                            </CardDescription>
+                            <div className="text-xs text-muted-foreground">
+                              {goalTypeLabels[goal.goalType]}
+                              {linkedAccount ? ` · ${linkedAccount.name}` : ""}
+                            </div>
                           </div>
-
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
+                              className="h-7 text-xs"
                               onClick={() => beginGoalEdit(goal)}
                             >
                               Edit
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
+                              className="h-7 text-xs text-destructive hover:text-destructive"
                               onClick={() => void handleDeleteGoal(goal.id)}
                             >
                               Delete
                             </Button>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-                        <div>
-                          <div className="font-medium text-foreground">Current progress</div>
-                          <div>
-                            {formatCurrency(goal.currentAmount)} of{" "}
-                            {formatCurrency(goal.targetAmount)}
+
+                        <div className="mt-3">
+                          <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{formatCurrency(goal.currentAmount)}</span>
+                            <span>{progressPercent}% of {formatCurrency(goal.targetAmount)}</span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{ width: `${progressPercent}%` }}
+                            />
                           </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-foreground">Monthly target</div>
-                          <div>{formatCurrency(plan.monthlyContribution)}</div>
+
+                        <Separator className="my-3" />
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <div className="text-xs text-muted-foreground">Monthly target</div>
+                            <div className="font-medium tabular-nums">
+                              {formatCurrency(plan.monthlyContribution)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Deadline</div>
+                            <div className="font-medium">{goal.targetDate}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-foreground">Remaining amount</div>
-                          <div>{formatCurrency(plan.remainingAmount)}</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-foreground">Target date</div>
-                          <div>{goal.targetDate}</div>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Separator className="mb-3" />
-                          {plan.isBehindSchedule
-                            ? "This goal is close to its deadline and needs immediate attention."
-                            : `${plan.monthsRemaining} month(s) remain to reach this goal.`}
-                        </div>
+
+                        {plan.isBehindSchedule ? (
+                          <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+                            This goal is behind schedule — increase contributions to stay on track.
+                          </p>
+                        ) : (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            {plan.monthsRemaining} month{plan.monthsRemaining !== 1 ? "s" : ""} remaining.
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   );

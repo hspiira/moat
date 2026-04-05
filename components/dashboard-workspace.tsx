@@ -15,7 +15,6 @@ import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -93,109 +92,43 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   );
 
   const topAccounts = [...accounts]
-    .filter((account) => !account.isArchived)
-    .sort((left, right) => right.balance - left.balance)
+    .filter((a) => !a.isArchived)
+    .sort((a, b) => b.balance - a.balance)
     .slice(0, 4);
 
-  return (
-    <div className="grid gap-6">
-      <Card className="overflow-hidden border-border/70 bg-background/95 shadow-lg shadow-primary/5">
-        <CardContent className="grid gap-6 p-0 lg:grid-cols-[1.5fr_0.9fr]">
-          <div className="space-y-6 px-6 py-8 sm:px-8 sm:py-10">
-            <div className="space-y-4">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/15">
-                Issue #7
-              </Badge>
-              <div className="space-y-4">
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-                  {profile.displayName}&apos;s monthly dashboard
-                </h1>
-                <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                  The overview route now reads from persisted data and converts
-                  transactions into a monthly cash-flow picture, top spending
-                  categories, and actionable prompts.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild>
-                <Link href="/transactions">Record or import transactions</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/accounts">Manage accounts</Link>
-              </Button>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                { label: "Inflow", value: formatCurrency(summary.inflow) },
-                { label: "Outflow", value: formatCurrency(summary.outflow) },
-                { label: "Savings", value: formatCurrency(summary.savings) },
-                {
-                  label: "Savings rate",
-                  value: `${Math.round(savingsRate * 100)}%`,
-                },
-              ].map((item) => (
-                <Card
-                  className="border-border/70 bg-muted/50 shadow-none"
-                  key={item.label}
-                  size="sm"
-                >
-                  <CardHeader className="space-y-2">
-                    <CardDescription className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                      {item.label}
-                    </CardDescription>
-                    <CardTitle className="text-sm leading-6 font-medium">
-                      {item.value}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </div>
+  const monthLabel = new Date(month + "-01").toLocaleString("en-UG", {
+    month: "long",
+    year: "numeric",
+  });
 
-          <Card className="m-4 border-border/70 bg-primary/5 shadow-none">
-            <CardHeader className="space-y-3">
-              <Badge variant="outline" className="w-fit bg-background/70">
-                Monthly prompts
-              </Badge>
-              <CardTitle className="text-2xl">What needs attention now</CardTitle>
-              <CardDescription className="text-sm leading-7">
-                These prompts are generated from saved account and transaction data,
-                not placeholder copy.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
-                {insights.length === 0 ? (
-                  <li>No monthly prompts yet. Add more transaction history for a richer dashboard.</li>
-                ) : (
-                  insights.map((insight) => (
-                    <li className="flex gap-2" key={insight.id}>
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                      <span>
-                        <span className="font-medium text-foreground">{insight.title}:</span>{" "}
-                        {insight.body}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+  return (
+    <div className="grid gap-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {profile.displayName}&apos;s overview
+          </h1>
+          <p className="text-sm text-muted-foreground">{monthLabel}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/transactions">Add transaction</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/accounts">Accounts</Link>
+          </Button>
+        </div>
+      </div>
 
       {error ? (
         <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-6 py-5 text-sm text-destructive">
-            {error}
-          </CardContent>
+          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
         </Card>
       ) : null}
 
       {isLoading ? (
-        <Card className="border-border/70 bg-background/90">
-          <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+        <Card className="border-border/40 shadow-none">
+          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
             Loading dashboard...
           </CardContent>
         </Card>
@@ -203,109 +136,144 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
       {!isLoading ? (
         <>
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <Card className="border-border/70 bg-background/90">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: "Inflow", value: formatCurrency(summary.inflow) },
+              { label: "Outflow", value: formatCurrency(summary.outflow) },
+              { label: "Savings", value: formatCurrency(summary.savings) },
+              {
+                label: "Savings rate",
+                value: `${Math.round(savingsRate * 100)}%`,
+              },
+            ].map((item) => (
+              <Card key={item.label} className="border-border/40 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardDescription>{item.label}</CardDescription>
+                  <CardTitle className="text-xl tabular-nums">{item.value}</CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <Card className="border-border/40 shadow-none">
               <CardHeader>
-                <CardTitle>Top spending categories this month</CardTitle>
-                <CardDescription className="leading-7">
-                  Transfer records are excluded so this reflects actual spending
-                  and debt payments only.
+                <CardTitle className="text-base">Top spending categories</CardTitle>
+                <CardDescription>
+                  Transfers excluded — this shows actual spending and debt payments only.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-4">
+              <CardContent className="grid gap-2">
                 {summary.topCategories.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border px-4 py-10 text-sm text-muted-foreground">
-                    No spending categories recorded this month yet.
+                  <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+                    No spending recorded this month.{" "}
+                    <Link href="/transactions" className="underline underline-offset-4 hover:text-foreground">
+                      Add transactions
+                    </Link>
                   </div>
                 ) : (
                   summary.topCategories.map((category) => (
-                    <Card
+                    <div
                       key={category.categoryId}
-                      className="border-border/70 bg-muted/35 shadow-none"
+                      className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-muted/30 px-4 py-3"
                     >
-                      <CardContent className="flex items-center justify-between gap-4 px-4 py-4">
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {category.categoryName}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Category spend for {month}
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium text-foreground">
-                          {formatCurrency(category.amount)}
-                        </div>
-                      </CardContent>
-                    </Card>
+                      <span className="text-sm text-foreground">{category.categoryName}</span>
+                      <span className="text-sm font-medium tabular-nums">
+                        {formatCurrency(category.amount)}
+                      </span>
+                    </div>
                   ))
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-border/70 bg-background/90">
-              <CardHeader>
-                <CardTitle>Tracked account balances</CardTitle>
-                <CardDescription className="leading-7">
-                  Balances are reconciled from opening balance plus saved transaction history.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4">
-                {topAccounts.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border px-4 py-10 text-sm text-muted-foreground">
-                    No accounts available yet.
-                  </div>
-                ) : (
-                  topAccounts.map((account) => (
-                    <Card
-                      key={account.id}
-                      className="border-border/70 bg-muted/35 shadow-none"
-                    >
-                      <CardContent className="flex items-center justify-between gap-4 px-4 py-4">
+            <div className="grid gap-5 content-start">
+              <Card className="border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Account balances</CardTitle>
+                  <CardDescription>
+                    Reconciled from opening balance and transaction history.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  {topAccounts.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+                      No accounts.{" "}
+                      <Link href="/accounts" className="underline underline-offset-4 hover:text-foreground">
+                        Add an account
+                      </Link>
+                    </div>
+                  ) : (
+                    topAccounts.map((account) => (
+                      <div
+                        key={account.id}
+                        className="flex items-center justify-between gap-4 rounded-md border border-border/40 bg-muted/30 px-4 py-3"
+                      >
                         <div>
-                          <div className="font-medium text-foreground">{account.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm font-medium text-foreground">
+                            {account.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
                             {account.type.replaceAll("_", " ")}
                           </div>
                         </div>
-                        <div className="text-sm font-medium text-foreground">
+                        <span className="text-sm font-medium tabular-nums">
                           {formatCurrency(account.balance)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/40 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">This month</CardTitle>
+                  <CardDescription>
+                    Prompts based on your saved data.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {insights.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Add more transactions for personalised prompts.
+                    </p>
+                  ) : (
+                    <ul className="grid gap-3">
+                      {insights.map((insight) => (
+                        <li key={insight.id} className="flex gap-2.5 text-sm">
+                          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                          <span className="text-muted-foreground leading-6">
+                            <span className="font-medium text-foreground">{insight.title}: </span>
+                            {insight.body}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          <section className="space-y-6">
-            <div className="space-y-2">
-              <Badge variant="outline">Modules</Badge>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                Continue implementation from the dashboard
-              </h2>
-              <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                The dashboard is now live. The remaining routed modules are still the next
-                implementation surfaces for goals, guidance, and education.
-              </p>
+          <section className="grid gap-4">
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-medium text-foreground">Continue</h2>
+              <p className="text-xs text-muted-foreground">Jump to any section.</p>
             </div>
-
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {modulePreviews.map((module) => (
-                <Card key={module.href} className="border-border/70 bg-background/90">
-                  <CardHeader className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <Badge variant="outline">{module.stage}</Badge>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={module.href}>Open</Link>
-                      </Button>
-                    </div>
-                    <CardTitle>{module.title}</CardTitle>
-                    <CardDescription className="leading-7">
-                      {module.summary}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                <Link
+                  key={module.href}
+                  href={module.href}
+                  className="group rounded-md border border-border/40 bg-muted/30 px-4 py-4 transition-colors hover:border-border/70 hover:bg-muted/50"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-foreground">{module.title}</span>
+                    <span className="text-xs text-muted-foreground">{module.stage}</span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{module.summary}</p>
+                </Link>
               ))}
             </div>
           </section>

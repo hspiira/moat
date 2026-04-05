@@ -4,12 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { DashboardWorkspace } from "@/components/dashboard-workspace";
 import { HomeOverview } from "@/components/home-overview";
-import {
-  appSections,
-  implementationMilestones,
-  modulePreviews,
-  productHighlights,
-} from "@/lib/data";
+import { modulePreviews } from "@/lib/data";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { UserProfile } from "@/lib/types";
 
@@ -37,12 +32,5 @@ export function HomeRoute() {
     return <DashboardWorkspace profile={profile} />;
   }
 
-  return (
-    <HomeOverview
-      sections={appSections}
-      milestones={implementationMilestones}
-      highlights={productHighlights}
-      modulePreviews={modulePreviews}
-    />
-  );
+  return <HomeOverview modulePreviews={modulePreviews} />;
 }
