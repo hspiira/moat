@@ -1,11 +1,10 @@
 import { AppShell } from "@/components/app-shell";
-import { ModulePage } from "@/components/module-page";
-import { moduleDetails } from "@/lib/data";
+import { InvestmentCompassWorkspace } from "@/components/investment-compass-workspace";
 
 export default function InvestmentCompassPage() {
   return (
     <AppShell>
-      <ModulePage detail={moduleDetails["investment-compass"]} />
+      <InvestmentCompassWorkspace />
     </AppShell>
   );
 }

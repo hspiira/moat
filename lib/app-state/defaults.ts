@@ -58,6 +58,22 @@ export function buildDefaultCategories(userId: string): Category[] {
 
 export const defaultResourceLinks: ResourceLink[] = [
   {
+    id: "resource:finscope-2023",
+    title: "FinScope Uganda 2023 survey findings",
+    sourceName: "FSD Uganda",
+    url: "https://fsduganda.or.ug/wp-content/uploads/2024/04/FinScope-Uganda-2023-Findings-Summary.pdf",
+    topic: "money-behaviour",
+    isOfficial: true,
+  },
+  {
+    id: "resource:ubos-labour",
+    title: "Uganda labour statistics and household context",
+    sourceName: "UBOS",
+    url: "https://www.ubos.org/labour/",
+    topic: "money-behaviour",
+    isOfficial: true,
+  },
+  {
     id: "resource:bills-and-bonds",
     title: "Bank of Uganda bills and bonds calendar",
     sourceName: "Bank of Uganda",
@@ -82,10 +98,26 @@ export const defaultResourceLinks: ResourceLink[] = [
     isOfficial: true,
   },
   {
+    id: "resource:urbra",
+    title: "Uganda Retirement Benefits Regulatory Authority",
+    sourceName: "URBRA",
+    url: "https://urbra.go.ug/",
+    topic: "regulated-investing",
+    isOfficial: true,
+  },
+  {
     id: "resource:umra",
     title: "Uganda Microfinance Regulatory Authority",
     sourceName: "UMRA",
     url: "https://umra.go.ug/",
+    topic: "institution-verification",
+    isOfficial: true,
+  },
+  {
+    id: "resource:cma-investor-education",
+    title: "CMA investor education resources",
+    sourceName: "Capital Markets Authority Uganda",
+    url: "https://cmauganda.co.ug/",
     topic: "institution-verification",
     isOfficial: true,
   },

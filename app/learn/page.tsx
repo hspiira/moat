@@ -1,11 +1,10 @@
 import { AppShell } from "@/components/app-shell";
-import { ModulePage } from "@/components/module-page";
-import { moduleDetails } from "@/lib/data";
+import { LearnWorkspace } from "@/components/learn-workspace";
 
 export default function LearnPage() {
   return (
     <AppShell>
-      <ModulePage detail={moduleDetails.learn} />
+      <LearnWorkspace />
     </AppShell>
   );
 }
