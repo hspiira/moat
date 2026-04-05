@@ -32,7 +32,7 @@ export function AppNavigation() {
               Moat
             </span>
             <span className="hidden text-sm text-muted-foreground sm:inline">
-              — Personal finance for Uganda
+              — Personal finance
             </span>
           </Link>
 
