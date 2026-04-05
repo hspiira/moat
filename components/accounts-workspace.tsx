@@ -4,7 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { AmountIndicator } from "@/components/amount-indicator";
-import { getAccountTotals } from "@/lib/domain/accounts";
+import { getAccountTotals, normalizeOpeningBalance } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, AccountType } from "@/lib/types";
@@ -90,7 +90,10 @@ export function AccountsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const accountId = editingAccountId ?? `account:${crypto.randomUUID()}`;
-      const openingBalance = Number(accountForm.openingBalance);
+      const openingBalance = normalizeOpeningBalance(
+        accountForm.type,
+        Number(accountForm.openingBalance),
+      );
       const wasEditing = Boolean(editingAccountId);
 
       await repositories.accounts.upsert({
@@ -124,13 +127,13 @@ export function AccountsWorkspace() {
 
   function beginAccountEdit(account: Account) {
     setEditingAccountId(account.id);
-    setAccountForm({
-      name: account.name,
-      type: account.type,
-      institutionName: account.institutionName ?? "",
-      openingBalance: String(account.balance),
-      notes: account.notes ?? "",
-    });
+      setAccountForm({
+        name: account.name,
+        type: account.type,
+        institutionName: account.institutionName ?? "",
+        openingBalance: String(Math.abs(account.openingBalance)),
+        notes: account.notes ?? "",
+      });
   }
 
   const accountTotals = getAccountTotals(accounts);

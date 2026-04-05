@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { applyGoalTransactions, getGoalContributionPlan } from "@/lib/domain/goals";
-import type { Goal, Transaction } from "@/lib/types";
+import { getGoalContributionPlan } from "@/lib/domain/goals";
+import type { Goal } from "@/lib/types";
 
 const goal: Goal = {
   id: "goal:emergency",
@@ -26,45 +26,13 @@ describe("goal domain rules", () => {
     expect(plan.monthlyContribution).toBe(200_000);
   });
 
-  it("hydrates goal progress from linked savings contribution transactions", () => {
-    const transactions: Transaction[] = [
-      {
-        id: "tx:saving-1",
-        userId: "user:default",
-        accountId: "account:savings",
-        type: "savings_contribution",
-        amount: 150_000,
-        occurredOn: "2026-04-04",
-        categoryId: "category:savings",
-        createdAt: "2026-04-04T00:00:00.000Z",
-        updatedAt: "2026-04-04T00:00:00.000Z",
-      },
-      {
-        id: "tx:saving-2",
-        userId: "user:default",
-        accountId: "account:savings",
-        type: "savings_contribution",
-        amount: 100_000,
-        occurredOn: "2026-04-06",
-        categoryId: "category:savings",
-        createdAt: "2026-04-06T00:00:00.000Z",
-        updatedAt: "2026-04-06T00:00:00.000Z",
-      },
-      {
-        id: "tx:other-account",
-        userId: "user:default",
-        accountId: "account:other",
-        type: "savings_contribution",
-        amount: 300_000,
-        occurredOn: "2026-04-08",
-        categoryId: "category:savings",
-        createdAt: "2026-04-08T00:00:00.000Z",
-        updatedAt: "2026-04-08T00:00:00.000Z",
-      },
-    ];
+  it("builds a plan from explicit saved progress instead of inferring cross-goal allocations", () => {
+    const plan = getGoalContributionPlan(
+      { ...goal, currentAmount: 300_000 },
+      new Date("2026-04-15T00:00:00.000Z"),
+    );
 
-    const hydratedGoal = applyGoalTransactions(goal, transactions);
-
-    expect(hydratedGoal.currentAmount).toBe(250_000);
+    expect(plan.remainingAmount).toBe(900_000);
+    expect(plan.monthlyContribution).toBe(150_000);
   });
 });

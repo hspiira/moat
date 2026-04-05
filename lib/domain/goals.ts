@@ -1,4 +1,4 @@
-import type { Goal, GoalContributionPlan, Transaction } from "@/lib/types";
+import type { Goal, GoalContributionPlan } from "@/lib/types";
 
 function differenceInMonths(targetDate: string, referenceDate: Date): number {
   const target = new Date(targetDate);
@@ -26,20 +26,5 @@ export function getGoalContributionPlan(
     monthsRemaining,
     monthlyContribution,
     isBehindSchedule: remainingAmount > 0 && monthsRemaining <= 1,
-  };
-}
-
-export function applyGoalTransactions(goal: Goal, transactions: Transaction[]): Goal {
-  const contributions = transactions
-    .filter(
-      (transaction) =>
-        transaction.type === "savings_contribution" &&
-        (!goal.linkedAccountId || transaction.accountId === goal.linkedAccountId),
-    )
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-  return {
-    ...goal,
-    currentAmount: contributions,
   };
 }

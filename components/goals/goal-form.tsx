@@ -23,6 +23,7 @@ export type GoalFormState = {
   name: string;
   goalType: GoalType;
   targetAmount: string;
+  currentAmount: string;
   targetDate: string;
   priority: string;
   linkedAccountId: string;
@@ -32,6 +33,7 @@ export const defaultGoalForm: GoalFormState = {
   name: "",
   goalType: "emergency_fund",
   targetAmount: "",
+  currentAmount: "0",
   targetDate: "",
   priority: "1",
   linkedAccountId: "",
@@ -163,6 +165,17 @@ export function GoalForm({
                 </Button>
               ) : null}
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="current-amount">Current amount saved (UGX)</Label>
+            <Input
+              id="current-amount"
+              inputMode="decimal"
+              value={form.currentAmount}
+              onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}
+              required
+            />
           </div>
 
           <div className="grid gap-2">

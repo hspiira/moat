@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
 import type { Account, Transaction } from "@/lib/types";
 
 const account: Account = {
@@ -66,5 +66,11 @@ describe("reconcileAccountBalances", () => {
     const [reconciled] = reconcileAccountBalances([account], transactions);
 
     expect(reconciled.balance).toBe(75_000);
+  });
+
+  it("normalizes debt opening balances as liabilities", () => {
+    expect(normalizeOpeningBalance("debt", 500_000)).toBe(-500_000);
+    expect(normalizeOpeningBalance("debt", -500_000)).toBe(-500_000);
+    expect(normalizeOpeningBalance("cash", 500_000)).toBe(500_000);
   });
 });

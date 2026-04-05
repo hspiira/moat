@@ -120,4 +120,32 @@ describe("getMonthSummary", () => {
 
     expect(getSavingsRate(summary)).toBe(0.2);
   });
+
+  it("uses absolute magnitudes for non-transfer totals", () => {
+    const summary = getMonthSummary(
+      [
+        {
+          ...transactions[0],
+          id: "tx:negative-income",
+          amount: -2_000_000,
+        },
+        {
+          ...transactions[1],
+          id: "tx:negative-expense",
+          amount: -300_000,
+        },
+        {
+          ...transactions[2],
+          id: "tx:negative-savings",
+          amount: -400_000,
+        },
+      ],
+      categories,
+      "2026-04",
+    );
+
+    expect(summary.inflow).toBe(2_000_000);
+    expect(summary.outflow).toBe(300_000);
+    expect(summary.savings).toBe(400_000);
+  });
 });

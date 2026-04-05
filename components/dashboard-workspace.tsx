@@ -9,13 +9,8 @@ import {
   useState,
 } from "react";
 
-import { modulePreviews } from "@/lib/data";
 import { AmountIndicator } from "@/components/amount-indicator";
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { getMonthlyInsights } from "@/lib/domain/insights";
-import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,8 +18,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { modulePreviews } from "@/lib/data";
+import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getMonthlyInsights } from "@/lib/domain/insights";
+import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
+import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 const repositories = createIndexedDbRepositories();
+
+type DashboardWorkspaceProps = {
+  profile: UserProfile;
+};
+
+type PeriodFilter = "week" | "month" | "year" | "all";
+
+type PeriodWindow = {
+  current: Transaction[];
+  previous: Transaction[];
+  title: string;
+  caption: string;
+  comparisonLabel: string | null;
+  overviewLabel: string;
+};
+
+type ChangeMetric = {
+  kind: "delta" | "new" | "none";
+  value: number | null;
+};
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
@@ -34,33 +55,161 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+function getPeriodOverviewLabel(period: PeriodFilter, now: Date) {
+  if (period === "week") {
+    return "This week";
+  }
+
+  if (period === "year") {
+    return now.getFullYear().toString();
+  }
+
+  if (period === "all") {
+    return "All lifetime";
+  }
+
+  return new Intl.DateTimeFormat("en-UG", {
+    month: "long",
+    year: "numeric",
+  }).format(now);
 }
 
-function getPreviousMonth(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const date = new Date(Date.UTC(year, monthNumber - 1, 1));
-  date.setUTCMonth(date.getUTCMonth() - 1);
-  return date.toISOString().slice(0, 7);
+function getPeriodChartLabel(period: PeriodFilter) {
+  if (period === "week") {
+    return "Week";
+  }
+
+  if (period === "year") {
+    return "Year";
+  }
+
+  if (period === "all") {
+    return "Lifetime";
+  }
+
+  return "Month";
 }
 
 function getChangePercent(current: number, previous: number) {
-  if (previous === 0) {
-    return null;
+  if (previous === 0 && current === 0) {
+    return { kind: "none", value: null } satisfies ChangeMetric;
   }
 
-  return ((current - previous) / previous) * 100;
+  if (previous === 0) {
+    return { kind: "new", value: null } satisfies ChangeMetric;
+  }
+
+  return {
+    kind: "delta",
+    value: ((current - previous) / previous) * 100,
+  } satisfies ChangeMetric;
 }
 
-type DashboardWorkspaceProps = {
-  profile: UserProfile;
-};
+function startOfWeek(date: Date) {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function startOfMonth(date: Date) {
+  const copy = new Date(date);
+  copy.setDate(1);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function startOfYear(date: Date) {
+  const copy = new Date(date);
+  copy.setMonth(0, 1);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function shiftDate(date: Date, unit: "week" | "month" | "year", amount: number) {
+  const copy = new Date(date);
+  if (unit === "week") copy.setDate(copy.getDate() + amount * 7);
+  if (unit === "month") copy.setMonth(copy.getMonth() + amount);
+  if (unit === "year") copy.setFullYear(copy.getFullYear() + amount);
+  return copy;
+}
+
+function filterTransactionsByRange(
+  transactions: Transaction[],
+  start: Date,
+  end: Date,
+) {
+  return transactions.filter((transaction) => {
+    const occurredOn = new Date(`${transaction.occurredOn}T00:00:00`);
+    return occurredOn >= start && occurredOn < end;
+  });
+}
+
+function buildPeriodWindow(
+  transactions: Transaction[],
+  period: PeriodFilter,
+  now: Date,
+): PeriodWindow {
+  if (period === "all") {
+    const yearStart = startOfYear(now);
+
+    return {
+      current: transactions,
+      previous: filterTransactionsByRange(transactions, new Date(0), yearStart),
+      title: "Lifetime cash flow",
+      caption: "All recorded transactions since setup.",
+      comparisonLabel: "before this year",
+      overviewLabel: "All lifetime",
+    };
+  }
+
+  const currentStart =
+    period === "week"
+      ? startOfWeek(now)
+      : period === "month"
+        ? startOfMonth(now)
+        : startOfYear(now);
+  const currentEnd =
+    period === "week"
+      ? shiftDate(currentStart, "week", 1)
+      : period === "month"
+        ? shiftDate(currentStart, "month", 1)
+        : shiftDate(currentStart, "year", 1);
+  const previousStart =
+    period === "week"
+      ? shiftDate(currentStart, "week", -1)
+      : period === "month"
+        ? shiftDate(currentStart, "month", -1)
+        : shiftDate(currentStart, "year", -1);
+
+  return {
+    current: filterTransactionsByRange(transactions, currentStart, currentEnd),
+    previous: filterTransactionsByRange(transactions, previousStart, currentStart),
+    title:
+      period === "week"
+        ? "This week's cash flow"
+        : period === "month"
+          ? "This month's cash flow"
+          : "This year's cash flow",
+    caption:
+      period === "week"
+        ? "Transactions dated in the current calendar week."
+        : period === "month"
+          ? "Transactions dated in the current calendar month."
+          : "Transactions dated in the current calendar year.",
+    comparisonLabel:
+      period === "week" ? "last week" : period === "month" ? "last month" : "last year",
+    overviewLabel: getPeriodOverviewLabel(period, now),
+  };
+}
 
 export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [period, setPeriod] = useState<PeriodFilter>("month");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,36 +242,36 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     });
   }, [profile.id]);
 
-  const month = getCurrentMonth();
-
+  const periodWindow = useMemo(
+    () => buildPeriodWindow(transactions, period, new Date()),
+    [period, transactions],
+  );
+  const currentTransactions = periodWindow.current;
+  const previousTransactions = periodWindow.previous;
   const summary = useMemo(
-    () => getMonthSummary(transactions, categories, month),
-    [categories, month, transactions],
+    () => getSummaryForTransactions(currentTransactions, categories),
+    [categories, currentTransactions],
   );
-  const previousMonth = getPreviousMonth(month);
   const previousSummary = useMemo(
-    () => getMonthSummary(transactions, categories, previousMonth),
-    [categories, previousMonth, transactions],
+    () => getSummaryForTransactions(previousTransactions, categories),
+    [categories, previousTransactions],
   );
-
   const savingsRate = useMemo(() => getSavingsRate(summary), [summary]);
   const insights = useMemo(
-    () => getMonthlyInsights(summary, transactions, accounts, month),
-    [accounts, month, summary, transactions],
+    () => getMonthlyInsights(summary, currentTransactions, accounts, period),
+    [accounts, currentTransactions, period, summary],
   );
+  const chartLabel = getPeriodChartLabel(period);
 
   const topAccounts = [...accounts]
-    .filter((a) => !a.isArchived)
-    .sort((a, b) => b.balance - a.balance)
+    .filter((account) => !account.isArchived)
+    .sort((left, right) => right.balance - left.balance)
     .slice(0, 4);
 
-  const monthLabel = new Date(month + "-01").toLocaleString("en-UG", {
-    month: "long",
-    year: "numeric",
-  });
   const inflowChange = getChangePercent(summary.inflow, previousSummary.inflow);
   const outflowChange = getChangePercent(summary.outflow, previousSummary.outflow);
   const savingsChange = getChangePercent(summary.savings, previousSummary.savings);
+
   const summaryTiles = [
     {
       label: "Inflow",
@@ -132,19 +281,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
       sign: summary.inflow > 0 ? ("positive" as const) : ("none" as const),
       change: inflowChange,
       changeTone:
-        inflowChange === null
+        inflowChange.kind === "none"
           ? ("neutral" as const)
-          : inflowChange > 0
+          : inflowChange.kind === "new"
             ? ("positive" as const)
-            : inflowChange < 0
+            : (inflowChange.value ?? 0) > 0
+            ? ("positive" as const)
+            : (inflowChange.value ?? 0) < 0
               ? ("negative" as const)
               : ("neutral" as const),
       changeDirection:
-        inflowChange === null
+        inflowChange.kind === "none"
           ? ("flat" as const)
-          : inflowChange > 0
+          : inflowChange.kind === "new"
             ? ("up" as const)
-            : inflowChange < 0
+            : (inflowChange.value ?? 0) > 0
+            ? ("up" as const)
+            : (inflowChange.value ?? 0) < 0
               ? ("down" as const)
               : ("flat" as const),
     },
@@ -156,19 +309,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
       sign: summary.outflow > 0 ? ("negative" as const) : ("none" as const),
       change: outflowChange,
       changeTone:
-        outflowChange === null
+        outflowChange.kind === "none"
           ? ("neutral" as const)
-          : outflowChange < 0
+          : outflowChange.kind === "new"
+            ? ("negative" as const)
+            : (outflowChange.value ?? 0) < 0
             ? ("positive" as const)
-            : outflowChange > 0
+            : (outflowChange.value ?? 0) > 0
               ? ("negative" as const)
               : ("neutral" as const),
       changeDirection:
-        outflowChange === null
+        outflowChange.kind === "none"
           ? ("flat" as const)
-          : outflowChange < 0
+          : outflowChange.kind === "new"
+            ? ("up" as const)
+            : (outflowChange.value ?? 0) < 0
             ? ("down" as const)
-            : outflowChange > 0
+            : (outflowChange.value ?? 0) > 0
               ? ("up" as const)
               : ("flat" as const),
     },
@@ -190,19 +347,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             : ("none" as const),
       change: savingsChange,
       changeTone:
-        savingsChange === null
+        savingsChange.kind === "none"
           ? ("neutral" as const)
-          : savingsChange > 0
+          : savingsChange.kind === "new"
             ? ("positive" as const)
-            : savingsChange < 0
+            : (savingsChange.value ?? 0) > 0
+            ? ("positive" as const)
+            : (savingsChange.value ?? 0) < 0
               ? ("negative" as const)
               : ("neutral" as const),
       changeDirection:
-        savingsChange === null
+        savingsChange.kind === "none"
           ? ("flat" as const)
-          : savingsChange > 0
+          : savingsChange.kind === "new"
             ? ("up" as const)
-            : savingsChange < 0
+            : (savingsChange.value ?? 0) > 0
+            ? ("up" as const)
+            : (savingsChange.value ?? 0) < 0
               ? ("down" as const)
               : ("flat" as const),
     },
@@ -215,7 +376,26 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
           <h1 className="text-2xl font-semibold tracking-tight">
             {profile.displayName}&apos;s overview
           </h1>
-          <p className="text-sm text-muted-foreground">{monthLabel}</p>
+          <p className="text-sm text-muted-foreground">{periodWindow.overviewLabel}</p>
+        </div>
+        <div className="flex items-center gap-1 border border-border/30 p-1">
+          {[
+            { id: "week", label: "W" },
+            { id: "month", label: "M" },
+            { id: "year", label: "Y" },
+            { id: "all", label: "All" },
+          ].map((option) => (
+            <Button
+              key={option.id}
+              type="button"
+              size="sm"
+              variant={period === option.id ? "secondary" : "ghost"}
+              className="min-w-9"
+              onClick={() => setPeriod(option.id as PeriodFilter)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -235,6 +415,11 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
       {!isLoading ? (
         <>
+          <div className="space-y-0.5">
+            <h2 className="text-sm font-medium text-foreground">{periodWindow.title}</h2>
+            <p className="text-xs text-muted-foreground">{periodWindow.caption}</p>
+          </div>
+
           <div className="grid gap-3 xl:grid-cols-[1.35fr_1fr]">
             <Card className="moat-panel-sage border-border/20 shadow-none">
               <CardContent className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
@@ -255,8 +440,8 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                     />
                   </div>
                   <p className="max-w-md text-sm leading-6 text-foreground/75">
-                    A simple view of how much of this month&apos;s inflow stayed available
-                    for your future self.
+                    Based only on the selected period. Current account balances below include
+                    opening balances and prior history too.
                   </p>
                 </div>
                 <div className="grid content-end gap-2">
@@ -270,8 +455,8 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                     ))}
                   </div>
                   <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
-                    <span>Past weeks</span>
-                    <span>{monthLabel}</span>
+                    <span>{chartLabel}</span>
+                    <span className="text-right">{period === "all" ? "Now" : "Current"}</span>
                   </div>
                 </div>
               </CardContent>
@@ -291,18 +476,22 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                       <AmountIndicator
                         tone={item.changeTone}
                         direction={item.changeDirection}
-                        showIcon={item.change !== null}
+                        showIcon={item.change.kind !== "none"}
                         sign={
-                          item.change !== null && item.change > 0
+                          item.change.kind === "new"
                             ? "positive"
-                            : item.change !== null && item.change < 0
+                            : item.change.kind === "delta" && (item.change.value ?? 0) > 0
+                            ? "positive"
+                            : item.change.kind === "delta" && (item.change.value ?? 0) < 0
                               ? "negative"
                               : "none"
                         }
                         value={
-                          item.change === null
+                          item.change.kind === "none"
                             ? "—"
-                            : `${Math.abs(item.change).toFixed(0)}%`
+                            : item.change.kind === "new"
+                              ? "New"
+                              : `${Math.abs(item.change.value ?? 0).toFixed(0)}%`
                         }
                         className="text-xs font-medium"
                         iconClassName="h-3.5 w-3.5"
@@ -326,13 +515,16 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             <Card className="border-border/20 shadow-none">
               <CardHeader>
                 <CardTitle className="text-base">Top spending categories</CardTitle>
-                <CardDescription>Transfers are excluded.</CardDescription>
+                <CardDescription>Selected period only. Transfers are excluded.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2">
                 {summary.topCategories.length === 0 ? (
                   <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
-                    No spending recorded this month.{" "}
-                    <Link href="/transactions" className="underline underline-offset-4 hover:text-foreground">
+                    No spending recorded in this period.{" "}
+                    <Link
+                      href="/transactions"
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
                       Add transactions
                     </Link>
                   </div>
@@ -368,14 +560,19 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             <div className="grid gap-5 content-start">
               <Card className="border-border/20 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-base">Account balances</CardTitle>
-                  <CardDescription>Reconciled from opening balance and history.</CardDescription>
+                  <CardTitle className="text-base">Current account balances</CardTitle>
+                  <CardDescription>
+                    All recorded history plus opening balances, independent of the filter.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-2">
                   {topAccounts.length === 0 ? (
                     <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
                       No accounts.{" "}
-                      <Link href="/accounts" className="underline underline-offset-4 hover:text-foreground">
+                      <Link
+                        href="/accounts"
+                        className="underline underline-offset-4 hover:text-foreground"
+                      >
                         Add an account
                       </Link>
                     </div>
@@ -390,24 +587,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                         }`}
                       >
                         <div>
-                          <div className="text-sm font-medium text-foreground">
-                            {account.name}
-                          </div>
+                          <div className="text-sm font-medium text-foreground">{account.name}</div>
                           <div className="text-xs text-muted-foreground">
                             {account.type.replaceAll("_", " ")}
                           </div>
                         </div>
                         <AmountIndicator
-                          tone={
-                            account.balance > 0
-                              ? "neutral"
-                              : account.balance < 0
-                                ? "negative"
-                                : "neutral"
-                          }
-                          sign={
-                            account.balance < 0 ? "negative" : "none"
-                          }
+                          tone={account.balance < 0 ? "negative" : "neutral"}
+                          sign={account.balance < 0 ? "negative" : "none"}
                           value={formatCurrency(account.balance)}
                           className="text-sm font-medium"
                         />
@@ -419,9 +606,9 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
               <Card className="moat-panel-lilac border-border/20 shadow-none">
                 <CardHeader>
-                  <CardTitle className="text-base">This month</CardTitle>
+                  <CardTitle className="text-base">This period</CardTitle>
                   <CardDescription className="text-foreground/65">
-                    Prompts from your saved data.
+                    Prompts from the selected time window.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -5,7 +5,6 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
 import { AmountIndicator } from "@/components/amount-indicator";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { applyGoalTransactions } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
@@ -64,9 +63,7 @@ export function GoalsWorkspace() {
       ]);
 
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
-      const hydratedGoals = sortGoals(
-        storedGoals.map((goal) => applyGoalTransactions(goal, storedTransactions)),
-      );
+      const hydratedGoals = sortGoals(storedGoals);
 
       setAccounts(reconciledAccounts);
       setGoals(hydratedGoals);
@@ -114,7 +111,7 @@ export function GoalsWorkspace() {
         name: goalForm.name.trim(),
         goalType: goalForm.goalType,
         targetAmount: Number(goalForm.targetAmount),
-        currentAmount: goals.find((g) => g.id === goalId)?.currentAmount ?? 0,
+        currentAmount: Number(goalForm.currentAmount),
         targetDate: goalForm.targetDate,
         priority: Number(goalForm.priority),
         linkedAccountId: goalForm.linkedAccountId || undefined,
@@ -142,6 +139,7 @@ export function GoalsWorkspace() {
       name: goal.name,
       goalType: goal.goalType,
       targetAmount: String(goal.targetAmount),
+      currentAmount: String(goal.currentAmount),
       targetDate: goal.targetDate,
       priority: String(goal.priority),
       linkedAccountId: goal.linkedAccountId ?? "",

@@ -6,6 +6,17 @@ export type AccountTotals = {
   accountsByType: Record<Account["type"], number>;
 };
 
+export function normalizeOpeningBalance(
+  type: Account["type"],
+  amount: number,
+): number {
+  if (type === "debt") {
+    return -Math.abs(amount);
+  }
+
+  return amount;
+}
+
 export function getAccountTotals(accounts: Account[]): AccountTotals {
   return accounts.reduce<AccountTotals>(
     (totals, account) => {
@@ -36,7 +47,7 @@ export function getAccountTotals(accounts: Account[]): AccountTotals {
 function getBalanceDelta(transaction: Transaction): number {
   switch (transaction.type) {
     case "income":
-      return transaction.amount;
+      return Math.abs(transaction.amount);
     case "expense":
     case "savings_contribution":
     case "debt_payment":
