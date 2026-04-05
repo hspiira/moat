@@ -11,12 +11,12 @@ Uganda-first personal finance app scaffold focused on spending visibility, goal-
 
 ## Current status
 
-This repository is at the foundation stage. The docs define the product and the app scaffold gives the next engineer a clean place to start building.
+This repository is at the foundation stage. The docs define the product, the routed app shell provides stable implementation surfaces, and the domain layer now includes shared models, financial calculations, bootstrap defaults, and IndexedDB-backed repository interfaces.
 
 ## Suggested next steps
 
 1. install dependencies with `npm install`
 2. run the app with `npm run dev`
-3. turn the scaffold sections into routed product pages
-4. add domain utilities for summary calculations and guidance logic
-5. introduce persistence after the first interactive flows are stable
+3. build onboarding and account setup on top of the routed shell
+4. wire forms into the repository layer instead of storing state directly in route components
+5. implement transactions, CSV import, and dashboard logic against the shared domain modules

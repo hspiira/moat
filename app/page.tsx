@@ -1,12 +1,10 @@
-import { DashboardShell } from "@/components/dashboard-shell";
-import { appSections, implementationMilestones, productHighlights } from "@/lib/data";
+import { AppShell } from "@/components/app-shell";
+import { HomeRoute } from "@/components/home-route";
 
 export default function HomePage() {
   return (
-    <DashboardShell
-      sections={appSections}
-      milestones={implementationMilestones}
-      highlights={productHighlights}
-    />
+    <AppShell>
+      <HomeRoute />
+    </AppShell>
   );
 }
