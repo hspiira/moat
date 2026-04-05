@@ -8,7 +8,9 @@ import {
   IconBuildingBank,
   IconCompass,
   IconHome2,
+  IconMenu2,
   IconMoon,
+  IconPlus,
   IconSun,
   IconTargetArrow,
   IconTransfer,
@@ -16,6 +18,21 @@ import {
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { navItems } from "@/lib/data";
 
 const navIcons: Record<string, Icon> = {
@@ -35,6 +52,64 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+const mobilePrimaryNav = ["/", "/transactions", "/goals", "/investment-compass"] as const;
+const mobileSecondaryNav = ["/accounts", "/learn"] as const;
+
+function AppBrand() {
+  return (
+    <Link href="/" className="flex items-center gap-3">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-sm shadow-primary/20">
+        M
+      </span>
+      <span>
+        <span className="block text-base font-semibold tracking-tight text-foreground">
+          Moat
+        </span>
+        <span className="block text-xs text-muted-foreground">
+          Personal finance for Uganda
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function ThemeToggle({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      aria-label="Toggle theme"
+      className={className}
+    >
+      <IconSun className="hidden h-4 w-4 dark:block" />
+      <IconMoon className="h-4 w-4 dark:hidden" />
+    </Button>
+  );
+}
+
+function QuickActionLinks() {
+  return (
+    <div className="grid gap-2">
+      <Button asChild variant="outline" className="justify-start">
+        <Link href="/transactions">Add or import transactions</Link>
+      </Button>
+      <Button asChild variant="outline" className="justify-start">
+        <Link href="/accounts">Add or update accounts</Link>
+      </Button>
+      <Button asChild variant="outline" className="justify-start">
+        <Link href="/goals">Create or review goals</Link>
+      </Button>
+    </div>
+  );
+}
+
 export function AppNavigation() {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
@@ -45,83 +120,67 @@ export function AppNavigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 rounded-[1.75rem] border border-border/60 bg-background/90 px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20">
-              M
-            </span>
-            <span>
-              <span className="block text-base font-semibold tracking-tight text-foreground">
-                Moat
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                Uganda finance PWA
-              </span>
-            </span>
-          </Link>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="h-10 w-10 rounded-2xl border-border/60 text-muted-foreground hover:text-foreground"
-          >
-            <IconSun className="hidden h-4 w-4 dark:block" />
-            <IconMoon className="h-4 w-4 dark:hidden" />
-          </Button>
-        </div>
-      </header>
-
-      <aside className="hidden lg:sticky lg:top-6 lg:block lg:h-fit lg:w-72 lg:self-start">
-        <div className="overflow-hidden rounded-[2rem] border border-border/60 bg-card/90 shadow-sm backdrop-blur">
-          <div className="border-b border-border/60 px-5 py-5">
-            <div className="flex items-center justify-between gap-4">
-              <Link href="/" className="flex items-center gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground shadow-sm shadow-primary/20">
-                  M
-                </span>
-                <span>
-                  <span className="block text-base font-semibold tracking-tight text-foreground">
-                    Moat
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    Personal finance for Uganda
-                  </span>
-                </span>
-              </Link>
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-                className="h-10 w-10 rounded-2xl border-border/60 text-muted-foreground hover:text-foreground"
-              >
-                <IconSun className="hidden h-4 w-4 dark:block" />
-                <IconMoon className="h-4 w-4 dark:hidden" />
-              </Button>
-            </div>
+      <Card className="sticky top-0 z-40 border-border/60 bg-background/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+        <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
+          <AppBrand />
+          <div className="flex items-center gap-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Open quick actions"
+                  className="h-10 w-10 rounded-2xl border-border/60"
+                >
+                  <IconMenu2 className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[80vh] rounded-t-[2rem] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                <SheetHeader className="px-6">
+                  <SheetTitle>Quick actions</SheetTitle>
+                  <SheetDescription>
+                    High-frequency actions for the mobile app flow.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="px-6">
+                  <QuickActionLinks />
+                </div>
+              </SheetContent>
+            </Sheet>
+            <ThemeToggle
+              onClick={toggleTheme}
+              className="h-10 w-10 rounded-2xl border-border/60"
+            />
           </div>
+        </CardContent>
+      </Card>
 
-          <nav className="grid gap-2 p-3">
+      <Card className="hidden lg:sticky lg:top-6 lg:block lg:w-72 lg:self-start lg:border-border/60 lg:bg-card/90 lg:shadow-sm">
+        <CardHeader className="gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <AppBrand />
+            <ThemeToggle
+              onClick={toggleTheme}
+              className="h-10 w-10 rounded-2xl border-border/60"
+            />
+          </div>
+        </CardHeader>
+        <Separator />
+        <CardContent className="grid gap-2 p-3">
+          <nav className="grid gap-2">
             {navItems.map((item) => {
               const isActive = isActiveRoute(pathname, item.href);
               const IconComponent = navIcons[item.href];
 
               return (
-                <Link
+                <Button
                   key={item.href}
-                  href={item.href}
-                  className={[
-                    "group rounded-[1.5rem] border px-4 py-3 transition-colors",
-                    isActive
-                      ? "border-primary/25 bg-primary/10 text-foreground"
-                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground",
-                  ].join(" ")}
+                  asChild
+                  variant={isActive ? "secondary" : "ghost"}
+                  className="h-auto justify-start rounded-[1.5rem] px-4 py-3"
                 >
-                  <div className="flex items-start gap-3">
+                  <Link href={item.href}>
+                    <span className="flex items-start gap-3">
                     <span
                       className={[
                         "mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors",
@@ -132,45 +191,129 @@ export function AppNavigation() {
                     >
                       <IconComponent className="h-4 w-4" />
                     </span>
-                    <span className="min-w-0">
+                    <span className="min-w-0 text-left">
                       <span className="block text-sm font-medium">{item.label}</span>
                       <span className="mt-1 block text-xs leading-5 opacity-75">
                         {item.description}
                       </span>
                     </span>
-                  </div>
-                </Link>
+                    </span>
+                  </Link>
+                </Button>
               );
             })}
           </nav>
-        </div>
-      </aside>
+        </CardContent>
+      </Card>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_30px_-20px_rgba(15,23,42,0.4)] backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden">
-        <div className="mx-auto grid max-w-4xl grid-cols-6 gap-1">
-          {navItems.map((item) => {
+      <Card className="fixed inset-x-2 bottom-2 z-50 border-border/70 bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden">
+        <CardContent className="px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
+          <nav className="mx-auto grid max-w-4xl grid-cols-5 gap-1">
+          {mobilePrimaryNav.map((href) => {
+            const item = navItems.find((entry) => entry.href === href);
+            if (!item) {
+              return null;
+            }
+
             const isActive = isActiveRoute(pathname, item.href);
             const IconComponent = navIcons[item.href];
 
             return (
-              <Link
+              <Button
                 key={item.href}
-                href={item.href}
-                className={[
-                  "flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-                ].join(" ")}
-                aria-current={isActive ? "page" : undefined}
+                asChild
+                variant={isActive ? "default" : "ghost"}
+                className="h-auto min-h-16 flex-col gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-medium"
               >
-                <IconComponent className="h-4 w-4" />
-                <span className="leading-none">{item.label}</span>
-              </Link>
+                <Link href={item.href} aria-current={isActive ? "page" : undefined}>
+                  <IconComponent className="h-4 w-4" />
+                  <span className="leading-none">{item.label}</span>
+                </Link>
+              </Button>
             );
           })}
-        </div>
-      </nav>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-auto min-h-16 flex-col gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-medium text-muted-foreground"
+              >
+                <IconPlus className="h-4 w-4" />
+                <span className="leading-none">More</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[85vh] rounded-t-[2rem] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <SheetHeader className="px-6">
+                <SheetTitle>Navigation and actions</SheetTitle>
+                <SheetDescription>
+                  Use the primary tabs for daily work and this panel for everything else.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-6 px-6">
+                <Card className="border-border/60 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Quick actions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <QuickActionLinks />
+                  </CardContent>
+                </Card>
+                <Card className="border-border/60 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">More places</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-2">
+                    {mobileSecondaryNav.map((href) => {
+                      const item = navItems.find((entry) => entry.href === href);
+                      if (!item) {
+                        return null;
+                      }
+                      const IconComponent = navIcons[item.href];
+                      const isActive = isActiveRoute(pathname, item.href);
+
+                      return (
+                        <Button
+                          key={item.href}
+                          asChild
+                          variant={isActive ? "secondary" : "ghost"}
+                          className="h-auto justify-start px-3 py-3"
+                        >
+                          <Link href={item.href}>
+                            <span className="flex items-start gap-3">
+                              <IconComponent className="mt-0.5 h-4 w-4" />
+                              <span className="text-left">
+                                <span className="block text-sm font-medium">{item.label}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {item.description}
+                                </span>
+                              </span>
+                            </span>
+                          </Link>
+                        </Button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+                <Card className="border-border/60 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Theme</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      Switch between light and dark mode.
+                    </div>
+                    <ThemeToggle
+                      onClick={toggleTheme}
+                      className="h-10 w-10 rounded-2xl border-border/60"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </SheetContent>
+          </Sheet>
+          </nav>
+        </CardContent>
+      </Card>
     </>
   );
 }
