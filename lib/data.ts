@@ -1,4 +1,44 @@
-import type { AppSection, Milestone, ProductHighlight } from "@/lib/types";
+import type {
+  AppSection,
+  Milestone,
+  ModuleDetail,
+  ModulePreview,
+  NavItem,
+  ProductHighlight,
+} from "@/lib/types";
+
+export const navItems: NavItem[] = [
+  {
+    href: "/",
+    label: "Overview",
+    description: "Issue map, route overview, and milestone context.",
+  },
+  {
+    href: "/accounts",
+    label: "Accounts",
+    description: "Manual account setup and balance foundations.",
+  },
+  {
+    href: "/transactions",
+    label: "Transactions",
+    description: "Money movement, categories, transfers, and imports.",
+  },
+  {
+    href: "/goals",
+    label: "Goals",
+    description: "Emergency fund and goal planning surfaces.",
+  },
+  {
+    href: "/investment-compass",
+    label: "Investment Compass",
+    description: "Deterministic guidance and local product framing.",
+  },
+  {
+    href: "/learn",
+    label: "Learn Uganda",
+    description: "Curated official sources and literacy content.",
+  },
+];
 
 export const productHighlights: ProductHighlight[] = [
   {
@@ -112,3 +152,289 @@ export const implementationMilestones: Milestone[] = [
     ],
   },
 ];
+
+export const modulePreviews: ModulePreview[] = [
+  {
+    href: "/accounts",
+    title: "Accounts",
+    summary: "Manual account setup for cash, mobile money, banks, SACCOs, debt, and investment containers.",
+    stage: "Issue #4 input",
+  },
+  {
+    href: "/transactions",
+    title: "Transactions",
+    summary: "Transaction and CSV surfaces that will carry category, transfer, and import logic.",
+    stage: "Issues #5-#7 input",
+  },
+  {
+    href: "/goals",
+    title: "Goals",
+    summary: "Goal and emergency-fund pages ready for the moat-building flows in iteration 3.",
+    stage: "Issue #8 input",
+  },
+  {
+    href: "/investment-compass",
+    title: "Investment Compass",
+    summary: "Dedicated guidance route for time horizon and suitability rules.",
+    stage: "Issue #9 input",
+  },
+  {
+    href: "/learn",
+    title: "Learn Uganda",
+    summary: "A distinct educational route for local official sources and reference content.",
+    stage: "Issue #9 input",
+  },
+];
+
+export const moduleDetails: Record<string, ModuleDetail> = {
+  accounts: {
+    eyebrow: "Accounts Surface",
+    title: "Accounts and balances",
+    description:
+      "This route exists to isolate account setup from the landing page. The next implementation step is to turn it into a usable balance and account-management workflow.",
+    intentTitle: "Why this route exists",
+    intentSummary:
+      "Issue #2 requires stable routed surfaces. Accounts is the first dependency for onboarding and balance-aware reporting.",
+    intentBullets: [
+      "Supports cash, mobile money, bank, SACCO, investment, and debt account types.",
+      "Gives onboarding a concrete destination instead of leaving setup buried on the home page.",
+      "Sets up later balance aggregation and reconciliation work.",
+    ],
+    primaryCta: {
+      href: "/transactions",
+      label: "Next: transactions route",
+    },
+    secondaryCta: {
+      href: "/",
+      label: "Back to overview",
+    },
+    scopeGroups: [
+      {
+        title: "Planned interactions",
+        summary: "These are the behaviors later issues should fill into this route.",
+        items: [
+          "Manual account creation and editing.",
+          "Opening balance capture during onboarding.",
+          "Institution metadata for bank and SACCO accounts.",
+        ],
+      },
+      {
+        title: "Route-level expectations",
+        summary: "The page already gives the app a stable information architecture target.",
+        items: [
+          "Dedicated URL and shell navigation.",
+          "Space for account summaries and setup prompts.",
+          "No dashboard-only coupling.",
+        ],
+      },
+    ],
+    acceptanceGates: [
+      "Users can reach account setup from the global shell.",
+      "The route is stable enough for onboarding work to target directly.",
+      "Account concepts are no longer implied only from documentation.",
+    ],
+    issueNumber: 4,
+    issueHref: "https://github.com/hspiira/moat/issues/4",
+    issueSummary: "Build onboarding and account setup flows.",
+  },
+  transactions: {
+    eyebrow: "Transactions Surface",
+    title: "Transactions and imports",
+    description:
+      "This route isolates transaction management from the overview so manual entry, CSV import, and dashboard feeds can be implemented without reshaping the app again.",
+    intentTitle: "Why this route exists",
+    intentSummary:
+      "Transactions drive the rest of the product. Routing them early avoids coupling import, categorization, and dashboard work to a static homepage.",
+    intentBullets: [
+      "Creates a home for manual transaction entry and later transaction lists.",
+      "Separates CSV import concerns from analytics presentation.",
+      "Lets dashboard issue work consume transaction logic rather than define page structure.",
+    ],
+    primaryCta: {
+      href: "/goals",
+      label: "Next: goals route",
+    },
+    secondaryCta: {
+      href: "/accounts",
+      label: "View accounts route",
+    },
+    scopeGroups: [
+      {
+        title: "Planned interactions",
+        summary: "These items map directly to iteration 2 work.",
+        items: [
+          "Manual income, expense, transfer, and savings entry.",
+          "CSV upload, mapping, preview, and review states.",
+          "Category editing and transfer-safe reporting inputs.",
+        ],
+      },
+      {
+        title: "Current route contract",
+        summary: "This route already establishes the presentation boundary for the next issues.",
+        items: [
+          "Dedicated page for transaction tooling.",
+          "Shared shell navigation and route consistency.",
+          "Clear linkage to issue #5 through issue #7.",
+        ],
+      },
+    ],
+    acceptanceGates: [
+      "Transactions are no longer embedded as a home page section.",
+      "CSV import has a clear future route target.",
+      "Dashboard issue work can depend on this route existing.",
+    ],
+    issueNumber: 5,
+    issueHref: "https://github.com/hspiira/moat/issues/5",
+    issueSummary: "Build transactions, categories, and transfer handling.",
+  },
+  goals: {
+    eyebrow: "Goal Planning Surface",
+    title: "Goals and emergency fund",
+    description:
+      "This route establishes a dedicated surface for savings targets and emergency-fund planning before the actual goal mechanics are implemented.",
+    intentTitle: "Why this route exists",
+    intentSummary:
+      "Goals are a separate product concern from raw spending analysis. They need their own route so the moat-building behavior can evolve cleanly.",
+    intentBullets: [
+      "Separates future goal math from dashboard summary cards.",
+      "Creates a stable destination for emergency-fund-first guidance.",
+      "Supports iteration 3 without another structural refactor.",
+    ],
+    primaryCta: {
+      href: "/investment-compass",
+      label: "Next: investment route",
+    },
+    secondaryCta: {
+      href: "/transactions",
+      label: "Back to transactions",
+    },
+    scopeGroups: [
+      {
+        title: "Planned interactions",
+        summary: "This route will later host the moat-building mechanics.",
+        items: [
+          "Goal creation for emergency fund, rent, land, and school fees.",
+          "Monthly contribution calculations.",
+          "Progress updates from savings-linked activity.",
+        ],
+      },
+      {
+        title: "Current route contract",
+        summary: "The page now holds the space that later issues can populate.",
+        items: [
+          "Dedicated shell entry for goal planning.",
+          "Explicit emergency-fund framing ahead of investment features.",
+          "Stable location for issue #8 acceptance work.",
+        ],
+      },
+    ],
+    acceptanceGates: [
+      "Goal planning is represented as a first-class route.",
+      "The shell sequence supports the intended user journey from tracking to saving.",
+      "Issue #8 can build behavior without moving navigation again.",
+    ],
+    issueNumber: 8,
+    issueHref: "https://github.com/hspiira/moat/issues/8",
+    issueSummary: "Build goals and emergency fund planning.",
+  },
+  "investment-compass": {
+    eyebrow: "Guidance Surface",
+    title: "Investment Compass",
+    description:
+      "This route gives the app a dedicated place for deterministic guidance, suitability rules, and safer local investment framing.",
+    intentTitle: "Why this route exists",
+    intentSummary:
+      "Guidance should not be mixed into general dashboard messaging. It needs a route where rules, warnings, and local product classes can be explained directly.",
+    intentBullets: [
+      "Creates a dedicated surface for non-advisory guidance.",
+      "Keeps investment messaging separate from budget summaries.",
+      "Supports rule-based output and source-backed education.",
+    ],
+    primaryCta: {
+      href: "/learn",
+      label: "Next: learn route",
+    },
+    secondaryCta: {
+      href: "/goals",
+      label: "Back to goals",
+    },
+    scopeGroups: [
+      {
+        title: "Planned interactions",
+        summary: "These are the concrete behaviors expected in iteration 3.",
+        items: [
+          "Time-horizon and liquidity-aware guidance outputs.",
+          "Warnings for high-cost debt, low emergency reserves, and scams.",
+          "Product-class explanations for Treasury instruments, SACCOs, unit trusts, and retirement paths.",
+        ],
+      },
+      {
+        title: "Current route contract",
+        summary: "The route now exists as a stable entry point for guidance work.",
+        items: [
+          "Navigation destination for issue #9.",
+          "Separate context from dashboard and goals pages.",
+          "Direct path into Learn Uganda resources.",
+        ],
+      },
+    ],
+    acceptanceGates: [
+      "The app has a dedicated guidance route.",
+      "Investment messaging has a clean shell boundary.",
+      "Issue #9 can ship without another navigation rewrite.",
+    ],
+    issueNumber: 9,
+    issueHref: "https://github.com/hspiira/moat/issues/9",
+    issueSummary: "Build Investment Compass and Learn Uganda.",
+  },
+  learn: {
+    eyebrow: "Education Surface",
+    title: "Learn Uganda",
+    description:
+      "This route reserves a proper home for source-backed Uganda finance education instead of scattering references across implementation notes.",
+    intentTitle: "Why this route exists",
+    intentSummary:
+      "The product promises local, explainable guidance. That requires a route dedicated to official sources and practical education.",
+    intentBullets: [
+      "Supports official-source aggregation from BoU, CMA, USE, UMRA, URBRA, UBOS, and FSD Uganda.",
+      "Separates literacy content from transactional workflows.",
+      "Gives issue #9 a distinct educational surface.",
+    ],
+    primaryCta: {
+      href: "/",
+      label: "Return to overview",
+    },
+    secondaryCta: {
+      href: "/investment-compass",
+      label: "Back to investment route",
+    },
+    scopeGroups: [
+      {
+        title: "Planned interactions",
+        summary: "This route will become the reference layer for the app.",
+        items: [
+          "Official and licensed source listings.",
+          "Uganda-first investing and savings explainers.",
+          "Institution verification and scam-avoidance guidance.",
+        ],
+      },
+      {
+        title: "Current route contract",
+        summary: "The route exists now so content work has a stable destination.",
+        items: [
+          "Dedicated educational URL in the shell.",
+          "Clear separation from recommendation logic.",
+          "Ready surface for curated local content.",
+        ],
+      },
+    ],
+    acceptanceGates: [
+      "Educational content has a dedicated route.",
+      "Local sources can be added without crowding operational workflows.",
+      "The shell now matches the information architecture in the product docs.",
+    ],
+    issueNumber: 9,
+    issueHref: "https://github.com/hspiira/moat/issues/9",
+    issueSummary: "Build Investment Compass and Learn Uganda.",
+  },
+};

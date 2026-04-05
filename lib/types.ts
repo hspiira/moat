@@ -27,11 +27,50 @@ export type ProductHighlight = {
   value: string;
 };
 
+export type NavItem = {
+  href: string;
+  label: string;
+  description: string;
+};
+
 export type AppSection = {
   id: string;
   title: string;
   summary: string;
   bullets: string[];
+};
+
+export type ModulePreview = {
+  href: string;
+  title: string;
+  summary: string;
+  stage: string;
+};
+
+export type ModuleDetail = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  intentTitle: string;
+  intentSummary: string;
+  intentBullets: string[];
+  primaryCta: {
+    href: string;
+    label: string;
+  };
+  secondaryCta: {
+    href: string;
+    label: string;
+  };
+  scopeGroups: {
+    title: string;
+    summary: string;
+    items: string[];
+  }[];
+  acceptanceGates: string[];
+  issueNumber: number;
+  issueHref: string;
+  issueSummary: string;
 };
 
 export type Milestone = {
