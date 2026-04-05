@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { modulePreviews } from "@/lib/data";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
@@ -35,6 +36,21 @@ function formatCurrency(amount: number) {
 
 function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
+}
+
+function getPreviousMonth(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1, 1));
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return date.toISOString().slice(0, 7);
+}
+
+function getChangePercent(current: number, previous: number) {
+  if (previous === 0) {
+    return null;
+  }
+
+  return ((current - previous) / previous) * 100;
 }
 
 type DashboardWorkspaceProps = {
@@ -83,6 +99,11 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     () => getMonthSummary(transactions, categories, month),
     [categories, month, transactions],
   );
+  const previousMonth = getPreviousMonth(month);
+  const previousSummary = useMemo(
+    () => getMonthSummary(transactions, categories, previousMonth),
+    [categories, previousMonth, transactions],
+  );
 
   const savingsRate = useMemo(() => getSavingsRate(summary), [summary]);
   const insights = useMemo(
@@ -99,21 +120,91 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     month: "long",
     year: "numeric",
   });
+  const inflowChange = getChangePercent(summary.inflow, previousSummary.inflow);
+  const outflowChange = getChangePercent(summary.outflow, previousSummary.outflow);
+  const savingsChange = getChangePercent(summary.savings, previousSummary.savings);
   const summaryTiles = [
     {
       label: "Inflow",
       value: formatCurrency(summary.inflow),
       className: "moat-panel-yellow",
+      tone: summary.inflow > 0 ? ("positive" as const) : ("neutral" as const),
+      sign: summary.inflow > 0 ? ("positive" as const) : ("none" as const),
+      change: inflowChange,
+      changeTone:
+        inflowChange === null
+          ? ("neutral" as const)
+          : inflowChange > 0
+            ? ("positive" as const)
+            : inflowChange < 0
+              ? ("negative" as const)
+              : ("neutral" as const),
+      changeDirection:
+        inflowChange === null
+          ? ("flat" as const)
+          : inflowChange > 0
+            ? ("up" as const)
+            : inflowChange < 0
+              ? ("down" as const)
+              : ("flat" as const),
     },
     {
       label: "Outflow",
       value: formatCurrency(summary.outflow),
       className: "moat-panel-lilac",
+      tone: summary.outflow > 0 ? ("negative" as const) : ("neutral" as const),
+      sign: summary.outflow > 0 ? ("negative" as const) : ("none" as const),
+      change: outflowChange,
+      changeTone:
+        outflowChange === null
+          ? ("neutral" as const)
+          : outflowChange < 0
+            ? ("positive" as const)
+            : outflowChange > 0
+              ? ("negative" as const)
+              : ("neutral" as const),
+      changeDirection:
+        outflowChange === null
+          ? ("flat" as const)
+          : outflowChange < 0
+            ? ("down" as const)
+            : outflowChange > 0
+              ? ("up" as const)
+              : ("flat" as const),
     },
     {
       label: "Savings",
       value: formatCurrency(summary.savings),
       className: "moat-panel-mint",
+      tone:
+        summary.savings > 0
+          ? ("positive" as const)
+          : summary.savings < 0
+            ? ("negative" as const)
+            : ("neutral" as const),
+      sign:
+        summary.savings > 0
+          ? ("positive" as const)
+          : summary.savings < 0
+            ? ("negative" as const)
+            : ("none" as const),
+      change: savingsChange,
+      changeTone:
+        savingsChange === null
+          ? ("neutral" as const)
+          : savingsChange > 0
+            ? ("positive" as const)
+            : savingsChange < 0
+              ? ("negative" as const)
+              : ("neutral" as const),
+      changeDirection:
+        savingsChange === null
+          ? ("flat" as const)
+          : savingsChange > 0
+            ? ("up" as const)
+            : savingsChange < 0
+              ? ("down" as const)
+              : ("flat" as const),
     },
   ];
 
@@ -152,9 +243,16 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                     <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
                       Savings rate
                     </div>
-                    <div className="text-6xl font-semibold tracking-tight tabular-nums">
-                      {Math.round(savingsRate * 100)}%
-                    </div>
+                    <AmountIndicator
+                      tone={
+                        savingsRate > 0 ? "positive" : savingsRate < 0 ? "negative" : "neutral"
+                      }
+                      sign={
+                        savingsRate > 0 ? "positive" : savingsRate < 0 ? "negative" : "none"
+                      }
+                      value={`${Math.round(savingsRate * 100)}%`}
+                      className="text-6xl font-semibold tracking-tight"
+                    />
                   </div>
                   <p className="max-w-md text-sm leading-6 text-foreground/75">
                     A simple view of how much of this month&apos;s inflow stayed available
@@ -186,9 +284,37 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                   className={`${item.className} border-border/20 shadow-none`}
                 >
                   <CardHeader className="gap-2 p-5">
-                    <CardDescription className="text-foreground/65">{item.label}</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums tracking-tight">
-                      {item.value}
+                    <div className="flex items-start justify-between gap-3">
+                      <CardDescription className="text-foreground/65">
+                        {item.label}
+                      </CardDescription>
+                      <AmountIndicator
+                        tone={item.changeTone}
+                        direction={item.changeDirection}
+                        showIcon={item.change !== null}
+                        sign={
+                          item.change !== null && item.change > 0
+                            ? "positive"
+                            : item.change !== null && item.change < 0
+                              ? "negative"
+                              : "none"
+                        }
+                        value={
+                          item.change === null
+                            ? "—"
+                            : `${Math.abs(item.change).toFixed(0)}%`
+                        }
+                        className="text-xs font-medium"
+                        iconClassName="h-3.5 w-3.5"
+                      />
+                    </div>
+                    <CardTitle className="text-2xl tracking-tight">
+                      <AmountIndicator
+                        tone={item.tone}
+                        sign={item.sign}
+                        value={item.value}
+                        className="text-2xl font-semibold tracking-tight"
+                      />
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -227,9 +353,12 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                       <span className="text-sm font-medium text-foreground">
                         {category.categoryName}
                       </span>
-                      <span className="text-base font-semibold tabular-nums">
-                        {formatCurrency(category.amount)}
-                      </span>
+                      <AmountIndicator
+                        tone="negative"
+                        sign="negative"
+                        value={formatCurrency(category.amount)}
+                        className="text-base font-semibold"
+                      />
                     </div>
                   ))
                 )}
@@ -268,9 +397,20 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                             {account.type.replaceAll("_", " ")}
                           </div>
                         </div>
-                        <span className="text-sm font-medium tabular-nums">
-                          {formatCurrency(account.balance)}
-                        </span>
+                        <AmountIndicator
+                          tone={
+                            account.balance > 0
+                              ? "neutral"
+                              : account.balance < 0
+                                ? "negative"
+                                : "neutral"
+                          }
+                          sign={
+                            account.balance < 0 ? "negative" : "none"
+                          }
+                          value={formatCurrency(account.balance)}
+                          className="text-sm font-medium"
+                        />
                       </div>
                     ))
                   )}

@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyGoalTransactions } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
@@ -224,9 +225,12 @@ export function GoalsWorkspace() {
                 <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
                   Suggested emergency moat
                 </div>
-                <div className="text-4xl font-semibold tracking-tight">
-                  {formatCurrency(emergencyFundSuggestion)}
-                </div>
+                <AmountIndicator
+                  tone={emergencyFundSuggestion > 0 ? "positive" : "neutral"}
+                  sign={emergencyFundSuggestion > 0 ? "positive" : "none"}
+                  value={formatCurrency(emergencyFundSuggestion)}
+                  className="text-4xl font-semibold tracking-tight"
+                />
                 <p className="max-w-lg text-sm leading-6 text-foreground/75">
                   Based on three months of current outflow. Use it as a planning floor, not a ceiling.
                 </p>

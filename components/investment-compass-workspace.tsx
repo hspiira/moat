@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
@@ -271,8 +272,13 @@ export function InvestmentCompassWorkspace() {
               <Card className="moat-panel-sage border-border/20 shadow-none">
                 <CardHeader className="gap-2 p-5">
                   <CardDescription className="text-foreground/72">Monthly outflow baseline</CardDescription>
-                  <CardTitle className="text-xl tabular-nums text-foreground">
-                    {formatCurrency(monthlyOutflow)}
+                  <CardTitle className="text-xl text-foreground">
+                    <AmountIndicator
+                      tone="negative"
+                      sign="negative"
+                      value={formatCurrency(monthlyOutflow)}
+                      className="text-xl font-semibold"
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -280,8 +286,12 @@ export function InvestmentCompassWorkspace() {
                 <CardHeader className="gap-2 p-5">
                   <CardDescription className="text-foreground/72">Emergency coverage</CardDescription>
                   <CardTitle className="text-xl text-foreground">
-                    {emergencyFundMonthsCovered.toFixed(1)} month
-                    {emergencyFundMonthsCovered !== 1 ? "s" : ""}
+                    <AmountIndicator
+                      tone={emergencyFundMonthsCovered > 0 ? "positive" : "neutral"}
+                      sign={emergencyFundMonthsCovered > 0 ? "positive" : "none"}
+                      value={`${emergencyFundMonthsCovered.toFixed(1)} month${emergencyFundMonthsCovered !== 1 ? "s" : ""}`}
+                      className="text-xl font-semibold"
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>

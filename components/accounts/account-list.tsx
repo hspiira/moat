@@ -1,5 +1,6 @@
 "use client";
 
+import { AmountIndicator } from "@/components/amount-indicator";
 import type { Account } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,9 +73,12 @@ export function AccountList({ accounts, onEdit }: Props) {
               <Separator className="my-3 bg-border/50" />
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Balance</span>
-                <span className="text-base font-semibold tabular-nums">
-                  {formatCurrency(account.balance)}
-                </span>
+                <AmountIndicator
+                  tone={account.balance < 0 ? "negative" : "neutral"}
+                  sign={account.balance < 0 ? "negative" : "none"}
+                  value={formatCurrency(account.balance)}
+                  className="text-base font-semibold"
+                />
               </div>
             </div>
           ))

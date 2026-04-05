@@ -1,5 +1,6 @@
 "use client";
 
+import { AmountIndicator } from "@/components/amount-indicator";
 import { getGoalContributionPlan } from "@/lib/domain/goals";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,11 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
 
                   <div className="mt-3">
                     <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{formatCurrency(goal.currentAmount)}</span>
+                      <AmountIndicator
+                        tone={goal.currentAmount > 0 ? "positive" : "neutral"}
+                        sign={goal.currentAmount > 0 ? "positive" : "none"}
+                        value={formatCurrency(goal.currentAmount)}
+                      />
                       <span>
                         {progressPercent}% of {formatCurrency(goal.targetAmount)}
                       </span>
@@ -112,9 +117,12 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <div className="text-xs text-muted-foreground">Monthly target</div>
-                      <div className="font-medium tabular-nums">
-                        {formatCurrency(plan.monthlyContribution)}
-                      </div>
+                      <AmountIndicator
+                        tone={plan.isBehindSchedule ? "negative" : "neutral"}
+                        sign={plan.isBehindSchedule ? "negative" : "none"}
+                        value={formatCurrency(plan.monthlyContribution)}
+                        className="font-medium"
+                      />
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Deadline</div>

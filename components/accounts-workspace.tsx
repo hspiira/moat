@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { getAccountTotals } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
@@ -175,7 +176,12 @@ export function AccountsWorkspace() {
               <CardHeader className="gap-2 p-5">
                 <CardDescription className="text-foreground/65">Total balance</CardDescription>
                 <CardTitle className="text-4xl tracking-tight">
-                  {formatCurrency(accountTotals.totalBalance)}
+                  <AmountIndicator
+                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
+                    sign={accountTotals.totalBalance < 0 ? "negative" : "none"}
+                    value={formatCurrency(accountTotals.totalBalance)}
+                    className="text-4xl font-semibold tracking-tight"
+                  />
                 </CardTitle>
               </CardHeader>
             </Card>
