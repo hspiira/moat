@@ -3,8 +3,9 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { applyGoalTransactions } from "@/lib/domain/goals";
+import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
@@ -37,6 +38,8 @@ export function GoalsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -60,9 +63,7 @@ export function GoalsWorkspace() {
       ]);
 
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
-      const hydratedGoals = sortGoals(
-        storedGoals.map((goal) => applyGoalTransactions(goal, storedTransactions)),
-      );
+      const hydratedGoals = sortGoals(storedGoals);
 
       setAccounts(reconciledAccounts);
       setGoals(hydratedGoals);
@@ -102,6 +103,7 @@ export function GoalsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const goalId = editingGoalId ?? `goal:${crypto.randomUUID()}`;
+      const wasEditing = Boolean(editingGoalId);
 
       await repositories.goals.upsert({
         id: goalId,
@@ -109,7 +111,7 @@ export function GoalsWorkspace() {
         name: goalForm.name.trim(),
         goalType: goalForm.goalType,
         targetAmount: Number(goalForm.targetAmount),
-        currentAmount: goals.find((g) => g.id === goalId)?.currentAmount ?? 0,
+        currentAmount: Number(goalForm.currentAmount),
         targetDate: goalForm.targetDate,
         priority: Number(goalForm.priority),
         linkedAccountId: goalForm.linkedAccountId || undefined,
@@ -117,6 +119,10 @@ export function GoalsWorkspace() {
         updatedAt: timestamp,
       });
 
+      const message = wasEditing ? "Goal updated locally" : "Goal saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "goals", savedAt: timestamp, message });
       setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
@@ -133,6 +139,7 @@ export function GoalsWorkspace() {
       name: goal.name,
       goalType: goal.goalType,
       targetAmount: String(goal.targetAmount),
+      currentAmount: String(goal.currentAmount),
       targetDate: goal.targetDate,
       priority: String(goal.priority),
       linkedAccountId: goal.linkedAccountId ?? "",
@@ -145,6 +152,11 @@ export function GoalsWorkspace() {
 
     try {
       await repositories.goals.remove(goalId);
+      const timestamp = new Date().toISOString();
+      const message = "Goal deleted locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "goals", savedAt: timestamp, message });
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
         setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
@@ -204,30 +216,64 @@ export function GoalsWorkspace() {
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <GoalForm
-            accounts={accounts}
-            goalTypes={defaultGoalTypes}
-            form={goalForm}
-            editingId={editingGoalId}
-            isSubmitting={isSubmitting}
-            emergencyFundSuggestion={emergencyFundSuggestion}
-            onFormChange={setGoalForm}
-            onSubmit={(e) => void handleGoalSubmit(e)}
-            onCancelEdit={() => {
-              setEditingGoalId(null);
-              setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
-            }}
-          />
+        <>
+          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+            <Card className="moat-panel-mint border-border/20 shadow-none">
+              <CardContent className="grid gap-3 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Suggested emergency moat
+                </div>
+                <AmountIndicator
+                  tone={emergencyFundSuggestion > 0 ? "positive" : "neutral"}
+                  sign={emergencyFundSuggestion > 0 ? "positive" : "none"}
+                  value={formatCurrency(emergencyFundSuggestion)}
+                  className="text-4xl font-semibold tracking-tight"
+                />
+                <p className="max-w-lg text-sm leading-6 text-foreground/75">
+                  Based on three months of current outflow. Use it as a planning floor, not a ceiling.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="moat-panel-yellow border-border/20 shadow-none">
+              <CardContent className="grid gap-2 p-5">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                  Active goals
+                </div>
+                <div className="text-4xl font-semibold tracking-tight">{goals.length}</div>
+                <div className="text-sm text-foreground/75">
+                  Prioritise buffers first, then longer-dated ambitions.
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <GoalList
-            accounts={accounts}
-            goals={goals}
-            isSubmitting={isSubmitting}
-            onEdit={beginGoalEdit}
-            onDelete={(id) => void handleDeleteGoal(id)}
-          />
-        </div>
+          <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+            <GoalForm
+              accounts={accounts}
+              goalTypes={defaultGoalTypes}
+              form={goalForm}
+              editingId={editingGoalId}
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+              emergencyFundSuggestion={emergencyFundSuggestion}
+              onFormChange={setGoalForm}
+              onSubmit={(e) => void handleGoalSubmit(e)}
+              onCancelEdit={() => {
+                setEditingGoalId(null);
+                setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
+              }}
+            />
+
+            <GoalList
+              accounts={accounts}
+              goals={goals}
+              isSubmitting={isSubmitting}
+              onEdit={beginGoalEdit}
+              onDelete={(id) => void handleDeleteGoal(id)}
+            />
+          </div>
+        </>
       ) : null}
     </div>
   );

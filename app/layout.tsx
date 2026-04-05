@@ -1,14 +1,41 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Moat — Personal Finance",
+  metadataBase: new URL("https://moat.local"),
+  title: "Moat",
   description: "Track your money, build your financial moat.",
+  applicationName: "Moat",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Moat",
+  },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/logo.png",
+    shortcut: "/icons/logo.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111111" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -25,6 +52,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PwaRegister />
           {children}
         </ThemeProvider>
       </body>

@@ -1,13 +1,12 @@
 "use client";
 
 import type { Account, Category, TransactionType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -62,6 +61,8 @@ type Props = {
   form: TransactionFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -73,6 +74,8 @@ export function TransactionForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   onFormChange,
   onSubmit,
   onCancelEdit,
@@ -80,19 +83,24 @@ export function TransactionForm({
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
 
   return (
-    <Card className="border-border/40 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">
-          {editingId ? "Edit transaction" : "Add transaction"}
-        </CardTitle>
-        <CardDescription>
-          {editingId
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit transaction" : "Add transaction"}
+        description={
+          editingId
             ? "Update this transaction."
-            : "Record a single money event against an account."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+            : "Record one money event against one account."
+        }
+      />
+      <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="tx-type">Type</Label>
             <Select

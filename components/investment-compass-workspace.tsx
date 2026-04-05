@@ -4,7 +4,9 @@ import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
+import { AmountIndicator } from "@/components/amount-indicator";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
+import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type {
@@ -16,6 +18,8 @@ import type {
   Transaction,
   UserProfile,
 } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -114,6 +118,8 @@ export function InvestmentCompassWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -209,6 +215,10 @@ export function InvestmentCompassWorkspace() {
       await repositories.investmentProfiles.save(nextProfile);
       setInvestmentProfile(nextProfile);
       setForm(buildProfileForm(nextProfile));
+      const message = "Investment profile saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "investment_profile", savedAt: timestamp, message });
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Unable to save investment profile.",
@@ -259,20 +269,29 @@ export function InvestmentCompassWorkspace() {
         <>
           {monthlyOutflow > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card className="border-border/40 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Monthly outflow baseline</CardDescription>
-                  <CardTitle className="text-xl tabular-nums">
-                    {formatCurrency(monthlyOutflow)}
+              <Card className="moat-panel-sage border-border/20 shadow-none">
+                <CardHeader className="gap-2 p-5">
+                  <CardDescription className="text-foreground/72">Monthly outflow baseline</CardDescription>
+                  <CardTitle className="text-xl text-foreground">
+                    <AmountIndicator
+                      tone="negative"
+                      sign="negative"
+                      value={formatCurrency(monthlyOutflow)}
+                      className="text-xl font-semibold"
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
-              <Card className="border-border/40 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Emergency coverage</CardDescription>
-                  <CardTitle className="text-xl">
-                    {emergencyFundMonthsCovered.toFixed(1)} month
-                    {emergencyFundMonthsCovered !== 1 ? "s" : ""}
+              <Card className="moat-panel-mint border-border/20 shadow-none">
+                <CardHeader className="gap-2 p-5">
+                  <CardDescription className="text-foreground/72">Emergency coverage</CardDescription>
+                  <CardTitle className="text-xl text-foreground">
+                    <AmountIndicator
+                      tone={emergencyFundMonthsCovered > 0 ? "positive" : "neutral"}
+                      sign={emergencyFundMonthsCovered > 0 ? "positive" : "none"}
+                      value={`${emergencyFundMonthsCovered.toFixed(1)} month${emergencyFundMonthsCovered !== 1 ? "s" : ""}`}
+                      className="text-xl font-semibold"
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -280,15 +299,21 @@ export function InvestmentCompassWorkspace() {
           ) : null}
 
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <Card className="border-border/40 shadow-none">
-              <CardHeader>
-                <CardTitle className="text-base">Your investment profile</CardTitle>
-                <CardDescription>
-                  Update these settings to see how guidance changes.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <Card className="gap-0 pt-0 border-border/20 shadow-none">
+              <AccentCardHeader
+                tone="yellow"
+                title="Your investment profile"
+                description="Update these settings to see how guidance changes."
+                titleClassName="text-base"
+              />
+              <CardContent className="p-5">
                 <form className="grid gap-4" onSubmit={handleSubmit}>
+                  <LocalSaveFeedback
+                    isSubmitting={isSubmitting}
+                    lastSavedAt={lastSavedAt}
+                    successMessage={successMessage}
+                  />
+
                   <div className="grid gap-2">
                     <Label htmlFor="time-horizon">Time horizon (months)</Label>
                     <Input
@@ -395,7 +420,7 @@ export function InvestmentCompassWorkspace() {
             </Card>
 
             <div className="grid gap-4 content-start">
-              <Card className="border-border/40 shadow-none">
+              <Card className="moat-panel-lilac border-border/20 shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base">Suggested product classes</CardTitle>
                   <CardDescription>

@@ -1,33 +1,26 @@
 import { excludeTransfers } from "@/lib/domain/transfers";
 import type { Category, MonthSummary, Transaction } from "@/lib/types";
 
-function isMonthMatch(date: string, month: string): boolean {
-  return date.startsWith(month);
-}
-
-export function getMonthSummary(
+function buildSummary(
   transactions: Transaction[],
   categories: Category[],
-  month: string,
 ): MonthSummary {
-  const monthlyTransactions = transactions.filter((transaction) =>
-    isMonthMatch(transaction.occurredOn, month),
-  );
-  const spendingTransactions = excludeTransfers(monthlyTransactions);
+  const spendingTransactions = excludeTransfers(transactions);
 
   const inflow = spendingTransactions
     .filter((transaction) => transaction.type === "income")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const outflow = spendingTransactions
     .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
-  const savings = spendingTransactions
+  const allocatedSavings = spendingTransactions
     .filter((transaction) => transaction.type === "savings_contribution")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+  const savings = inflow - outflow;
 
-  const transfers = monthlyTransactions
+  const transfers = transactions
     .filter((transaction) => transaction.type === "transfer")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
@@ -40,7 +33,7 @@ export function getMonthSummary(
 
     categoryTotals.set(
       transaction.categoryId,
-      (categoryTotals.get(transaction.categoryId) ?? 0) + transaction.amount,
+      (categoryTotals.get(transaction.categoryId) ?? 0) + Math.abs(transaction.amount),
     );
   }
 
@@ -59,10 +52,34 @@ export function getMonthSummary(
     inflow,
     outflow,
     savings,
+    allocatedSavings,
     transfers,
-    net: inflow - outflow - savings,
+    net: savings,
     topCategories,
   };
+}
+
+function isMonthMatch(date: string, month: string): boolean {
+  return date.startsWith(month);
+}
+
+export function getMonthSummary(
+  transactions: Transaction[],
+  categories: Category[],
+  month: string,
+): MonthSummary {
+  const monthlyTransactions = transactions.filter((transaction) =>
+    isMonthMatch(transaction.occurredOn, month),
+  );
+
+  return buildSummary(monthlyTransactions, categories);
+}
+
+export function getSummaryForTransactions(
+  transactions: Transaction[],
+  categories: Category[],
+): MonthSummary {
+  return buildSummary(transactions, categories);
 }
 
 export function getSavingsRate(summary: MonthSummary): number {

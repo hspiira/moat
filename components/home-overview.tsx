@@ -8,6 +8,7 @@ import {
 } from "@/components/app-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import type { ModulePreview } from "@/lib/types";
 
 type HomeOverviewProps = {
@@ -18,8 +19,9 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
   return (
     <AppPage>
       <AppHeroCard
-        title="Track your money. Build your financial moat."
-        description="A personal finance tool built for Uganda. Track income and expenses across mobile money, cash, and bank accounts. Set goals, build emergency savings, and get rule-based investment guidance."
+        className="border-border/20"
+        title="Track clearly. Save deliberately. Invest with rules."
+        description="A personal finance tool for Uganda that keeps cash, mobile money, bank, SACCO, and long-term goals in one simple operating view."
         actions={
           <>
             <Button asChild>
@@ -32,22 +34,30 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
         }
         aside={
           <AppAsideIntro
-            title="What Moat does"
-            description="Built for how money actually works in Uganda."
+            title="Built for how money moves locally"
+            description="One clean system for tracking, building buffers, and choosing safer next steps."
           >
-            <div className="p-6 pt-0">
-              <ul className="grid gap-2.5 text-sm leading-6 text-muted-foreground">
+            <div className="grid gap-5 p-6 pt-0">
+              <div className="grid gap-3 sm:grid-cols-[0.8fr_1fr]">
+                <div className="moat-pie aspect-square w-full border border-border/20" />
+                <div className="grid content-between gap-4">
+                  <div>
+                    <div className="text-4xl font-semibold tracking-tight">3</div>
+                    <p className="text-sm text-muted-foreground">track, decide, automate</p>
+                  </div>
+                  <div className="text-sm leading-6 text-muted-foreground">
+                    Emergency fund first, investment guidance second.
+                  </div>
+                </div>
+              </div>
+              <Separator className="bg-border/50" />
+              <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
                 {[
                   "Track spending across cash, mobile money, and bank accounts",
-                  "Understand your monthly cash flow without complex setup",
                   "Build an emergency fund before taking on investment risk",
-                  "Get guidance matched to your time horizon — not stock tips",
                   "Import MTN or bank statements via CSV",
                 ].map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                    <span>{item}</span>
-                  </li>
+                  <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
@@ -57,32 +67,89 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
 
       <section className="grid gap-4">
         <AppSectionHeading
-          title="Sections"
-          description="Explore the app structure without completing setup."
+          title="How the product stays simple"
+          description="One accent block, one clear list, one next action."
         />
+        <div className="grid gap-3 xl:grid-cols-[1.3fr_1fr_1fr]">
+          <Card className="moat-panel-yellow border-border/20 shadow-none">
+            <CardContent className="grid gap-6 p-5">
+              <div className="space-y-1">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
+                  Track
+                </div>
+                <div className="text-4xl font-semibold tracking-tight">Cash flow</div>
+              </div>
+              <div className="grid gap-2 text-sm text-foreground/80">
+                <div>See what came in.</div>
+                <div>See what went out.</div>
+                <div>See what should change next month.</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="moat-panel-lilac border-border/20 shadow-none">
+            <CardContent className="grid gap-4 p-5">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
+                Save
+              </div>
+              <div className="text-3xl font-semibold tracking-tight">Emergency first</div>
+              <p className="text-sm leading-6 text-foreground/80">
+                Build a rent or school-fees buffer before stretching into long-term risk.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="moat-panel-mint border-border/20 shadow-none">
+            <CardContent className="grid gap-4 p-5">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
+                Decide
+              </div>
+              <div className="text-3xl font-semibold tracking-tight">Rule-based guidance</div>
+              <p className="text-sm leading-6 text-foreground/80">
+                Match your horizon and liquidity needs to safer product classes in Uganda.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="grid gap-4">
+        <AppSectionHeading title="Explore the product" description="Every screen has one main job." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {modulePreviews.map((module) => (
-            <Card key={module.href} className="border-border/30 bg-muted/30 shadow-none">
-              <CardContent className="p-0">
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="h-auto w-full items-start justify-start rounded-[inherit] px-4 py-4 text-left"
-                >
-                  <Link href={module.href}>
-                    <span className="block">
-                      <span className="block text-sm font-medium text-foreground">
-                        {module.title}
+          {modulePreviews.map((module, index) => {
+            const toneClass =
+              index % 3 === 0
+                ? "moat-panel-yellow"
+                : index % 3 === 1
+                  ? "moat-panel-sage"
+                  : "moat-panel-mint";
+
+            return (
+              <Card key={module.href} className={`${toneClass} border-border/20 shadow-none`}>
+                <CardContent className="p-0">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="h-auto w-full items-start justify-start px-4 py-5 text-left"
+                  >
+                    <Link href={module.href}>
+                      <span className="block">
+                        <span className="block text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                          {module.stage}
+                        </span>
+                        <span className="mt-2 block text-lg font-semibold text-foreground">
+                          {module.title}
+                        </span>
+                        <span className="mt-2 block text-sm leading-6 text-foreground/75">
+                          {module.summary}
+                        </span>
                       </span>
-                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                        {module.summary}
-                      </span>
-                    </span>
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
     </AppPage>

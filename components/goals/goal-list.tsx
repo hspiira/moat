@@ -1,5 +1,6 @@
 "use client";
 
+import { AmountIndicator } from "@/components/amount-indicator";
 import { getGoalContributionPlan } from "@/lib/domain/goals";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,10 @@ type Props = {
 
 export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Props) {
   return (
-    <Card className="border-border/40 shadow-none">
+    <Card className="border-border/20 shadow-none">
       <CardHeader>
         <CardTitle className="text-base">Your goals</CardTitle>
-        <CardDescription>
-          Monthly contribution targets are calculated from target, deadline, and current progress.
-        </CardDescription>
+        <CardDescription>Targets are calculated from amount, deadline, and progress.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {goals.length === 0 ? (
@@ -45,7 +44,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
             No goals yet. Create your first goal to start building.
           </div>
         ) : (
-          goals.map((goal) => {
+          goals.map((goal, index) => {
             const plan = getGoalContributionPlan(goal);
             const linkedAccount = accounts.find((a) => a.id === goal.linkedAccountId);
             const progressPercent =
@@ -54,7 +53,16 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
                 : 0;
 
             return (
-              <Card key={goal.id} className="border-border/40 bg-muted/30 shadow-none">
+              <Card
+                key={goal.id}
+                className={`border-border/20 shadow-none ${
+                  index === 0
+                    ? "moat-panel-mint"
+                    : index % 2 === 0
+                      ? "moat-panel-sage"
+                      : "bg-muted/20"
+                }`}
+              >
                 <CardContent className="px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-0.5">
@@ -87,14 +95,18 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
 
                   <div className="mt-3">
                     <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{formatCurrency(goal.currentAmount)}</span>
+                      <AmountIndicator
+                        tone={goal.currentAmount > 0 ? "positive" : "neutral"}
+                        sign={goal.currentAmount > 0 ? "positive" : "none"}
+                        value={formatCurrency(goal.currentAmount)}
+                      />
                       <span>
                         {progressPercent}% of {formatCurrency(goal.targetAmount)}
                       </span>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-1.5 w-full overflow-hidden bg-muted">
                       <div
-                        className="h-full rounded-full bg-primary transition-all"
+                        className="h-full bg-primary transition-all"
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
@@ -105,9 +117,12 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <div className="text-xs text-muted-foreground">Monthly target</div>
-                      <div className="font-medium tabular-nums">
-                        {formatCurrency(plan.monthlyContribution)}
-                      </div>
+                      <AmountIndicator
+                        tone={plan.isBehindSchedule ? "negative" : "neutral"}
+                        sign={plan.isBehindSchedule ? "negative" : "none"}
+                        value={formatCurrency(plan.monthlyContribution)}
+                        className="font-medium"
+                      />
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Deadline</div>

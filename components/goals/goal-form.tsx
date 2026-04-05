@@ -1,13 +1,12 @@
 "use client";
 
 import type { Account, GoalType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -24,6 +23,7 @@ export type GoalFormState = {
   name: string;
   goalType: GoalType;
   targetAmount: string;
+  currentAmount: string;
   targetDate: string;
   priority: string;
   linkedAccountId: string;
@@ -33,6 +33,7 @@ export const defaultGoalForm: GoalFormState = {
   name: "",
   goalType: "emergency_fund",
   targetAmount: "",
+  currentAmount: "0",
   targetDate: "",
   priority: "1",
   linkedAccountId: "",
@@ -62,6 +63,8 @@ type Props = {
   form: GoalFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   emergencyFundSuggestion: number;
   onFormChange: (updater: (prev: GoalFormState) => GoalFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -74,6 +77,8 @@ export function GoalForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   emergencyFundSuggestion,
   onFormChange,
   onSubmit,
@@ -83,19 +88,24 @@ export function GoalForm({
     form.goalType === "emergency_fund" && emergencyFundSuggestion > 0;
 
   return (
-    <Card className="border-border/40 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">
-          {editingId ? "Edit goal" : "New goal"}
-        </CardTitle>
-        <CardDescription>
-          {form.goalType === "emergency_fund"
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit goal" : "New goal"}
+        description={
+          form.goalType === "emergency_fund"
             ? `Suggested target based on 3x monthly outflow: ${formatCurrency(emergencyFundSuggestion)}`
-            : "Set a target amount and deadline for this goal."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+            : "Set a target amount and deadline for this goal."
+        }
+      />
+      <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="goal-name">Goal name</Label>
             <Input
@@ -155,6 +165,17 @@ export function GoalForm({
                 </Button>
               ) : null}
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="current-amount">Current amount saved (UGX)</Label>
+            <Input
+              id="current-amount"
+              inputMode="decimal"
+              value={form.currentAmount}
+              onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}
+              required
+            />
           </div>
 
           <div className="grid gap-2">

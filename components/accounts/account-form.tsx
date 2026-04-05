@@ -1,13 +1,12 @@
 "use client";
 
 import type { AccountType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +49,8 @@ type Props = {
   form: AccountFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   onFormChange: (updater: (prev: AccountFormState) => AccountFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -60,22 +61,31 @@ export function AccountForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   onFormChange,
   onSubmit,
   onCancelEdit,
 }: Props) {
   return (
-    <Card className="border-border/40 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">
-          {editingId ? "Edit account" : "Add account"}
-        </CardTitle>
-        <CardDescription>
-          {editingId ? "Update the details for this account." : "Add a new account to track."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit account" : "Add account"}
+        description={
+          editingId
+            ? "Update the details for this account."
+            : "Name it once and track it clearly."
+        }
+      />
+      <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="account-name">Account name</Label>
             <Input

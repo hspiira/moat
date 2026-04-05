@@ -3,9 +3,15 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
-import { getAccountTotals } from "@/lib/domain/accounts";
+import { AmountIndicator } from "@/components/amount-indicator";
+import {
+  getAccountTotals,
+  normalizeOpeningBalance,
+  reconcileAccountBalances,
+} from "@/lib/domain/accounts";
+import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { Account, AccountType } from "@/lib/types";
+import type { Account, AccountType, Transaction } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -20,6 +26,7 @@ import {
   defaultAccountForm,
 } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
+import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 
 const repositories = createIndexedDbRepositories();
 
@@ -43,11 +50,14 @@ export function AccountsWorkspace() {
     { id: string } | null
   >(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accountForm, setAccountForm] = useState<AccountFormState>(defaultAccountForm);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -58,10 +68,15 @@ export function AccountsWorkspace() {
       setProfile(nextProfile);
 
       if (nextProfile) {
-        const nextAccounts = await repositories.accounts.listByUser(nextProfile.id);
-        setAccounts(nextAccounts);
+        const [nextAccounts, nextTransactions] = await Promise.all([
+          repositories.accounts.listByUser(nextProfile.id),
+          repositories.transactions.listByUser(nextProfile.id),
+        ]);
+        setAccounts(reconcileAccountBalances(nextAccounts, nextTransactions));
+        setTransactions(nextTransactions);
       } else {
         setAccounts([]);
+        setTransactions([]);
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load accounts.");
@@ -86,7 +101,11 @@ export function AccountsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const accountId = editingAccountId ?? `account:${crypto.randomUUID()}`;
-      const openingBalance = Number(accountForm.openingBalance);
+      const openingBalance = normalizeOpeningBalance(
+        accountForm.type,
+        Number(accountForm.openingBalance),
+      );
+      const wasEditing = Boolean(editingAccountId);
 
       await repositories.accounts.upsert({
         id: accountId,
@@ -103,11 +122,52 @@ export function AccountsWorkspace() {
         updatedAt: timestamp,
       });
 
+      const message = wasEditing ? "Account updated locally" : "Account saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
       setAccountForm(defaultAccountForm);
       setEditingAccountId(null);
       await loadWorkspace();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save account.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleRepairAccounts(
+    repairs: { accountId: string; openingBalance: number }[],
+  ) {
+    if (!profile || repairs.length === 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const timestamp = new Date().toISOString();
+
+      await Promise.all(
+        repairs.map(async ({ accountId, openingBalance }) => {
+          const existing = accounts.find((account) => account.id === accountId);
+          if (!existing) return;
+
+          await repositories.accounts.upsert({
+            ...existing,
+            openingBalance,
+            balance: openingBalance,
+            updatedAt: timestamp,
+          });
+        }),
+      );
+
+      const message = "Opening balances repaired locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
+      await loadWorkspace();
+    } catch (repairError) {
+      setError(repairError instanceof Error ? repairError.message : "Unable to repair accounts.");
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +179,7 @@ export function AccountsWorkspace() {
       name: account.name,
       type: account.type,
       institutionName: account.institutionName ?? "",
-      openingBalance: String(account.balance),
+      openingBalance: String(Math.abs(account.openingBalance)),
       notes: account.notes ?? "",
     });
   }
@@ -162,25 +222,39 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
-                <CardDescription>Total balance</CardDescription>
-                <CardTitle className="text-xl">
-                  {formatCurrency(accountTotals.totalBalance)}
+          <RepairAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onRepair={handleRepairAccounts}
+          />
+
+          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr_1fr]">
+            <Card className="moat-panel-sage border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
+                <CardDescription className="text-foreground/65">Total balance</CardDescription>
+                <CardTitle className="text-4xl tracking-tight">
+                  <AmountIndicator
+                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
+                    sign={accountTotals.totalBalance < 0 ? "negative" : "none"}
+                    value={formatCurrency(accountTotals.totalBalance)}
+                    className="text-4xl font-semibold tracking-tight"
+                  />
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
+            <Card className="moat-panel-yellow border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
                 <CardDescription>Active accounts</CardDescription>
-                <CardTitle className="text-xl">{accountTotals.activeAccounts}</CardTitle>
+                <CardTitle className="text-3xl tracking-tight">
+                  {accountTotals.activeAccounts}
+                </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="border-border/40 shadow-none">
-              <CardHeader className="pb-2">
+            <Card className="moat-panel-mint border-border/20 shadow-none">
+              <CardHeader className="gap-2 p-5">
                 <CardDescription>Account types set up</CardDescription>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-3xl tracking-tight">
                   {
                     defaultAccountTypes.filter(
                       (type) => accountTotals.accountsByType[type] > 0,
@@ -192,12 +266,14 @@ export function AccountsWorkspace() {
             </Card>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
             <AccountForm
               accountTypes={defaultAccountTypes}
               form={accountForm}
               editingId={editingAccountId}
               isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
               onFormChange={setAccountForm}
               onSubmit={(e) => void handleAccountSubmit(e)}
               onCancelEdit={() => {
@@ -206,7 +282,7 @@ export function AccountsWorkspace() {
               }}
             />
 
-            <AccountList accounts={accounts} onEdit={beginAccountEdit} />
+            <AccountList accounts={accounts} transactions={transactions} onEdit={beginAccountEdit} />
           </div>
         </>
       ) : null}

@@ -6,6 +6,27 @@ export type AccountTotals = {
   accountsByType: Record<Account["type"], number>;
 };
 
+export type AccountBalanceBreakdown = {
+  openingBalance: number;
+  inflow: number;
+  outflow: number;
+  savingsAllocations: number;
+  transfers: number;
+  movement: number;
+  currentBalance: number;
+};
+
+export function normalizeOpeningBalance(
+  type: Account["type"],
+  amount: number,
+): number {
+  if (type === "debt") {
+    return -Math.abs(amount);
+  }
+
+  return amount;
+}
+
 export function getAccountTotals(accounts: Account[]): AccountTotals {
   return accounts.reduce<AccountTotals>(
     (totals, account) => {
@@ -36,7 +57,7 @@ export function getAccountTotals(accounts: Account[]): AccountTotals {
 function getBalanceDelta(transaction: Transaction): number {
   switch (transaction.type) {
     case "income":
-      return transaction.amount;
+      return Math.abs(transaction.amount);
     case "expense":
     case "savings_contribution":
     case "debt_payment":
@@ -46,6 +67,44 @@ function getBalanceDelta(transaction: Transaction): number {
     default:
       return 0;
   }
+}
+
+export function getAccountBalanceBreakdown(
+  account: Account,
+  transactions: Transaction[],
+): AccountBalanceBreakdown {
+  const accountTransactions = transactions.filter(
+    (transaction) => transaction.accountId === account.id,
+  );
+
+  const inflow = accountTransactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+
+  const outflow = accountTransactions
+    .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+
+  const savingsAllocations = accountTransactions
+    .filter((transaction) => transaction.type === "savings_contribution")
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+
+  const transfers = accountTransactions
+    .filter((transaction) => transaction.type === "transfer")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  const movement =
+    inflow - outflow - savingsAllocations + transfers;
+
+  return {
+    openingBalance: account.openingBalance,
+    inflow,
+    outflow,
+    savingsAllocations,
+    transfers,
+    movement,
+    currentBalance: account.openingBalance + movement,
+  };
 }
 
 export function reconcileAccountBalances(

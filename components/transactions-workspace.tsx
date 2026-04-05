@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,8 @@ export function TransactionsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -104,6 +107,7 @@ export function TransactionsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const amount = Number(transactionForm.amount);
+      const wasEditing = Boolean(editingTransactionId);
 
       if (transactionForm.type === "transfer") {
         if (!transactionForm.accountId || !transactionForm.destinationAccountId) {
@@ -163,6 +167,12 @@ export function TransactionsWorkspace() {
       }
 
       await refreshAccounts(profile.id);
+      const message = wasEditing
+        ? "Transaction updated locally"
+        : "Transaction saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
       setEditingTransactionId(null);
       setTransactionForm({
         ...defaultTransactionForm,
@@ -215,6 +225,11 @@ export function TransactionsWorkspace() {
         setTransactionForm(defaultTransactionForm);
       }
 
+      const timestamp = new Date().toISOString();
+      const message = "Transaction deleted locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
       await refreshAccounts(profile.id);
       await loadWorkspace();
     } catch (deleteError) {
@@ -232,12 +247,14 @@ export function TransactionsWorkspace() {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
           <p className="text-sm text-muted-foreground">
-            Record income, expenses, transfers, and savings contributions.
+            Record income, expenses, transfers, and savings in one clean stream.
           </p>
         </div>
         {transactions.length > 0 ? (
-          <div className="text-right text-sm text-muted-foreground">
-            <div className="font-medium text-foreground">{transactions.length}</div>
+          <div className="moat-panel-yellow border border-border/20 px-4 py-3 text-right text-sm text-muted-foreground">
+            <div className="text-2xl font-semibold tracking-tight text-foreground">
+              {transactions.length}
+            </div>
             <div className="text-xs">recorded</div>
           </div>
         ) : null}
@@ -269,14 +286,16 @@ export function TransactionsWorkspace() {
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
           <TransactionForm
             accounts={accounts}
             categories={categories}
-            form={transactionForm}
-            editingId={editingTransactionId}
-            isSubmitting={isSubmitting}
-            onFormChange={setTransactionForm}
+              form={transactionForm}
+              editingId={editingTransactionId}
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+              onFormChange={setTransactionForm}
             onSubmit={(e) => void handleTransactionSubmit(e)}
             onCancelEdit={() => {
               setEditingTransactionId(null);

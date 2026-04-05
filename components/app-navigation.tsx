@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -58,9 +59,14 @@ const mobileSecondaryNav = ["/accounts", "/learn"] as const;
 function AppBrand() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground">
-        M
-      </span>
+      <Image
+        src="/icons/logo.svg"
+        alt="Moat logo"
+        width={44}
+        height={44}
+        className="h-11 w-11"
+        priority
+      />
       <span>
         <span className="block text-base font-semibold tracking-tight text-foreground">
           Moat
@@ -124,7 +130,7 @@ function MobileUtilitySheet({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] rounded-t-[2rem] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="max-h-[85vh] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="px-6">
           <SheetTitle>Navigation and actions</SheetTitle>
@@ -187,7 +193,7 @@ function MobileUtilitySheet({
               </div>
               <ThemeToggle
                 onClick={onToggleTheme}
-                className="h-10 w-10 rounded-2xl border-border/30"
+                className="h-10 w-10 border-border/30"
               />
             </CardContent>
           </Card>
@@ -209,17 +215,22 @@ export function AppNavigation() {
 
   return (
     <>
-      <Card className="sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-border/30 bg-background/92 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:hidden">
-        <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+      <Card className="sticky top-0 z-40 border-x-0 border-t-0 border-border/30 bg-background/92 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:hidden">
+        <CardContent className="flex items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
-              M
-            </span>
+            <Image
+              src="/icons/logo.svg"
+              alt="Moat logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0"
+              priority
+            />
             <div className="min-w-0">
               <div className="truncate text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Moat
               </div>
-              <div className="truncate text-lg font-semibold tracking-tight text-foreground">
+              <div className="truncate text-base font-semibold tracking-tight text-foreground">
                 {activeItem.label}
               </div>
             </div>
@@ -233,9 +244,9 @@ export function AppNavigation() {
                 variant="ghost"
                 size="icon"
                 aria-label="Open navigation and actions"
-                className="h-10 w-10 rounded-2xl"
+                className="h-9 w-9"
               >
-                <IconMenu2 className="h-5 w-5" />
+                <IconMenu2 className="h-[18px] w-[18px]" />
               </Button>
             }
           />
@@ -259,7 +270,7 @@ export function AppNavigation() {
                   asChild
                   variant="ghost"
                   className={[
-                    "h-11 w-full rounded-none border-b-2 px-2 text-sm shadow-none",
+                    "h-11 w-full border-b-2 px-2 text-sm shadow-none",
                     isActive
                       ? "border-b-primary text-foreground dark:border-b-cyan-400 dark:text-cyan-100"
                       : "border-b-transparent text-muted-foreground/80 hover:text-foreground",
@@ -294,16 +305,16 @@ export function AppNavigation() {
           <div className="flex shrink-0 items-center">
             <ThemeToggle
               onClick={toggleTheme}
-              className="h-10 w-10 rounded-2xl border-border/30"
+              className="h-10 w-10 border-border/30"
             />
           </div>
         </div>
         <Separator className="bg-border/50" />
       </div>
 
-      <Card className="fixed inset-x-0 bottom-0 z-50 rounded-none border-x-0 border-b-0 border-t border-border/30 bg-background/96 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/88 lg:hidden">
-        <CardContent className="px-2 pb-[calc(0.4rem+env(safe-area-inset-bottom))] pt-1.5">
-          <nav className="mx-auto grid max-w-md grid-cols-5 gap-1">
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-[backdrop-filter]:bg-background/88 lg:hidden">
+        <div className="px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))] pt-1">
+          <nav className="grid grid-cols-5 gap-1">
           {mobilePrimaryNav.map((href) => {
             const item = navItems.find((entry) => entry.href === href);
             if (!item) {
@@ -317,20 +328,20 @@ export function AppNavigation() {
               <Button
                 key={item.href}
                 asChild
-                variant="ghost"
+                variant={isActive ? "secondary" : "ghost"}
                 className={[
-                  "h-auto min-h-14 flex-col gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-medium shadow-none",
+                  "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
                   isActive
-                    ? "text-primary dark:text-cyan-200"
+                    ? "text-foreground dark:text-cyan-100"
                     : "text-muted-foreground",
                 ].join(" ")}
               >
                 <Link href={item.href} aria-current={isActive ? "page" : undefined}>
                   <span
                     className={[
-                      "inline-flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                      "inline-flex h-6 w-10 items-center justify-center transition-colors",
                       isActive
-                        ? "bg-primary/10 dark:bg-cyan-400/15"
+                        ? "text-primary dark:text-cyan-300"
                         : "bg-transparent",
                     ].join(" ")}
                   >
@@ -347,9 +358,9 @@ export function AppNavigation() {
             trigger={
               <Button
                 variant="ghost"
-                className="h-auto min-h-14 flex-col gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-medium text-muted-foreground shadow-none"
+                className="h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium text-muted-foreground shadow-none"
               >
-                <span className="inline-flex h-8 w-12 items-center justify-center rounded-full">
+                <span className="inline-flex h-6 w-10 items-center justify-center">
                   <IconPlus className="h-4 w-4" />
                 </span>
                 <span className="leading-none">More</span>
@@ -357,8 +368,8 @@ export function AppNavigation() {
             }
           />
           </nav>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   );
 }
