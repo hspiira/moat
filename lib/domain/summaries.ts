@@ -15,9 +15,10 @@ function buildSummary(
     .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
-  const savings = spendingTransactions
+  const allocatedSavings = spendingTransactions
     .filter((transaction) => transaction.type === "savings_contribution")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+  const savings = inflow - outflow;
 
   const transfers = transactions
     .filter((transaction) => transaction.type === "transfer")
@@ -51,8 +52,9 @@ function buildSummary(
     inflow,
     outflow,
     savings,
+    allocatedSavings,
     transfers,
-    net: inflow - outflow - savings,
+    net: savings,
     topCategories,
   };
 }

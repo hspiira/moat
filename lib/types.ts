@@ -219,6 +219,7 @@ export type MonthSummary = {
   inflow: number;
   outflow: number;
   savings: number;
+  allocatedSavings: number;
   transfers: number;
   net: number;
   topCategories: {

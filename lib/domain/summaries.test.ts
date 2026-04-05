@@ -99,12 +99,13 @@ const transactions: Transaction[] = [
 ];
 
 describe("getMonthSummary", () => {
-  it("separates inflow, outflow, savings, and ignores transfers in cash-flow totals", () => {
+  it("separates inflow, outflow, saved surplus, allocated savings, and ignores transfers in cash-flow totals", () => {
     const summary = getMonthSummary(transactions, categories, "2026-04");
 
     expect(summary.inflow).toBe(2_000_000);
     expect(summary.outflow).toBe(300_000);
-    expect(summary.savings).toBe(400_000);
+    expect(summary.savings).toBe(1_700_000);
+    expect(summary.allocatedSavings).toBe(400_000);
     expect(summary.transfers).toBe(0);
     expect(summary.topCategories).toEqual([
       {
@@ -118,7 +119,7 @@ describe("getMonthSummary", () => {
   it("calculates savings rate from monthly inflow", () => {
     const summary = getMonthSummary(transactions, categories, "2026-04");
 
-    expect(getSavingsRate(summary)).toBe(0.2);
+    expect(getSavingsRate(summary)).toBe(0.85);
   });
 
   it("uses absolute magnitudes for non-transfer totals", () => {
@@ -146,6 +147,7 @@ describe("getMonthSummary", () => {
 
     expect(summary.inflow).toBe(2_000_000);
     expect(summary.outflow).toBe(300_000);
-    expect(summary.savings).toBe(400_000);
+    expect(summary.savings).toBe(1_700_000);
+    expect(summary.allocatedSavings).toBe(400_000);
   });
 });

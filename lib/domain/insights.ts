@@ -40,12 +40,24 @@ export function getMonthlyInsights(
     );
   }
 
-  if (summary.savings === 0 && summary.inflow > 0) {
+  if (summary.allocatedSavings === 0 && summary.savings > 0) {
     insights.push(
       buildInsight(
         "insight:no-savings",
-        "No savings contributions recorded",
-        `Income was recorded ${periodPhrase} but nothing was tagged as savings. Set aside an explicit savings contribution to avoid silent drift.`,
+        "No savings allocation recorded",
+        `You still saved money ${periodPhrase}, but none of it was explicitly tagged as a savings contribution. Record where that surplus is meant to sit so the plan stays intentional.`,
+        2,
+        periodLabel,
+      ),
+    );
+  }
+
+  if (summary.allocatedSavings > summary.savings && summary.savings >= 0) {
+    insights.push(
+      buildInsight(
+        "insight:over-allocated-savings",
+        "Savings allocations exceed the period surplus",
+        `Tagged savings contributions are higher than the surplus recorded ${periodPhrase}. Check whether those contributions were funded from prior balances or whether some spending or income entries are missing.`,
         2,
         periodLabel,
       ),
