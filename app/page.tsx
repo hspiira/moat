@@ -1,21 +1,10 @@
 import { AppShell } from "@/components/app-shell";
-import { HomeOverview } from "@/components/home-overview";
-import {
-  appSections,
-  implementationMilestones,
-  modulePreviews,
-  productHighlights,
-} from "@/lib/data";
+import { HomeRoute } from "@/components/home-route";
 
 export default function HomePage() {
   return (
     <AppShell>
-      <HomeOverview
-        sections={appSections}
-        milestones={implementationMilestones}
-        highlights={productHighlights}
-        modulePreviews={modulePreviews}
-      />
+      <HomeRoute />
     </AppShell>
   );
 }
