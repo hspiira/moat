@@ -63,6 +63,11 @@ const goalFocusOptions: { value: InvestmentProfile["goalFocus"]; label: string }
   { value: "house_construction", label: "House / Construction" },
 ];
 
+/**
+ * Create an ISO 8601 timestamp for the current date and time.
+ *
+ * @returns An ISO 8601 timestamp string representing the current date and time, e.g. `2026-04-05T12:34:56.789Z`
+ */
 function buildTimestamp() {
   return new Date().toISOString();
 }
@@ -71,6 +76,11 @@ function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+/**
+ * Format a numeric amount as Ugandan shilling currency with no fractional digits.
+ *
+ * @returns The input amount formatted as a `UGX` currency string using the `en-UG` locale and no decimal places.
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -79,6 +89,14 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Calculate how many months of the given month's outflows the emergency fund currently covers.
+ *
+ * @param goals - Array of goals; the function uses the goal with `goalType === "emergency_fund"`, if any.
+ * @param transactions - Array of transactions used to compute the month's outflow.
+ * @param month - Month identifier in `YYYY-MM` format for which to compute coverage.
+ * @returns The number of months covered by the emergency fund; `0` if there is no emergency fund goal or if the month's outflow is zero or negative.
+ */
 function getEmergencyFundMonthsCovered(
   goals: Goal[],
   transactions: Transaction[],
@@ -90,10 +108,22 @@ function getEmergencyFundMonthsCovered(
   return emergencyGoal.currentAmount / monthSummary.outflow;
 }
 
+/**
+ * Determines whether any transaction in the list represents a debt payment.
+ *
+ * @param transactions - The list of transactions to inspect
+ * @returns `true` if at least one transaction has `type === "debt_payment"`, `false` otherwise
+ */
 function hasHighCostDebt(transactions: Transaction[]) {
   return transactions.some((t) => t.type === "debt_payment");
 }
 
+/**
+ * Create a form-ready InvestmentProfileFormState from an InvestmentProfile.
+ *
+ * @param profile - The source investment profile to convert
+ * @returns An InvestmentProfileFormState with `timeHorizonMonths` converted to a string and the other profile fields copied
+ */
 function buildProfileForm(profile: InvestmentProfile): InvestmentProfileFormState {
   return {
     timeHorizonMonths: String(profile.timeHorizonMonths),
@@ -104,6 +134,15 @@ function buildProfileForm(profile: InvestmentProfile): InvestmentProfileFormStat
   };
 }
 
+/**
+ * Render the Investment Compass workspace that shows rule-based investment guidance and an editable investment profile.
+ *
+ * This component loads the current user profile, goals, transactions, and resources from IndexedDB, derives guidance and metrics
+ * (monthly outflow, emergency coverage, recommended product classes, rationale, and warnings), and provides a form to view and
+ * update the user's investment profile.
+ *
+ * @returns The UI for viewing guidance, inspecting related resources, and editing/saving the user's investment profile.
+ */
 export function InvestmentCompassWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [investmentProfile, setInvestmentProfile] = useState<InvestmentProfile | null>(null);

@@ -11,6 +11,12 @@ import {
 } from "@/components/ui/card";
 import { transactionTypeLabels } from "./transaction-form";
 
+/**
+ * Format a numeric amount as Ugandan shillings without fractional digits.
+ *
+ * @param amount - The numeric amount to format in UGX
+ * @returns The formatted currency string (locale "en-UG", currency "UGX", no fractional digits)
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -28,6 +34,17 @@ type Props = {
   onDelete: (transaction: Transaction) => void;
 };
 
+/**
+ * Render a card containing a list of recorded transactions or an empty-state when none exist.
+ *
+ * @param accounts - Available accounts used to display each transaction's account name
+ * @param categories - Available categories used to display each transaction's category name
+ * @param transactions - Transactions to render; transfer transactions are shown as individual records
+ * @param isSubmitting - When true, disables action buttons to prevent concurrent submissions
+ * @param onEdit - Callback invoked with a transaction when its Edit button is clicked
+ * @param onDelete - Callback invoked with a transaction when its Delete button is clicked
+ * @returns A JSX element containing the transactions card and its rows or an empty-state message
+ */
 export function TransactionList({
   accounts,
   categories,

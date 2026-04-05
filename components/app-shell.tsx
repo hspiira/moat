@@ -6,6 +6,12 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+/**
+ * Layout component that renders the application navigation and page content within a centered container.
+ *
+ * @param children - Page content rendered below the top navigation
+ * @returns The app shell element containing the navigation bar and the provided children
+ */
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-background">

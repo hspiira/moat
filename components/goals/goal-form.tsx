@@ -48,6 +48,12 @@ export const goalTypeLabels: Record<GoalType, string> = {
   house_construction: "House / Construction",
 };
 
+/**
+ * Format a numeric amount as a Uganda Shilling currency string.
+ *
+ * @param amount - The numeric amount to format (in UGX)
+ * @returns The formatted currency string using the `en-UG` locale, `UGX` currency, and no fractional digits
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -68,6 +74,25 @@ type Props = {
   onCancelEdit: () => void;
 };
 
+/**
+ * Render a card-based form for creating or editing a financial goal.
+ *
+ * Renders controlled inputs for name, goal type, target amount, target date,
+ * priority, and an optional linked savings account. When the selected goal type
+ * is `emergency_fund` and a positive `emergencyFundSuggestion` is provided,
+ * displays a suggested target amount and a "Use suggested" action.
+ *
+ * @param accounts - Available savings accounts shown in the linked-account selector
+ * @param goalTypes - Available goal types shown in the goal-type selector
+ * @param form - Current controlled form state for all inputs
+ * @param editingId - Truthy value when editing an existing goal (affects title and submit label)
+ * @param isSubmitting - Disables the submit button and changes its label while submitting
+ * @param emergencyFundSuggestion - Numeric suggestion used to prefill the target amount for emergency funds
+ * @param onFormChange - Functional updater used to change form state
+ * @param onSubmit - Form submit handler
+ * @param onCancelEdit - Handler invoked to cancel edit mode
+ * @returns The rendered JSX element for the goal form
+ */
 export function GoalForm({
   accounts,
   goalTypes,

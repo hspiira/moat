@@ -17,6 +17,20 @@ type DatePickerProps = {
   id?: string;
 };
 
+/**
+ * Render a button-triggered popover calendar for selecting a date in YYYY-MM-DD format.
+ *
+ * The component displays a trigger button showing the formatted date (`dd MMM yyyy`) or a placeholder.
+ * Opening the popover shows a calendar; selecting a date calls `onChange` with a local `YYYY-MM-DD` string
+ * (constructed from the selected Date's year, month, and day to avoid timezone shifts).
+ *
+ * @param value - Current selected date as an ISO `YYYY-MM-DD` string; if falsy, no date is selected.
+ * @param onChange - Callback invoked with the newly selected date as an ISO `YYYY-MM-DD` string.
+ * @param placeholder - Text shown in the trigger when `value` is empty. Defaults to `"Pick a date"`.
+ * @param disabled - If true, disables the trigger button.
+ * @param id - Optional id applied to the trigger `Button`.
+ * @returns A React element that renders the date picker UI.
+ */
 export function DatePicker({
   value,
   onChange,

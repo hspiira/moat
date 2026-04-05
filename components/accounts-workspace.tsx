@@ -23,6 +23,12 @@ import { AccountList } from "./accounts/account-list";
 
 const repositories = createIndexedDbRepositories();
 
+/**
+ * Format a numeric amount as Ugandan shilling currency.
+ *
+ * @param amount - The numeric amount to format
+ * @returns The `amount` formatted as `UGX` in the `en-UG` locale with no fractional digits
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -31,6 +37,12 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Map an account type to the corresponding institution type identifier.
+ *
+ * @param type - The account type to map
+ * @returns The institution type: `'bank'`, `'mobile_money'`, `'sacco'`, or `'other'` for any other account type
+ */
 function toInstitutionType(type: AccountType): Account["institutionType"] {
   if (type === "bank") return "bank";
   if (type === "mobile_money") return "mobile_money";
@@ -38,6 +50,13 @@ function toInstitutionType(type: AccountType): Account["institutionType"] {
   return "other";
 }
 
+/**
+ * Render the accounts management workspace, providing UI and state for loading a user profile, listing accounts, creating and editing accounts, and displaying summaries and errors.
+ *
+ * This component manages local state (profile, accounts, form state, loading/submitting flags, and errors), performs initial workspace loading, handles account upsert submissions, and wires the AccountForm and AccountList UI pieces together.
+ *
+ * @returns The accounts workspace UI as a React element.
+ */
 export function AccountsWorkspace() {
   const [profile, setProfile] = useState<
     { id: string } | null

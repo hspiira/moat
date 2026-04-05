@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { navItems } from "@/lib/data";
 
+/**
+ * Renders the app navigation UI including a branded home link, a theme toggle button, and a grid of navigation links.
+ *
+ * The theme toggle reflects the current theme after client mount and switches between "dark" and "light".
+ *
+ * @returns The navigation React element containing the header and navigation link grid
+ */
 export function AppNavigation() {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();

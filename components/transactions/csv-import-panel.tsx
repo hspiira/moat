@@ -60,10 +60,22 @@ const defaultCsvMappings: CsvMappings = {
   account: "",
 };
 
+/**
+ * Normalize a textual name for case-insensitive comparisons by trimming surrounding whitespace and converting to lowercase.
+ *
+ * @param value - The input string to normalize
+ * @returns The trimmed, lowercased version of `value`
+ */
 function normalizeName(value: string) {
   return value.trim().toLowerCase();
 }
 
+/**
+ * Maps a free-form CSV type value to a normalized TransactionType.
+ *
+ * @param value - The raw type string extracted from a CSV cell
+ * @returns The matching `TransactionType` (`"income"`, `"expense"`, `"savings_contribution"`, `"debt_payment"`, or `"transfer"`), or `""` if no known mapping is found
+ */
 function parseImportedType(value: string): TransactionType | "" {
   const n = normalizeName(value);
   switch (n) {
@@ -86,6 +98,13 @@ function parseImportedType(value: string): TransactionType | "" {
   }
 }
 
+/**
+ * Determines whether a previewed import row matches any existing transaction.
+ *
+ * @param preview - The preview row to check; its `accountId`, `occurredOn`, `amount`, `type`, and `note` fields are compared.
+ * @param existing - The list of existing transactions to compare against.
+ * @returns `true` if an existing transaction has the same `accountId`, `occurredOn`, `amount`, `type`, and `note`, `false` otherwise.
+ */
 function detectDuplicate(
   preview: {
     accountId: string;
@@ -106,6 +125,12 @@ function detectDuplicate(
   );
 }
 
+/**
+ * Format a numeric amount as Ugandan Shillings (UGX) with no fractional digits.
+ *
+ * @param amount - The numeric amount to format; negative values include a minus sign.
+ * @returns The amount formatted as a UGX currency string (e.g., "UGX 1,000")
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -123,6 +148,21 @@ type Props = {
   onError: (message: string) => void;
 };
 
+/**
+ * Renders a CSV import panel that lets users upload a CSV, map columns to transaction fields,
+ * preview and validate parsed rows, and persist valid transactions and an import batch to IndexedDB.
+ *
+ * The component computes per-row issues (e.g., missing date, invalid amount, unresolved account/category,
+ * unsupported transfer, likely duplicate) and only imports rows without issues when confirmed.
+ *
+ * @param accounts - Available accounts used to resolve account names in the CSV and to choose a default account
+ * @param categories - Available categories used to resolve category names and to limit the default category by type
+ * @param transactions - Existing transactions used for duplicate detection during preview
+ * @param profile - Current user profile; `profile.id` is used as the owner of created import and transactions
+ * @param onImportSuccess - Called when the import completes successfully (after persisting the import batch and transactions)
+ * @param onError - Called with a human-readable message when CSV parsing or import fails
+ * @returns A React element containing the CSV import UI (file input, column mapping controls, row preview, and import controls)
+ */
 export function CsvImportPanel({
   accounts,
   categories,

@@ -34,10 +34,23 @@ const topicCopy: Record<string, { title: string; summary: string }> = {
   },
 };
 
+/**
+ * Produce a new array of resource links ordered by title using locale-aware comparison.
+ *
+ * @param resources - The resource links to sort; the input array is not mutated.
+ * @returns A new array containing the same resources sorted by `title` in ascending, locale-aware order.
+ */
 function sortResources(resources: ResourceLink[]) {
   return [...resources].sort((a, b) => a.title.localeCompare(b.title));
 }
 
+/**
+ * Render the LearnWorkspace client component that loads and displays learning resources grouped by topic.
+ *
+ * The component fetches a user profile and a list of resources from the module-scoped IndexedDB repositories, sorts resources by title, and groups them by topic. It renders loading and error states, an unauthenticated guidance card when no profile exists, a header with the total resource count, and topic cards containing external links to each resource (with an "Official" label when applicable).
+ *
+ * @returns The component's JSX element representing the workspace UI.
+ */
 export function LearnWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [resources, setResources] = useState<ResourceLink[]>([]);

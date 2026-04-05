@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   description: "Track your money, build your financial moat.",
 };
 
+/**
+ * Root layout component that sets the document language, applies the Geist font CSS variable, and wraps app content with the theme provider.
+ *
+ * @param children - The application content to render inside the root layout.
+ * @returns The top-level HTML structure with the font class on `<html>` and `children` wrapped by `ThemeProvider`.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

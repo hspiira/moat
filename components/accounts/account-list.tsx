@@ -13,6 +13,12 @@ import { Separator } from "@/components/ui/separator";
 
 import { accountTypeLabels } from "./account-form";
 
+/**
+ * Format a numeric amount as Ugandan Shilling (UGX) using the en-UG locale.
+ *
+ * @param amount - The numeric amount to format
+ * @returns The formatted currency string in UGX with no decimal digits (e.g., `UGX 1,000`)
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -26,6 +32,13 @@ type Props = {
   onEdit: (account: Account) => void;
 };
 
+/**
+ * Render a card containing the provided non-archived accounts or an empty-state message.
+ *
+ * @param accounts - Array of accounts to display; archived accounts are omitted from the rendered list.
+ * @param onEdit - Callback invoked with an account when the user clicks its "Edit" button.
+ * @returns The JSX element representing the accounts card and its list (or empty-state).
+ */
 export function AccountList({ accounts, onEdit }: Props) {
   const active = accounts.filter((a) => !a.isArchived);
 

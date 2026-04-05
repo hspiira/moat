@@ -15,10 +15,22 @@ import { GoalList } from "./goals/goal-list";
 
 const repositories = createIndexedDbRepositories();
 
+/**
+ * Create a new array of goals sorted in ascending order by `priority`.
+ *
+ * @param goals - The goals to sort
+ * @returns A new array containing the same goals sorted by `priority` from lowest to highest
+ */
 function sortGoals(goals: Goal[]) {
   return [...goals].sort((a, b) => a.priority - b.priority);
 }
 
+/**
+ * Format a numeric amount as Ugandan Shilling (UGX) using the `en-UG` locale.
+ *
+ * @param amount - The numeric amount to format
+ * @returns The formatted currency string in UGX with no fractional digits
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -27,6 +39,14 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Renders the goals workspace UI and manages its state, data loading, and goal CRUD operations.
+ *
+ * Loads the current user profile, accounts, goals, and transactions; computes a monthly summary
+ * and an emergency fund suggestion; and provides forms and handlers to create, edit, and delete goals.
+ *
+ * @returns The Goals workspace as a React element
+ */
 export function GoalsWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);

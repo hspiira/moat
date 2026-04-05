@@ -42,10 +42,22 @@ const defaultForm: OnboardingFormState = {
   investmentHorizonMonths: "36",
 };
 
+/**
+ * Create an ISO 8601 timestamp string for the current time.
+ *
+ * @returns The current date-time as an ISO 8601 string (e.g., `2026-04-05T14:23:00.000Z`)
+ */
 function buildTimestamp() {
   return new Date().toISOString();
 }
 
+/**
+ * Renders the onboarding workspace UI that collects a user's profile, bootstraps initial data, and navigates to the app home once setup completes.
+ *
+ * The component checks for an existing local profile on mount and redirects to the root route if one exists. When the form is submitted it saves the profile and related bootstrap state to local repositories, displays any submission error, and navigates to the root route on success.
+ *
+ * @returns The onboarding workspace React element
+ */
 export function OnboardingWorkspace() {
   const router = useRouter();
   const [form, setForm] = useState<OnboardingFormState>(defaultForm);

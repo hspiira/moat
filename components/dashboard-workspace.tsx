@@ -42,6 +42,13 @@ type DashboardWorkspaceProps = {
   profile: UserProfile;
 };
 
+/**
+ * Render the user's dashboard workspace showing an overview of the current month,
+ * key metrics, top spending categories, account balances, insights, and navigation links.
+ *
+ * @param profile - The current user's profile used to scope data loading and display the user's name
+ * @returns The dashboard UI for the given user profile
+ */
 export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

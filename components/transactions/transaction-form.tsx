@@ -49,6 +49,13 @@ export const transactionTypeLabels: Record<TransactionType, string> = {
   transfer: "Transfer",
 };
 
+/**
+ * Determine whether a Category is valid for a given TransactionType.
+ *
+ * @param category - The category to test
+ * @param type - The transaction type to match
+ * @returns `true` if `category.kind` corresponds to `type` (`"income"` → `"income"`, `"transfer"` → `"transfer"`, `"savings_contribution"` → `"savings"`, all other types → `"expense"`), `false` otherwise
+ */
 export function categoryMatchesType(category: Category, type: TransactionType) {
   if (type === "income") return category.kind === "income";
   if (type === "transfer") return category.kind === "transfer";
@@ -67,6 +74,23 @@ type Props = {
   onCancelEdit: () => void;
 };
 
+/**
+ * Renders a card containing a transaction form for creating or editing an entry.
+ *
+ * The form supports selecting a transaction type, source account, optional destination account
+ * (shown only for transfers), a category filtered to the selected type, amount, date, and note.
+ * The submit button label and presence of a cancel action change when `editingId` is provided.
+ *
+ * @param accounts - Available accounts to choose from
+ * @param categories - Available categories used to populate the category selector (filtered by selected transaction type)
+ * @param form - Current form state values
+ * @param editingId - If truthy, the form is in edit mode for the transaction with this id
+ * @param isSubmitting - When true, disables the submit button and shows a saving label
+ * @param onFormChange - Updater callback invoked with a function that receives previous form state and returns the next state
+ * @param onSubmit - Form submit handler
+ * @param onCancelEdit - Handler invoked when cancelling edit mode (rendered only when `editingId` is truthy)
+ * @returns A React element representing the transaction form UI
+ */
 export function TransactionForm({
   accounts,
   categories,

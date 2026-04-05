@@ -10,6 +10,11 @@ import type { UserProfile } from "@/lib/types";
 
 const repositories = createIndexedDbRepositories();
 
+/**
+ * Selects and renders the appropriate top-level home route UI based on the persisted user profile.
+ *
+ * @returns The dashboard workspace when a user profile exists; the home overview when no profile is found; `null` while the profile lookup is in progress.
+ */
 export function HomeRoute() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isResolved, setIsResolved] = useState(false);

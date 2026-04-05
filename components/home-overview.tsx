@@ -14,6 +14,12 @@ type HomeOverviewProps = {
   modulePreviews: ModulePreview[];
 };
 
+/**
+ * Render the home page overview, including a hero card with CTAs and a grid of module preview links.
+ *
+ * @param modulePreviews - Array of module preview items; each item is expected to include `href`, `title`, and `summary`
+ * @returns The React element for the Home overview UI
+ */
 export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
   return (
     <div className="grid gap-6">

@@ -14,6 +14,12 @@ import { Separator } from "@/components/ui/separator";
 
 import { goalTypeLabels } from "./goal-form";
 
+/**
+ * Format a numeric amount as a Ugandan shilling (UGX) currency string.
+ *
+ * @param amount - The numeric amount to format (in UGX).
+ * @returns The formatted UGX currency string with no fractional digits
+ */
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
     style: "currency",
@@ -30,6 +36,16 @@ type Props = {
   onDelete: (goalId: string) => void;
 };
 
+/**
+ * Renders a "Your goals" card that displays a list of goals or an empty-state when none exist.
+ *
+ * @param accounts - Available accounts used to resolve a goal's linked account name
+ * @param goals - Goals to render inside the card
+ * @param isSubmitting - When true, disables destructive actions (Delete)
+ * @param onEdit - Callback invoked with a goal when the user clicks the Edit button
+ * @param onDelete - Callback invoked with a goal id when the user clicks the Delete button
+ * @returns A card element containing either an empty-state prompt or a list of goal cards with progress, monthly target, deadline, and action buttons
+ */
 export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Props) {
   return (
     <Card className="border-border/40 shadow-none">

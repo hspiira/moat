@@ -2,6 +2,14 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Render an HTML input element with the component's standardized Tailwind styles and any forwarded attributes.
+ *
+ * @param className - Additional CSS class names to merge with the component's base styles
+ * @param type - The HTML input `type` attribute (e.g., "text", "password", "file")
+ * @param props - Other standard `<input>` attributes and event handlers forwarded to the underlying element
+ * @returns The rendered input element
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

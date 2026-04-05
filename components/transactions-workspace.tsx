@@ -18,6 +18,12 @@ import { TransactionList } from "./transactions/transaction-list";
 
 const repositories = createIndexedDbRepositories();
 
+/**
+ * Sorts transactions by occurrence date and creation time in descending order.
+ *
+ * @param transactions - The array of transactions to sort
+ * @returns A new array containing the same transactions sorted by `occurredOn` (newest first); when `occurredOn` is equal, by `createdAt` (newest first)
+ */
 function sortTransactions(transactions: Transaction[]) {
   return [...transactions].sort((a, b) => {
     if (a.occurredOn === b.occurredOn) return b.createdAt.localeCompare(a.createdAt);
@@ -25,6 +31,13 @@ function sortTransactions(transactions: Transaction[]) {
   });
 }
 
+/**
+ * Render the Transactions workspace and manage loading, reconciliation, creation, editing, and deletion of a user's transactions.
+ *
+ * Manages local UI state, interacts with IndexedDB repositories to load and persist accounts, categories, and transactions, reconciles account balances, and delegates form, CSV import, and list rendering to child components.
+ *
+ * @returns The React element for the Transactions workspace view.
+ */
 export function TransactionsWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);

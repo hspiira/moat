@@ -55,6 +55,18 @@ type Props = {
   onCancelEdit: () => void;
 };
 
+/**
+ * Render a card containing a form for adding a new account or editing an existing one.
+ *
+ * @param accountTypes - Available account types to show in the type select
+ * @param form - Current form state (fields: `name`, `type`, `institutionName`, `openingBalance`, `notes`)
+ * @param editingId - Id of the account being edited, or `null` when adding a new account
+ * @param isSubmitting - When true, disables the submit button and updates its label
+ * @param onFormChange - Functional updater called with a state updater to modify the form
+ * @param onSubmit - Form submit handler for creating or updating the account
+ * @param onCancelEdit - Called to exit edit mode when `editingId` is present
+ * @returns The rendered account form React element
+ */
 export function AccountForm({
   accountTypes,
   form,

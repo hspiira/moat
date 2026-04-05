@@ -12,6 +12,17 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { IconChevronLeft, IconChevronRight, IconChevronDown } from "@tabler/icons-react"
 
+/**
+ * Render a styled DayPicker calendar with custom navigation icons, localization, and per-day rendering.
+ *
+ * Renders a DayPicker wrapped with opinionated class names and slot overrides: custom Root wrapper, chevron icons that respect orientation/RTL, a DayButton mapped to the exported CalendarDayButton, and a centered WeekNumber cell. It also supplies a localized month dropdown formatter using `locale?.code` and merges any provided `formatters`, and merges caller-supplied `classNames` and `components` with the defaults.
+ *
+ * @param buttonVariant - Button variant to use for the previous/next navigation buttons (default: `"ghost"`).
+ * @param captionLayout - Layout style for the month caption (default: `"label"`).
+ * @param showOutsideDays - Whether to show days from adjacent months (default: `true`).
+ * @param locale - Optional locale (partial `Locale`) used for formatting and passed to day buttons.
+ * @returns The Calendar React element that wraps and configures `DayPicker`.
+ */
 function Calendar({
   className,
   classNames,
@@ -180,6 +191,16 @@ function Calendar({
   )
 }
 
+/**
+ * Renders a calendar day button reflecting selection and range state.
+ *
+ * Focuses the underlying button when `modifiers.focused` is true, applies data attributes
+ * (`data-day`, `data-selected-single`, `data-range-start`, `data-range-end`, `data-range-middle`)
+ * to expose day and range/selection state, and composes visual state via class names.
+ *
+ * @param locale - Optional locale (partial) used to format the `data-day` attribute
+ * @returns A button element representing the given day with state attributes for selection and range
+ */
 function CalendarDayButton({
   className,
   day,
