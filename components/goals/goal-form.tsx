@@ -1,6 +1,7 @@
 "use client";
 
 import type { Account, GoalType } from "@/lib/types";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -62,6 +63,8 @@ type Props = {
   form: GoalFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   emergencyFundSuggestion: number;
   onFormChange: (updater: (prev: GoalFormState) => GoalFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -74,6 +77,8 @@ export function GoalForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   emergencyFundSuggestion,
   onFormChange,
   onSubmit,
@@ -96,6 +101,12 @@ export function GoalForm({
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="goal-name">Goal name</Label>
             <Input

@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,8 @@ export function TransactionsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -104,6 +107,7 @@ export function TransactionsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const amount = Number(transactionForm.amount);
+      const wasEditing = Boolean(editingTransactionId);
 
       if (transactionForm.type === "transfer") {
         if (!transactionForm.accountId || !transactionForm.destinationAccountId) {
@@ -163,6 +167,12 @@ export function TransactionsWorkspace() {
       }
 
       await refreshAccounts(profile.id);
+      const message = wasEditing
+        ? "Transaction updated locally"
+        : "Transaction saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
       setEditingTransactionId(null);
       setTransactionForm({
         ...defaultTransactionForm,
@@ -215,6 +225,11 @@ export function TransactionsWorkspace() {
         setTransactionForm(defaultTransactionForm);
       }
 
+      const timestamp = new Date().toISOString();
+      const message = "Transaction deleted locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
       await refreshAccounts(profile.id);
       await loadWorkspace();
     } catch (deleteError) {
@@ -273,10 +288,12 @@ export function TransactionsWorkspace() {
           <TransactionForm
             accounts={accounts}
             categories={categories}
-            form={transactionForm}
-            editingId={editingTransactionId}
-            isSubmitting={isSubmitting}
-            onFormChange={setTransactionForm}
+              form={transactionForm}
+              editingId={editingTransactionId}
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+              onFormChange={setTransactionForm}
             onSubmit={(e) => void handleTransactionSubmit(e)}
             onCancelEdit={() => {
               setEditingTransactionId(null);

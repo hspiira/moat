@@ -5,6 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
+import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type {
@@ -16,6 +17,7 @@ import type {
   Transaction,
   UserProfile,
 } from "@/lib/types";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -114,6 +116,8 @@ export function InvestmentCompassWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -209,6 +213,10 @@ export function InvestmentCompassWorkspace() {
       await repositories.investmentProfiles.save(nextProfile);
       setInvestmentProfile(nextProfile);
       setForm(buildProfileForm(nextProfile));
+      const message = "Investment profile saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "investment_profile", savedAt: timestamp, message });
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Unable to save investment profile.",
@@ -289,6 +297,12 @@ export function InvestmentCompassWorkspace() {
               </CardHeader>
               <CardContent>
                 <form className="grid gap-4" onSubmit={handleSubmit}>
+                  <LocalSaveFeedback
+                    isSubmitting={isSubmitting}
+                    lastSavedAt={lastSavedAt}
+                    successMessage={successMessage}
+                  />
+
                   <div className="grid gap-2">
                     <Label htmlFor="time-horizon">Time horizon (months)</Label>
                     <Input

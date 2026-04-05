@@ -1,6 +1,7 @@
 "use client";
 
 import type { Account, Category, TransactionType } from "@/lib/types";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -62,6 +63,8 @@ type Props = {
   form: TransactionFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -73,6 +76,8 @@ export function TransactionForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   onFormChange,
   onSubmit,
   onCancelEdit,
@@ -93,6 +98,12 @@ export function TransactionForm({
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="tx-type">Type</Label>
             <Select

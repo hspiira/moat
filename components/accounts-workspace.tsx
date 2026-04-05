@@ -4,6 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { getAccountTotals } from "@/lib/domain/accounts";
+import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, AccountType } from "@/lib/types";
 import {
@@ -48,6 +49,8 @@ export function AccountsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -87,6 +90,7 @@ export function AccountsWorkspace() {
       const timestamp = new Date().toISOString();
       const accountId = editingAccountId ?? `account:${crypto.randomUUID()}`;
       const openingBalance = Number(accountForm.openingBalance);
+      const wasEditing = Boolean(editingAccountId);
 
       await repositories.accounts.upsert({
         id: accountId,
@@ -103,6 +107,10 @@ export function AccountsWorkspace() {
         updatedAt: timestamp,
       });
 
+      const message = wasEditing ? "Account updated locally" : "Account saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
       setAccountForm(defaultAccountForm);
       setEditingAccountId(null);
       await loadWorkspace();
@@ -198,6 +206,8 @@ export function AccountsWorkspace() {
               form={accountForm}
               editingId={editingAccountId}
               isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
               onFormChange={setAccountForm}
               onSubmit={(e) => void handleAccountSubmit(e)}
               onCancelEdit={() => {

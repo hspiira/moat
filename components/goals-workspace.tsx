@@ -5,6 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyGoalTransactions } from "@/lib/domain/goals";
+import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
@@ -37,6 +38,8 @@ export function GoalsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -102,6 +105,7 @@ export function GoalsWorkspace() {
     try {
       const timestamp = new Date().toISOString();
       const goalId = editingGoalId ?? `goal:${crypto.randomUUID()}`;
+      const wasEditing = Boolean(editingGoalId);
 
       await repositories.goals.upsert({
         id: goalId,
@@ -117,6 +121,10 @@ export function GoalsWorkspace() {
         updatedAt: timestamp,
       });
 
+      const message = wasEditing ? "Goal updated locally" : "Goal saved locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "goals", savedAt: timestamp, message });
       setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
@@ -145,6 +153,11 @@ export function GoalsWorkspace() {
 
     try {
       await repositories.goals.remove(goalId);
+      const timestamp = new Date().toISOString();
+      const message = "Goal deleted locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "goals", savedAt: timestamp, message });
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
         setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
@@ -211,6 +224,8 @@ export function GoalsWorkspace() {
             form={goalForm}
             editingId={editingGoalId}
             isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
             emergencyFundSuggestion={emergencyFundSuggestion}
             onFormChange={setGoalForm}
             onSubmit={(e) => void handleGoalSubmit(e)}

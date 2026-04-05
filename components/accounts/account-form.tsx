@@ -1,6 +1,7 @@
 "use client";
 
 import type { AccountType } from "@/lib/types";
+import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,6 +51,8 @@ type Props = {
   form: AccountFormState;
   editingId: string | null;
   isSubmitting: boolean;
+  lastSavedAt: string | null;
+  successMessage: string | null;
   onFormChange: (updater: (prev: AccountFormState) => AccountFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -60,6 +63,8 @@ export function AccountForm({
   form,
   editingId,
   isSubmitting,
+  lastSavedAt,
+  successMessage,
   onFormChange,
   onSubmit,
   onCancelEdit,
@@ -76,6 +81,12 @@ export function AccountForm({
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={onSubmit}>
+          <LocalSaveFeedback
+            isSubmitting={isSubmitting}
+            lastSavedAt={lastSavedAt}
+            successMessage={successMessage}
+          />
+
           <div className="grid gap-2">
             <Label htmlFor="account-name">Account name</Label>
             <Input
