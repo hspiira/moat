@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
+import { AccentCardHeader, type AccentTone } from "@/components/accent-card-header";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { ResourceLink, UserProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 const repositories = createIndexedDbRepositories();
@@ -79,7 +77,7 @@ export function LearnWorkspace() {
   }, [resources]);
 
   const topicEntries = Object.entries(resourcesByTopic);
-  const topicToneClasses = ["moat-panel-yellow", "moat-panel-lilac", "moat-panel-mint"];
+  const topicTones: AccentTone[] = ["yellow", "lilac", "mint"];
 
   return (
     <div className="grid gap-5">
@@ -160,16 +158,16 @@ export function LearnWorkspace() {
               title: topic,
               summary: "Reference material.",
             };
-            const toneClass = topicToneClasses[index % topicToneClasses.length];
+            const tone = topicTones[index % topicTones.length];
 
             return (
-              <Card key={topic} className="border-border/20 shadow-none">
-                <CardHeader className={`${toneClass} gap-2 border-b border-border/20`}>
-                  <CardTitle className="text-lg">{copy.title}</CardTitle>
-                  <CardDescription className="max-w-3xl text-foreground/75">
-                    {copy.summary}
-                  </CardDescription>
-                </CardHeader>
+              <Card key={topic} className="gap-0 pt-0 border-border/20 shadow-none">
+                <AccentCardHeader
+                  tone={tone}
+                  title={copy.title}
+                  description={copy.summary}
+                  descriptionClassName="max-w-3xl"
+                />
                 <CardContent className="grid gap-2 p-5 md:grid-cols-2">
                   {topicResources.map((resource, resourceIndex) => (
                     <a

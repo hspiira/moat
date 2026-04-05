@@ -17,6 +17,7 @@ import type {
   Transaction,
   UserProfile,
 } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
@@ -289,12 +290,12 @@ export function InvestmentCompassWorkspace() {
 
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <Card className="gap-0 pt-0 border-border/20 shadow-none">
-              <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
-                <CardTitle className="text-base text-foreground">Your investment profile</CardTitle>
-                <CardDescription className="text-foreground/72 leading-6">
-                  Update these settings to see how guidance changes.
-                </CardDescription>
-              </CardHeader>
+              <AccentCardHeader
+                tone="yellow"
+                title="Your investment profile"
+                description="Update these settings to see how guidance changes."
+                titleClassName="text-base"
+              />
               <CardContent className="p-5">
                 <form className="grid gap-4" onSubmit={handleSubmit}>
                   <LocalSaveFeedback

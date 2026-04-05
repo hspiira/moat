@@ -12,6 +12,7 @@ import type {
   TransactionType,
   UserProfile,
 } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -310,12 +311,11 @@ export function CsvImportPanel({
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <CardHeader className="moat-panel-lilac min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
-        <CardTitle className="text-lg text-foreground">CSV import</CardTitle>
-        <CardDescription className="text-foreground/72 leading-6">
-          Upload, map, review, then confirm.
-        </CardDescription>
-      </CardHeader>
+      <AccentCardHeader
+        tone="lilac"
+        title="CSV import"
+        description="Upload, map, review, then confirm."
+      />
       <CardContent className="grid gap-4 p-5 pt-6">
         <Input
           accept=".csv,text/csv"

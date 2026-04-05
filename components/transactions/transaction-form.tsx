@@ -1,14 +1,12 @@
 "use client";
 
 import type { Account, Category, TransactionType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -86,16 +84,15 @@ export function TransactionForm({
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
-        <CardTitle className="text-lg text-foreground">
-          {editingId ? "Edit transaction" : "Add transaction"}
-        </CardTitle>
-        <CardDescription className="text-foreground/72 leading-6">
-          {editingId
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit transaction" : "Add transaction"}
+        description={
+          editingId
             ? "Update this transaction."
-            : "Record one money event against one account."}
-        </CardDescription>
-      </CardHeader>
+            : "Record one money event against one account."
+        }
+      />
       <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
           <LocalSaveFeedback

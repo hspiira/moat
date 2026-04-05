@@ -1,14 +1,12 @@
 "use client";
 
 import type { AccountType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,14 +69,15 @@ export function AccountForm({
 }: Props) {
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
-        <CardTitle className="text-lg text-foreground">
-          {editingId ? "Edit account" : "Add account"}
-        </CardTitle>
-        <CardDescription className="text-foreground/72 leading-6">
-          {editingId ? "Update the details for this account." : "Name it once and track it clearly."}
-        </CardDescription>
-      </CardHeader>
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit account" : "Add account"}
+        description={
+          editingId
+            ? "Update the details for this account."
+            : "Name it once and track it clearly."
+        }
+      />
       <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
           <LocalSaveFeedback

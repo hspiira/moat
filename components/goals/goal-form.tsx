@@ -1,14 +1,12 @@
 "use client";
 
 import type { Account, GoalType } from "@/lib/types";
+import { AccentCardHeader } from "@/components/accent-card-header";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -89,16 +87,15 @@ export function GoalForm({
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <CardHeader className="moat-panel-yellow min-h-20 gap-1 border-b border-border/20 py-3 text-foreground">
-        <CardTitle className="text-lg text-foreground">
-          {editingId ? "Edit goal" : "New goal"}
-        </CardTitle>
-        <CardDescription className="text-foreground/72 leading-6">
-          {form.goalType === "emergency_fund"
+      <AccentCardHeader
+        tone="yellow"
+        title={editingId ? "Edit goal" : "New goal"}
+        description={
+          form.goalType === "emergency_fund"
             ? `Suggested target based on 3x monthly outflow: ${formatCurrency(emergencyFundSuggestion)}`
-            : "Set a target amount and deadline for this goal."}
-        </CardDescription>
-      </CardHeader>
+            : "Set a target amount and deadline for this goal."
+        }
+      />
       <CardContent className="p-5">
         <form className="grid gap-4" onSubmit={onSubmit}>
           <LocalSaveFeedback
