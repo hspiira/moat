@@ -8,6 +8,7 @@ import {
   DashboardCashFlowSection,
   DashboardContinueLinks,
   DashboardInsightsPanel,
+  DashboardQuickActions,
   DashboardTopSpendingCategories,
 } from "@/components/dashboard/dashboard-sections";
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
@@ -37,6 +38,12 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     transactions,
     modulePreviews,
   } = useDashboardWorkspace(profile);
+
+  const quickActions = [
+    { href: "/transactions", title: "Add transaction" },
+    { href: "/accounts", title: "Accounts" },
+    { href: "/goals", title: "Set goal" },
+  ];
 
   return (
     <div className="grid gap-5">
@@ -70,6 +77,8 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             <h2 className="text-sm font-medium text-foreground">{periodWindow.title}</h2>
             <p className="text-xs text-muted-foreground">{periodWindow.caption}</p>
           </div>
+
+          <DashboardQuickActions actions={quickActions} />
 
           <DashboardCashFlowSection
             summaryTiles={summaryTiles}
@@ -105,7 +114,9 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             </div>
           </div>
 
-          <DashboardContinueLinks modules={modulePreviews} />
+          <div className="hidden lg:block">
+            <DashboardContinueLinks modules={modulePreviews} />
+          </div>
         </>
       ) : null}
     </div>

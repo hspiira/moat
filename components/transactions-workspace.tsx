@@ -12,7 +12,9 @@ import {
 import { TransactionForm } from "./transactions/transaction-form";
 import { CsvImportPanel } from "./transactions/csv-import-panel";
 import { MonthClosePanel } from "./transactions/month-close-panel";
+import { CaptureIntentPanel } from "./transactions/capture-intent-panel";
 import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
+import { TextCapturePanel } from "./transactions/text-capture-panel";
 import { TransactionList } from "./transactions/transaction-list";
 import { TransactionRulesPanel } from "./transactions/transaction-rules-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
@@ -38,6 +40,7 @@ export function TransactionsWorkspace() {
     lastSavedAt,
     successMessage,
     rememberedFxHint,
+    captureIntent,
     setError,
     setTransactionForm,
     setBudgetForm,
@@ -46,6 +49,7 @@ export function TransactionsWorkspace() {
     handleTransactionSubmit,
     beginTransactionEdit,
     handleDeleteTransaction,
+    saveCapturedTransactions,
     saveRule,
     toggleRule,
     saveObligation,
@@ -87,6 +91,8 @@ export function TransactionsWorkspace() {
 
       {!isLoading && profile ? (
         <div className="grid gap-5">
+          <CaptureIntentPanel intent={captureIntent} />
+
           <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
             <TransactionForm
               accounts={accounts}
@@ -103,6 +109,15 @@ export function TransactionsWorkspace() {
             />
 
             <div className="grid gap-5 content-start">
+              <TextCapturePanel
+                accounts={accounts}
+                categories={categories}
+                existingTransactions={transactions}
+                isSubmitting={isSubmitting}
+                active={captureIntent === "text"}
+                onSaveCaptured={saveCapturedTransactions}
+              />
+
               <CsvImportPanel
                 accounts={accounts}
                 categories={categories}

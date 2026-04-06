@@ -10,6 +10,7 @@ import {
   getMobileTopBarTitle,
   isActiveRoute,
   isPrimaryMobileRoute,
+  MobileCaptureSheet,
   mobilePrimaryNav,
   MobileMoreButton,
   MobileNavTrigger,
@@ -25,6 +26,38 @@ export function MobileNavigation({
 }) {
   const isPrimaryRoute = isPrimaryMobileRoute(pathname);
   const topBarTitle = getMobileTopBarTitle(pathname);
+
+  function renderNavButton(href: (typeof mobilePrimaryNav)[number]) {
+    const item = navItems.find((entry) => entry.href === href);
+    if (!item) return null;
+
+    const isActive = isActiveRoute(pathname, item.href);
+    const IconComponent = navIcons[item.href];
+
+    return (
+      <Button
+        key={item.href}
+        asChild
+        variant={isActive ? "secondary" : "ghost"}
+        className={[
+          "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
+          isActive ? "text-foreground dark:text-cyan-100" : "text-muted-foreground",
+        ].join(" ")}
+      >
+        <Link href={item.href} aria-current={isActive ? "page" : undefined}>
+          <span
+            className={[
+              "inline-flex h-6 w-10 items-center justify-center transition-colors",
+              isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
+            ].join(" ")}
+          >
+            <IconComponent className="h-4 w-4" />
+          </span>
+          <span className="leading-none">{item.label}</span>
+        </Link>
+      </Button>
+    );
+  }
 
   return (
     <>
@@ -63,40 +96,12 @@ export function MobileNavigation({
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-[backdrop-filter]:bg-background/88 lg:hidden">
         <div className="px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))] pt-1">
-          <nav className="grid grid-cols-5 gap-1">
-            {mobilePrimaryNav.map((href) => {
-              const item = navItems.find((entry) => entry.href === href);
-              if (!item) return null;
-
-              const isActive = isActiveRoute(pathname, item.href);
-              const IconComponent = navIcons[item.href];
-
-              return (
-                <Button
-                  key={item.href}
-                  asChild
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={[
-                    "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-                    isActive
-                      ? "text-foreground dark:text-cyan-100"
-                      : "text-muted-foreground",
-                  ].join(" ")}
-                >
-                  <Link href={item.href} aria-current={isActive ? "page" : undefined}>
-                    <span
-                      className={[
-                        "inline-flex h-6 w-10 items-center justify-center transition-colors",
-                        isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
-                      ].join(" ")}
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </span>
-                    <span className="leading-none">{item.label}</span>
-                  </Link>
-                </Button>
-              );
-            })}
+          <nav className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] items-center gap-1">
+            {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
+            <div className="flex justify-center">
+              <MobileCaptureSheet />
+            </div>
+            {mobilePrimaryNav.slice(2).map(renderNavButton)}
             <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
           </nav>
         </div>

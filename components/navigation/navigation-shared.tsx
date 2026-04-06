@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   IconBuildingBank,
   IconCompass,
+  IconFileImport,
   IconHome2,
   IconMenu2,
+  IconMessage2,
   IconMoon,
   IconPlus,
   IconSchool,
@@ -42,8 +44,35 @@ export const navIcons: Record<string, Icon> = {
   "/learn": IconSchool,
 };
 
-export const mobilePrimaryNav = ["/", "/transactions", "/accounts", "/goals"] as const;
-export const mobileSecondaryNav = ["/investment-compass", "/learn"] as const;
+export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
+export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
+export const mobileCaptureActions = [
+  {
+    href: "/transactions?capture=expense&type=expense",
+    label: "Expense",
+    description: "Record money spent now.",
+  },
+  {
+    href: "/transactions?capture=income&type=income",
+    label: "Income",
+    description: "Record incoming money.",
+  },
+  {
+    href: "/transactions?capture=transfer&type=transfer",
+    label: "Transfer",
+    description: "Move money between accounts.",
+  },
+  {
+    href: "/transactions?capture=text",
+    label: "Paste text",
+    description: "Parse SMS and notification text.",
+  },
+  {
+    href: "/transactions?capture=import",
+    label: "Import",
+    description: "Bring in statement rows from CSV.",
+  },
+] as const;
 
 export function isActiveRoute(pathname: string, href: string) {
   if (href === "/") {
@@ -54,7 +83,7 @@ export function isActiveRoute(pathname: string, href: string) {
 }
 
 export function isPrimaryMobileRoute(pathname: string) {
-  return navItems.some((item) => item.href === pathname);
+  return mobilePrimaryNav.some((href) => isActiveRoute(pathname, href));
 }
 
 export function getMobileTopBarTitle(pathname: string) {
@@ -123,6 +152,61 @@ export function QuickActionLinks() {
         <Link href="/goals">Create or review goals</Link>
       </Button>
     </div>
+  );
+}
+
+export function MobileCaptureSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          variant="secondary"
+          size="icon"
+          aria-label="Capture transaction"
+          className="h-12 w-12 border border-border/30 bg-primary text-primary-foreground shadow-none dark:text-primary-foreground"
+        >
+          <IconPlus className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        side="bottom"
+        className="max-h-[85vh] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+      >
+        <SheetHeader className="px-6">
+          <SheetTitle>Capture</SheetTitle>
+          <SheetDescription>
+            Start with the fastest capture path. Text, image, and document capture can plug into this same entry point later.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="grid gap-2 px-6">
+          {mobileCaptureActions.map((action) => {
+            const IconComponent =
+              action.label === "Import"
+                ? IconFileImport
+                : action.label === "Paste text"
+                  ? IconMessage2
+                  : IconPlus;
+
+            return (
+              <Button
+                key={action.href}
+                asChild
+                variant="ghost"
+                className="h-auto justify-start px-0 py-0 shadow-none"
+              >
+                <Link href={action.href} className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left">
+                  <span className="flex items-center gap-3 text-sm font-medium text-foreground">
+                    <IconComponent className="h-4 w-4" />
+                    {action.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{action.description}</span>
+                </Link>
+              </Button>
+            );
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -240,16 +324,26 @@ export function MobileMoreButton({
   pathname: string;
   onToggleTheme: () => void;
 }) {
+  const isActive = mobileSecondaryNav.some((href) => isActiveRoute(pathname, href));
+
   return (
     <MobileUtilitySheet
       pathname={pathname}
       onToggleTheme={onToggleTheme}
       trigger={
         <Button
-          variant="ghost"
-          className="h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium text-muted-foreground shadow-none"
+          variant={isActive ? "secondary" : "ghost"}
+          className={[
+            "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
+            isActive ? "text-foreground dark:text-cyan-100" : "text-muted-foreground",
+          ].join(" ")}
         >
-          <span className="inline-flex h-6 w-10 items-center justify-center">
+          <span
+            className={[
+              "inline-flex h-6 w-10 items-center justify-center transition-colors",
+              isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
+            ].join(" ")}
+          >
             <IconPlus className="h-4 w-4" />
           </span>
           <span className="leading-none">More</span>

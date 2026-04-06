@@ -1,6 +1,7 @@
 "use client";
 
 import { normalizeAmountToUgx } from "@/lib/currency";
+import { buildStableHash } from "@/lib/hash";
 import type {
   Account,
   Category,
@@ -86,15 +87,7 @@ export function parseImportedCurrency(value: string): SupportedCurrency | null {
 }
 
 export function buildMessageHash(values: string[]) {
-  const normalized = values.map((value) => value.trim().toLowerCase()).join("|");
-  let hash = 0;
-
-  for (let index = 0; index < normalized.length; index += 1) {
-    hash = (hash << 5) - hash + normalized.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `csv:${Math.abs(hash)}`;
+  return buildStableHash(values, "csv");
 }
 
 export function detectDuplicate(
