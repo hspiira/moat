@@ -91,5 +91,11 @@ export function subscribeToNativeCapture(handler: (payload: NativeCapturePayload
     });
   }
 
-  return () => window.removeEventListener(MOAT_NATIVE_CAPTURE_EVENT, listener);
+  return () => {
+    window.removeEventListener(MOAT_NATIVE_CAPTURE_EVENT, listener);
+    window.__moatNativeCaptureListenerCount = Math.max(
+      0,
+      (window.__moatNativeCaptureListenerCount ?? 1) - 1,
+    );
+  };
 }

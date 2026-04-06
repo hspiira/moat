@@ -9,6 +9,7 @@ import {
   saveCaptureAutomationSettings,
   type CaptureAutomationSettings,
 } from "@/lib/native/capture-settings";
+import { syncNativeCaptureSettings } from "@/lib/native/capture-bridge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +52,7 @@ export function CaptureAutomationPanel() {
   function updateSettings(next: CaptureAutomationSettings) {
     setSettings(next);
     saveCaptureAutomationSettings(next);
+    syncNativeCaptureSettings(JSON.stringify(next));
   }
 
   return (

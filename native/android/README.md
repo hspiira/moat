@@ -1,35 +1,32 @@
-# Android host shell scaffolding
+# Android host shell
 
-This folder documents and scaffolds the Android-native side of Moat Phase 2.
+This folder now contains a standard Android WebView shell scaffold for Moat Phase 2.
 
 ## What exists here
 
-- `AndroidManifest.capture.xml`: manifest snippet for share intent and notification listener wiring
-- `MoatCaptureBridge.kt`: WebView bridge contract for shared text and notification payloads
-- `MoatNotificationListenerService.kt`: notification listener skeleton that forwards allowlisted payloads into the web app
+- `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`: root Gradle configuration
+- `app/build.gradle.kts`: Android app module config
+- `app/src/main/AndroidManifest.xml`: host activity, share receiver, and notification listener wiring
+- `app/src/main/java/ug/co/moat/app/MainActivity.kt`: WebView host for the Moat app
+- `app/src/main/java/ug/co/moat/app/ShareReceiverActivity.kt`: receives Android share intents and queues payloads
+- `app/src/main/java/ug/co/moat/app/MoatNotificationListenerService.kt`: allowlisted notification listener
+- `app/src/main/java/ug/co/moat/app/CapturePayloadStore.kt`: SharedPreferences-backed payload queue and native capture settings
+- `app/src/main/java/ug/co/moat/app/MoatCaptureBridge.kt`: JavaScript injection bridge into the web app
+- `app/src/main/java/ug/co/moat/app/MoatHostBridge.kt`: JavaScript interface exposed to the web app for settings sync
 
-## What is still required
+## What this shell does
 
-This repo does **not** yet include a full runnable Android project or Capacitor install. The web-side contract is ready, but a native Android shell still needs:
+1. hosts the web app inside a hardened WebView
+2. receives shared text from Android apps and queues it for the web layer
+3. listens for allowlisted financial notifications and queues them for review
+4. injects pending native capture payloads into `window.moatNativeCapture.ingest(...)`
+5. accepts capture settings updates from the web app through `window.moatHostBridge.updateCaptureSettings(...)`
 
-1. a real Android host project or Capacitor wrapper
-2. WebView wiring to the built Next.js app
-3. notification permission and settings UX
-4. package allowlist enforcement on the native side
+## Current limitation
 
-## Bridge contract
+This is a runnable scaffold, not a built APK inside this workspace. To run it, an Android SDK and local Gradle toolchain are still required. The web-side contract and native project structure are now aligned.
 
-Native code should call:
+## Default host URL
 
-```js
-window.moatNativeCapture.ingest({
-  channel: "shared_text" | "notification",
-  source: "shared_text" | "notification",
-  rawContent: "...",
-  sourceTitle: "...",
-  sourceApp: "com.example.app",
-  occurredAt: "2026-04-06T12:00:00.000Z"
-})
-```
-
-The web app already registers this bridge globally and routes payloads into the capture inbox.
+The Android shell points at `https://moat.localhost` through `BuildConfig.MOAT_WEB_URL`.
+Change that in `app/build.gradle.kts` to your deployed or dev host before building.
