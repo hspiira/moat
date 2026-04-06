@@ -16,7 +16,19 @@ declare global {
     moatNativeCapture?: {
       ingest: (payload: NativeCapturePayload) => void;
     };
+    moatHostBridge?: {
+      updateCaptureSettings?: (settingsJson: string) => void;
+    };
+    __moatPendingCapturePayloads?: NativeCapturePayload[];
+    __moatNativeCaptureListenerCount?: number;
   }
+}
+
+function queueNativeCapturePayload(payload: NativeCapturePayload) {
+  if (typeof window === "undefined") return;
+
+  window.__moatPendingCapturePayloads = window.__moatPendingCapturePayloads ?? [];
+  window.__moatPendingCapturePayloads.push(payload);
 }
 
 export function emitNativeCapturePayload(payload: NativeCapturePayload) {
@@ -34,9 +46,25 @@ export function registerNativeCaptureGlobal() {
 
   window.moatNativeCapture = {
     ingest(payload) {
-      emitNativeCapturePayload(payload);
+      if ((window.__moatNativeCaptureListenerCount ?? 0) > 0) {
+        emitNativeCapturePayload(payload);
+        return;
+      }
+
+      queueNativeCapturePayload(payload);
     },
   };
+
+  const pending = window.__moatPendingCapturePayloads ?? [];
+  if (pending.length > 0) {
+    window.__moatPendingCapturePayloads = [];
+    pending.forEach((payload) => emitNativeCapturePayload(payload));
+  }
+}
+
+export function syncNativeCaptureSettings(settingsJson: string) {
+  if (typeof window === "undefined") return;
+  window.moatHostBridge?.updateCaptureSettings?.(settingsJson);
 }
 
 export function subscribeToNativeCapture(handler: (payload: NativeCapturePayload) => void) {
@@ -50,6 +78,18 @@ export function subscribeToNativeCapture(handler: (payload: NativeCapturePayload
     handler(detail);
   };
 
+  window.__moatNativeCaptureListenerCount = (window.__moatNativeCaptureListenerCount ?? 0) + 1;
   window.addEventListener(MOAT_NATIVE_CAPTURE_EVENT, listener);
+
+  const pending = window.__moatPendingCapturePayloads ?? [];
+  if (pending.length > 0) {
+    window.__moatPendingCapturePayloads = [];
+    pending.forEach((payload) => {
+      if (payload.rawContent?.trim()) {
+        handler(payload);
+      }
+    });
+  }
+
   return () => window.removeEventListener(MOAT_NATIVE_CAPTURE_EVENT, listener);
 }
