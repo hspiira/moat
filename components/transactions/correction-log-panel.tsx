@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { CorrectionLog, UserProfile } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 
-const repositories = createIndexedDbRepositories();
 
 export function CorrectionLogPanel({ profile }: { profile: UserProfile | null }) {
   const [logs, setLogs] = useState<CorrectionLog[]>([]);

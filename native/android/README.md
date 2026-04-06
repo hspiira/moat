@@ -1,6 +1,6 @@
 # Android host shell
 
-This folder now contains a standard Android WebView shell scaffold for Moat Phase 2.
+This folder contains the Android WebView host shell for Moat Phase 2 capture intake.
 
 ## What exists here
 
@@ -24,7 +24,7 @@ This folder now contains a standard Android WebView shell scaffold for Moat Phas
 
 ## Current limitation
 
-This is a runnable scaffold, not a built APK inside this workspace. To run it, an Android SDK and local Gradle toolchain are still required. The web-side contract and native project structure are now aligned.
+This is implemented source code, not a built APK inside this workspace. To run it, an Android SDK and local Gradle toolchain are still required. Share-to-app handoff is wired end to end; notification capture remains a later Phase 2 sub-slice that still needs device-level enablement and product hardening.
 
 ## Default host URL
 

@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   IconBuildingBank,
-  IconCompass,
+  IconBusinessplan,
+  IconChalkboard,
   IconFileImport,
   IconHome2,
   IconLock,
@@ -15,7 +16,6 @@ import {
   IconSchool,
   IconSettings,
   IconSun,
-  IconTargetArrow,
   IconTransfer,
   type Icon,
 } from "@tabler/icons-react";
@@ -35,8 +35,8 @@ export const navIcons: Record<string, Icon> = {
   "/": IconHome2,
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
-  "/goals": IconTargetArrow,
-  "/investment-compass": IconCompass,
+  "/goals": IconBusinessplan,
+  "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
   "/settings": IconSettings,
   "/privacy": IconLock,
@@ -401,7 +401,7 @@ export function MobileNavTrigger({
           aria-label="Open navigation and actions"
           className="h-9 w-9"
         >
-          <IconMenu2 className="h-[18px] w-[18px]" />
+          <IconMenu2 className="h-4.5 w-4.5" />
         </Button>
       }
     />

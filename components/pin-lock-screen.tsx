@@ -9,12 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function PinLockScreen() {
-  const { lockState, unlock } = usePinLock();
-
-  if (lockState.status !== "locked") {
-    return null;
-  }
-
+  const { unlock } = usePinLock();
   return <LockedPinScreen unlock={unlock} />;
 }
 

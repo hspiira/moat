@@ -11,6 +11,8 @@ import type {
   MonthClose,
   RecurringObligation,
   ResourceLink,
+  SyncOutboxItem,
+  SyncProfile,
   Transaction,
   TransactionRule,
   UserProfile,
@@ -64,6 +66,15 @@ export interface ResourceRepository {
   replaceAll(resources: ResourceLink[]): Promise<ResourceLink[]>;
 }
 
+export interface SyncProfileRepository {
+  getByUser(userId: string): Promise<SyncProfile | null>;
+  save(profile: SyncProfile): Promise<SyncProfile>;
+}
+
+export interface SyncOutboxRepository extends Repository<SyncOutboxItem> {
+  listPendingByUser(userId: string): Promise<SyncOutboxItem[]>;
+}
+
 export interface RepositoryBundle {
   userProfile: UserProfileRepository;
   accounts: AccountRepository;
@@ -80,4 +91,6 @@ export interface RepositoryBundle {
   investmentProfiles: InvestmentProfileRepository;
   imports: ImportBatchRepository;
   resources: ResourceRepository;
+  syncProfiles: SyncProfileRepository;
+  syncOutbox: SyncOutboxRepository;
 }

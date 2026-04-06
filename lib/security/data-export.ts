@@ -1,4 +1,5 @@
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { clearRepositoryStorage } from "@/lib/repositories/admin";
+import { repositories } from "@/lib/repositories/instance";
 import type {
   Account,
   BudgetTarget,
@@ -6,6 +7,8 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  SyncOutboxItem,
+  SyncProfile,
   Transaction,
   UserProfile,
 } from "@/lib/types";
@@ -21,24 +24,26 @@ export type FullExport = {
   budgets: BudgetTarget[];
   investmentProfiles: InvestmentProfile[];
   imports: ImportBatch[];
+  syncProfiles: SyncProfile[];
+  syncOutbox: SyncOutboxItem[];
 };
 
 /**
  * Collect all user data from IndexedDB and return as a structured export object.
  */
 export async function collectFullExport(): Promise<FullExport> {
-  const repositories = createIndexedDbRepositories();
-
   const userProfile = await repositories.userProfile.get();
   const userId = userProfile?.id ?? "";
 
-  const [accounts, transactions, categories, goals, budgets, imports] = await Promise.all([
+  const [accounts, transactions, categories, goals, budgets, imports, syncProfile, syncOutbox] = await Promise.all([
     userId ? repositories.accounts.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.transactions.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.categories.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.goals.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.budgets.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.imports.listByUser(userId) : Promise.resolve([]),
+    userId ? repositories.syncProfiles.getByUser(userId) : Promise.resolve(null),
+    userId ? repositories.syncOutbox.listByUser(userId) : Promise.resolve([]),
   ]);
 
   const investmentProfile = userId
@@ -56,6 +61,8 @@ export async function collectFullExport(): Promise<FullExport> {
     budgets,
     investmentProfiles: investmentProfile ? [investmentProfile] : [],
     imports,
+    syncProfiles: syncProfile ? [syncProfile] : [],
+    syncOutbox,
   };
 }
 
@@ -63,8 +70,6 @@ export async function collectFullExport(): Promise<FullExport> {
  * Restore a FullExport into IndexedDB, overwriting any existing records with the same id.
  */
 export async function restoreFullExport(data: FullExport): Promise<void> {
-  const repositories = createIndexedDbRepositories();
-
   if (data.userProfile) {
     await repositories.userProfile.save(data.userProfile);
   }
@@ -76,6 +81,8 @@ export async function restoreFullExport(data: FullExport): Promise<void> {
     ...data.goals.map((r) => repositories.goals.upsert(r)),
     ...data.budgets.map((r) => repositories.budgets.upsert(r)),
     ...data.imports.map((r) => repositories.imports.upsert(r)),
+    ...data.syncProfiles.map((r) => repositories.syncProfiles.save(r)),
+    ...data.syncOutbox.map((r) => repositories.syncOutbox.upsert(r)),
     ...(data.investmentProfiles.length > 0
       ? [repositories.investmentProfiles.save(data.investmentProfiles[0])]
       : []),
@@ -117,15 +124,5 @@ export function downloadBlob(blob: Blob, filename: string): void {
  * This is destructive and cannot be undone.
  */
 export async function deleteAllUserData(): Promise<void> {
-  // Use the raw IndexedDB API to delete the entire database
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase("uganda-finance-app");
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error ?? new Error("Unable to delete database."));
-    request.onblocked = () => {
-      // Another tab has the database open — resolve anyway, the delete will
-      // complete when all connections close
-      resolve();
-    };
-  });
+  return clearRepositoryStorage();
 }

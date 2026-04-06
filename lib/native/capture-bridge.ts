@@ -1,5 +1,7 @@
 import type { CaptureEnvelopeSource } from "@/lib/types";
 
+// Bridges native capture payloads into the web app by queueing, dispatching, and subscribing to host-provided capture events.
+
 export type NativeCapturePayload = {
   channel: "shared_text" | "notification";
   source: CaptureEnvelopeSource;
@@ -15,9 +17,6 @@ declare global {
   interface Window {
     moatNativeCapture?: {
       ingest: (payload: NativeCapturePayload) => void;
-    };
-    moatHostBridge?: {
-      updateCaptureSettings?: (settingsJson: string) => void;
     };
     __moatPendingCapturePayloads?: NativeCapturePayload[];
     __moatNativeCaptureListenerCount?: number;
@@ -65,6 +64,17 @@ export function registerNativeCaptureGlobal() {
 export function syncNativeCaptureSettings(settingsJson: string) {
   if (typeof window === "undefined") return;
   window.moatHostBridge?.updateCaptureSettings?.(settingsJson);
+}
+
+export function getPendingNativeCaptureRouteHint(): string | null {
+  if (typeof window === "undefined") return null;
+  const routeHint = window.moatHostBridge?.getPendingCaptureRouteHint?.();
+  return typeof routeHint === "string" && routeHint.trim() ? routeHint : null;
+}
+
+export function clearPendingNativeCaptureRouteHint() {
+  if (typeof window === "undefined") return;
+  window.moatHostBridge?.clearPendingCaptureRouteHint?.();
 }
 
 export function subscribeToNativeCapture(handler: (payload: NativeCapturePayload) => void) {

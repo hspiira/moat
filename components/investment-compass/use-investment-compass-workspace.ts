@@ -6,7 +6,7 @@ import { createBootstrapState } from "@/lib/app-state/bootstrap";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type {
   Goal,
   InvestmentProfile,
@@ -17,7 +17,6 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
-const repositories = createIndexedDbRepositories();
 
 export type InvestmentProfileFormState = {
   timeHorizonMonths: string;

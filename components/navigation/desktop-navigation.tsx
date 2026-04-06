@@ -18,7 +18,7 @@ export function DesktopNavigation({
   onToggleTheme: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-40 hidden bg-background/92 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:block">
+    <div className="sticky top-0 z-40 hidden bg-background/92 pt-3 backdrop-blur supports-backdrop-filter:bg-background/84 lg:block">
       <div className="flex items-center gap-4 py-1">
         <div className="shrink-0">
           <AppBrand />
@@ -50,7 +50,7 @@ export function DesktopNavigation({
                         ].join(" ")}
                       >
                         <IconComponent
-                          className={isActive ? "h-4 w-4" : "h-[15px] w-[15px]"}
+                          className={isActive ? "h-4 w-4" : "h-3.75 w-3.75"}
                           stroke={isActive ? 1.9 : 1.7}
                         />
                       </span>

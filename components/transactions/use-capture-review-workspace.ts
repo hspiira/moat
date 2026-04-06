@@ -1,9 +1,11 @@
 "use client";
 
+// Manages the capture review inbox: loading review items, validating edits, and resolving them into approved or rejected outcomes.
+
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
 import { announceLocalSave } from "@/lib/local-save";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
@@ -22,7 +24,6 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
-const repositories = createIndexedDbRepositories();
 
 function sortByUpdatedAt(items: CaptureReviewItem[]) {
   return [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

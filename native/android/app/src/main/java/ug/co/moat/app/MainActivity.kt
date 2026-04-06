@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
                 occurredAt = java.time.Instant.now().toString(),
             ),
         )
+        CapturePayloadStore.writePendingRouteHint(this, "/transactions/review/capture")
         flushPendingPayloads()
     }
 

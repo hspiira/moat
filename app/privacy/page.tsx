@@ -56,12 +56,17 @@ const sections = [
     content: (
       <>
         <p>
-          Moat is local-first. Your records are stored in your device&apos;s IndexedDB storage.
-          They do not leave your device unless you explicitly export or share them.
+          Moat is local-first by default. In the web app and PWA, your records are stored in your
+          device&apos;s browser storage. In native mobile shells, Moat is designed to use encrypted
+          local database storage on the device.
         </p>
         <p>
-          Clearing browser storage or uninstalling the app removes local records unless you have
-          created a backup.
+          Your records do not leave your device unless you explicitly export them or opt in to a
+          cloud sync feature when it becomes available.
+        </p>
+        <p>
+          Clearing browser storage, uninstalling the app, or resetting a device can still remove
+          locally stored records unless you have created a backup.
         </p>
       </>
     ),
@@ -72,14 +77,32 @@ const sections = [
     content: (
       <>
         <p>
-          Moat offers optional PIN lock and encrypted backup features. When enabled, the app uses
-          your PIN to derive an encryption key and protect local access.
+          Moat offers optional PIN lock and encrypted backup features today. The target native
+          security model uses encrypted local database storage, platform-protected keys, and app
+          unlock through PIN and supported biometric prompts.
         </p>
         <ul className="grid gap-2 text-foreground/80">
           <li>The app can require a PIN to unlock on each session</li>
           <li>Encrypted backup files are protected with AES-GCM</li>
           <li>Derived keys are kept only for the active session and cleared on lock</li>
+          <li>Future native shells are intended to use OS key storage such as Keychain or Keystore</li>
         </ul>
+      </>
+    ),
+  },
+  {
+    id: "sync",
+    title: "Optional sync and cloud storage",
+    content: (
+      <>
+        <p>
+          Moat&apos;s default mode is local-only. If optional cloud sync is introduced, it will be an
+          explicit opt-in choice rather than a mandatory requirement to use the app.
+        </p>
+        <p>
+          Any optional sync feature will explain what leaves your device, how it is encrypted in
+          transit and at rest, and how to disable it again. Local-only use will remain available.
+        </p>
       </>
     ),
   },
@@ -123,8 +146,9 @@ const sections = [
           captured messages are processed locally in the app.
         </p>
         <p>
-          The application may load framework-managed assets such as fonts, but it does not send
-          your accounting records to outside services during normal use.
+          If you later opt in to a hosted sync service, Moat will treat that as a separate storage
+          mode and document the database location, encryption posture, and retention behavior
+          clearly before activation.
         </p>
       </>
     ),
@@ -231,7 +255,7 @@ export default function PrivacyPage() {
               <PrivacySummaryCard
                 icon={IconLock}
                 title="Local-first by default"
-                body="Your records stay on your device unless you explicitly export or share them."
+                body="Your records stay on your device unless you explicitly export them or later opt in to sync."
               />
               <PrivacySummaryCard
                 icon={IconDownload}
@@ -241,7 +265,7 @@ export default function PrivacyPage() {
               <PrivacySummaryCard
                 icon={IconTrash}
                 title="You stay in control"
-                body="You can correct or delete your records directly inside the app."
+                body="PIN lock, backups, and any future sync mode are intended to remain under your control."
               />
             </div>
           </CardContent>

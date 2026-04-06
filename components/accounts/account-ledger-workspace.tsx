@@ -29,13 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getLedgerRows, reconcileAccountBalances } from "@/lib/domain/accounts";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 import { accountTypeLabels } from "./account-form";
 
-const repositories = createIndexedDbRepositories();
 
 function normalizeAccountId(value: string) {
   try {
@@ -155,7 +154,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
         title={account?.name ?? "Account"}
         description="Trace the current balance from opening balance and recorded movements."
         aside={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start gap-2 sm:items-center">
             {account ? (
               <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
             ) : null}
@@ -188,8 +187,20 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 </CardDescription>
                 <CardTitle className="text-4xl tracking-tight">
                   <AmountIndicator
-                    tone={account.balance < 0 ? "negative" : "neutral"}
-                    sign={account.balance < 0 ? "negative" : "none"}
+                    tone={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "neutral"
+                    }
+                    sign={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "none"
+                    }
                     value={formatCurrency(account.balance)}
                     className="text-4xl font-semibold tracking-tight"
                   />
@@ -216,14 +227,14 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[110px]">Date</TableHead>
-                      <TableHead className="w-[140px]">Category</TableHead>
-                      <TableHead className="w-[140px]">Type</TableHead>
-                      <TableHead className="w-[180px]">Payee</TableHead>
+                      <TableHead className="w-27.5">Date</TableHead>
+                      <TableHead className="w-35">Category</TableHead>
+                      <TableHead className="w-35">Type</TableHead>
+                      <TableHead className="w-45">Payee</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="w-[140px] text-right">Debit</TableHead>
-                      <TableHead className="w-[140px] text-right">Credit</TableHead>
-                      <TableHead className="w-[160px] text-right">Running balance</TableHead>
+                      <TableHead className="w-35 text-right">Debit</TableHead>
+                      <TableHead className="w-35 text-right">Credit</TableHead>
+                      <TableHead className="w-40 text-right">Running balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -41,6 +41,9 @@ export type CaptureConfidenceField =
   | "currency"
   | "balance";
 export type CaptureWarningLevel = "info" | "warning";
+export type SyncMode = "local_only" | "hosted_opt_in";
+export type SyncOutboxOperation = "upsert" | "remove";
+export type SyncOutboxStatus = "pending" | "syncing" | "failed" | "synced" | "conflict";
 
 export type GoalType =
   | "emergency_fund"
@@ -346,6 +349,35 @@ export type CorrectionLog = {
   originalSnapshot: CaptureReviewSnapshot;
   approvedSnapshot: CaptureReviewSnapshot;
   createdAt: string;
+};
+
+export type SyncProfile = {
+  id: string;
+  userId: string;
+  mode: SyncMode;
+  hostedSyncEnabled: boolean;
+  postgresSyncUrl?: string;
+  deviceId?: string;
+  syncAuthToken?: string;
+  lastSyncedAt?: string;
+  lastPulledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SyncOutboxItem = {
+  id: string;
+  userId: string;
+  entityType: string;
+  entityId: string;
+  operation: SyncOutboxOperation;
+  payload: string;
+  status: SyncOutboxStatus;
+  attempts: number;
+  queuedAt: string;
+  updatedAt: string;
+  lastError?: string;
+  conflictPayload?: string;
 };
 
 export type TransactionRule = {

@@ -61,8 +61,9 @@ export function CaptureAutomationPanel() {
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Capture automation</div>
           <div className="text-sm text-muted-foreground">
-            Native Android notification capture is gated by an explicit allowlist and still routes
-            everything into review before posting.
+            Android share-to-app intake is wired through the native host shell. Notification
+            capture stays gated by an explicit allowlist and still routes everything into review
+            before posting.
           </div>
         </div>
 
@@ -108,8 +109,8 @@ export function CaptureAutomationPanel() {
         <div className="grid gap-1 text-xs text-muted-foreground">
           <div>Native bridge contract: `window.moatNativeCapture.ingest(payload)`</div>
           <div>
-            Android host shell work remains required before this becomes a live device-level
-            capture path.
+            Android share-to-app is delivered through the host shell now. Notification listener
+            capture remains a separate device-level opt-in path.
           </div>
         </div>
       </CardContent>

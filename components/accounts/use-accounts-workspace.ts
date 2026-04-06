@@ -4,12 +4,11 @@ import { startTransition, useEffect, useState } from "react";
 
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { Account, AccountType, Transaction } from "@/lib/types";
 
 import { defaultAccountForm, type AccountFormState } from "./account-form";
 
-const repositories = createIndexedDbRepositories();
 
 function toInstitutionType(type: AccountType): Account["institutionType"] {
   if (type === "bank") return "bank";

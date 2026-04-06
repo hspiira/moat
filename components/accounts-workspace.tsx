@@ -84,8 +84,20 @@ export function AccountsWorkspace() {
                 <CardDescription className="text-foreground/65">Total balance</CardDescription>
                 <CardTitle className="text-4xl tracking-tight">
                   <AmountIndicator
-                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
-                    sign={accountTotals.totalBalance < 0 ? "negative" : "none"}
+                    tone={
+                      accountTotals.totalBalance > 0
+                        ? "positive"
+                        : accountTotals.totalBalance < 0
+                          ? "negative"
+                          : "neutral"
+                    }
+                    sign={
+                      accountTotals.totalBalance > 0
+                        ? "positive"
+                        : accountTotals.totalBalance < 0
+                          ? "negative"
+                          : "none"
+                    }
                     value={formatMoney(accountTotals.totalBalance, "UGX")}
                     className="text-4xl font-semibold tracking-tight"
                   />
