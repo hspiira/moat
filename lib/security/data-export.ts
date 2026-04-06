@@ -1,17 +1,26 @@
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { UserProfile } from "@/lib/types";
+import type {
+  Account,
+  BudgetTarget,
+  Category,
+  Goal,
+  ImportBatch,
+  InvestmentProfile,
+  Transaction,
+  UserProfile,
+} from "@/lib/types";
 
-type FullExport = {
+export type FullExport = {
   exportedAt: string;
   schemaVersion: number;
   userProfile: UserProfile | null;
-  accounts: unknown[];
-  transactions: unknown[];
-  categories: unknown[];
-  goals: unknown[];
-  budgets: unknown[];
-  investmentProfiles: unknown[];
-  imports: unknown[];
+  accounts: Account[];
+  transactions: Transaction[];
+  categories: Category[];
+  goals: Goal[];
+  budgets: BudgetTarget[];
+  investmentProfiles: InvestmentProfile[];
+  imports: ImportBatch[];
 };
 
 /**
@@ -32,13 +41,9 @@ export async function collectFullExport(): Promise<FullExport> {
     userId ? repositories.imports.listByUser(userId) : Promise.resolve([]),
   ]);
 
-  let investmentProfiles: unknown[] = [];
-  if (userId) {
-    const profile = await repositories.investmentProfiles.getByUser(userId);
-    if (profile) {
-      investmentProfiles = [profile];
-    }
-  }
+  const investmentProfile = userId
+    ? await repositories.investmentProfiles.getByUser(userId)
+    : null;
 
   return {
     exportedAt: new Date().toISOString(),
@@ -49,9 +54,32 @@ export async function collectFullExport(): Promise<FullExport> {
     categories,
     goals,
     budgets,
-    investmentProfiles,
+    investmentProfiles: investmentProfile ? [investmentProfile] : [],
     imports,
   };
+}
+
+/**
+ * Restore a FullExport into IndexedDB, overwriting any existing records with the same id.
+ */
+export async function restoreFullExport(data: FullExport): Promise<void> {
+  const repositories = createIndexedDbRepositories();
+
+  if (data.userProfile) {
+    await repositories.userProfile.save(data.userProfile);
+  }
+
+  await Promise.all([
+    ...data.accounts.map((r) => repositories.accounts.upsert(r)),
+    ...data.transactions.map((r) => repositories.transactions.upsert(r)),
+    ...data.categories.map((r) => repositories.categories.upsert(r)),
+    ...data.goals.map((r) => repositories.goals.upsert(r)),
+    ...data.budgets.map((r) => repositories.budgets.upsert(r)),
+    ...data.imports.map((r) => repositories.imports.upsert(r)),
+    ...(data.investmentProfiles.length > 0
+      ? [repositories.investmentProfiles.save(data.investmentProfiles[0])]
+      : []),
+  ]);
 }
 
 /**

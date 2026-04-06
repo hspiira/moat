@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import { collectFullExport, downloadBlob } from "@/lib/security/data-export";
+import { collectFullExport, downloadBlob, restoreFullExport, type FullExport } from "@/lib/security/data-export";
 import { encryptWithPin, decryptWithPin, type EncryptedPayload } from "@/lib/security/pin-crypto";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,45 +84,9 @@ export function BackupPanel() {
     try {
       const text = await file.text();
       const payload = JSON.parse(text) as EncryptedPayload;
-      const data = await decryptWithPin(payload, restorePin);
+      const data = await decryptWithPin<FullExport>(payload, restorePin);
 
-      // Write each store back via repositories
-      const { createIndexedDbRepositories } = await import("@/lib/repositories/indexeddb");
-      const repositories = createIndexedDbRepositories();
-      const exportData = data as Record<string, unknown>;
-
-      if (exportData.userProfile) {
-        await repositories.userProfile.save(exportData.userProfile as Parameters<typeof repositories.userProfile.save>[0]);
-      }
-
-      const arrayStores = [
-        { key: "accounts", repo: repositories.accounts },
-        { key: "categories", repo: repositories.categories },
-        { key: "goals", repo: repositories.goals },
-        { key: "budgets", repo: repositories.budgets },
-        { key: "imports", repo: repositories.imports },
-      ] as const;
-
-      for (const { key, repo } of arrayStores) {
-        const items = exportData[key] as { id: string }[] | undefined;
-        if (Array.isArray(items)) {
-          await Promise.all(items.map((item) => (repo as { upsert: (i: typeof item) => Promise<unknown> }).upsert(item)));
-        }
-      }
-
-      if (Array.isArray(exportData.transactions)) {
-        await Promise.all(
-          (exportData.transactions as Parameters<typeof repositories.transactions.upsert>[0][]).map(
-            (t) => repositories.transactions.upsert(t),
-          ),
-        );
-      }
-
-      if (Array.isArray(exportData.investmentProfiles) && exportData.investmentProfiles.length > 0) {
-        await repositories.investmentProfiles.save(
-          exportData.investmentProfiles[0] as Parameters<typeof repositories.investmentProfiles.save>[0],
-        );
-      }
+      await restoreFullExport(data);
 
       setSuccess("Backup restored successfully. Reload the app to see your data.");
       reset();
