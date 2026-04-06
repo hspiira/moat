@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 
 import { goalTypeLabels } from "./goal-form";
@@ -40,9 +41,9 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
       </CardHeader>
       <CardContent className="grid gap-3">
         {goals.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+          <EmptyState>
             No goals yet. Create your first goal to start building.
-          </div>
+          </EmptyState>
         ) : (
           goals.map((goal, index) => {
             const plan = getGoalContributionPlan(goal);

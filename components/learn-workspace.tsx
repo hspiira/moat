@@ -11,6 +11,7 @@ import {
 } from "@/components/page-shell/page-state";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { ResourceLink, UserProfile } from "@/lib/types";
+import { AccentMetricCard } from "@/components/ui/accent-metric-card";
 import {
   Card,
   CardContent,
@@ -111,30 +112,21 @@ export function LearnWorkspace() {
       {!isLoading ? (
         <div className="grid gap-5">
           <div className="grid gap-3 lg:grid-cols-3">
-            <Card className="moat-panel-yellow border-border/20 shadow-none">
-              <CardContent className="grid gap-2 p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                  Official first
-                </div>
-                <div className="text-3xl font-semibold tracking-tight">Verify before you move money</div>
-              </CardContent>
-            </Card>
-            <Card className="moat-panel-lilac border-border/20 shadow-none">
-              <CardContent className="grid gap-2 p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                  Product research
-                </div>
-                <div className="text-3xl font-semibold tracking-tight">Use data, not promises</div>
-              </CardContent>
-            </Card>
-            <Card className="moat-panel-mint border-border/20 shadow-none">
-              <CardContent className="grid gap-2 p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                  Guidance boundary
-                </div>
-                <div className="text-3xl font-semibold tracking-tight">Education, not hot picks</div>
-              </CardContent>
-            </Card>
+            <AccentMetricCard
+              tone="yellow"
+              kicker="Official first"
+              value="Verify before you move money"
+            />
+            <AccentMetricCard
+              tone="lilac"
+              kicker="Product research"
+              value="Use data, not promises"
+            />
+            <AccentMetricCard
+              tone="mint"
+              kicker="Guidance boundary"
+              value="Education, not hot picks"
+            />
           </div>
 
           {topicEntries.map(([topic, topicResources], index) => {

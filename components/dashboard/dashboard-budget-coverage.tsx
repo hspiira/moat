@@ -2,6 +2,7 @@
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { BudgetEnvelope } from "@/lib/domain/budgets";
 
 function formatCurrency(amount: number) {
@@ -35,9 +36,9 @@ export function DashboardBudgetCoverage({
       </CardHeader>
       <CardContent className="grid gap-2">
         {!hasBudgets ? (
-          <div className="text-sm text-muted-foreground">
+          <EmptyState className="py-6">
             No budgets set yet. Add envelopes from Transactions.
-          </div>
+          </EmptyState>
         ) : (
           <>
             <div className="grid gap-2 border border-border/20 px-4 py-3">

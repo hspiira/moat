@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 
 import { accountTypeLabels } from "./account-form";
@@ -43,9 +44,9 @@ export function AccountList({ accounts, transactions, onEdit }: Props) {
       </CardHeader>
       <CardContent className="grid gap-3">
         {active.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+          <EmptyState>
             No accounts yet. Add your first account to get started.
-          </div>
+          </EmptyState>
         ) : (
           active.map((account, index) => (
             <div

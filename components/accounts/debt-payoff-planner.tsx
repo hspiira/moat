@@ -28,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { optionsFromRecord } from "@/lib/select-options";
+import { StatTile } from "@/components/ui/stat-tile";
 
 const strategyLabels: Record<DebtPayoffStrategy, string> = {
   avalanche: "Avalanche",
@@ -148,28 +149,21 @@ export function DebtPayoffPlanner({
             />
           </div>
           <div className="grid gap-2 md:grid-cols-3">
-            <div className="border border-border/20 px-3 py-3">
-              <div className="text-xs text-muted-foreground">Outstanding</div>
-              <div className="mt-1 text-lg text-foreground">
-                {formatMoney(
-                  debtSummaries.reduce((sum, debt) => sum + debt.outstandingBalance, 0),
-                  "UGX",
-                )}
-              </div>
-            </div>
-            <div className="border border-border/20 px-3 py-3">
-              <div className="text-xs text-muted-foreground">Min monthly load</div>
-              <div className="mt-1 text-lg text-foreground">
-                {formatMoney(
-                  debtSummaries.reduce((sum, debt) => sum + debt.inferredMinimumPayment, 0),
-                  "UGX",
-                )}
-              </div>
-            </div>
-            <div className="border border-border/20 px-3 py-3">
-              <div className="text-xs text-muted-foreground">Open debts</div>
-              <div className="mt-1 text-lg text-foreground">{debtSummaries.length}</div>
-            </div>
+            <StatTile
+              label="Outstanding"
+              value={formatMoney(
+                debtSummaries.reduce((sum, debt) => sum + debt.outstandingBalance, 0),
+                "UGX",
+              )}
+            />
+            <StatTile
+              label="Min monthly load"
+              value={formatMoney(
+                debtSummaries.reduce((sum, debt) => sum + debt.inferredMinimumPayment, 0),
+                "UGX",
+              )}
+            />
+            <StatTile label="Open debts" value={debtSummaries.length} />
           </div>
         </div>
 

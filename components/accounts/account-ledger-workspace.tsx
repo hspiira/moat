@@ -12,6 +12,7 @@ import {
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Card,
   CardContent,
@@ -208,9 +209,9 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             </CardHeader>
             <CardContent>
               {ledgerRows.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+                <EmptyState>
                   No transactions recorded for this account.
-                </div>
+                </EmptyState>
               ) : (
                 <Table>
                   <TableHeader>

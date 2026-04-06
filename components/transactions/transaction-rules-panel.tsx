@@ -14,6 +14,7 @@ import {
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -248,9 +249,7 @@ export function TransactionRulesPanel({
 
         <div className="grid gap-2">
           {rules.length === 0 ? (
-            <div className="border border-dashed border-border/50 px-4 py-6 text-sm text-muted-foreground">
-              No rules yet.
-            </div>
+            <EmptyState className="py-6">No rules yet.</EmptyState>
           ) : (
             rules
               .sort((left, right) => left.priority - right.priority)

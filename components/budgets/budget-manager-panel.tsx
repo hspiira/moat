@@ -13,8 +13,9 @@ import { SelectField } from "@/components/forms/select-field";
 import { categoryOptions } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatTile } from "@/components/ui/stat-tile";
+import { InputField } from "@/components/forms/input-field";
 
 type Props = {
   month: string;
@@ -80,35 +81,31 @@ export function BudgetManagerPanel({
       />
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="border border-border/20 px-3 py-3">
-            <div className="text-xs text-muted-foreground">Income available</div>
-            <div className="mt-1 text-lg text-foreground">{formatMoney(fundingCapacity.inflow, "UGX")}</div>
-          </div>
-          <div className="border border-border/20 px-3 py-3">
-            <div className="text-xs text-muted-foreground">Allocated</div>
-            <div className="mt-1 text-lg text-foreground">{formatMoney(fundingCapacity.allocated, "UGX")}</div>
-          </div>
-          <div className="border border-border/20 px-3 py-3">
-            <div className="text-xs text-muted-foreground">Unallocated income</div>
-            <AmountIndicator
-              tone={
-                fundingCapacity.unallocatedIncome > 0
-                  ? "positive"
-                  : fundingCapacity.unallocatedIncome < 0
-                    ? "negative"
-                    : "neutral"
-              }
-              sign={
-                fundingCapacity.unallocatedIncome > 0
-                  ? "positive"
-                  : fundingCapacity.unallocatedIncome < 0
-                    ? "negative"
-                    : "none"
-              }
-              value={formatMoney(Math.abs(fundingCapacity.unallocatedIncome), "UGX")}
-              className="mt-1 text-lg"
-            />
-          </div>
+          <StatTile label="Income available" value={formatMoney(fundingCapacity.inflow, "UGX")} />
+          <StatTile label="Allocated" value={formatMoney(fundingCapacity.allocated, "UGX")} />
+          <StatTile
+            label="Unallocated income"
+            value={
+              <AmountIndicator
+                tone={
+                  fundingCapacity.unallocatedIncome > 0
+                    ? "positive"
+                    : fundingCapacity.unallocatedIncome < 0
+                      ? "negative"
+                      : "neutral"
+                }
+                sign={
+                  fundingCapacity.unallocatedIncome > 0
+                    ? "positive"
+                    : fundingCapacity.unallocatedIncome < 0
+                      ? "negative"
+                      : "none"
+                }
+                value={formatMoney(Math.abs(fundingCapacity.unallocatedIncome), "UGX")}
+                className="text-lg"
+              />
+            }
+          />
         </div>
 
         {incomeFundingSummaries.length > 0 ? (
@@ -179,9 +176,10 @@ export function BudgetManagerPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Allocated (UGX)</Label>
             <div className="flex gap-2">
-              <Input
+              <InputField
+                id="budget-target-amount"
+                label="Allocated (UGX)"
                 inputMode="numeric"
                 value={form.targetAmount}
                 onChange={(event) =>
@@ -210,8 +208,9 @@ export function BudgetManagerPanel({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Rollover (UGX)</Label>
-            <Input
+            <InputField
+              id="budget-rollover-amount"
+              label="Rollover (UGX)"
               inputMode="numeric"
               value={form.rolloverAmount}
               onChange={(event) =>
@@ -237,9 +236,7 @@ export function BudgetManagerPanel({
 
         <div className="grid gap-2">
           {envelopes.length === 0 ? (
-            <div className="border border-dashed border-border/50 px-4 py-6 text-sm text-muted-foreground">
-              No budgets set for this month.
-            </div>
+            <EmptyState className="py-6">No budgets set for this month.</EmptyState>
           ) : (
             envelopes.map((envelope) => (
               <div

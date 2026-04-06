@@ -17,6 +17,7 @@ import {
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type ObligationFormState = {
   name: string;
@@ -195,9 +196,7 @@ export function RecurringObligationsPanel({
 
         <div className="grid gap-2">
           {evaluations.length === 0 ? (
-            <div className="border border-dashed border-border/50 px-4 py-6 text-sm text-muted-foreground">
-              No recurring obligations yet.
-            </div>
+            <EmptyState className="py-6">No recurring obligations yet.</EmptyState>
           ) : (
             evaluations.map((evaluation) => (
               <div

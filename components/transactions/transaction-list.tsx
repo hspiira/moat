@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { transactionTypeLabels } from "./transaction-form";
 
 type Props = {
@@ -48,9 +49,7 @@ export function TransactionList({
       </CardHeader>
       <CardContent className="grid gap-2">
         {transactions.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
-            No transactions yet.
-          </div>
+          <EmptyState>No transactions yet.</EmptyState>
         ) : (
           transactions.map((transaction, index) => {
             const account = accounts.find((a) => a.id === transaction.accountId);

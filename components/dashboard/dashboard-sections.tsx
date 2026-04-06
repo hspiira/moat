@@ -6,6 +6,7 @@ import { AmountIndicator } from "@/components/amount-indicator";
 import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Account, Transaction } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
@@ -112,12 +113,12 @@ export function DashboardTopSpendingCategories({
       </CardHeader>
       <CardContent className="grid gap-2">
         {categories.length === 0 ? (
-          <div className="border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+          <EmptyState>
             No spending recorded in this period.{" "}
             <Link href="/transactions" className="underline underline-offset-4 hover:text-foreground">
               Add transactions
             </Link>
-          </div>
+          </EmptyState>
         ) : (
           categories.map((category, index) => (
             <div
@@ -164,12 +165,12 @@ export function DashboardAccountBalances({
       </CardHeader>
       <CardContent className="grid gap-2">
         {accounts.length === 0 ? (
-          <div className="border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+          <EmptyState>
             No accounts.{" "}
             <Link href="/accounts" className="underline underline-offset-4 hover:text-foreground">
               Add an account
             </Link>
-          </div>
+          </EmptyState>
         ) : (
           accounts.map((account, index) => (
             <div
@@ -221,7 +222,9 @@ export function DashboardInsightsPanel({
       </CardHeader>
       <CardContent>
         {insights.length === 0 ? (
-          <p className="text-sm text-foreground/75">Add more transactions for personalised prompts.</p>
+          <EmptyState className="border-border/30 bg-background/10 py-6 text-foreground/75">
+            Add more transactions for personalised prompts.
+          </EmptyState>
         ) : (
           <ul className="grid gap-3">
             {insights.map((insight) => (
