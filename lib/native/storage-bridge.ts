@@ -77,6 +77,9 @@ export type NativeStorageResponse =
     };
 
 export interface NativeStorageBridge {
+  updateCaptureSettings?: (settingsJson: string) => void;
+  getPendingCaptureRouteHint?: () => string | null;
+  clearPendingCaptureRouteHint?: () => void;
   isStorageAvailable?: () => boolean;
   executeStorageCommand?: (commandJson: string) => string;
   clearStorage?: () => boolean;
@@ -86,6 +89,8 @@ declare global {
   interface Window {
     moatHostBridge?: {
       updateCaptureSettings?: (settingsJson: string) => void;
+      getPendingCaptureRouteHint?: () => string | null;
+      clearPendingCaptureRouteHint?: () => void;
       isStorageAvailable?: () => boolean;
       executeStorageCommand?: (commandJson: string) => string;
       clearStorage?: () => boolean;

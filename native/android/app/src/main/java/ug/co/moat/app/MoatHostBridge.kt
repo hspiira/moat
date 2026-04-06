@@ -14,6 +14,14 @@ class MoatHostBridge(
     }
 
     @JavascriptInterface
+    fun getPendingCaptureRouteHint(): String? = CapturePayloadStore.readPendingRouteHint(context)
+
+    @JavascriptInterface
+    fun clearPendingCaptureRouteHint() {
+        CapturePayloadStore.clearPendingRouteHint(context)
+    }
+
+    @JavascriptInterface
     fun isStorageAvailable(): Boolean = storageBridge.isStorageAvailable()
 
     @JavascriptInterface

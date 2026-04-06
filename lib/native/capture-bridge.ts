@@ -66,6 +66,17 @@ export function syncNativeCaptureSettings(settingsJson: string) {
   window.moatHostBridge?.updateCaptureSettings?.(settingsJson);
 }
 
+export function getPendingNativeCaptureRouteHint(): string | null {
+  if (typeof window === "undefined") return null;
+  const routeHint = window.moatHostBridge?.getPendingCaptureRouteHint?.();
+  return typeof routeHint === "string" && routeHint.trim() ? routeHint : null;
+}
+
+export function clearPendingNativeCaptureRouteHint() {
+  if (typeof window === "undefined") return;
+  window.moatHostBridge?.clearPendingCaptureRouteHint?.();
+}
+
 export function subscribeToNativeCapture(handler: (payload: NativeCapturePayload) => void) {
   if (typeof window === "undefined") {
     return () => undefined;

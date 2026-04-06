@@ -195,10 +195,10 @@ Suggested priority order after current state:
 |------|--------|--------|
 | `#56` | Phase 2 epic | In progress — foundation work exists, native/mobile channels still missing |
 | `#53` | Capture inbox and review queue | Implemented in code; ready for review/board update |
-| `#27` | Share-to-app and paste-to-app intake | Partial — paste flow and web share-target exist; native Android share intent still missing |
-| `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial — source metadata, hashes, duplicate hints, and basic confidence exist; no canonical pipeline modules or field-level confidence model yet |
+| `#27` | Share-to-app and paste-to-app intake | Implemented in code — Android share intent, host-shell handoff, and capture-review inbox routing are wired; validate on device |
+| `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial — canonical pipeline modules, source adapters, provider packs, hashes, duplicate hints, and field warnings exist; provider coverage and refinement loop still incomplete |
 | `#30` | MTN, Airtel, and bank parser templates | Partial — first generic templates exist; not yet provider-grade or fixture-complete |
-| `#55` | Android host shell and native bridge | Not started |
+| `#55` | Android host shell and native bridge | Implemented in code — WebView host, payload queue, JS bridge, and review-route handoff are present; needs device verification and notification-specific follow-up |
 | `#25` | Android notification listener ingestion | Not started |
 | `#54` | Correction logging and parser refinement workflow | Not started |
 

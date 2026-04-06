@@ -22,6 +22,7 @@ object CapturePayloadStore {
     private const val PREFERENCES = "moat-native-capture"
     private const val PAYLOAD_QUEUE_KEY = "payload_queue"
     private const val SETTINGS_KEY = "capture_settings"
+    private const val ROUTE_HINT_KEY = "pending_capture_route_hint"
 
     private val defaultAllowedPackages = setOf(
         "com.mtn.uganda.momo",
@@ -80,6 +81,27 @@ object CapturePayloadStore {
             .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
             .edit()
             .putString(SETTINGS_KEY, settingsJson)
+            .apply()
+    }
+
+    fun writePendingRouteHint(context: Context, route: String) {
+        context
+            .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .edit()
+            .putString(ROUTE_HINT_KEY, route)
+            .apply()
+    }
+
+    fun readPendingRouteHint(context: Context): String? =
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .getString(ROUTE_HINT_KEY, null)
+            ?.takeIf { it.isNotBlank() }
+
+    fun clearPendingRouteHint(context: Context) {
+        context
+            .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .edit()
+            .remove(ROUTE_HINT_KEY)
             .apply()
     }
 
