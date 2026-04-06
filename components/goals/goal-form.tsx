@@ -1,8 +1,12 @@
 "use client";
 
 import type { Account, GoalType } from "@/lib/types";
+import { formatMoney } from "@/lib/currency";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { InputField } from "@/components/forms/input-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
+import { SelectField } from "@/components/forms/select-field";
+import { accountOptions, optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,13 +15,6 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export type GoalFormState = {
   name: string;
@@ -48,14 +45,6 @@ export const goalTypeLabels: Record<GoalType, string> = {
   education: "Education",
   house_construction: "House / Construction",
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -94,7 +83,7 @@ export function GoalForm({
         title={editingId ? "Edit goal" : "New goal"}
         description={
           form.goalType === "emergency_fund"
-            ? `Suggested target based on 3x monthly outflow: ${formatCurrency(emergencyFundSuggestion)}`
+            ? `Suggested target based on 3x monthly outflow: ${formatMoney(emergencyFundSuggestion, "UGX")}`
             : "Set a target amount and deadline for this goal."
         }
       />
@@ -106,40 +95,27 @@ export function GoalForm({
             successMessage={successMessage}
           />
 
-          <div className="grid gap-2">
-            <Label htmlFor="goal-name">Goal name</Label>
-            <Input
-              id="goal-name"
-              value={form.name}
-              onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
-              placeholder="e.g. Emergency savings"
-              required
-            />
-          </div>
+          <InputField
+            id="goal-name"
+            label="Goal name"
+            value={form.name}
+            onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
+            placeholder="e.g. Emergency savings"
+            required
+          />
+
+          <SelectField
+            id="goal-type"
+            label="Goal type"
+            value={form.goalType}
+            options={optionsFromRecord(goalTypeLabels, goalTypes)}
+            onValueChange={(value) =>
+              onFormChange((c) => ({ ...c, goalType: value as GoalType }))
+            }
+          />
 
           <div className="grid gap-2">
-            <Label htmlFor="goal-type">Goal type</Label>
-            <Select
-              value={form.goalType}
-              onValueChange={(value) =>
-                onFormChange((c) => ({ ...c, goalType: value as GoalType }))
-              }
-            >
-              <SelectTrigger id="goal-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {goalTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {goalTypeLabels[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="target-amount">Target amount (UGX)</Label>
+            <div className="text-sm text-foreground">Target amount (UGX)</div>
             <div className="flex gap-2">
               <Input
                 id="target-amount"
@@ -167,16 +143,14 @@ export function GoalForm({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="current-amount">Current amount saved (UGX)</Label>
-            <Input
-              id="current-amount"
-              inputMode="decimal"
-              value={form.currentAmount}
-              onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}
-              required
-            />
-          </div>
+          <InputField
+            id="current-amount"
+            label="Current amount saved (UGX)"
+            inputMode="decimal"
+            value={form.currentAmount}
+            onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}
+            required
+          />
 
           <div className="grid gap-2">
             <Label htmlFor="target-date">Target date</Label>
@@ -187,44 +161,31 @@ export function GoalForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="goal-priority">Priority (1 = highest)</Label>
-            <Input
-              id="goal-priority"
-              inputMode="numeric"
-              min="1"
-              max="10"
-              value={form.priority}
-              onChange={(e) => onFormChange((c) => ({ ...c, priority: e.target.value }))}
-              required
-            />
-          </div>
+          <InputField
+            id="goal-priority"
+            label="Priority (1 = highest)"
+            inputMode="numeric"
+            min="1"
+            max="10"
+            value={form.priority}
+            onChange={(e) => onFormChange((c) => ({ ...c, priority: e.target.value }))}
+            required
+          />
 
           {accounts.length > 0 ? (
-            <div className="grid gap-2">
-              <Label htmlFor="linked-account">Linked savings account</Label>
-              <Select
-                value={form.linkedAccountId || "__none__"}
-                onValueChange={(value) =>
-                  onFormChange((c) => ({
-                    ...c,
-                    linkedAccountId: value === "__none__" ? "" : value,
-                  }))
-                }
-              >
-                <SelectTrigger id="linked-account">
-                  <SelectValue placeholder="Any account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Any account</SelectItem>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectField
+              id="linked-account"
+              label="Linked savings account"
+              value={form.linkedAccountId || "__none__"}
+              placeholder="Any account"
+              options={[{ value: "__none__", label: "Any account" }, ...accountOptions(accounts)]}
+              onValueChange={(value) =>
+                onFormChange((c) => ({
+                  ...c,
+                  linkedAccountId: value === "__none__" ? "" : value,
+                }))
+              }
+            />
           ) : null}
 
           <div className="flex flex-wrap gap-2">

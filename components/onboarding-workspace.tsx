@@ -6,17 +6,11 @@ import { startTransition, useEffect, useState } from "react";
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { IncomeType, RiskComfort, SalaryCycle, UserProfile } from "@/lib/types";
+import { InputField } from "@/components/forms/input-field";
+import { SelectField } from "@/components/forms/select-field";
+import { optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const repositories = createIndexedDbRepositories();
 
@@ -34,6 +28,24 @@ const defaultForm: OnboardingFormState = {
   primaryIncomeType: "salary",
   riskComfort: "moderate",
   investmentHorizonMonths: "36",
+};
+
+const incomeTypeLabels: Record<IncomeType, string> = {
+  salary: "Salary only",
+  salary_plus_side_income: "Salary plus side income",
+  services: "Services / freelance",
+};
+
+const salaryCycleLabels: Record<SalaryCycle, string> = {
+  month_end: "End of month",
+  mid_month: "Mid month",
+  custom: "Varies",
+};
+
+const riskComfortLabels: Record<RiskComfort, string> = {
+  low: "Low — I prefer safety and liquidity",
+  moderate: "Moderate — I can handle some ups and downs",
+  high: "High — I am comfortable with long-term volatility",
 };
 
 function buildTimestamp() {
@@ -120,102 +132,59 @@ export function OnboardingWorkspace() {
       <Card className="border-border/40 shadow-none">
         <CardContent className="pt-6">
           <form className="grid gap-5" onSubmit={handleSubmit}>
-            <div className="grid gap-2">
-              <Label htmlFor="display-name">Your name or nickname</Label>
-              <Input
-                id="display-name"
-                value={form.displayName}
-                onChange={(e) => setForm((c) => ({ ...c, displayName: e.target.value }))}
-                placeholder="e.g. Piira"
-                autoComplete="off"
-                required
-              />
-            </div>
+            <InputField
+              id="display-name"
+              label="Your name or nickname"
+              value={form.displayName}
+              onChange={(e) => setForm((c) => ({ ...c, displayName: e.target.value }))}
+              placeholder="e.g. Piira"
+              autoComplete="off"
+              required
+            />
 
-            <div className="grid gap-2">
-              <Label htmlFor="income-type">How do you earn money?</Label>
-              <Select
-                value={form.primaryIncomeType}
-                onValueChange={(v) =>
-                  setForm((c) => ({ ...c, primaryIncomeType: v as IncomeType }))
-                }
-              >
-                <SelectTrigger id="income-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="salary">Salary only</SelectItem>
-                  <SelectItem value="salary_plus_side_income">
-                    Salary plus side income
-                  </SelectItem>
-                  <SelectItem value="services">Services / freelance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectField
+              id="income-type"
+              label="How do you earn money?"
+              value={form.primaryIncomeType}
+              options={optionsFromRecord(incomeTypeLabels)}
+              onValueChange={(v) =>
+                setForm((c) => ({ ...c, primaryIncomeType: v as IncomeType }))
+              }
+            />
 
-            <div className="grid gap-2">
-              <Label htmlFor="salary-cycle">When does your salary arrive?</Label>
-              <Select
-                value={form.salaryCycle}
-                onValueChange={(v) =>
-                  setForm((c) => ({ ...c, salaryCycle: v as SalaryCycle }))
-                }
-              >
-                <SelectTrigger id="salary-cycle">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month_end">End of month</SelectItem>
-                  <SelectItem value="mid_month">Mid month</SelectItem>
-                  <SelectItem value="custom">Varies</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectField
+              id="salary-cycle"
+              label="When does your salary arrive?"
+              value={form.salaryCycle}
+              options={optionsFromRecord(salaryCycleLabels)}
+              onValueChange={(v) =>
+                setForm((c) => ({ ...c, salaryCycle: v as SalaryCycle }))
+              }
+            />
 
-            <div className="grid gap-2">
-              <Label htmlFor="risk-comfort">How do you feel about financial risk?</Label>
-              <Select
-                value={form.riskComfort}
-                onValueChange={(v) =>
-                  setForm((c) => ({ ...c, riskComfort: v as RiskComfort }))
-                }
-              >
-                <SelectTrigger id="risk-comfort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">
-                    Low — I prefer safety and liquidity
-                  </SelectItem>
-                  <SelectItem value="moderate">
-                    Moderate — I can handle some ups and downs
-                  </SelectItem>
-                  <SelectItem value="high">
-                    High — I am comfortable with long-term volatility
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectField
+              id="risk-comfort"
+              label="How do you feel about financial risk?"
+              value={form.riskComfort}
+              options={optionsFromRecord(riskComfortLabels)}
+              onValueChange={(v) =>
+                setForm((c) => ({ ...c, riskComfort: v as RiskComfort }))
+              }
+            />
 
-            <div className="grid gap-2">
-              <Label htmlFor="horizon">
-                How many months ahead are you planning for?
-              </Label>
-              <Input
-                id="horizon"
-                inputMode="numeric"
-                min="1"
-                value={form.investmentHorizonMonths}
-                onChange={(e) =>
-                  setForm((c) => ({ ...c, investmentHorizonMonths: e.target.value }))
-                }
-                placeholder="e.g. 36 for 3 years"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                This helps calibrate the Investment Compass for your timeline.
-              </p>
-            </div>
+            <InputField
+              id="horizon"
+              label="How many months ahead are you planning for?"
+              inputMode="numeric"
+              min="1"
+              value={form.investmentHorizonMonths}
+              onChange={(e) =>
+                setForm((c) => ({ ...c, investmentHorizonMonths: e.target.value }))
+              }
+              placeholder="e.g. 36 for 3 years"
+              hint="This helps calibrate the Investment Compass for your timeline."
+              required
+            />
 
             <Button disabled={isSubmitting} type="submit" className="w-full">
               {isSubmitting ? "Setting up..." : "Start tracking"}

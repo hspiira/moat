@@ -7,7 +7,9 @@ import type {
   DebtRepaymentFrequency,
 } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
+import { TextareaField } from "@/components/forms/textarea-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountTypeOptions,
@@ -21,9 +23,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 export { accountTypeLabels } from "@/lib/select-options";
 
@@ -99,16 +98,14 @@ export function AccountForm({
             successMessage={successMessage}
           />
 
-          <div className="grid gap-2">
-            <Label htmlFor="account-name">Account name</Label>
-            <Input
-              id="account-name"
-              value={form.name}
-              onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
-              placeholder="e.g. MTN Mobile Money"
-              required
-            />
-          </div>
+          <InputField
+            id="account-name"
+            label="Account name"
+            value={form.name}
+            onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
+            placeholder="e.g. MTN Mobile Money"
+            required
+          />
 
           <div className="grid gap-2">
             <SelectField
@@ -122,34 +119,30 @@ export function AccountForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="institution-name">Institution name</Label>
-            <Input
-              id="institution-name"
-              value={form.institutionName}
-              onChange={(e) => onFormChange((c) => ({ ...c, institutionName: e.target.value }))}
-              placeholder="Optional — e.g. Stanbic Bank"
-            />
-          </div>
+          <InputField
+            id="institution-name"
+            label="Institution name"
+            value={form.institutionName}
+            onChange={(e) => onFormChange((c) => ({ ...c, institutionName: e.target.value }))}
+            placeholder="Optional — e.g. Stanbic Bank"
+          />
 
-          <div className="grid gap-2">
-            <Label htmlFor="opening-balance">Opening balance (UGX)</Label>
-            <Input
-              id="opening-balance"
-              inputMode="decimal"
-              value={form.openingBalance}
-              onChange={(e) => onFormChange((c) => ({ ...c, openingBalance: e.target.value }))}
-              required
-            />
-          </div>
+          <InputField
+            id="opening-balance"
+            label="Opening balance (UGX)"
+            inputMode="decimal"
+            value={form.openingBalance}
+            onChange={(e) => onFormChange((c) => ({ ...c, openingBalance: e.target.value }))}
+            required
+          />
 
           {form.type === "debt" ? (
             <>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-principal">Principal (UGX)</Label>
-                  <Input
+                  <InputField
                     id="debt-principal"
+                    label="Principal (UGX)"
                     inputMode="decimal"
                     value={form.debtPrincipal}
                     onChange={(e) =>
@@ -158,9 +151,9 @@ export function AccountForm({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-interest-rate">Interest rate (%)</Label>
-                  <Input
+                  <InputField
                     id="debt-interest-rate"
+                    label="Interest rate (%)"
                     inputMode="decimal"
                     value={form.debtInterestRate}
                     onChange={(e) =>
@@ -203,9 +196,9 @@ export function AccountForm({
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-start-date">Start date</Label>
-                  <Input
+                  <InputField
                     id="debt-start-date"
+                    label="Start date"
                     type="date"
                     value={form.debtStartDate}
                     onChange={(e) =>
@@ -214,9 +207,9 @@ export function AccountForm({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-term-months">Term (months)</Label>
-                  <Input
+                  <InputField
                     id="debt-term-months"
+                    label="Term (months)"
                     inputMode="numeric"
                     value={form.debtTermMonths}
                     onChange={(e) =>
@@ -243,16 +236,14 @@ export function AccountForm({
             </>
           ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="account-notes">Notes</Label>
-            <Textarea
-              id="account-notes"
-              value={form.notes}
-              onChange={(e) => onFormChange((c) => ({ ...c, notes: e.target.value }))}
-              placeholder="Optional"
-              className="min-h-20"
-            />
-          </div>
+          <TextareaField
+            id="account-notes"
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => onFormChange((c) => ({ ...c, notes: e.target.value }))}
+            placeholder="Optional"
+            className="min-h-20"
+          />
 
           <div className="flex flex-wrap gap-2">
             <Button disabled={isSubmitting} type="submit" size="sm">

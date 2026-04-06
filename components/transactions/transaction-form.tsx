@@ -5,7 +5,9 @@ import { useMemo } from "react";
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
+import { TextareaField } from "@/components/forms/textarea-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
@@ -20,9 +22,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 export { transactionTypeLabels } from "@/lib/select-options";
 
@@ -181,44 +181,36 @@ export function TransactionForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tx-payee">Payee / source</Label>
-            <Input
-              id="tx-payee"
-              value={form.payee}
-              onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
-              placeholder="Optional"
-            />
-          </div>
+          <InputField
+            id="tx-payee"
+            label="Payee / source"
+            value={form.payee}
+            onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+            placeholder="Optional"
+          />
 
-          <div className="grid gap-2">
-            <Label htmlFor="tx-amount">
-              Amount ({form.currency})
-            </Label>
-            <Input
-              id="tx-amount"
-              inputMode="decimal"
-              value={form.amount}
-              onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
-              required
-            />
-          </div>
+          <InputField
+            id="tx-amount"
+            label={`Amount (${form.currency})`}
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
+            required
+          />
 
           {showFxFields ? (
             <>
-              <div className="grid gap-2">
-                <Label htmlFor="tx-fx-rate">FX rate to UGX</Label>
-                <Input
-                  id="tx-fx-rate"
-                  inputMode="decimal"
-                  value={form.fxRateToUgx}
-                  onChange={(e) =>
-                    onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
-                  }
-                  placeholder="e.g. 3700"
-                  required={showFxFields}
-                />
-              </div>
+              <InputField
+                id="tx-fx-rate"
+                label="FX rate to UGX"
+                inputMode="decimal"
+                value={form.fxRateToUgx}
+                onChange={(e) =>
+                  onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
+                }
+                placeholder="e.g. 3700"
+                required={showFxFields}
+              />
               <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
                 {hasValidNormalizedAmount ? (
                   <>
@@ -244,16 +236,14 @@ export function TransactionForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tx-note">Note</Label>
-            <Textarea
-              id="tx-note"
-              value={form.note}
-              onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
-              placeholder="Optional"
-              className="min-h-16"
-            />
-          </div>
+          <TextareaField
+            id="tx-note"
+            label="Note"
+            value={form.note}
+            onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
+            placeholder="Optional"
+            className="min-h-16"
+          />
 
           <div className="flex flex-wrap gap-2">
             <Button disabled={isSubmitting} type="submit" size="sm">
