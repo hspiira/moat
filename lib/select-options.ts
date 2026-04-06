@@ -5,7 +5,10 @@ import type {
   DebtInterestModel,
   DebtLenderType,
   DebtRepaymentFrequency,
+  GuidanceLevel,
+  LiquidityNeed,
   RecurringObligation,
+  RiskComfort,
   SupportedCurrency,
   TransactionSource,
   TransactionType,
@@ -56,6 +59,24 @@ export const transactionSourceLabels: Record<TransactionSource, string> = {
 
 export const supportedCurrencyOptionLabels: Record<SupportedCurrency, string> =
   supportedCurrencyLabels;
+
+export const liquidityNeedLabels: Record<LiquidityNeed, string> = {
+  immediate: "Immediate",
+  near_term: "Near term",
+  long_term: "Long term",
+};
+
+export const riskComfortLabels: Record<RiskComfort, string> = {
+  low: "Low",
+  moderate: "Moderate",
+  high: "High",
+};
+
+export const guidanceLevelLabels: Record<GuidanceLevel, string> = {
+  starter: "Starter",
+  standard: "Standard",
+  detailed: "Detailed",
+};
 
 export const recurringObligationTypeLabels: Record<RecurringObligation["type"], string> = {
   rent: "Rent",
