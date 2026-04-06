@@ -4,7 +4,15 @@ import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
+import { MetricChip } from "@/components/page-shell/metric-chip";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+  SetupRequiredCard,
+} from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Card,
   CardContent,
@@ -20,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getLedgerRows, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
@@ -50,22 +58,6 @@ function formatLedgerDate(date: string) {
   return [day, month, year].join("-");
 }
 
-function getTransactionTone(transaction: Transaction) {
-  if (transaction.type === "income") {
-    return { tone: "positive" as const, sign: "positive" as const };
-  }
-
-  if (transaction.type === "transfer") {
-    return {
-      tone: "neutral" as const,
-      sign: "none" as const,
-      direction: "transfer" as const,
-    };
-  }
-
-  return { tone: "negative" as const, sign: "negative" as const };
-}
-
 const transactionTypeLabels: Record<Transaction["type"], string> = {
   income: "Income",
   expense: "Expense",
@@ -93,6 +85,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const ledgerRows = account ? getLedgerRows(account, transactions) : [];
 
   useEffect(() => {
     startTransition(() => {
@@ -158,52 +151,32 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
   return (
     <div className="grid gap-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            Account ledger
+      <PageHeader
+        title={account?.name ?? "Account"}
+        description="Trace the current balance from opening balance and recorded movements."
+        aside={
+          <div className="flex items-center gap-2">
+            {account ? (
+              <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
+            ) : null}
+            <Button asChild size="sm" variant="outline">
+              <Link href="/accounts">Back to accounts</Link>
+            </Button>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {account?.name ?? "Account"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Trace the current balance from opening balance and recorded movements.
-          </p>
-        </div>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/accounts">Back to accounts</Link>
-        </Button>
-      </div>
+        }
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading ledger...
-          </CardContent>
-        </Card>
-      ) : null}
-
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading ledger..." /> : null}
       {!isLoading && !profile ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Complete onboarding first to view account ledgers.
-          </CardContent>
-        </Card>
+        <SetupRequiredCard
+          message="Complete onboarding first to view account ledgers."
+          href="/onboarding"
+          cta="Set up your profile"
+        />
       ) : null}
 
-      {!isLoading && profile && !account ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Account not found.
-          </CardContent>
-        </Card>
-      ) : null}
+      {!isLoading && profile && !account ? <LoadingStateCard message="Account not found." /> : null}
 
       {!isLoading && profile && account ? (
         <>
@@ -235,49 +208,76 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {transactions.length === 0 ? (
-                <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
+              {ledgerRows.length === 0 ? (
+                <EmptyState>
                   No transactions recorded for this account.
-                </div>
+                </EmptyState>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[110px]">Date</TableHead>
                       <TableHead className="w-[140px]">Category</TableHead>
-                      <TableHead className="w-[160px]">Type</TableHead>
+                      <TableHead className="w-[140px]">Type</TableHead>
+                      <TableHead className="w-[180px]">Payee</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="w-[160px] text-right">Amount</TableHead>
+                      <TableHead className="w-[140px] text-right">Debit</TableHead>
+                      <TableHead className="w-[140px] text-right">Credit</TableHead>
+                      <TableHead className="w-[160px] text-right">Running balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map((transaction) => {
-                      const category = categories.find((entry) => entry.id === transaction.categoryId);
-                      const presentation = getTransactionTone(transaction);
+                    {ledgerRows.map((row) => {
+                      const category = categories.find((entry) => entry.id === row.categoryId);
+                      const balanceTone =
+                        row.runningBalance < 0 ? "negative" : row.runningBalance > 0 ? "positive" : "neutral";
 
                       return (
-                        <TableRow key={transaction.id} className={getRowTone(transaction)}>
+                        <TableRow key={row.id} className={getRowTone(row.transaction)}>
                           <TableCell className="text-xs text-muted-foreground">
-                            {formatLedgerDate(transaction.occurredOn)}
+                            {formatLedgerDate(row.date)}
                           </TableCell>
                           <TableCell className="text-sm text-foreground/82">
                             {category?.name ?? "Uncategorized"}
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-foreground">
-                              {transactionTypeLabels[transaction.type]}
+                              {transactionTypeLabels[row.type]}
                             </span>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {transaction.note?.trim() || "—"}
+                            {row.payee?.trim() || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {row.note?.trim() || "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <AmountIndicator
-                              tone={presentation.tone}
-                              sign={presentation.sign}
-                              direction={presentation.direction}
-                              showIcon={transaction.type === "transfer"}
-                              value={formatCurrency(Math.abs(transaction.amount))}
+                              tone={row.debit > 0 ? "negative" : "neutral"}
+                              sign={row.debit > 0 ? "negative" : "none"}
+                              value={row.debit > 0 ? formatCurrency(row.debit) : "—"}
+                              className="justify-end text-sm"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AmountIndicator
+                              tone={row.credit > 0 ? "positive" : "neutral"}
+                              sign={row.credit > 0 ? "positive" : "none"}
+                              value={row.credit > 0 ? formatCurrency(row.credit) : "—"}
+                              className="justify-end text-sm"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AmountIndicator
+                              tone={balanceTone}
+                              sign={
+                                row.runningBalance < 0
+                                  ? "negative"
+                                  : row.runningBalance > 0
+                                    ? "positive"
+                                    : "none"
+                              }
+                              value={formatCurrency(Math.abs(row.runningBalance))}
                               className="justify-end text-sm"
                             />
                           </TableCell>

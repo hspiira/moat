@@ -1,31 +1,39 @@
 "use client";
 
-import type { Account, Category, TransactionType } from "@/lib/types";
+import { useMemo } from "react";
+
+import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
+import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { DatePickerField } from "@/components/forms/date-picker-field";
+import { InputField } from "@/components/forms/input-field";
+import { SelectField } from "@/components/forms/select-field";
+import { TextareaField } from "@/components/forms/textarea-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
+import {
+  accountOptions,
+  categoryOptions,
+  optionsFromRecord,
+  supportedCurrencyOptionLabels,
+  transactionTypeLabels,
+} from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+
+export { transactionTypeLabels } from "@/lib/select-options";
 
 export type TransactionFormState = {
   type: TransactionType;
   accountId: string;
   destinationAccountId: string;
   categoryId: string;
+  currency: SupportedCurrency;
+  payee: string;
   amount: string;
+  fxRateToUgx: string;
   occurredOn: string;
   note: string;
 };
@@ -35,17 +43,12 @@ export const defaultTransactionForm: TransactionFormState = {
   accountId: "",
   destinationAccountId: "",
   categoryId: "",
+  currency: "UGX",
+  payee: "",
   amount: "",
+  fxRateToUgx: "",
   occurredOn: new Date().toISOString().slice(0, 10),
   note: "",
-};
-
-export const transactionTypeLabels: Record<TransactionType, string> = {
-  expense: "Expense",
-  income: "Income",
-  savings_contribution: "Savings contribution",
-  debt_payment: "Debt payment",
-  transfer: "Transfer",
 };
 
 export function categoryMatchesType(category: Category, type: TransactionType) {
@@ -63,6 +66,7 @@ type Props = {
   isSubmitting: boolean;
   lastSavedAt: string | null;
   successMessage: string | null;
+  rememberedFxHint?: string | null;
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -76,11 +80,19 @@ export function TransactionForm({
   isSubmitting,
   lastSavedAt,
   successMessage,
+  rememberedFxHint,
   onFormChange,
   onSubmit,
   onCancelEdit,
 }: Props) {
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
+  const normalizedUgxAmount = useMemo(
+    () =>
+      normalizeAmountToUgx(Number(form.amount), form.currency, Number(form.fxRateToUgx || 0)),
+    [form.amount, form.currency, form.fxRateToUgx],
+  );
+  const showFxFields = form.currency !== "UGX";
+  const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -102,9 +114,11 @@ export function TransactionForm({
           />
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-type">Type</Label>
-            <Select
+            <SelectField
+              id="tx-type"
+              label="Type"
               value={form.type}
+              options={optionsFromRecord(transactionTypeLabels)}
               onValueChange={(v) => {
                 const nextType = v as TransactionType;
                 onFormChange((c) => ({
@@ -114,111 +128,124 @@ export function TransactionForm({
                     categories.find((cat) => categoryMatchesType(cat, nextType))?.id ?? "",
                 }));
               }}
-            >
-              <SelectTrigger id="tx-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(transactionTypeLabels) as TransactionType[]).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {transactionTypeLabels[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-account">
-              {form.type === "transfer" ? "From account" : "Account"}
-            </Label>
-            <Select
+            <SelectField
+              id="tx-account"
+              label={form.type === "transfer" ? "From account" : "Account"}
               value={form.accountId}
+              placeholder="Select account"
+              options={accountOptions(accounts)}
               onValueChange={(v) => onFormChange((c) => ({ ...c, accountId: v }))}
-            >
-              <SelectTrigger id="tx-account">
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           {form.type === "transfer" ? (
             <div className="grid gap-2">
-              <Label htmlFor="tx-dest">To account</Label>
-              <Select
+              <SelectField
+                id="tx-dest"
+                label="To account"
                 value={form.destinationAccountId}
+                placeholder="Select destination"
+                options={accountOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
-              >
-                <SelectTrigger id="tx-dest">
-                  <SelectValue placeholder="Select destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-category">Category</Label>
-            <Select
+            <SelectField
+              id="tx-category"
+              label="Category"
               value={form.categoryId}
+              placeholder="Select category"
+              options={categoryOptions(availableCategories)}
               onValueChange={(v) => onFormChange((c) => ({ ...c, categoryId: v }))}
-            >
-              <SelectTrigger id="tx-category">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="tx-amount">Amount (UGX)</Label>
-            <Input
-              id="tx-amount"
-              inputMode="decimal"
-              value={form.amount}
-              onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
-              required
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-date">Date</Label>
-            <DatePicker
-              id="tx-date"
-              value={form.occurredOn}
-              onChange={(v) => onFormChange((c) => ({ ...c, occurredOn: v }))}
+            <SelectField
+              id="tx-currency"
+              label="Currency"
+              value={form.currency}
+              options={optionsFromRecord(supportedCurrencyOptionLabels)}
+              onValueChange={(value) =>
+                onFormChange((current) => ({
+                  ...current,
+                  currency: value as SupportedCurrency,
+                  fxRateToUgx: value === "UGX" ? "" : current.fxRateToUgx,
+                }))
+              }
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tx-note">Note</Label>
-            <Textarea
-              id="tx-note"
-              value={form.note}
-              onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
-              placeholder="Optional"
-              className="min-h-16"
-            />
-          </div>
+          <InputField
+            id="tx-payee"
+            label="Payee / source"
+            value={form.payee}
+            onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+            placeholder="Optional"
+          />
+
+          <InputField
+            id="tx-amount"
+            label={`Amount (${form.currency})`}
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
+            required
+          />
+
+          {showFxFields ? (
+            <>
+              <InputField
+                id="tx-fx-rate"
+                label="FX rate to UGX"
+                inputMode="decimal"
+                value={form.fxRateToUgx}
+                onChange={(e) =>
+                  onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
+                }
+                placeholder="e.g. 3700"
+                required={showFxFields}
+              />
+              <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
+                {hasValidNormalizedAmount ? (
+                  <>
+                    Posts to books as{" "}
+                    <span className="text-foreground">
+                      {formatMoney(normalizedUgxAmount, "UGX")}
+                    </span>
+                    {" "}from {formatMoney(Number(form.amount || 0), form.currency)}.
+                  </>
+                ) : (
+                  "Enter a valid FX rate to post the transaction in UGX."
+                )}
+                {rememberedFxHint ? (
+                  <div className="mt-1 text-[11px] text-foreground/72">{rememberedFxHint}</div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+
+          <DatePickerField
+            id="tx-date"
+            label="Date"
+            value={form.occurredOn}
+            onChange={(v) => onFormChange((c) => ({ ...c, occurredOn: v }))}
+          />
+
+          <TextareaField
+            id="tx-note"
+            label="Note"
+            value={form.note}
+            onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
+            placeholder="Optional"
+            className="min-h-16"
+          />
 
           <div className="flex flex-wrap gap-2">
             <Button disabled={isSubmitting} type="submit" size="sm">

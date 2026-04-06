@@ -33,6 +33,7 @@
     "@types/react-dom": "19.2.2",
     "eslint": "^9.38.0",
     "eslint-config-next": "^16.2.2",
+    "fast-check": "^4.6.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "typescript": "5.8.3",

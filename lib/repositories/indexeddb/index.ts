@@ -5,8 +5,11 @@ import {
   createGoalRepository,
   createImportBatchRepository,
   createInvestmentProfileRepository,
+  createMonthCloseRepository,
+  createRecurringObligationRepository,
   createResourceRepository,
   createTransactionRepository,
+  createTransactionRuleRepository,
   createUserProfileRepository,
 } from "@/lib/repositories/indexeddb/repository";
 import type { RepositoryBundle } from "@/lib/repositories/types";
@@ -16,6 +19,9 @@ export function createIndexedDbRepositories(): RepositoryBundle {
     userProfile: createUserProfileRepository(),
     accounts: createAccountRepository(),
     transactions: createTransactionRepository(),
+    transactionRules: createTransactionRuleRepository(),
+    recurringObligations: createRecurringObligationRepository(),
+    monthCloses: createMonthCloseRepository(),
     categories: createCategoryRepository(),
     goals: createGoalRepository(),
     budgets: createBudgetTargetRepository(),

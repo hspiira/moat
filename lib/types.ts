@@ -6,12 +6,26 @@ export type AccountType =
   | "investment"
   | "debt";
 
+export type DebtInterestModel = "flat" | "reducing_balance";
+export type DebtLenderType = "bank" | "sacco" | "microfinance" | "informal";
+export type DebtRepaymentFrequency = "weekly" | "monthly";
+export type SupportedCurrency = "UGX" | "USD" | "KES" | "TZS" | "RWF" | "EUR" | "GBP";
+
 export type TransactionType =
   | "income"
   | "expense"
   | "transfer"
   | "savings_contribution"
   | "debt_payment";
+
+export type ReconciliationState =
+  | "draft"
+  | "parsed"
+  | "reviewed"
+  | "posted"
+  | "matched";
+
+export type TransactionSource = "manual" | "csv" | "notification" | "sms";
 
 export type GoalType =
   | "emergency_fund"
@@ -124,6 +138,13 @@ export type Account = {
   openingBalance: number;
   balance: number;
   notes?: string;
+  debtPrincipal?: number;
+  debtInterestRate?: number;
+  debtInterestModel?: DebtInterestModel;
+  debtLenderType?: DebtLenderType;
+  debtStartDate?: string;
+  debtTermMonths?: number;
+  debtRepaymentFrequency?: DebtRepaymentFrequency;
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -135,9 +156,20 @@ export type Transaction = {
   accountId: string;
   type: TransactionType;
   amount: number;
+  currency: SupportedCurrency;
+  originalAmount: number;
+  fxRateToUgx?: number;
   occurredOn: string;
   categoryId: string;
+  reconciliationState: ReconciliationState;
+  source: TransactionSource;
+  payee?: string;
+  rawPayee?: string;
   note?: string;
+  messageHash?: string;
+  isRecurringCandidate?: boolean;
+  matchedRuleId?: string;
+  reviewedAt?: string;
   transferGroupId?: string;
   importBatchId?: string;
   createdAt: string;
@@ -173,6 +205,8 @@ export type BudgetTarget = {
   month: string;
   categoryId: string;
   targetAmount: number;
+  rolloverAmount?: number;
+  incomeTransactionId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -215,12 +249,78 @@ export type ImportBatch = {
   rowCount: number;
 };
 
+export type TransactionRule = {
+  id: string;
+  userId: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  senderPattern?: string;
+  source?: TransactionSource;
+  payeePattern?: string;
+  keywordPattern?: string;
+  amountPattern?: string;
+  categoryId?: string;
+  accountId?: string;
+  effectPayee?: string;
+  effectCategoryId?: string;
+  effectAccountId?: string;
+  effectTransactionType?: TransactionType;
+  autoMarkReviewed: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecurringObligationType =
+  | "rent"
+  | "school_fees"
+  | "data_airtime"
+  | "sacco_contribution"
+  | "salary"
+  | "loan_repayment";
+
+export type RecurringCadence = "weekly" | "monthly" | "custom";
+
+export type RecurringObligation = {
+  id: string;
+  userId: string;
+  name: string;
+  type: RecurringObligationType;
+  categoryId: string;
+  expectedAmount: number;
+  cadence: RecurringCadence;
+  dueDay?: number;
+  dueDatePattern?: string;
+  linkedAccountId?: string;
+  payee?: string;
+  status: "active" | "paused";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MonthClose = {
+  id: string;
+  userId: string;
+  period: string;
+  state: "open" | "ready" | "closed";
+  unresolvedTransactions: number;
+  duplicateAlerts: number;
+  missingCategoryCount: number;
+  closedAt?: string;
+  exportedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type MonthSummary = {
+  openingBalance: number;
   inflow: number;
   outflow: number;
   savings: number;
   allocatedSavings: number;
   transfers: number;
+  movement: number;
+  closingBalance: number;
   net: number;
   topCategories: {
     categoryId: string;

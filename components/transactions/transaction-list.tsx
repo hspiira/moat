@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMoney } from "@/lib/currency";
 import { AmountIndicator } from "@/components/amount-indicator";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { transactionTypeLabels } from "./transaction-form";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -38,7 +32,7 @@ export function TransactionList({
   onDelete,
 }: Props) {
   function getTransactionTone(transaction: Transaction) {
-    if (transaction.type === "income" || transaction.type === "savings_contribution") {
+    if (transaction.type === "income") {
       return { tone: "positive" as const, sign: "positive" as const };
     }
     if (transaction.type === "transfer") {
@@ -55,9 +49,7 @@ export function TransactionList({
       </CardHeader>
       <CardContent className="grid gap-2">
         {transactions.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
-            No transactions yet.
-          </div>
+          <EmptyState>No transactions yet.</EmptyState>
         ) : (
           transactions.map((transaction, index) => {
             const account = accounts.find((a) => a.id === transaction.accountId);
@@ -84,7 +76,7 @@ export function TransactionList({
                         sign={presentation.sign}
                         direction={presentation.direction}
                         showIcon={transaction.type === "transfer"}
-                        value={formatCurrency(Math.abs(transaction.amount))}
+                        value={formatMoney(Math.abs(transaction.amount), "UGX")}
                         className="text-base font-semibold"
                       />
                       <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -95,6 +87,23 @@ export function TransactionList({
                       {transaction.occurredOn} · {account?.name ?? "—"} ·{" "}
                       {category?.name ?? "—"}
                     </div>
+                    {transaction.payee || transaction.rawPayee ? (
+                      <div className="text-xs text-muted-foreground">
+                        {transaction.payee ?? transaction.rawPayee}
+                        {transaction.source ? ` · ${transaction.source}` : ""}
+                        {transaction.reconciliationState
+                          ? ` · ${transaction.reconciliationState}`
+                          : ""}
+                      </div>
+                    ) : null}
+                    {transaction.currency !== "UGX" ? (
+                      <div className="text-xs text-muted-foreground">
+                        Source amount {formatMoney(transaction.originalAmount, transaction.currency)}
+                        {transaction.fxRateToUgx
+                          ? ` · FX ${transaction.fxRateToUgx.toLocaleString("en-UG")}`
+                          : ""}
+                      </div>
+                    ) : null}
                     {transaction.note ? (
                       <div className="text-xs text-muted-foreground">{transaction.note}</div>
                     ) : null}

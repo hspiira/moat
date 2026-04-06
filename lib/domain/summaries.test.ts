@@ -3,6 +3,21 @@ import { describe, expect, it } from "vitest";
 import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
 import type { Category, Transaction } from "@/lib/types";
 
+function buildTransaction(
+  values: Partial<Transaction> & Pick<Transaction, "id" | "accountId" | "type" | "amount" | "occurredOn" | "categoryId">,
+): Transaction {
+  return {
+    userId: "user:default",
+    reconciliationState: "posted",
+    source: "manual",
+    currency: "UGX",
+    originalAmount: Math.abs(values.amount),
+    createdAt: "2026-04-01T00:00:00.000Z",
+    updatedAt: "2026-04-01T00:00:00.000Z",
+    ...values,
+  };
+}
+
 const categories: Category[] = [
   {
     id: "category:food",
@@ -39,63 +54,48 @@ const categories: Category[] = [
 ];
 
 const transactions: Transaction[] = [
-  {
+  buildTransaction({
     id: "tx:salary",
-    userId: "user:default",
     accountId: "account:bank",
     type: "income",
     amount: 2_000_000,
     occurredOn: "2026-04-01",
     categoryId: "category:salary",
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-  },
-  {
+  }),
+  buildTransaction({
     id: "tx:food",
-    userId: "user:default",
     accountId: "account:wallet",
     type: "expense",
     amount: 300_000,
     occurredOn: "2026-04-03",
     categoryId: "category:food",
-    createdAt: "2026-04-03T00:00:00.000Z",
-    updatedAt: "2026-04-03T00:00:00.000Z",
-  },
-  {
+  }),
+  buildTransaction({
     id: "tx:savings",
-    userId: "user:default",
     accountId: "account:sacco",
     type: "savings_contribution",
     amount: 400_000,
     occurredOn: "2026-04-04",
     categoryId: "category:savings",
-    createdAt: "2026-04-04T00:00:00.000Z",
-    updatedAt: "2026-04-04T00:00:00.000Z",
-  },
-  {
+  }),
+  buildTransaction({
     id: "tx:transfer-out",
-    userId: "user:default",
     accountId: "account:wallet",
     type: "transfer",
     amount: -100_000,
     occurredOn: "2026-04-05",
     categoryId: "category:transfers",
     transferGroupId: "transfer:1",
-    createdAt: "2026-04-05T00:00:00.000Z",
-    updatedAt: "2026-04-05T00:00:00.000Z",
-  },
-  {
+  }),
+  buildTransaction({
     id: "tx:transfer-in",
-    userId: "user:default",
     accountId: "account:bank",
     type: "transfer",
     amount: 100_000,
     occurredOn: "2026-04-05",
     categoryId: "category:transfers",
     transferGroupId: "transfer:1",
-    createdAt: "2026-04-05T00:00:00.000Z",
-    updatedAt: "2026-04-05T00:00:00.000Z",
-  },
+  }),
 ];
 
 describe("getMonthSummary", () => {
@@ -107,6 +107,8 @@ describe("getMonthSummary", () => {
     expect(summary.savings).toBe(1_700_000);
     expect(summary.allocatedSavings).toBe(400_000);
     expect(summary.transfers).toBe(0);
+    expect(summary.movement).toBe(1_300_000);
+    expect(summary.closingBalance).toBe(1_300_000);
     expect(summary.topCategories).toEqual([
       {
         categoryId: "category:food",
@@ -120,6 +122,18 @@ describe("getMonthSummary", () => {
     const summary = getMonthSummary(transactions, categories, "2026-04");
 
     expect(getSavingsRate(summary)).toBe(0.85);
+  });
+
+  it("applies opening balance to the closing balance bridge", () => {
+    const summary = getMonthSummary(transactions, categories, "2026-04");
+
+    const withOpening = {
+      ...summary,
+      openingBalance: 500_000,
+      closingBalance: 500_000 + summary.movement,
+    };
+
+    expect(withOpening.openingBalance + withOpening.movement).toBe(withOpening.closingBalance);
   });
 
   it("uses absolute magnitudes for non-transfer totals", () => {

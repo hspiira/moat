@@ -5,8 +5,11 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  MonthClose,
+  RecurringObligation,
   ResourceLink,
   Transaction,
+  TransactionRule,
   UserProfile,
 } from "@/lib/types";
 
@@ -26,6 +29,14 @@ export type AccountRepository = Repository<Account>;
 
 export interface TransactionRepository extends Repository<Transaction> {
   listByMonth(userId: string, month: string): Promise<Transaction[]>;
+}
+
+export type TransactionRuleRepository = Repository<TransactionRule>;
+
+export type RecurringObligationRepository = Repository<RecurringObligation>;
+
+export interface MonthCloseRepository extends Repository<MonthClose> {
+  getByPeriod(userId: string, period: string): Promise<MonthClose | null>;
 }
 
 export interface CategoryRepository extends Repository<Category> {
@@ -54,6 +65,9 @@ export interface RepositoryBundle {
   userProfile: UserProfileRepository;
   accounts: AccountRepository;
   transactions: TransactionRepository;
+  transactionRules: TransactionRuleRepository;
+  recurringObligations: RecurringObligationRepository;
+  monthCloses: MonthCloseRepository;
   categories: CategoryRepository;
   goals: GoalRepository;
   budgets: BudgetTargetRepository;

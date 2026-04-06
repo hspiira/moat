@@ -1,10 +1,13 @@
 const DATABASE_NAME = "uganda-finance-app";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 export const storeNames = {
   userProfiles: "userProfiles",
   accounts: "accounts",
   transactions: "transactions",
+  transactionRules: "transactionRules",
+  recurringObligations: "recurringObligations",
+  monthCloses: "monthCloses",
   categories: "categories",
   goals: "goals",
   budgets: "budgets",
@@ -23,6 +26,16 @@ function createStores(database: IDBDatabase) {
   }
 }
 
+function resetStores(database: IDBDatabase) {
+  const existingStoreNames = [...database.objectStoreNames];
+
+  for (const storeName of existingStoreNames) {
+    database.deleteObjectStore(storeName);
+  }
+
+  createStores(database);
+}
+
 export function openFinanceDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === "undefined") {
@@ -33,7 +46,7 @@ export function openFinanceDatabase(): Promise<IDBDatabase> {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
     request.onupgradeneeded = () => {
-      createStores(request.result);
+      resetStores(request.result);
     };
 
     request.onsuccess = () => {
