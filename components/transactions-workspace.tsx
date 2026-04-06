@@ -47,7 +47,10 @@ export function TransactionsWorkspace() {
     closeMonth,
     exportMonthClose,
     saveBudget,
+    editBudget,
+    deleteBudget,
     cancelEdit,
+    cancelBudgetEdit,
   } = useTransactionsWorkspace();
 
   return (
@@ -176,6 +179,9 @@ export function TransactionsWorkspace() {
             isSubmitting={isSubmitting}
             onFormChange={setBudgetForm}
             onSave={() => void saveBudget()}
+            onEdit={editBudget}
+            onDelete={(budgetId) => void deleteBudget(budgetId)}
+            onCancelEdit={cancelBudgetEdit}
           />
         </div>
       ) : null}

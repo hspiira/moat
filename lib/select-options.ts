@@ -6,10 +6,12 @@ import type {
   DebtLenderType,
   DebtRepaymentFrequency,
   RecurringObligation,
+  SupportedCurrency,
   TransactionSource,
   TransactionType,
 } from "@/lib/types";
 import type { SelectFieldOption } from "@/components/forms/select-field";
+import { supportedCurrencyLabels } from "@/lib/currency";
 
 export const accountTypeLabels: Record<AccountType, string> = {
   cash: "Cash",
@@ -51,6 +53,9 @@ export const transactionSourceLabels: Record<TransactionSource, string> = {
   notification: "Notification",
   sms: "SMS",
 };
+
+export const supportedCurrencyOptionLabels: Record<SupportedCurrency, string> =
+  supportedCurrencyLabels;
 
 export const recurringObligationTypeLabels: Record<RecurringObligation["type"], string> = {
   rent: "Rent",

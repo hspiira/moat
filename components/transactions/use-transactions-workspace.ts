@@ -4,6 +4,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { normalizeAmountToUgx } from "@/lib/currency";
 import type {
   Account,
   BudgetTarget,
@@ -33,9 +34,11 @@ import {
 const repositories = createIndexedDbRepositories();
 
 export type BudgetFormState = {
+  budgetId: string | null;
   categoryId: string;
   targetAmount: string;
   rolloverAmount: string;
+  incomeTransactionId: string;
 };
 
 function sortTransactions(transactions: Transaction[]) {
@@ -56,7 +59,9 @@ function getResetTransactionForm(
     categoryId:
       categories.find((category) => categoryMatchesType(category, defaultTransactionForm.type))
         ?.id ?? "",
+    currency: "UGX",
     payee: "",
+    fxRateToUgx: "",
   };
 }
 
@@ -81,9 +86,11 @@ export function useTransactionsWorkspace() {
   const [transactionForm, setTransactionForm] =
     useState<TransactionFormState>(defaultTransactionForm);
   const [budgetForm, setBudgetForm] = useState<BudgetFormState>({
+    budgetId: null,
     categoryId: "",
     targetAmount: "",
     rolloverAmount: "",
+    incomeTransactionId: "",
   });
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -239,9 +246,21 @@ export function useTransactionsWorkspace() {
 
       try {
         const timestamp = new Date().toISOString();
-        const amount = Number(transactionForm.amount);
+        const originalAmount = Number(transactionForm.amount);
+        const normalizedAmount = normalizeAmountToUgx(
+          originalAmount,
+          transactionForm.currency,
+          Number(transactionForm.fxRateToUgx || 0),
+        );
         const wasEditing = Boolean(editingTransactionId);
         const rules = await repositories.transactionRules.listByUser(profile.id);
+
+        if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+          throw new Error("Amount must be greater than zero.");
+        }
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+          throw new Error("Enter a valid currency and FX rate.");
+        }
 
         if (transactionForm.type === "transfer") {
           if (!transactionForm.accountId || !transactionForm.destinationAccountId) {
@@ -262,9 +281,13 @@ export function useTransactionsWorkspace() {
               userId: profile.id,
               accountId: transactionForm.accountId,
               type: "transfer",
-              amount: -Math.abs(amount),
-              currency: "UGX",
-              originalAmount: Math.abs(amount),
+              amount: -Math.abs(normalizedAmount),
+              currency: transactionForm.currency,
+              originalAmount: Math.abs(originalAmount),
+              fxRateToUgx:
+                transactionForm.currency === "UGX"
+                  ? undefined
+                  : Number(transactionForm.fxRateToUgx),
               occurredOn: transactionForm.occurredOn,
               categoryId: transactionForm.categoryId,
               payee: transactionForm.payee.trim() || undefined,
@@ -281,9 +304,13 @@ export function useTransactionsWorkspace() {
               userId: profile.id,
               accountId: transactionForm.destinationAccountId,
               type: "transfer",
-              amount: Math.abs(amount),
-              currency: "UGX",
-              originalAmount: Math.abs(amount),
+              amount: Math.abs(normalizedAmount),
+              currency: transactionForm.currency,
+              originalAmount: Math.abs(originalAmount),
+              fxRateToUgx:
+                transactionForm.currency === "UGX"
+                  ? undefined
+                  : Number(transactionForm.fxRateToUgx),
               occurredOn: transactionForm.occurredOn,
               categoryId: transactionForm.categoryId,
               payee: transactionForm.payee.trim() || undefined,
@@ -305,9 +332,13 @@ export function useTransactionsWorkspace() {
             userId: profile.id,
             accountId: transactionForm.accountId,
             type: transactionForm.type,
-            amount: Math.abs(amount),
-            currency: "UGX",
-            originalAmount: Math.abs(amount),
+            amount: Math.abs(normalizedAmount),
+            currency: transactionForm.currency,
+            originalAmount: Math.abs(originalAmount),
+            fxRateToUgx:
+              transactionForm.currency === "UGX"
+                ? undefined
+                : Number(transactionForm.fxRateToUgx),
             occurredOn: transactionForm.occurredOn,
             categoryId: transactionForm.categoryId,
             payee: transactionForm.payee.trim() || undefined,
@@ -363,8 +394,10 @@ export function useTransactionsWorkspace() {
       accountId: transaction.accountId,
       destinationAccountId: "",
       categoryId: transaction.categoryId,
+      currency: transaction.currency,
       payee: transaction.payee ?? transaction.rawPayee ?? "",
-      amount: String(transaction.amount),
+      amount: String(transaction.originalAmount),
+      fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
       occurredOn: transaction.occurredOn,
       note: transaction.note ?? "",
     });
@@ -555,7 +588,9 @@ export function useTransactionsWorkspace() {
     setIsSubmitting(true);
     try {
       const timestamp = new Date().toISOString();
-      const existing = budgets.find((budget) => budget.categoryId === budgetForm.categoryId);
+      const existing =
+        budgets.find((budget) => budget.id === budgetForm.budgetId) ??
+        budgets.find((budget) => budget.categoryId === budgetForm.categoryId);
       await repositories.budgets.upsert({
         id: existing?.id ?? `budget:${closePeriod}:${budgetForm.categoryId}`,
         userId: profile.id,
@@ -563,19 +598,60 @@ export function useTransactionsWorkspace() {
         categoryId: budgetForm.categoryId,
         targetAmount: Number(budgetForm.targetAmount) || 0,
         rolloverAmount: Number(budgetForm.rolloverAmount) || 0,
+        incomeTransactionId: budgetForm.incomeTransactionId || undefined,
         createdAt: existing?.createdAt ?? timestamp,
         updatedAt: timestamp,
       });
-      setBudgetForm((current) => ({
-        ...current,
+      setBudgetForm({
+        budgetId: null,
+        categoryId:
+          categories.find((category) => category.kind === "expense")?.id ?? "",
         targetAmount: "",
         rolloverAmount: "",
-      }));
+        incomeTransactionId: "",
+      });
       await loadWorkspace();
     } finally {
       setIsSubmitting(false);
     }
-  }, [budgetForm, budgets, closePeriod, loadWorkspace, profile]);
+  }, [budgetForm, budgets, categories, closePeriod, loadWorkspace, profile]);
+
+  const editBudget = useCallback(
+    (budgetId: string) => {
+      const budget = budgets.find((entry) => entry.id === budgetId);
+      if (!budget) return;
+
+      setBudgetForm({
+        budgetId: budget.id,
+        categoryId: budget.categoryId,
+        targetAmount: String(budget.targetAmount),
+        rolloverAmount: String(budget.rolloverAmount ?? 0),
+        incomeTransactionId: budget.incomeTransactionId ?? "",
+      });
+    },
+    [budgets],
+  );
+
+  const deleteBudget = useCallback(async (budgetId: string) => {
+    setIsSubmitting(true);
+    try {
+      await repositories.budgets.remove(budgetId);
+      setBudgetForm((current) =>
+        current.budgetId === budgetId
+          ? {
+              budgetId: null,
+              categoryId: categories.find((category) => category.kind === "expense")?.id ?? "",
+              targetAmount: "",
+              rolloverAmount: "",
+              incomeTransactionId: "",
+            }
+          : current,
+      );
+      await loadWorkspace();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [categories, loadWorkspace]);
 
   return {
     closePeriod,
@@ -612,9 +688,20 @@ export function useTransactionsWorkspace() {
     closeMonth,
     exportMonthClose,
     saveBudget,
+    editBudget,
+    deleteBudget,
     cancelEdit: () => {
       setEditingTransactionId(null);
       setTransactionForm(getResetTransactionForm(accounts, categories));
+    },
+    cancelBudgetEdit: () => {
+      setBudgetForm({
+        budgetId: null,
+        categoryId: categories.find((category) => category.kind === "expense")?.id ?? "",
+        targetAmount: "",
+        rolloverAmount: "",
+        incomeTransactionId: "",
+      });
     },
   };
 }

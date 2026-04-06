@@ -1,6 +1,9 @@
 "use client";
 
-import type { Account, Category, TransactionType } from "@/lib/types";
+import { useMemo } from "react";
+
+import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
+import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { SelectField } from "@/components/forms/select-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
@@ -8,6 +11,7 @@ import {
   accountOptions,
   categoryOptions,
   optionsFromRecord,
+  supportedCurrencyOptionLabels,
   transactionTypeLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
@@ -27,8 +31,10 @@ export type TransactionFormState = {
   accountId: string;
   destinationAccountId: string;
   categoryId: string;
+  currency: SupportedCurrency;
   payee: string;
   amount: string;
+  fxRateToUgx: string;
   occurredOn: string;
   note: string;
 };
@@ -38,8 +44,10 @@ export const defaultTransactionForm: TransactionFormState = {
   accountId: "",
   destinationAccountId: "",
   categoryId: "",
+  currency: "UGX",
   payee: "",
   amount: "",
+  fxRateToUgx: "",
   occurredOn: new Date().toISOString().slice(0, 10),
   note: "",
 };
@@ -77,6 +85,13 @@ export function TransactionForm({
   onCancelEdit,
 }: Props) {
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
+  const normalizedUgxAmount = useMemo(
+    () =>
+      normalizeAmountToUgx(Number(form.amount), form.currency, Number(form.fxRateToUgx || 0)),
+    [form.amount, form.currency, form.fxRateToUgx],
+  );
+  const showFxFields = form.currency !== "UGX";
+  const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -151,6 +166,22 @@ export function TransactionForm({
           </div>
 
           <div className="grid gap-2">
+            <SelectField
+              id="tx-currency"
+              label="Currency"
+              value={form.currency}
+              options={optionsFromRecord(supportedCurrencyOptionLabels)}
+              onValueChange={(value) =>
+                onFormChange((current) => ({
+                  ...current,
+                  currency: value as SupportedCurrency,
+                  fxRateToUgx: value === "UGX" ? "" : current.fxRateToUgx,
+                }))
+              }
+            />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="tx-payee">Payee / source</Label>
             <Input
               id="tx-payee"
@@ -161,7 +192,9 @@ export function TransactionForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-amount">Amount (UGX)</Label>
+            <Label htmlFor="tx-amount">
+              Amount ({form.currency})
+            </Label>
             <Input
               id="tx-amount"
               inputMode="decimal"
@@ -170,6 +203,37 @@ export function TransactionForm({
               required
             />
           </div>
+
+          {showFxFields ? (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="tx-fx-rate">FX rate to UGX</Label>
+                <Input
+                  id="tx-fx-rate"
+                  inputMode="decimal"
+                  value={form.fxRateToUgx}
+                  onChange={(e) =>
+                    onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
+                  }
+                  placeholder="e.g. 3700"
+                  required={showFxFields}
+                />
+              </div>
+              <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
+                {hasValidNormalizedAmount ? (
+                  <>
+                    Posts to books as{" "}
+                    <span className="text-foreground">
+                      {formatMoney(normalizedUgxAmount, "UGX")}
+                    </span>
+                    {" "}from {formatMoney(Number(form.amount || 0), form.currency)}.
+                  </>
+                ) : (
+                  "Enter a valid FX rate to post the transaction in UGX."
+                )}
+              </div>
+            </>
+          ) : null}
 
           <div className="grid gap-2">
             <Label htmlFor="tx-date">Date</Label>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMoney } from "@/lib/currency";
 import { AmountIndicator } from "@/components/amount-indicator";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { transactionTypeLabels } from "./transaction-form";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -84,7 +77,7 @@ export function TransactionList({
                         sign={presentation.sign}
                         direction={presentation.direction}
                         showIcon={transaction.type === "transfer"}
-                        value={formatCurrency(Math.abs(transaction.amount))}
+                        value={formatMoney(Math.abs(transaction.amount), "UGX")}
                         className="text-base font-semibold"
                       />
                       <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -101,6 +94,14 @@ export function TransactionList({
                         {transaction.source ? ` · ${transaction.source}` : ""}
                         {transaction.reconciliationState
                           ? ` · ${transaction.reconciliationState}`
+                          : ""}
+                      </div>
+                    ) : null}
+                    {transaction.currency !== "UGX" ? (
+                      <div className="text-xs text-muted-foreground">
+                        Source amount {formatMoney(transaction.originalAmount, transaction.currency)}
+                        {transaction.fxRateToUgx
+                          ? ` · FX ${transaction.fxRateToUgx.toLocaleString("en-UG")}`
                           : ""}
                       </div>
                     ) : null}

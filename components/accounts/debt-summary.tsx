@@ -1,16 +1,9 @@
 "use client";
 
+import { formatMoney } from "@/lib/currency";
 import { AmountIndicator } from "@/components/amount-indicator";
 import { getDebtSummary } from "@/lib/domain/debt";
 import type { Account, Transaction } from "@/lib/types";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export function DebtSummary({
   account,
@@ -32,7 +25,7 @@ export function DebtSummary({
         <AmountIndicator
           tone="neutral"
           sign="none"
-          value={formatCurrency(summary.principal)}
+          value={formatMoney(summary.principal, "UGX")}
           className="text-sm font-medium"
         />
       </div>
@@ -41,22 +34,31 @@ export function DebtSummary({
         <AmountIndicator
           tone={summary.outstandingBalance > 0 ? "negative" : "neutral"}
           sign={summary.outstandingBalance > 0 ? "negative" : "none"}
-          value={formatCurrency(summary.outstandingBalance)}
+          value={formatMoney(summary.outstandingBalance, "UGX")}
           className="text-sm font-medium"
         />
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-muted-foreground">Interest rate</span>
-        <span className="text-foreground">{summary.interestRate}%</span>
+        <span className="text-foreground">
+          {summary.interestRate}% · {summary.interestModel === "flat" ? "flat" : "reducing"}
+        </span>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Avg payment</span>
+        <span className="text-muted-foreground">Min / avg payment</span>
         <AmountIndicator
-          tone={summary.monthlyPayment > 0 ? "positive" : "neutral"}
-          sign={summary.monthlyPayment > 0 ? "positive" : "none"}
-          value={formatCurrency(summary.monthlyPayment)}
+          tone={summary.averagePayment > 0 ? "positive" : "neutral"}
+          sign={summary.averagePayment > 0 ? "positive" : "none"}
+          value={`${formatMoney(summary.inferredMinimumPayment, "UGX")} · ${formatMoney(
+            summary.averagePayment,
+            "UGX",
+          )}`}
           className="text-sm font-medium"
         />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">Monthly interest</span>
+        <span className="text-foreground">{formatMoney(summary.estimatedMonthlyInterest, "UGX")}</span>
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-muted-foreground">Payoff estimate</span>
@@ -66,6 +68,9 @@ export function DebtSummary({
             : "Needs higher payments"}
         </span>
       </div>
+      {summary.warning ? (
+        <div className="text-xs text-destructive">{summary.warning}</div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
 
 export type BudgetEnvelope = {
+  budgetId: string;
   categoryId: string;
   categoryName: string;
   allocated: number;
@@ -8,6 +9,7 @@ export type BudgetEnvelope = {
   spent: number;
   remaining: number;
   isOverspent: boolean;
+  incomeTransactionId?: string;
 };
 
 export function getBudgetEnvelopes(
@@ -37,6 +39,7 @@ export function getBudgetEnvelopes(
       const remaining = allocated - spent;
 
       return {
+        budgetId: budget.id,
         categoryId: budget.categoryId,
         categoryName: categoryLookup.get(budget.categoryId) ?? "Uncategorized",
         allocated,
@@ -44,6 +47,7 @@ export function getBudgetEnvelopes(
         spent,
         remaining,
         isOverspent: remaining < 0,
+        incomeTransactionId: budget.incomeTransactionId,
       };
     })
     .sort((left, right) => left.categoryName.localeCompare(right.categoryName));
@@ -69,5 +73,29 @@ export function getBudgetCoverage(
     allocated,
     spent,
     remaining: allocated - spent,
+  };
+}
+
+export function getBudgetFundingCapacity(
+  budgets: BudgetTarget[],
+  transactions: Transaction[],
+) {
+  const inflow = transactions.reduce((sum, transaction) => {
+    if (transaction.type !== "income") {
+      return sum;
+    }
+
+    return sum + Math.abs(transaction.amount);
+  }, 0);
+
+  const allocated = budgets.reduce(
+    (sum, budget) => sum + budget.targetAmount + (budget.rolloverAmount ?? 0),
+    0,
+  );
+
+  return {
+    inflow,
+    allocated,
+    unallocatedIncome: inflow - allocated,
   };
 }

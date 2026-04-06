@@ -9,6 +9,7 @@ export type AccountType =
 export type DebtInterestModel = "flat" | "reducing_balance";
 export type DebtLenderType = "bank" | "sacco" | "microfinance" | "informal";
 export type DebtRepaymentFrequency = "weekly" | "monthly";
+export type SupportedCurrency = "UGX" | "USD" | "KES" | "TZS" | "RWF" | "EUR" | "GBP";
 
 export type TransactionType =
   | "income"
@@ -155,7 +156,7 @@ export type Transaction = {
   accountId: string;
   type: TransactionType;
   amount: number;
-  currency: string;
+  currency: SupportedCurrency;
   originalAmount: number;
   fxRateToUgx?: number;
   occurredOn: string;

@@ -26,6 +26,7 @@ import {
   defaultAccountForm,
 } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
+import { DebtPayoffPlanner } from "./accounts/debt-payoff-planner";
 import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 
 const repositories = createIndexedDbRepositories();
@@ -311,6 +312,8 @@ export function AccountsWorkspace() {
 
             <AccountList accounts={accounts} transactions={transactions} onEdit={beginAccountEdit} />
           </div>
+
+          <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
         </>
       ) : null}
     </div>
