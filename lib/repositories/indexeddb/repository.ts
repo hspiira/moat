@@ -5,9 +5,12 @@ import type {
   GoalRepository,
   ImportBatchRepository,
   InvestmentProfileRepository,
+  MonthCloseRepository,
+  RecurringObligationRepository,
   Repository,
   ResourceRepository,
   TransactionRepository,
+  TransactionRuleRepository,
   UserProfileRepository,
 } from "@/lib/repositories/types";
 import type {
@@ -17,8 +20,11 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  MonthClose,
+  RecurringObligation,
   ResourceLink,
   Transaction,
+  TransactionRule,
   UserProfile,
 } from "@/lib/types";
 
@@ -122,6 +128,26 @@ export function createTransactionRepository(): TransactionRepository {
     async listByMonth(userId, month) {
       const records = await repository.listByUser(userId);
       return records.filter((record) => record.occurredOn.startsWith(month));
+    },
+  };
+}
+
+export function createTransactionRuleRepository(): TransactionRuleRepository {
+  return createUserScopedRepository<TransactionRule>("transactionRules");
+}
+
+export function createRecurringObligationRepository(): RecurringObligationRepository {
+  return createUserScopedRepository<RecurringObligation>("recurringObligations");
+}
+
+export function createMonthCloseRepository(): MonthCloseRepository {
+  const repository = createUserScopedRepository<MonthClose>("monthCloses");
+
+  return {
+    ...repository,
+    async getByPeriod(userId, period) {
+      const records = await repository.listByUser(userId);
+      return records.find((record) => record.period === period) ?? null;
     },
   };
 }

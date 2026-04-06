@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { applyTransactionRules } from "@/lib/domain/rules";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
@@ -108,6 +109,7 @@ export function TransactionsWorkspace() {
       const timestamp = new Date().toISOString();
       const amount = Number(transactionForm.amount);
       const wasEditing = Boolean(editingTransactionId);
+      const rules = await repositories.transactionRules.listByUser(profile.id);
 
       if (transactionForm.type === "transfer") {
         if (!transactionForm.accountId || !transactionForm.destinationAccountId) {
@@ -131,7 +133,11 @@ export function TransactionsWorkspace() {
             amount: -Math.abs(amount),
             occurredOn: transactionForm.occurredOn,
             categoryId: transactionForm.categoryId,
+            payee: transactionForm.payee.trim() || undefined,
+            rawPayee: transactionForm.payee.trim() || undefined,
             note: transactionForm.note.trim() || undefined,
+            reconciliationState: "posted",
+            source: "manual",
             transferGroupId,
             createdAt: transactions.find((t) => t.id === sourceId)?.createdAt ?? timestamp,
             updatedAt: timestamp,
@@ -144,7 +150,11 @@ export function TransactionsWorkspace() {
             amount: Math.abs(amount),
             occurredOn: transactionForm.occurredOn,
             categoryId: transactionForm.categoryId,
+            payee: transactionForm.payee.trim() || undefined,
+            rawPayee: transactionForm.payee.trim() || undefined,
             note: transactionForm.note.trim() || undefined,
+            reconciliationState: "posted",
+            source: "manual",
             transferGroupId,
             createdAt: transactions.find((t) => t.id === destId)?.createdAt ?? timestamp,
             updatedAt: timestamp,
@@ -152,7 +162,7 @@ export function TransactionsWorkspace() {
         ]);
       } else {
         const transactionId = editingTransactionId ?? `transaction:${crypto.randomUUID()}`;
-        await repositories.transactions.upsert({
+        const baseTransaction: Transaction = {
           id: transactionId,
           userId: profile.id,
           accountId: transactionForm.accountId,
@@ -160,10 +170,19 @@ export function TransactionsWorkspace() {
           amount: Math.abs(amount),
           occurredOn: transactionForm.occurredOn,
           categoryId: transactionForm.categoryId,
+          payee: transactionForm.payee.trim() || undefined,
+          rawPayee: transactionForm.payee.trim() || undefined,
           note: transactionForm.note.trim() || undefined,
+          reconciliationState: "posted",
+          source: "manual",
+          reviewedAt: timestamp,
           createdAt: transactions.find((t) => t.id === transactionId)?.createdAt ?? timestamp,
           updatedAt: timestamp,
-        });
+        };
+        const proposed =
+          applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
+
+        await repositories.transactions.upsert(proposed);
       }
 
       await refreshAccounts(profile.id);
@@ -180,6 +199,7 @@ export function TransactionsWorkspace() {
         destinationAccountId: accounts[1]?.id ?? "",
         categoryId:
           categories.find((c) => categoryMatchesType(c, defaultTransactionForm.type))?.id ?? "",
+        payee: "",
       });
       await loadWorkspace();
     } catch (submitError) {
@@ -199,6 +219,7 @@ export function TransactionsWorkspace() {
       accountId: transaction.accountId,
       destinationAccountId: "",
       categoryId: transaction.categoryId,
+      payee: transaction.payee ?? transaction.rawPayee ?? "",
       amount: String(transaction.amount),
       occurredOn: transaction.occurredOn,
       note: transaction.note ?? "",

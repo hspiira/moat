@@ -38,7 +38,7 @@ export function TransactionList({
   onDelete,
 }: Props) {
   function getTransactionTone(transaction: Transaction) {
-    if (transaction.type === "income" || transaction.type === "savings_contribution") {
+    if (transaction.type === "income") {
       return { tone: "positive" as const, sign: "positive" as const };
     }
     if (transaction.type === "transfer") {
@@ -95,6 +95,15 @@ export function TransactionList({
                       {transaction.occurredOn} · {account?.name ?? "—"} ·{" "}
                       {category?.name ?? "—"}
                     </div>
+                    {transaction.payee || transaction.rawPayee ? (
+                      <div className="text-xs text-muted-foreground">
+                        {transaction.payee ?? transaction.rawPayee}
+                        {transaction.source ? ` · ${transaction.source}` : ""}
+                        {transaction.reconciliationState
+                          ? ` · ${transaction.reconciliationState}`
+                          : ""}
+                      </div>
+                    ) : null}
                     {transaction.note ? (
                       <div className="text-xs text-muted-foreground">{transaction.note}</div>
                     ) : null}

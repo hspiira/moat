@@ -20,9 +20,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { modulePreviews } from "@/lib/data";
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { reconcileAccountBalances, getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { getMonthlyInsights } from "@/lib/domain/insights";
-import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
+import {
+  getAggregateOpeningBalance,
+  getSavingsRate,
+  getSummaryForTransactions,
+} from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
@@ -37,6 +41,7 @@ type PeriodFilter = "week" | "month" | "year" | "all";
 type PeriodWindow = {
   current: Transaction[];
   previous: Transaction[];
+  currentStart: Date | null;
   title: string;
   caption: string;
   comparisonLabel: string | null;
@@ -159,6 +164,7 @@ function buildPeriodWindow(
     return {
       current: transactions,
       previous: filterTransactionsByRange(transactions, new Date(0), yearStart),
+      currentStart: null,
       title: "Lifetime cash flow",
       caption: "All recorded transactions since setup.",
       comparisonLabel: "before this year",
@@ -188,6 +194,7 @@ function buildPeriodWindow(
   return {
     current: filterTransactionsByRange(transactions, currentStart, currentEnd),
     previous: filterTransactionsByRange(transactions, previousStart, currentStart),
+    currentStart,
     title:
       period === "week"
         ? "This week's cash flow"
@@ -204,6 +211,29 @@ function buildPeriodWindow(
       period === "week" ? "last week" : period === "month" ? "last month" : "last year",
     overviewLabel: getPeriodOverviewLabel(period, now),
   };
+}
+
+function getAggregateBalanceAtDate(
+  accounts: Account[],
+  transactions: Transaction[],
+  boundary: Date | null,
+) {
+  const openingBalance = getAggregateOpeningBalance(accounts);
+
+  if (!boundary) {
+    return openingBalance;
+  }
+
+  const priorMovement = transactions.reduce((sum, transaction) => {
+    const occurredOn = new Date(`${transaction.occurredOn}T00:00:00`);
+    if (occurredOn >= boundary) {
+      return sum;
+    }
+
+    return sum + getTransactionBalanceDelta(transaction);
+  }, 0);
+
+  return openingBalance + priorMovement;
 }
 
 export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
@@ -249,9 +279,13 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   );
   const currentTransactions = periodWindow.current;
   const previousTransactions = periodWindow.previous;
+  const openingBalance = useMemo(
+    () => getAggregateBalanceAtDate(accounts, transactions, periodWindow.currentStart),
+    [accounts, periodWindow.currentStart, transactions],
+  );
   const summary = useMemo(
-    () => getSummaryForTransactions(currentTransactions, categories),
-    [categories, currentTransactions],
+    () => getSummaryForTransactions(currentTransactions, categories, openingBalance),
+    [categories, currentTransactions, openingBalance],
   );
   const previousSummary = useMemo(
     () => getSummaryForTransactions(previousTransactions, categories),
@@ -621,6 +655,50 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                       </div>
                     ))
                   )}
+                </CardContent>
+              </Card>
+
+              <Card className="moat-panel-lilac border-border/20 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Period balance bridge</CardTitle>
+                  <CardDescription className="text-foreground/65">
+                    Opening plus movement equals closing for the selected period.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm">
+                  {[
+                    ["Opening balance", summary.openingBalance],
+                    ["Inflow", summary.inflow],
+                    ["Outflow", -summary.outflow],
+                    ["Allocated savings", -summary.allocatedSavings],
+                    ["Movement", summary.movement],
+                    ["Closing balance", summary.closingBalance],
+                  ].map(([label, amount]) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between gap-3 border-b border-border/15 pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <span className="text-foreground/72">{label}</span>
+                      <AmountIndicator
+                        tone={
+                          Number(amount) > 0
+                            ? "positive"
+                            : Number(amount) < 0
+                              ? "negative"
+                              : "neutral"
+                        }
+                        sign={
+                          Number(amount) > 0
+                            ? "positive"
+                            : Number(amount) < 0
+                              ? "negative"
+                              : "none"
+                        }
+                        value={formatCurrency(Math.abs(Number(amount)))}
+                        className="text-sm font-medium"
+                      />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
 

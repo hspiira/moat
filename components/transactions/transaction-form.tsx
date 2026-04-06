@@ -25,6 +25,7 @@ export type TransactionFormState = {
   accountId: string;
   destinationAccountId: string;
   categoryId: string;
+  payee: string;
   amount: string;
   occurredOn: string;
   note: string;
@@ -35,6 +36,7 @@ export const defaultTransactionForm: TransactionFormState = {
   accountId: "",
   destinationAccountId: "",
   categoryId: "",
+  payee: "",
   amount: "",
   occurredOn: new Date().toISOString().slice(0, 10),
   note: "",
@@ -187,6 +189,16 @@ export function TransactionForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="tx-payee">Payee / source</Label>
+            <Input
+              id="tx-payee"
+              value={form.payee}
+              onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+              placeholder="Optional"
+            />
           </div>
 
           <div className="grid gap-2">

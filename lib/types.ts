@@ -13,6 +13,15 @@ export type TransactionType =
   | "savings_contribution"
   | "debt_payment";
 
+export type ReconciliationState =
+  | "draft"
+  | "parsed"
+  | "reviewed"
+  | "posted"
+  | "matched";
+
+export type TransactionSource = "manual" | "csv" | "notification" | "sms";
+
 export type GoalType =
   | "emergency_fund"
   | "rent_buffer"
@@ -137,7 +146,15 @@ export type Transaction = {
   amount: number;
   occurredOn: string;
   categoryId: string;
+  reconciliationState: ReconciliationState;
+  source: TransactionSource;
+  payee?: string;
+  rawPayee?: string;
   note?: string;
+  messageHash?: string;
+  isRecurringCandidate?: boolean;
+  matchedRuleId?: string;
+  reviewedAt?: string;
   transferGroupId?: string;
   importBatchId?: string;
   createdAt: string;
@@ -215,12 +232,77 @@ export type ImportBatch = {
   rowCount: number;
 };
 
+export type TransactionRule = {
+  id: string;
+  userId: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  senderPattern?: string;
+  source?: TransactionSource;
+  payeePattern?: string;
+  keywordPattern?: string;
+  amountPattern?: string;
+  categoryId?: string;
+  accountId?: string;
+  effectPayee?: string;
+  effectCategoryId?: string;
+  effectAccountId?: string;
+  effectTransactionType?: TransactionType;
+  autoMarkReviewed: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecurringObligationType =
+  | "rent"
+  | "school_fees"
+  | "data_airtime"
+  | "sacco_contribution"
+  | "salary";
+
+export type RecurringCadence = "weekly" | "monthly" | "custom";
+
+export type RecurringObligation = {
+  id: string;
+  userId: string;
+  name: string;
+  type: RecurringObligationType;
+  categoryId: string;
+  expectedAmount: number;
+  cadence: RecurringCadence;
+  dueDay?: number;
+  dueDatePattern?: string;
+  linkedAccountId?: string;
+  payee?: string;
+  status: "active" | "paused";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MonthClose = {
+  id: string;
+  userId: string;
+  period: string;
+  state: "open" | "ready" | "closed";
+  unresolvedTransactions: number;
+  duplicateAlerts: number;
+  missingCategoryCount: number;
+  closedAt?: string;
+  exportedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type MonthSummary = {
+  openingBalance: number;
   inflow: number;
   outflow: number;
   savings: number;
   allocatedSavings: number;
   transfers: number;
+  movement: number;
+  closingBalance: number;
   net: number;
   topCategories: {
     categoryId: string;

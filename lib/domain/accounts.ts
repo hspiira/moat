@@ -16,6 +16,19 @@ export type AccountBalanceBreakdown = {
   currentBalance: number;
 };
 
+export type LedgerRow = {
+  id: string;
+  date: string;
+  type: Transaction["type"];
+  payee?: string;
+  categoryId: string;
+  note?: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  transaction: Transaction;
+};
+
 export function normalizeOpeningBalance(
   type: Account["type"],
   amount: number,
@@ -54,7 +67,7 @@ export function getAccountTotals(accounts: Account[]): AccountTotals {
   );
 }
 
-function getBalanceDelta(transaction: Transaction): number {
+export function getTransactionBalanceDelta(transaction: Transaction): number {
   switch (transaction.type) {
     case "income":
       return Math.abs(transaction.amount);
@@ -67,6 +80,16 @@ function getBalanceDelta(transaction: Transaction): number {
     default:
       return 0;
   }
+}
+
+function sortTransactionsForLedger(transactions: Transaction[]) {
+  return [...transactions].sort((left, right) => {
+    if (left.occurredOn === right.occurredOn) {
+      return left.createdAt.localeCompare(right.createdAt);
+    }
+
+    return left.occurredOn.localeCompare(right.occurredOn);
+  });
 }
 
 export function getAccountBalanceBreakdown(
@@ -93,8 +116,10 @@ export function getAccountBalanceBreakdown(
     .filter((transaction) => transaction.type === "transfer")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const movement =
-    inflow - outflow - savingsAllocations + transfers;
+  const movement = accountTransactions.reduce(
+    (sum, transaction) => sum + getTransactionBalanceDelta(transaction),
+    0,
+  );
 
   return {
     openingBalance: account.openingBalance,
@@ -116,7 +141,7 @@ export function reconcileAccountBalances(
   for (const transaction of transactions) {
     deltas.set(
       transaction.accountId,
-      (deltas.get(transaction.accountId) ?? 0) + getBalanceDelta(transaction),
+      (deltas.get(transaction.accountId) ?? 0) + getTransactionBalanceDelta(transaction),
     );
   }
 
@@ -124,4 +149,37 @@ export function reconcileAccountBalances(
     ...account,
     balance: account.openingBalance + (deltas.get(account.id) ?? 0),
   }));
+}
+
+export function getLedgerRows(
+  account: Account,
+  transactions: Transaction[],
+): LedgerRow[] {
+  const accountTransactions = sortTransactionsForLedger(
+    transactions.filter((transaction) => transaction.accountId === account.id),
+  );
+
+  let runningBalance = account.openingBalance;
+
+  return accountTransactions.map((transaction) => {
+    const delta = getTransactionBalanceDelta(transaction);
+    runningBalance += delta;
+
+    const magnitude = Math.abs(transaction.amount);
+    const credit = delta > 0 ? magnitude : 0;
+    const debit = delta < 0 ? magnitude : 0;
+
+    return {
+      id: transaction.id,
+      date: transaction.occurredOn,
+      type: transaction.type,
+      payee: transaction.payee ?? transaction.rawPayee,
+      categoryId: transaction.categoryId,
+      note: transaction.note,
+      debit,
+      credit,
+      runningBalance,
+      transaction,
+    };
+  });
 }

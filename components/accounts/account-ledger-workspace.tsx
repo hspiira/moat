@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getLedgerRows, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
@@ -50,22 +50,6 @@ function formatLedgerDate(date: string) {
   return [day, month, year].join("-");
 }
 
-function getTransactionTone(transaction: Transaction) {
-  if (transaction.type === "income") {
-    return { tone: "positive" as const, sign: "positive" as const };
-  }
-
-  if (transaction.type === "transfer") {
-    return {
-      tone: "neutral" as const,
-      sign: "none" as const,
-      direction: "transfer" as const,
-    };
-  }
-
-  return { tone: "negative" as const, sign: "negative" as const };
-}
-
 const transactionTypeLabels: Record<Transaction["type"], string> = {
   income: "Income",
   expense: "Expense",
@@ -93,6 +77,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const ledgerRows = account ? getLedgerRows(account, transactions) : [];
 
   useEffect(() => {
     startTransition(() => {
@@ -235,7 +220,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {transactions.length === 0 ? (
+              {ledgerRows.length === 0 ? (
                 <div className="rounded-md border border-dashed border-border/50 px-4 py-8 text-sm text-muted-foreground">
                   No transactions recorded for this account.
                 </div>
@@ -245,39 +230,66 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                     <TableRow>
                       <TableHead className="w-[110px]">Date</TableHead>
                       <TableHead className="w-[140px]">Category</TableHead>
-                      <TableHead className="w-[160px]">Type</TableHead>
+                      <TableHead className="w-[140px]">Type</TableHead>
+                      <TableHead className="w-[180px]">Payee</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="w-[160px] text-right">Amount</TableHead>
+                      <TableHead className="w-[140px] text-right">Debit</TableHead>
+                      <TableHead className="w-[140px] text-right">Credit</TableHead>
+                      <TableHead className="w-[160px] text-right">Running balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map((transaction) => {
-                      const category = categories.find((entry) => entry.id === transaction.categoryId);
-                      const presentation = getTransactionTone(transaction);
+                    {ledgerRows.map((row) => {
+                      const category = categories.find((entry) => entry.id === row.categoryId);
+                      const balanceTone =
+                        row.runningBalance < 0 ? "negative" : row.runningBalance > 0 ? "positive" : "neutral";
 
                       return (
-                        <TableRow key={transaction.id} className={getRowTone(transaction)}>
+                        <TableRow key={row.id} className={getRowTone(row.transaction)}>
                           <TableCell className="text-xs text-muted-foreground">
-                            {formatLedgerDate(transaction.occurredOn)}
+                            {formatLedgerDate(row.date)}
                           </TableCell>
                           <TableCell className="text-sm text-foreground/82">
                             {category?.name ?? "Uncategorized"}
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-foreground">
-                              {transactionTypeLabels[transaction.type]}
+                              {transactionTypeLabels[row.type]}
                             </span>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {transaction.note?.trim() || "—"}
+                            {row.payee?.trim() || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {row.note?.trim() || "—"}
                           </TableCell>
                           <TableCell className="text-right">
                             <AmountIndicator
-                              tone={presentation.tone}
-                              sign={presentation.sign}
-                              direction={presentation.direction}
-                              showIcon={transaction.type === "transfer"}
-                              value={formatCurrency(Math.abs(transaction.amount))}
+                              tone={row.debit > 0 ? "negative" : "neutral"}
+                              sign={row.debit > 0 ? "negative" : "none"}
+                              value={row.debit > 0 ? formatCurrency(row.debit) : "—"}
+                              className="justify-end text-sm"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AmountIndicator
+                              tone={row.credit > 0 ? "positive" : "neutral"}
+                              sign={row.credit > 0 ? "positive" : "none"}
+                              value={row.credit > 0 ? formatCurrency(row.credit) : "—"}
+                              className="justify-end text-sm"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AmountIndicator
+                              tone={balanceTone}
+                              sign={
+                                row.runningBalance < 0
+                                  ? "negative"
+                                  : row.runningBalance > 0
+                                    ? "positive"
+                                    : "none"
+                              }
+                              value={formatCurrency(Math.abs(row.runningBalance))}
                               className="justify-end text-sm"
                             />
                           </TableCell>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { applyTransactionRules } from "@/lib/domain/rules";
 import { parseCsvText } from "@/lib/import/csv";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type {
@@ -35,7 +36,14 @@ import { categoryMatchesType } from "./transaction-form";
 
 const repositories = createIndexedDbRepositories();
 
-type CsvFieldKey = "date" | "amount" | "note" | "type" | "category" | "account";
+type CsvFieldKey =
+  | "date"
+  | "amount"
+  | "payee"
+  | "note"
+  | "type"
+  | "category"
+  | "account";
 type CsvMappings = Record<CsvFieldKey, string>;
 
 type ImportPreviewRow = {
@@ -46,6 +54,7 @@ type ImportPreviewRow = {
   type: TransactionType | "";
   accountId: string;
   categoryId: string;
+  payee: string;
   note: string;
   duplicate: boolean;
   issues: string[];
@@ -54,6 +63,7 @@ type ImportPreviewRow = {
 const defaultCsvMappings: CsvMappings = {
   date: "",
   amount: "",
+  payee: "",
   note: "",
   type: "",
   category: "",
@@ -86,12 +96,25 @@ function parseImportedType(value: string): TransactionType | "" {
   }
 }
 
+function buildMessageHash(values: string[]) {
+  const normalized = values.map((value) => value.trim().toLowerCase()).join("|");
+  let hash = 0;
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = (hash << 5) - hash + normalized.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return `csv:${Math.abs(hash)}`;
+}
+
 function detectDuplicate(
   preview: {
     accountId: string;
     occurredOn: string;
     amount: number;
     type: TransactionType | "";
+    payee: string;
     note: string;
   },
   existing: Transaction[],
@@ -102,6 +125,7 @@ function detectDuplicate(
       t.occurredOn === preview.occurredOn &&
       t.amount === preview.amount &&
       t.type === preview.type &&
+      (t.payee ?? t.rawPayee ?? "") === preview.payee &&
       (t.note ?? "") === preview.note,
   );
 }
@@ -166,6 +190,7 @@ export function CsvImportPanel({
       const resolvedType = importedType || defaultImportType;
       const accountName = getValue("account");
       const categoryName = getValue("category");
+      const payee = getValue("payee");
       const resolvedAccountId =
         (accountName ? accountLookup.get(normalizeName(accountName)) : undefined) ??
         defaultImportAccountId;
@@ -188,6 +213,7 @@ export function CsvImportPanel({
           occurredOn,
           amount: Math.abs(amountValue),
           type: resolvedType,
+          payee,
           note,
         },
         transactions,
@@ -202,6 +228,7 @@ export function CsvImportPanel({
         type: resolvedType,
         accountId: resolvedAccountId,
         categoryId: resolvedCategoryId,
+        payee,
         note,
         duplicate,
         issues,
@@ -243,6 +270,11 @@ export function CsvImportPanel({
           parsed.headers.find((h) => normalizeName(h).includes("amount")) ??
           parsed.headers.find((h) => normalizeName(h).includes("debit")) ??
           "",
+        payee:
+          parsed.headers.find((h) => normalizeName(h).includes("payee")) ??
+          parsed.headers.find((h) => normalizeName(h).includes("merchant")) ??
+          parsed.headers.find((h) => normalizeName(h).includes("sender")) ??
+          "",
         note:
           parsed.headers.find((h) => normalizeName(h).includes("note")) ??
           parsed.headers.find((h) => normalizeName(h).includes("description")) ??
@@ -267,6 +299,7 @@ export function CsvImportPanel({
       const validRows = importPreview.filter(
         (row) => row.issues.length === 0 && row.type && row.accountId && row.categoryId,
       );
+      const rules = await repositories.transactionRules.listByUser(profile.id);
 
       if (validRows.length === 0) throw new Error("No valid rows to import.");
 
@@ -279,19 +312,38 @@ export function CsvImportPanel({
         rowCount: validRows.length,
       };
 
-      const nextTransactions: Transaction[] = validRows.map((row) => ({
-        id: `transaction:${crypto.randomUUID()}`,
-        userId: profile.id,
-        accountId: row.accountId,
-        type: row.type as Exclude<TransactionType, "transfer">,
-        amount: row.amount,
-        occurredOn: row.occurredOn,
-        categoryId: row.categoryId,
-        note: row.note || undefined,
-        importBatchId: importBatch.id,
-        createdAt: now,
-        updatedAt: now,
-      }));
+      const nextTransactions: Transaction[] = validRows.map((row) => {
+        const baseTransaction: Transaction = {
+          id: `transaction:${crypto.randomUUID()}`,
+          userId: profile.id,
+          accountId: row.accountId,
+          type: row.type as Exclude<TransactionType, "transfer">,
+          amount: row.amount,
+          occurredOn: row.occurredOn,
+          categoryId: row.categoryId,
+          payee: row.payee || undefined,
+          rawPayee: row.payee || undefined,
+          note: row.note || undefined,
+          source: "csv",
+          reconciliationState: row.payee ? "reviewed" : "parsed",
+          reviewedAt: row.payee ? now : undefined,
+          importBatchId: importBatch.id,
+          messageHash: buildMessageHash([
+            row.accountId,
+            row.occurredOn,
+            String(row.amount),
+            row.type,
+            row.payee,
+            row.note,
+          ]),
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        return (
+          applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction
+        );
+      });
 
       await repositories.imports.upsert(importBatch);
       await Promise.all(nextTransactions.map((t) => repositories.transactions.upsert(t)));
@@ -337,6 +389,7 @@ export function CsvImportPanel({
                     [
                       ["date", "Date column"],
                       ["amount", "Amount column"],
+                      ["payee", "Payee column"],
                       ["note", "Note column"],
                       ["type", "Type column"],
                       ["category", "Category column"],

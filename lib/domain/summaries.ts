@@ -1,9 +1,11 @@
+import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { excludeTransfers } from "@/lib/domain/transfers";
-import type { Category, MonthSummary, Transaction } from "@/lib/types";
+import type { Account, Category, MonthSummary, Transaction } from "@/lib/types";
 
 function buildSummary(
   transactions: Transaction[],
   categories: Category[],
+  openingBalance = 0,
 ): MonthSummary {
   const spendingTransactions = excludeTransfers(transactions);
 
@@ -18,11 +20,16 @@ function buildSummary(
   const allocatedSavings = spendingTransactions
     .filter((transaction) => transaction.type === "savings_contribution")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
-  const savings = inflow - outflow;
 
   const transfers = transactions
     .filter((transaction) => transaction.type === "transfer")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const savings = inflow - outflow;
+  const movement = transactions.reduce(
+    (sum, transaction) => sum + getTransactionBalanceDelta(transaction),
+    0,
+  );
+  const closingBalance = openingBalance + movement;
 
   const categoryTotals = new Map<string, number>();
 
@@ -49,11 +56,14 @@ function buildSummary(
     .slice(0, 5);
 
   return {
+    openingBalance,
     inflow,
     outflow,
     savings,
     allocatedSavings,
     transfers,
+    movement,
+    closingBalance,
     net: savings,
     topCategories,
   };
@@ -78,8 +88,15 @@ export function getMonthSummary(
 export function getSummaryForTransactions(
   transactions: Transaction[],
   categories: Category[],
+  openingBalance = 0,
 ): MonthSummary {
-  return buildSummary(transactions, categories);
+  return buildSummary(transactions, categories, openingBalance);
+}
+
+export function getAggregateOpeningBalance(accounts: Account[]) {
+  return accounts
+    .filter((account) => !account.isArchived)
+    .reduce((sum, account) => sum + account.openingBalance, 0);
 }
 
 export function getSavingsRate(summary: MonthSummary): number {
