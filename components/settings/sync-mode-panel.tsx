@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/types";
+import { runHostedSync } from "@/lib/sync/engine";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -43,6 +44,8 @@ export function SyncModePanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
 
   const loadState = useCallback(async () => {
     const user = await repositories.userProfile.get();
@@ -66,6 +69,22 @@ export function SyncModePanel() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(window.navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
     void loadState();
   }, [loadState]);
 
@@ -85,6 +104,44 @@ export function SyncModePanel() {
       setIsSaving(false);
     }
   }
+
+  const syncNow = useCallback(
+    async (activeProfile: SyncProfile) => {
+      setIsSyncing(true);
+      setError(null);
+      setSuccess(null);
+
+      try {
+        const summary = await runHostedSync({
+          repositories,
+          profile: activeProfile,
+          isOnline,
+        });
+
+        if (summary.error) {
+          setError(summary.error);
+        } else {
+          setSuccess(
+            summary.attempted === 0
+              ? "Nothing to sync right now."
+              : `Sync complete. ${summary.synced} change${summary.synced === 1 ? "" : "s"} uploaded.`,
+          );
+        }
+        await loadState();
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [isOnline, loadState],
+  );
+
+  useEffect(() => {
+    if (!syncProfile || !isOnline) return;
+    if (!syncProfile.hostedSyncEnabled || syncProfile.mode !== "hosted_opt_in") return;
+    if (pendingItems.length === 0) return;
+
+    void syncNow(syncProfile);
+  }, [isOnline, pendingItems.length, syncNow, syncProfile]);
 
   if (!profile || !syncProfile) {
     return (
@@ -166,8 +223,21 @@ export function SyncModePanel() {
               >
                 Save hosted sync settings
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isSyncing || isSaving}
+                onClick={() => void syncNow(syncProfile)}
+              >
+                {isSyncing ? "Syncing..." : "Sync now"}
+              </Button>
               <div className="text-xs text-muted-foreground">
                 Pending local changes: {pendingItems.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {isOnline ? "Online" : "Offline"}
+                {syncProfile.lastSyncedAt ? ` · Last synced ${syncProfile.lastSyncedAt}` : ""}
               </div>
             </div>
           </div>
