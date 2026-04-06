@@ -6,6 +6,8 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  SyncOutboxItem,
+  SyncProfile,
   Transaction,
   UserProfile,
 } from "@/lib/types";
@@ -21,6 +23,8 @@ export type FullExport = {
   budgets: BudgetTarget[];
   investmentProfiles: InvestmentProfile[];
   imports: ImportBatch[];
+  syncProfiles: SyncProfile[];
+  syncOutbox: SyncOutboxItem[];
 };
 
 /**
@@ -32,13 +36,15 @@ export async function collectFullExport(): Promise<FullExport> {
   const userProfile = await repositories.userProfile.get();
   const userId = userProfile?.id ?? "";
 
-  const [accounts, transactions, categories, goals, budgets, imports] = await Promise.all([
+  const [accounts, transactions, categories, goals, budgets, imports, syncProfile, syncOutbox] = await Promise.all([
     userId ? repositories.accounts.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.transactions.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.categories.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.goals.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.budgets.listByUser(userId) : Promise.resolve([]),
     userId ? repositories.imports.listByUser(userId) : Promise.resolve([]),
+    userId ? repositories.syncProfiles.getByUser(userId) : Promise.resolve(null),
+    userId ? repositories.syncOutbox.listByUser(userId) : Promise.resolve([]),
   ]);
 
   const investmentProfile = userId
@@ -56,6 +62,8 @@ export async function collectFullExport(): Promise<FullExport> {
     budgets,
     investmentProfiles: investmentProfile ? [investmentProfile] : [],
     imports,
+    syncProfiles: syncProfile ? [syncProfile] : [],
+    syncOutbox,
   };
 }
 
@@ -76,6 +84,8 @@ export async function restoreFullExport(data: FullExport): Promise<void> {
     ...data.goals.map((r) => repositories.goals.upsert(r)),
     ...data.budgets.map((r) => repositories.budgets.upsert(r)),
     ...data.imports.map((r) => repositories.imports.upsert(r)),
+    ...data.syncProfiles.map((r) => repositories.syncProfiles.save(r)),
+    ...data.syncOutbox.map((r) => repositories.syncOutbox.upsert(r)),
     ...(data.investmentProfiles.length > 0
       ? [repositories.investmentProfiles.save(data.investmentProfiles[0])]
       : []),

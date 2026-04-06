@@ -9,6 +9,8 @@ import type {
   RecurringObligationRepository,
   Repository,
   ResourceRepository,
+  SyncOutboxRepository,
+  SyncProfileRepository,
   TransactionRepository,
   TransactionRuleRepository,
   UserProfileRepository,
@@ -26,10 +28,24 @@ import type {
   MonthClose,
   RecurringObligation,
   ResourceLink,
+  SyncOutboxItem,
+  SyncProfile,
   Transaction,
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
+
+type SyncableRecord = { id: string; userId: string };
+
+const unsyncedStoreNames = new Set<StoreName>([
+  "captureEnvelopes",
+  "captureReviewItems",
+  "correctionLogs",
+  "imports",
+  "resources",
+  "syncProfiles",
+  "syncOutbox",
+]);
 
 async function readAll<T>(storeName: StoreName): Promise<T[]> {
   const database = await openFinanceDatabase();
@@ -87,6 +103,43 @@ async function removeOne(storeName: StoreName, id: string): Promise<void> {
   });
 }
 
+async function readSyncProfileByUser(userId: string): Promise<SyncProfile | null> {
+  const profiles = await readAll<SyncProfile>("syncProfiles");
+  return profiles.find((profile) => profile.userId === userId) ?? null;
+}
+
+async function enqueueSyncMutation(params: {
+  entity: SyncableRecord;
+  entityType: StoreName;
+  operation: "upsert" | "remove";
+  payload: unknown;
+}) {
+  if (unsyncedStoreNames.has(params.entityType)) {
+    return;
+  }
+
+  const syncProfile = await readSyncProfileByUser(params.entity.userId);
+  if (!syncProfile?.hostedSyncEnabled || syncProfile.mode !== "hosted_opt_in") {
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const outboxItem: SyncOutboxItem = {
+    id: `sync-outbox:${crypto.randomUUID()}`,
+    userId: params.entity.userId,
+    entityType: params.entityType,
+    entityId: params.entity.id,
+    operation: params.operation,
+    payload: JSON.stringify(params.payload),
+    status: "pending",
+    attempts: 0,
+    queuedAt: timestamp,
+    updatedAt: timestamp,
+  };
+
+  await putOne("syncOutbox", outboxItem);
+}
+
 function createUserScopedRepository<T extends { id: string; userId: string }>(
   storeName: StoreName,
 ): Repository<T> {
@@ -99,10 +152,26 @@ function createUserScopedRepository<T extends { id: string; userId: string }>(
       return records.filter((record) => record.userId === userId);
     },
     async upsert(entity) {
-      return putOne(storeName, entity);
+      const saved = await putOne(storeName, entity);
+      await enqueueSyncMutation({
+        entity,
+        entityType: storeName,
+        operation: "upsert",
+        payload: entity,
+      });
+      return saved;
     },
     async remove(id) {
-      return removeOne(storeName, id);
+      const existing = await getOne<T>(storeName, id);
+      await removeOne(storeName, id);
+      if (existing) {
+        await enqueueSyncMutation({
+          entity: existing,
+          entityType: storeName,
+          operation: "remove",
+          payload: { id: existing.id },
+        });
+      }
     },
   };
 }
@@ -114,7 +183,14 @@ export function createUserProfileRepository(): UserProfileRepository {
       return profiles[0] ?? null;
     },
     async save(profile) {
-      return putOne("userProfiles", profile);
+      const saved = await putOne("userProfiles", profile);
+      await enqueueSyncMutation({
+        entity: { id: profile.id, userId: profile.id },
+        entityType: "userProfiles",
+        operation: "upsert",
+        payload: profile,
+      });
+      return saved;
     },
   };
 }
@@ -202,7 +278,14 @@ export function createInvestmentProfileRepository(): InvestmentProfileRepository
       return records.find((record) => record.userId === userId) ?? null;
     },
     async save(profile) {
-      return putOne("investmentProfiles", profile);
+      const saved = await putOne("investmentProfiles", profile);
+      await enqueueSyncMutation({
+        entity: profile,
+        entityType: "investmentProfiles",
+        operation: "upsert",
+        payload: profile,
+      });
+      return saved;
     },
   };
 }
@@ -232,6 +315,29 @@ export function createResourceRepository(): ResourceRepository {
         transaction.onerror = () =>
           reject(transaction.error ?? new Error("Unable to replace resources."));
       });
+    },
+  };
+}
+
+export function createSyncProfileRepository(): SyncProfileRepository {
+  return {
+    async getByUser(userId) {
+      return readSyncProfileByUser(userId);
+    },
+    async save(profile) {
+      return putOne("syncProfiles", profile);
+    },
+  };
+}
+
+export function createSyncOutboxRepository(): SyncOutboxRepository {
+  const repository = createUserScopedRepository<SyncOutboxItem>("syncOutbox");
+
+  return {
+    ...repository,
+    async listPendingByUser(userId) {
+      const items = await repository.listByUser(userId);
+      return items.filter((item) => item.status === "pending" || item.status === "failed");
     },
   };
 }

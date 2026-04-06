@@ -1,7 +1,8 @@
 const DATABASE_NAME = "uganda-finance-app";
-const DATABASE_VERSION = 4;
+const DATABASE_VERSION = 6;
 
 export const storeNames = {
+  meta: "meta",
   userProfiles: "userProfiles",
   accounts: "accounts",
   transactions: "transactions",
@@ -17,26 +18,78 @@ export const storeNames = {
   investmentProfiles: "investmentProfiles",
   imports: "imports",
   resources: "resources",
+  syncProfiles: "syncProfiles",
+  syncOutbox: "syncOutbox",
 } as const;
 
 export type StoreName = (typeof storeNames)[keyof typeof storeNames];
 
-function createStores(database: IDBDatabase) {
-  for (const storeName of Object.values(storeNames)) {
-    if (!database.objectStoreNames.contains(storeName)) {
-      database.createObjectStore(storeName, { keyPath: "id" });
-    }
+type MetaRecord = {
+  id: "schema";
+  schemaVersion: number;
+  updatedAt: string;
+};
+
+function ensureStore(database: IDBDatabase, storeName: StoreName) {
+  if (!database.objectStoreNames.contains(storeName)) {
+    database.createObjectStore(storeName, { keyPath: "id" });
   }
 }
 
-function resetStores(database: IDBDatabase) {
-  const existingStoreNames = [...database.objectStoreNames];
+function createBaseStores(database: IDBDatabase) {
+  ensureStore(database, "meta");
+  ensureStore(database, "userProfiles");
+  ensureStore(database, "accounts");
+  ensureStore(database, "transactions");
+  ensureStore(database, "categories");
+  ensureStore(database, "goals");
+  ensureStore(database, "budgets");
+  ensureStore(database, "investmentProfiles");
+  ensureStore(database, "imports");
+  ensureStore(database, "resources");
+  ensureStore(database, "syncProfiles");
+  ensureStore(database, "syncOutbox");
+}
 
-  for (const storeName of existingStoreNames) {
-    database.deleteObjectStore(storeName);
+function runMigrations(database: IDBDatabase, oldVersion: number) {
+  if (oldVersion < 1) {
+    createBaseStores(database);
   }
 
-  createStores(database);
+  if (oldVersion < 4) {
+    ensureStore(database, "captureEnvelopes");
+    ensureStore(database, "captureReviewItems");
+    ensureStore(database, "correctionLogs");
+    ensureStore(database, "transactionRules");
+    ensureStore(database, "recurringObligations");
+    ensureStore(database, "monthCloses");
+  }
+
+  if (oldVersion < 5) {
+    for (const storeName of Object.values(storeNames)) {
+      ensureStore(database, storeName);
+    }
+  }
+
+  if (oldVersion < 6) {
+    ensureStore(database, "syncProfiles");
+    ensureStore(database, "syncOutbox");
+  }
+}
+
+function persistSchemaMeta(database: IDBDatabase) {
+  if (!database.objectStoreNames.contains(storeNames.meta)) {
+    return;
+  }
+
+  const transaction = database.transaction(storeNames.meta, "readwrite");
+  const store = transaction.objectStore(storeNames.meta);
+  const record: MetaRecord = {
+    id: "schema",
+    schemaVersion: DATABASE_VERSION,
+    updatedAt: new Date().toISOString(),
+  };
+  store.put(record);
 }
 
 export function openFinanceDatabase(): Promise<IDBDatabase> {
@@ -48,12 +101,18 @@ export function openFinanceDatabase(): Promise<IDBDatabase> {
 
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
-    request.onupgradeneeded = () => {
-      resetStores(request.result);
+    request.onupgradeneeded = (event) => {
+      runMigrations(request.result, event.oldVersion);
+    };
+
+    request.onblocked = () => {
+      reject(new Error("IndexedDB upgrade is blocked by another open app session."));
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      const database = request.result;
+      persistSchemaMeta(database);
+      resolve(database);
     };
 
     request.onerror = () => {

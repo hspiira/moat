@@ -11,6 +11,8 @@ import {
   createMonthCloseRepository,
   createRecurringObligationRepository,
   createResourceRepository,
+  createSyncOutboxRepository,
+  createSyncProfileRepository,
   createTransactionRepository,
   createTransactionRuleRepository,
   createUserProfileRepository,
@@ -34,5 +36,7 @@ export function createIndexedDbRepositories(): RepositoryBundle {
     investmentProfiles: createInvestmentProfileRepository(),
     imports: createImportBatchRepository(),
     resources: createResourceRepository(),
+    syncProfiles: createSyncProfileRepository(),
+    syncOutbox: createSyncOutboxRepository(),
   };
 }

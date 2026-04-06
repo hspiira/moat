@@ -7,6 +7,7 @@ import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PinLockPanel } from "./settings/pin-lock-panel";
+import { SyncModePanel } from "./settings/sync-mode-panel";
 
 export function SettingsWorkspace() {
   return (
@@ -38,6 +39,17 @@ export function SettingsWorkspace() {
           </p>
         </div>
         <CaptureAutomationPanel />
+      </section>
+
+      <section className="grid gap-4">
+        <div className="space-y-0.5">
+          <h2 className="text-base font-semibold">Storage and sync</h2>
+          <p className="text-xs text-muted-foreground">
+            Moat always writes locally first. Hosted sync is optional and remains an explicit
+            opt-in mode.
+          </p>
+        </div>
+        <SyncModePanel />
       </section>
 
       <section className="grid gap-4">
