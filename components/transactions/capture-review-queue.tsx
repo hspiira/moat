@@ -149,6 +149,16 @@ function ReviewItemEditor({
         </div>
       ) : null}
 
+      {draft.fieldWarnings.length > 0 ? (
+        <div className="grid gap-1 text-xs text-muted-foreground">
+          {draft.fieldWarnings.map((warning, index) => (
+            <div key={`${draft.id}:${warning.field}:${index}`}>
+              {warning.field}: {warning.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={() => void onUpdateItem(draft)}>
           Save changes

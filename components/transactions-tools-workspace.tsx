@@ -2,6 +2,7 @@
 
 import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
 
+import { CorrectionLogPanel } from "./transactions/correction-log-panel";
 import { TransactionRulesPanel } from "./transactions/transaction-rules-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
@@ -46,6 +47,8 @@ export function TransactionsToolsWorkspace() {
           onDelete={(budgetId) => void workspace.deleteBudget(budgetId)}
           onCancelEdit={workspace.cancelBudgetEdit}
         />
+
+        <CorrectionLogPanel profile={workspace.profile} />
       </div>
     </TransactionsWorkspaceFrame>
   );

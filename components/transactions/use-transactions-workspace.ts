@@ -8,11 +8,17 @@ import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { normalizeAmountToUgx } from "@/lib/currency";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import {
-  createCaptureEnvelope,
+  buildCaptureCandidatesFromEnvelope,
+  createEnvelopeForSource,
+  createEnvelopeFromNativePayload,
+  deriveTransactionSourceFromEnvelopeSource,
+} from "@/lib/capture/ingestion";
+import {
   createCaptureReviewItem,
   getOpenCaptureReviewItems,
-  inferEnvelopeSourceFromTransactionSource,
 } from "@/lib/capture/review-queue";
+import { loadCaptureAutomationSettings } from "@/lib/native/capture-settings";
+import { subscribeToNativeCapture, type NativeCapturePayload } from "@/lib/native/capture-bridge";
 import {
   getRememberedFxDefault,
   normalizePayeeKey,
@@ -271,6 +277,51 @@ export function useTransactionsWorkspace() {
     });
   }, [loadWorkspace]);
 
+  const ingestNativeCapturePayload = useCallback(
+    async (payload: NativeCapturePayload) => {
+      if (!profile) return;
+
+      if (payload.channel === "notification") {
+        const settings = loadCaptureAutomationSettings();
+        const packageAllowed =
+          payload.sourceApp && settings.allowedNotificationPackages.includes(payload.sourceApp);
+        if (!settings.notificationCaptureEnabled || !packageAllowed) {
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        const envelope = createEnvelopeFromNativePayload({
+          userId: profile.id,
+          payload,
+        });
+
+        await persistCaptureEnvelopes({
+          envelopes: [envelope],
+          sourceOverride: payload.channel === "notification" ? "notification" : "sms",
+        });
+      } catch (nativeCaptureError) {
+        setError(
+          nativeCaptureError instanceof Error
+            ? nativeCaptureError.message
+            : "Unable to ingest native capture payload.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [persistCaptureEnvelopes, profile],
+  );
+
+  useEffect(() => {
+    return subscribeToNativeCapture((payload) => {
+      void ingestNativeCapturePayload(payload);
+    });
+  }, [ingestNativeCapturePayload]);
+
   useEffect(() => {
     const capture = searchParams.get("capture");
     const type = searchParams.get("type");
@@ -383,6 +434,97 @@ export function useTransactionsWorkspace() {
       setMonthCloseEvaluation(evaluation);
     },
     [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
+  );
+
+  const persistCaptureEnvelopes = useCallback(
+    async (params: {
+      envelopes: ReturnType<typeof createEnvelopeForSource>[];
+      fallbackFxRate?: number;
+      sourceOverride?: Transaction["source"];
+    }) => {
+      if (!profile || params.envelopes.length === 0) return;
+
+      const timestamp = new Date().toISOString();
+      const rules = await repositories.transactionRules.listByUser(profile.id);
+      const existingReviewItems = await repositories.captureReviewItems.listByUser(profile.id);
+
+      await Promise.all(
+        params.envelopes.flatMap((envelope) => {
+          const candidates = buildCaptureCandidatesFromEnvelope({
+            envelope,
+            source: params.sourceOverride ?? deriveTransactionSourceFromEnvelopeSource(envelope.source),
+            accountId: transactionForm.accountId || accounts[0]?.id || "",
+            categories,
+            existingTransactions: transactions,
+            existingReviewItems,
+            fallbackFxRate: params.fallbackFxRate,
+          });
+
+          return [
+            repositories.captureEnvelopes.upsert(envelope),
+            ...candidates.map(async (candidate) => {
+              const reviewItem = createCaptureReviewItem({
+                userId: profile.id,
+                envelopeId: envelope.id,
+                candidate,
+                capturedAt: timestamp,
+              });
+              const rulePreview: Transaction = {
+                id: `transaction:preview:${reviewItem.id}`,
+                userId: profile.id,
+                accountId: reviewItem.accountId,
+                type: reviewItem.type,
+                amount: Math.abs(reviewItem.normalizedAmount),
+                currency: reviewItem.currency,
+                originalAmount: Math.abs(reviewItem.originalAmount),
+                fxRateToUgx: reviewItem.currency === "UGX" ? undefined : reviewItem.fxRateToUgx,
+                occurredOn: reviewItem.occurredOn,
+                categoryId: reviewItem.categoryId,
+                payee: reviewItem.payee.trim() || undefined,
+                rawPayee: reviewItem.payee.trim() || undefined,
+                note: reviewItem.note.trim() || undefined,
+                reconciliationState: "reviewed",
+                source: reviewItem.source,
+                messageHash: reviewItem.messageHash,
+                parserLabel: reviewItem.parserLabel,
+                confidenceScore: reviewItem.confidenceScore,
+                reviewedAt: timestamp,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+              };
+              const ruledPreview =
+                applyTransactionRules(rulePreview, rules)?.proposedTransaction ?? rulePreview;
+
+              return repositories.captureReviewItems.upsert({
+                ...reviewItem,
+                accountId: ruledPreview.accountId,
+                type: ruledPreview.type as CaptureReviewItem["type"],
+                categoryId: ruledPreview.categoryId,
+                payee: ruledPreview.payee ?? reviewItem.payee,
+                note: ruledPreview.note ?? reviewItem.note,
+                updatedAt: timestamp,
+              });
+            }),
+          ];
+        }),
+      );
+
+      await refreshMonthCloseState(profile.id);
+      const message = "Captured items sent to review locally";
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
+      await loadWorkspace();
+    },
+    [
+      accounts,
+      categories,
+      loadWorkspace,
+      profile,
+      refreshMonthCloseState,
+      transactionForm.accountId,
+      transactions,
+    ],
   );
 
   const handleTransactionSubmit = useCallback(
@@ -629,23 +771,19 @@ export function useTransactionsWorkspace() {
               throw new Error("One or more captured rows has an invalid amount or FX rate.");
             }
 
-            const normalizedCandidate = {
-              ...candidate,
-              normalizedAmount,
-            };
-            const envelope = createCaptureEnvelope({
+            const envelope = createEnvelopeForSource({
               userId: profile.id,
+              source: sharedCaptureInput.trim() ? "shared_text" : "pasted_text",
               rawContent: candidate.rawText,
-              source: inferEnvelopeSourceFromTransactionSource(
-                candidate.source,
-                Boolean(sharedCaptureInput.trim()),
-              ),
               capturedAt: timestamp,
             });
             const reviewItem = createCaptureReviewItem({
               userId: profile.id,
               envelopeId: envelope.id,
-              candidate: normalizedCandidate,
+              candidate: {
+                ...candidate,
+                normalizedAmount,
+              },
               capturedAt: timestamp,
             });
             const rulePreview: Transaction = {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTransactionFromCaptureReviewItem, createCaptureReviewItem } from "@/lib/capture/review-queue";
+import {
+  buildTransactionFromCaptureReviewItem,
+  createCorrectionLog,
+  createCaptureReviewItem,
+} from "@/lib/capture/review-queue";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 
 const baseCandidate: ParsedCaptureCandidate = {
@@ -19,6 +23,7 @@ const baseCandidate: ParsedCaptureCandidate = {
   messageHash: "hash:123",
   parserLabel: "mtn-uganda",
   confidence: 0.9,
+  fieldWarnings: [],
   duplicate: false,
   issues: [],
 };
@@ -59,5 +64,27 @@ describe("capture review queue", () => {
     expect(transaction.captureReviewItemId).toBe(reviewItem.id);
     expect(transaction.parserLabel).toBe("mtn-uganda");
     expect(transaction.confidenceScore).toBe(0.9);
+  });
+
+  it("captures original and approved snapshots in a correction log", () => {
+    const reviewItem = createCaptureReviewItem({
+      userId: "user:1",
+      envelopeId: "capture-envelope:1",
+      candidate: baseCandidate,
+      capturedAt: "2026-04-06T10:00:00.000Z",
+    });
+
+    const log = createCorrectionLog({
+      userId: "user:1",
+      item: reviewItem,
+      approvedSnapshot: {
+        ...reviewItem.originalSnapshot,
+        payee: "Approved sender",
+      },
+      createdAt: "2026-04-06T11:00:00.000Z",
+    });
+
+    expect(log.originalSnapshot.payee).toBe("Sender");
+    expect(log.approvedSnapshot.payee).toBe("Approved sender");
   });
 });

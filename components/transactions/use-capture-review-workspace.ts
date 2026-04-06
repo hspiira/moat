@@ -9,6 +9,7 @@ import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import {
   buildTransactionFromCaptureReviewItem,
+  createCorrectionLog,
   getOpenCaptureReviewItems,
   validateCaptureReviewItem,
 } from "@/lib/capture/review-queue";
@@ -151,8 +152,33 @@ export function useCaptureReviewWorkspace() {
       });
       const proposed =
         applyTransactionRules(baseTransaction, transactionRules)?.proposedTransaction ?? baseTransaction;
+      const approvedSnapshot = {
+        accountId: item.accountId,
+        occurredOn: item.occurredOn,
+        originalAmount: item.originalAmount,
+        currency: item.currency,
+        fxRateToUgx: item.fxRateToUgx,
+        normalizedAmount:
+          item.currency === "UGX" ? item.originalAmount : item.originalAmount * (item.fxRateToUgx ?? 0),
+        type: item.type,
+        categoryId: item.categoryId,
+        payee: item.payee,
+        note: item.note,
+        parserLabel: item.parserLabel,
+        confidenceScore: item.confidenceScore,
+        issues,
+        fieldWarnings: item.fieldWarnings,
+      };
 
       await repositories.transactions.upsert(proposed);
+      await repositories.correctionLogs.upsert(
+        createCorrectionLog({
+          userId: profile.id,
+          item,
+          approvedSnapshot,
+          createdAt: timestamp,
+        }),
+      );
       await repositories.captureReviewItems.upsert({
         ...item,
         approvedTransactionId: proposed.id,
