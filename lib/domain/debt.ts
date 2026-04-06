@@ -29,6 +29,16 @@ export type DebtPayoffPlan = {
   warnings: string[];
 };
 
+export type DebtRepaymentAction = {
+  accountId: string;
+  accountName: string;
+  minimumPayment: number;
+  extraAllocation: number;
+  recommendedPayment: number;
+  priority: number;
+  reason: string;
+};
+
 function monthsBetween(startDate: string, endDate: Date) {
   const start = new Date(`${startDate}T00:00:00`);
   return Math.max(
@@ -240,4 +250,38 @@ export function buildDebtPayoffPlan(
     payoffOrder,
     warnings,
   };
+}
+
+export function getDebtRepaymentActions(
+  accounts: Account[],
+  transactions: Transaction[],
+  strategy: DebtPayoffStrategy,
+  extraMonthlyPayment: number,
+) {
+  const summaries = getDebtPortfolioSummary(accounts, transactions);
+  const sorted = [...summaries].sort((left, right) => {
+    if (strategy === "avalanche" && left.interestRate !== right.interestRate) {
+      return right.interestRate - left.interestRate;
+    }
+    if (strategy === "snowball" && left.outstandingBalance !== right.outstandingBalance) {
+      return left.outstandingBalance - right.outstandingBalance;
+    }
+    return left.accountName.localeCompare(right.accountName);
+  });
+
+  return sorted.map<DebtRepaymentAction>((summary, index) => {
+    const extraAllocation = index === 0 ? Math.max(0, extraMonthlyPayment) : 0;
+    return {
+      accountId: summary.accountId,
+      accountName: summary.accountName,
+      minimumPayment: summary.inferredMinimumPayment,
+      extraAllocation,
+      recommendedPayment: summary.inferredMinimumPayment + extraAllocation,
+      priority: index + 1,
+      reason:
+        strategy === "avalanche"
+          ? "Highest interest first to reduce total cost."
+          : "Smallest balance first to free cash flow quickly.",
+    };
+  });
 }

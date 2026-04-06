@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getBudgetCoverage, getBudgetEnvelopes, getBudgetFundingCapacity } from "@/lib/domain/budgets";
+import {
+  getBudgetCoverage,
+  getBudgetEnvelopes,
+  getBudgetFundingCapacity,
+  getIncomeFundingSummaries,
+} from "@/lib/domain/budgets";
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
 
 const categories: Category[] = [
@@ -82,5 +87,19 @@ describe("budget domain", () => {
       allocated: 520000,
       unallocatedIncome: 980000,
     });
+  });
+
+  it("tracks budgets against concrete income events", () => {
+    expect(getIncomeFundingSummaries(budgets, transactions)).toEqual([
+      {
+        transactionId: "tx:income",
+        date: "2026-04-02",
+        payee: undefined,
+        amount: 1500000,
+        allocated: 520000,
+        remaining: 980000,
+        linkedBudgetCount: 1,
+      },
+    ]);
   });
 });

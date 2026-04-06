@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDebtPayoffPlan, getDebtSummary } from "@/lib/domain/debt";
+import {
+  buildDebtPayoffPlan,
+  getDebtRepaymentActions,
+  getDebtSummary,
+} from "@/lib/domain/debt";
 import type { Account, Transaction } from "@/lib/types";
 
 const accounts: Account[] = [
@@ -89,5 +93,17 @@ describe("debt domain", () => {
     expect(avalanche.totalInterest).toBeLessThanOrEqual(snowball.totalInterest);
     expect(snowball.payoffOrder.length).toBe(2);
     expect(avalanche.payoffOrder.length).toBe(2);
+  });
+
+  it("builds repayment actions in the selected strategy order", () => {
+    const snowballActions = getDebtRepaymentActions(accounts, transactions, "snowball", 50000);
+    const avalancheActions = getDebtRepaymentActions(accounts, transactions, "avalanche", 50000);
+
+    expect(snowballActions[0].accountName).toBe("Device loan");
+    expect(snowballActions[0].extraAllocation).toBe(50000);
+    expect(avalancheActions[0].accountName).toBe("Device loan");
+    expect(avalancheActions[0].recommendedPayment).toBeGreaterThan(
+      avalancheActions[0].minimumPayment,
+    );
   });
 });

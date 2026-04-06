@@ -1,10 +1,14 @@
+import { Suspense } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { TransactionsWorkspace } from "@/components/transactions-workspace";
 
 export default function TransactionsPage() {
   return (
     <AppShell>
-      <TransactionsWorkspace />
+      <Suspense fallback={null}>
+        <TransactionsWorkspace />
+      </Suspense>
     </AppShell>
   );
 }

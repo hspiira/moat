@@ -2,7 +2,11 @@
 
 import { formatMoney } from "@/lib/currency";
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
-import { getBudgetEnvelopes, getBudgetFundingCapacity } from "@/lib/domain/budgets";
+import {
+  getBudgetEnvelopes,
+  getBudgetFundingCapacity,
+  getIncomeFundingSummaries,
+} from "@/lib/domain/budgets";
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { AmountIndicator } from "@/components/amount-indicator";
 import { SelectField } from "@/components/forms/select-field";
@@ -50,18 +54,22 @@ export function BudgetManagerPanel({
   );
   const envelopes = getBudgetEnvelopes(budgets, categories, monthTransactions);
   const fundingCapacity = getBudgetFundingCapacity(budgets, monthTransactions);
+  const incomeFundingSummaries = getIncomeFundingSummaries(budgets, monthTransactions);
   const expenseCategoryOptions = categoryOptions(
     categories.filter((category) => category.kind === "expense"),
   );
   const incomeTransactionOptions = [
     { value: "__none__", label: "Any income in this month" },
-    ...monthTransactions
-      .filter((transaction) => transaction.type === "income")
-      .map((transaction) => ({
-        value: transaction.id,
-        label: `${transaction.occurredOn} · ${formatMoney(transaction.amount, "UGX")}`,
+    ...incomeFundingSummaries.map((summary) => ({
+        value: summary.transactionId,
+        label: `${summary.date} · ${formatMoney(summary.amount, "UGX")}${
+          summary.payee ? ` · ${summary.payee}` : ""
+        }`,
       })),
   ];
+  const selectedFundingSource = incomeFundingSummaries.find(
+    (summary) => summary.transactionId === form.incomeTransactionId,
+  );
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -103,6 +111,48 @@ export function BudgetManagerPanel({
           </div>
         </div>
 
+        {incomeFundingSummaries.length > 0 ? (
+          <div className="grid gap-2">
+            <div className="text-sm text-foreground">Income funding</div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {incomeFundingSummaries.map((summary) => (
+                <div key={summary.transactionId} className="border border-border/20 px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-foreground">
+                        {summary.payee ?? "Income event"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {summary.date} · {summary.linkedBudgetCount} linked budget
+                        {summary.linkedBudgetCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() =>
+                        onFormChange((current) => ({
+                          ...current,
+                          incomeTransactionId: summary.transactionId,
+                        }))
+                      }
+                    >
+                      Use
+                    </Button>
+                  </div>
+                  <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                    <div>Total {formatMoney(summary.amount, "UGX")}</div>
+                    <div>Allocated {formatMoney(summary.allocated, "UGX")}</div>
+                    <div>Remaining {formatMoney(summary.remaining, "UGX")}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid gap-3 md:grid-cols-[1.1fr_1.1fr_0.8fr_0.8fr]">
           <div className="grid gap-2">
             <SelectField
@@ -130,16 +180,34 @@ export function BudgetManagerPanel({
           </div>
           <div className="grid gap-2">
             <Label>Allocated (UGX)</Label>
-            <Input
-              inputMode="numeric"
-              value={form.targetAmount}
-              onChange={(event) =>
-                onFormChange((current) => ({
-                  ...current,
-                  targetAmount: event.target.value,
-                }))
-              }
-            />
+            <div className="flex gap-2">
+              <Input
+                inputMode="numeric"
+                value={form.targetAmount}
+                onChange={(event) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    targetAmount: event.target.value,
+                  }))
+                }
+              />
+              {selectedFundingSource ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() =>
+                    onFormChange((current) => ({
+                      ...current,
+                      targetAmount: String(Math.max(0, selectedFundingSource.remaining)),
+                    }))
+                  }
+                >
+                  Use remaining
+                </Button>
+              ) : null}
+            </div>
           </div>
           <div className="grid gap-2">
             <Label>Rollover (UGX)</Label>

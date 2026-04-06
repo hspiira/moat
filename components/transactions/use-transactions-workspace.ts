@@ -1,10 +1,12 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { normalizeAmountToUgx } from "@/lib/currency";
+import { findFxMemory, normalizePayeeKey, saveFxMemory } from "@/lib/preferences/fx-memory";
 import type {
   Account,
   BudgetTarget,
@@ -66,6 +68,7 @@ function getResetTransactionForm(
 }
 
 export function useTransactionsWorkspace() {
+  const searchParams = useSearchParams();
   const closePeriod = new Date().toISOString().slice(0, 7);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -98,6 +101,7 @@ export function useTransactionsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [rememberedFxHint, setRememberedFxHint] = useState<string | null>(null);
 
   const recurringEvaluations = useMemo(
     () => evaluateRecurringObligations(recurringObligations, transactions, closePeriod),
@@ -196,6 +200,56 @@ export function useTransactionsWorkspace() {
       void loadWorkspace();
     });
   }, [loadWorkspace]);
+
+  useEffect(() => {
+    const type = searchParams.get("type");
+    const accountId = searchParams.get("accountId");
+    const amount = searchParams.get("amount");
+    const payee = searchParams.get("payee");
+
+    if (!type && !accountId && !amount && !payee) return;
+
+    setTransactionForm((current) => ({
+      ...current,
+      type: (type as TransactionFormState["type"]) || current.type,
+      accountId: accountId || current.accountId,
+      amount: amount || current.amount,
+      payee: payee || current.payee,
+      categoryId:
+        categories.find((category) =>
+          categoryMatchesType(category, (type as TransactionFormState["type"]) || current.type),
+        )?.id ?? current.categoryId,
+    }));
+  }, [categories, searchParams]);
+
+  useEffect(() => {
+    if (transactionForm.currency === "UGX") {
+      setRememberedFxHint(null);
+      return;
+    }
+
+    const payee = transactionForm.payee.trim();
+    if (!payee) {
+      setRememberedFxHint(null);
+      return;
+    }
+
+    const memory = findFxMemory(payee, transactionForm.currency);
+    if (!memory) {
+      setRememberedFxHint(null);
+      return;
+    }
+
+    setRememberedFxHint(
+      `Remembered ${memory.currency} → UGX rate ${memory.rateToUgx.toLocaleString("en-UG")} for ${memory.displayPayee}.`,
+    );
+    setTransactionForm((current) => {
+      if (current.fxRateToUgx) return current;
+      if (current.currency !== memory.currency) return current;
+      if (normalizePayeeKey(current.payee) !== memory.payeeKey) return current;
+      return { ...current, fxRateToUgx: String(memory.rateToUgx) };
+    });
+  }, [transactionForm.currency, transactionForm.payee]);
 
   const refreshAccounts = useCallback(async (userId: string) => {
     const storedAccounts = await repositories.accounts.listByUser(userId);
@@ -360,6 +414,15 @@ export function useTransactionsWorkspace() {
 
         await refreshAccounts(profile.id);
         await refreshMonthCloseState(profile.id);
+        if (transactionForm.currency !== "UGX" && transactionForm.payee.trim()) {
+          saveFxMemory({
+            payeeKey: normalizePayeeKey(transactionForm.payee),
+            displayPayee: transactionForm.payee.trim(),
+            currency: transactionForm.currency,
+            rateToUgx: Number(transactionForm.fxRateToUgx),
+            updatedAt: timestamp,
+          });
+        }
         const message = wasEditing ? "Transaction updated locally" : "Transaction saved locally";
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
@@ -673,6 +736,7 @@ export function useTransactionsWorkspace() {
     error,
     lastSavedAt,
     successMessage,
+    rememberedFxHint,
     setError,
     setTransactionForm,
     setBudgetForm,

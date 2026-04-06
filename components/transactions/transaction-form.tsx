@@ -67,6 +67,7 @@ type Props = {
   isSubmitting: boolean;
   lastSavedAt: string | null;
   successMessage: string | null;
+  rememberedFxHint?: string | null;
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -80,6 +81,7 @@ export function TransactionForm({
   isSubmitting,
   lastSavedAt,
   successMessage,
+  rememberedFxHint,
   onFormChange,
   onSubmit,
   onCancelEdit,
@@ -223,6 +225,9 @@ export function TransactionForm({
                 ) : (
                   "Enter a valid FX rate to post the transaction in UGX."
                 )}
+                {rememberedFxHint ? (
+                  <div className="mt-1 text-[11px] text-foreground/72">{rememberedFxHint}</div>
+                ) : null}
               </div>
             </>
           ) : null}

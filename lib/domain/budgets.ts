@@ -12,6 +12,16 @@ export type BudgetEnvelope = {
   incomeTransactionId?: string;
 };
 
+export type IncomeFundingSummary = {
+  transactionId: string;
+  date: string;
+  payee?: string;
+  amount: number;
+  allocated: number;
+  remaining: number;
+  linkedBudgetCount: number;
+};
+
 export function getBudgetEnvelopes(
   budgets: BudgetTarget[],
   categories: Category[],
@@ -98,4 +108,33 @@ export function getBudgetFundingCapacity(
     allocated,
     unallocatedIncome: inflow - allocated,
   };
+}
+
+export function getIncomeFundingSummaries(
+  budgets: BudgetTarget[],
+  transactions: Transaction[],
+) {
+  const incomeTransactions = transactions.filter((transaction) => transaction.type === "income");
+
+  return incomeTransactions
+    .map<IncomeFundingSummary>((transaction) => {
+      const linkedBudgets = budgets.filter(
+        (budget) => budget.incomeTransactionId === transaction.id,
+      );
+      const allocated = linkedBudgets.reduce(
+        (sum, budget) => sum + budget.targetAmount + (budget.rolloverAmount ?? 0),
+        0,
+      );
+
+      return {
+        transactionId: transaction.id,
+        date: transaction.occurredOn,
+        payee: transaction.payee ?? transaction.rawPayee,
+        amount: Math.abs(transaction.amount),
+        allocated,
+        remaining: Math.abs(transaction.amount) - allocated,
+        linkedBudgetCount: linkedBudgets.length,
+      };
+    })
+    .sort((left, right) => right.date.localeCompare(left.date));
 }

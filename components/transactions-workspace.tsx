@@ -32,6 +32,7 @@ export function TransactionsWorkspace() {
     error,
     lastSavedAt,
     successMessage,
+    rememberedFxHint,
     setError,
     setTransactionForm,
     setBudgetForm,
@@ -108,6 +109,7 @@ export function TransactionsWorkspace() {
               isSubmitting={isSubmitting}
               lastSavedAt={lastSavedAt}
               successMessage={successMessage}
+              rememberedFxHint={rememberedFxHint}
               onFormChange={setTransactionForm}
               onSubmit={(e) => void handleTransactionSubmit(e)}
               onCancelEdit={cancelEdit}
