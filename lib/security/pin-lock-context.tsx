@@ -9,7 +9,13 @@ import {
   useState,
 } from "react";
 
-import { encryptWithPin, verifyPin, type EncryptedPayload } from "./pin-crypto";
+import {
+  deriveSessionKey,
+  encryptWithPin,
+  verifyPin,
+  type EncryptedPayload,
+} from "./pin-crypto";
+import { setActiveRecordCryptoKey } from "./record-crypto";
 
 const PIN_HASH_KEY = "moat:pin_hash";
 const PIN_SALT_KEY = "moat:pin_salt";
@@ -41,6 +47,15 @@ type PinLockContextValue = {
 };
 
 const PinLockContext = createContext<PinLockContextValue | null>(null);
+
+function base64ToUint8Array(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
 
 export function usePinLock(): PinLockContextValue {
   const ctx = useContext(PinLockContext);
@@ -111,6 +126,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     };
 
     localStorage.setItem(PIN_HASH_KEY, JSON.stringify(record));
+    setActiveRecordCryptoKey(await deriveSessionKey(pin, base64ToUint8Array(payload.salt)));
     setLockState({ status: "unlocked" });
     resetInactivityTimer();
     return true;
@@ -126,6 +142,9 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     const valid = await verifyPin(record.payload, pin);
 
     if (valid) {
+      setActiveRecordCryptoKey(
+        await deriveSessionKey(pin, base64ToUint8Array(record.payload.salt)),
+      );
       setLockState({ status: "unlocked" });
       resetInactivityTimer();
     }
@@ -135,6 +154,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
   const lock = useCallback(() => {
     setLockState((s) => (s.status === "no_pin" ? s : { status: "locked" }));
+    setActiveRecordCryptoKey(null);
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
     }
@@ -152,6 +172,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     if (valid) {
       localStorage.removeItem(PIN_HASH_KEY);
       localStorage.removeItem(PIN_SALT_KEY);
+      setActiveRecordCryptoKey(null);
       setLockState({ status: "no_pin" });
     }
 

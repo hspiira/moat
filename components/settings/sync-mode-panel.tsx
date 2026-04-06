@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";
@@ -260,14 +261,18 @@ export function SyncModePanel() {
               </div>
             </div>
             {conflictItems.length > 0 ? (
-              <div className="grid gap-2 border border-destructive/20 p-3 text-xs">
-                <div className="text-foreground">Hosted sync conflicts</div>
-                {conflictItems.map((item) => (
-                  <div key={item.id} className="text-muted-foreground">
-                    {item.entityType}:{item.entityId}
-                    {item.lastError ? ` · ${item.lastError}` : ""}
+              <div className="grid gap-3 border border-destructive/20 p-3 text-xs">
+                <div className="grid gap-1">
+                  <div className="text-foreground">Hosted sync conflicts</div>
+                  <div className="text-muted-foreground">
+                    {conflictItems.length} item{conflictItems.length === 1 ? "" : "s"} need a final choice before hosted sync can continue cleanly.
                   </div>
-                ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/settings/sync-conflicts">Review conflicts</Link>
+                  </Button>
+                </div>
               </div>
             ) : null}
           </div>

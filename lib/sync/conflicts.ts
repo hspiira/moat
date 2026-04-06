@@ -1,40 +1,113 @@
+import { repositories as defaultRepositories } from "@/lib/repositories/instance";
+import type { RepositoryBundle } from "@/lib/repositories/types";
+import type { SyncPullRecord } from "@/lib/sync/types";
 import type { SyncOutboxItem } from "@/lib/types";
 
-export type SyncEntityType =
-  | "userProfiles"
-  | "accounts"
-  | "transactions"
-  | "categories"
-  | "goals"
-  | "budgets"
-  | "investmentProfiles"
-  | "transactionRules"
-  | "recurringObligations"
-  | "monthCloses";
+import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
+import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 
-export type SyncConflictStrategy = "client_wins" | "server_wins" | "manual_review";
-
-export const syncConflictStrategies: Record<SyncEntityType, SyncConflictStrategy> = {
-  userProfiles: "client_wins",
-  accounts: "manual_review",
-  transactions: "manual_review",
-  categories: "client_wins",
-  goals: "manual_review",
-  budgets: "manual_review",
-  investmentProfiles: "client_wins",
-  transactionRules: "client_wins",
-  recurringObligations: "manual_review",
-  monthCloses: "server_wins",
+export type SyncConflictRecord = {
+  item: SyncOutboxItem;
+  localPayload: unknown;
+  serverRecord: SyncPullRecord | null;
+  strategy: ReturnType<typeof getConflictStrategy>;
 };
 
-export function getSyncConflictStrategy(entityType: string): SyncConflictStrategy {
-  return syncConflictStrategies[entityType as SyncEntityType] ?? "manual_review";
-}
-
-export function shouldBlockAutomaticSync(item: Pick<SyncOutboxItem, "entityType" | "operation">) {
-  if (item.operation === "remove") {
-    return getSyncConflictStrategy(item.entityType) === "manual_review";
+function parseJsonValue(value: string | undefined): unknown {
+  if (!value) {
+    return null;
   }
 
-  return getSyncConflictStrategy(item.entityType) === "manual_review";
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
+
+function parseServerRecord(item: SyncOutboxItem): SyncPullRecord | null {
+  const parsed = parseJsonValue(item.conflictPayload);
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+
+  const record = parsed as Partial<SyncPullRecord>;
+  if (
+    typeof record.entityType !== "string" ||
+    typeof record.entityId !== "string" ||
+    typeof record.deleted !== "boolean" ||
+    typeof record.updatedAt !== "string" ||
+    typeof record.serverVersionToken !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    entityType: record.entityType,
+    entityId: record.entityId,
+    payload: typeof record.payload === "string" || record.payload === null ? record.payload : null,
+    deleted: record.deleted,
+    updatedAt: record.updatedAt,
+    serverVersionToken: record.serverVersionToken,
+  };
+}
+
+export async function listSyncConflicts(
+  userId: string,
+  bundle: RepositoryBundle = defaultRepositories,
+): Promise<SyncConflictRecord[]> {
+  const outbox = await bundle.syncOutbox.listByUser(userId);
+
+  return outbox
+    .filter((item) => item.status === "conflict")
+    .map((item) => ({
+      item,
+      localPayload: parseJsonValue(item.payload),
+      serverRecord: parseServerRecord(item),
+      strategy: getConflictStrategy(item.entityType),
+    }));
+}
+
+export async function resolveSyncConflictKeepLocal(
+  outboxId: string,
+  bundle: RepositoryBundle = defaultRepositories,
+): Promise<void> {
+  const item = await bundle.syncOutbox.getById(outboxId);
+  if (!item || item.status !== "conflict") {
+    throw new Error("The selected sync conflict could not be found.");
+  }
+
+  const timestamp = new Date().toISOString();
+  await bundle.syncOutbox.upsert({
+    ...item,
+    id: `sync-outbox:${crypto.randomUUID()}`,
+    status: "pending",
+    attempts: 0,
+    queuedAt: timestamp,
+    updatedAt: timestamp,
+    lastError: undefined,
+    conflictPayload: undefined,
+  });
+  await bundle.syncOutbox.remove(outboxId);
+}
+
+export async function resolveSyncConflictUseServer(
+  outboxId: string,
+  bundle: RepositoryBundle = defaultRepositories,
+): Promise<void> {
+  const item = await bundle.syncOutbox.getById(outboxId);
+  if (!item || item.status !== "conflict") {
+    throw new Error("The selected sync conflict could not be found.");
+  }
+
+  const serverRecord = parseServerRecord(item);
+  if (!serverRecord) {
+    throw new Error("This conflict does not include a usable server record.");
+  }
+
+  await runWithSyncMutationSuppressed(async () => {
+    await applyPulledRecord(bundle, serverRecord);
+  });
+  await bundle.syncOutbox.remove(outboxId);
+}
+

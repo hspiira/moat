@@ -20,6 +20,7 @@ import type {
 } from "@/lib/types";
 import { goalTypeLabels } from "@/components/goals/goal-form";
 import { InputField } from "@/components/forms/input-field";
+import { OnboardingRecoveryPanel } from "@/components/onboarding-recovery-panel";
 import { SelectField } from "@/components/forms/select-field";
 import { optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const HORIZON_PRESETS = [
 ];
 
 type OnboardingStep = "profile" | "account" | "goal";
+type OnboardingMode = "choose" | "fresh" | "restore_file" | "restore_drive";
 
 type OnboardingFormState = {
   displayName: string;
@@ -273,6 +275,7 @@ export function OnboardingWorkspace() {
   });
   const [consentGiven, setConsentGiven] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("profile");
+  const [mode, setMode] = useState<OnboardingMode>("choose");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -295,6 +298,7 @@ export function OnboardingWorkspace() {
           setGoal(normalizeDraftGoal(draft.goal));
           setConsentGiven(Boolean(draft.consentGiven));
           setStep(draft.step ?? "profile");
+          setMode("fresh");
         })
         .catch(() => null)
         .finally(() => setIsChecking(false));
@@ -302,7 +306,7 @@ export function OnboardingWorkspace() {
   }, [router]);
 
   useEffect(() => {
-    if (isChecking) return;
+    if (isChecking || mode !== "fresh") return;
 
     writeDraft({
       profile: {
@@ -316,7 +320,7 @@ export function OnboardingWorkspace() {
       consentGiven,
       step,
     });
-  }, [account, consentGiven, form, goal, isChecking, step]);
+  }, [account, consentGiven, form, goal, isChecking, mode, step]);
 
   const stepIndex = steps.indexOf(step);
   const stepError = useMemo(
@@ -429,6 +433,76 @@ export function OnboardingWorkspace() {
 
   if (isChecking) {
     return null;
+  }
+
+  if (mode === "choose") {
+    return (
+      <div className="mx-auto grid w-full max-w-2xl gap-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Get back into Moat</h1>
+          <p className="text-sm text-muted-foreground">
+            Start fresh on this device or restore an encrypted backup you already control.
+          </p>
+        </div>
+
+        <div className="grid gap-3">
+          <button
+            type="button"
+            onClick={() => setMode("fresh")}
+            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
+          >
+            <div className="text-sm text-foreground">Start fresh</div>
+            <div className="text-sm text-muted-foreground">
+              Create a new local profile, first account, and optional first goal on this device.
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("restore_file")}
+            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
+          >
+            <div className="text-sm text-foreground">Restore encrypted file</div>
+            <div className="text-sm text-muted-foreground">
+              Use a backup file you previously downloaded and restore it with your backup PIN.
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("restore_drive")}
+            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
+          >
+            <div className="text-sm text-foreground">Restore from Google Drive</div>
+            <div className="text-sm text-muted-foreground">
+              Connect Google Drive, choose a Moat backup, and restore it with your backup PIN.
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "restore_file" || mode === "restore_drive") {
+    return (
+      <div className="mx-auto grid w-full max-w-2xl gap-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {mode === "restore_file" ? "Restore your backup file" : "Restore from Google Drive"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Restore first, then continue in the app with the same local-first storage model.
+          </p>
+        </div>
+
+        <OnboardingRecoveryPanel
+          mode={mode === "restore_file" ? "file" : "drive"}
+          onBack={() => setMode("choose")}
+          onRestored={() => {
+            clearDraft();
+            router.replace("/");
+          }}
+        />
+      </div>
+    );
   }
 
   return (

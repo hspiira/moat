@@ -3,6 +3,7 @@ import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
 import type { SyncPullRecord, SyncPushResult, SyncRunSummary } from "@/lib/sync/types";
 
 import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
+import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
 
 function withOutboxUpdate(
@@ -54,7 +55,9 @@ async function applyPulledRecords(params: {
       continue;
     }
 
-    await applyPulledRecord(params.repositories, record);
+    await runWithSyncMutationSuppressed(async () => {
+      await applyPulledRecord(params.repositories, record);
+    });
   }
 }
 

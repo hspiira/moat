@@ -8,6 +8,11 @@ import {
   USER_ID_STATUS_INDEX,
   type StoreName,
 } from "@/lib/repositories/indexeddb/client";
+import {
+  decryptRecordFromStorage,
+  encryptRecordForStorage,
+} from "@/lib/security/record-crypto";
+import { shouldSuppressSyncMutation } from "@/lib/sync/mutation-scope";
 import type {
   BudgetTargetRepository,
   CategoryRepository,
@@ -59,15 +64,17 @@ const unsyncedStoreNames = new Set<StoreName>([
 async function readAll<T>(storeName: StoreName): Promise<T[]> {
   const database = await openFinanceDatabase();
 
-  return new Promise((resolve, reject) => {
+  const records = await new Promise<unknown[]>((resolve, reject) => {
     const transaction = database.transaction(storeName, "readonly");
     const store = transaction.objectStore(storeName);
     const request = store.getAll();
 
-    request.onsuccess = () => resolve(request.result as T[]);
+    request.onsuccess = () => resolve(request.result as unknown[]);
     request.onerror = () =>
       reject(request.error ?? new Error(`Unable to read records from ${storeName}.`));
   });
+
+  return Promise.all(records.map((record) => decryptRecordFromStorage<T>(record))) as Promise<T[]>;
 }
 
 async function readAllByIndex<T>(
@@ -77,25 +84,31 @@ async function readAllByIndex<T>(
 ): Promise<T[]> {
   const database = await openFinanceDatabase();
 
-  return new Promise((resolve, reject) => {
+  const records = await new Promise<unknown[]>((resolve, reject) => {
     const transaction = database.transaction(storeName, "readonly");
     const store = transaction.objectStore(storeName);
     const index = store.index(indexName);
     const request = index.getAll(query);
 
-    request.onsuccess = () => resolve(request.result as T[]);
+    request.onsuccess = () => resolve(request.result as unknown[]);
     request.onerror = () =>
       reject(request.error ?? new Error(`Unable to read indexed records from ${storeName}.`));
   });
+
+  return Promise.all(records.map((record) => decryptRecordFromStorage<T>(record))) as Promise<T[]>;
 }
 
 async function putOne<T>(storeName: StoreName, entity: T): Promise<T> {
   const database = await openFinanceDatabase();
+  const storedEntity = await encryptRecordForStorage(
+    storeName,
+    entity as T & { id: string },
+  );
 
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, "readwrite");
     const store = transaction.objectStore(storeName);
-    const request = store.put(entity);
+    const request = store.put(storedEntity);
 
     request.onsuccess = () => resolve(entity);
     request.onerror = () =>
@@ -106,15 +119,17 @@ async function putOne<T>(storeName: StoreName, entity: T): Promise<T> {
 async function getOne<T>(storeName: StoreName, id: string): Promise<T | null> {
   const database = await openFinanceDatabase();
 
-  return new Promise((resolve, reject) => {
+  const record = await new Promise<unknown>((resolve, reject) => {
     const transaction = database.transaction(storeName, "readonly");
     const store = transaction.objectStore(storeName);
     const request = store.get(id);
 
-    request.onsuccess = () => resolve((request.result as T | undefined) ?? null);
+    request.onsuccess = () => resolve(request.result ?? null);
     request.onerror = () =>
       reject(request.error ?? new Error(`Unable to read record ${id} from ${storeName}.`));
   });
+
+  return decryptRecordFromStorage<T>(record);
 }
 
 async function removeOne(storeName: StoreName, id: string): Promise<void> {
@@ -142,6 +157,10 @@ async function enqueueSyncMutation(params: {
   operation: "upsert" | "remove";
   payload: unknown;
 }) {
+  if (shouldSuppressSyncMutation()) {
+    return;
+  }
+
   if (unsyncedStoreNames.has(params.entityType)) {
     return;
   }
@@ -345,13 +364,16 @@ export function createResourceRepository(): ResourceRepository {
     },
     async replaceAll(resources) {
       const database = await openFinanceDatabase();
+      const storedResources = await Promise.all(
+        resources.map((resource) => encryptRecordForStorage("resources", resource)),
+      );
 
-      return new Promise((resolve, reject) => {
+      return new Promise<ResourceLink[]>((resolve, reject) => {
         const transaction = database.transaction("resources", "readwrite");
         const store = transaction.objectStore("resources");
         store.clear();
 
-        for (const resource of resources) {
+        for (const resource of storedResources) {
           store.put(resource);
         }
 

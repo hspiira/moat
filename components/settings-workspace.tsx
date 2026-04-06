@@ -57,7 +57,7 @@ export function SettingsWorkspace() {
           <h2 className="text-base font-semibold">Backup and restore</h2>
           <p className="text-xs text-muted-foreground">
             Your data is stored locally only. A device reset or browser clear will delete it.
-            Download an encrypted backup regularly.
+            Download an encrypted backup regularly or keep a recovery copy in Google Drive.
           </p>
         </div>
         <BackupPanel />

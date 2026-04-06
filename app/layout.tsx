@@ -3,7 +3,7 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { PinLockProvider } from "@/lib/security/pin-lock-context";
-import { PinLockScreen } from "@/components/pin-lock-screen";
+import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
@@ -56,10 +56,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PinLockProvider>
-            <PinLockScreen />
             <PwaRegister />
             <NativeCaptureBridgeRegister />
-            {children}
+            <PinLockGate>{children}</PinLockGate>
           </PinLockProvider>
         </ThemeProvider>
       </body>

@@ -36,6 +36,7 @@ import type {
 } from "@/lib/types";
 
 import type { SqliteClient } from "@/lib/repositories/sqlite/client";
+import { shouldSuppressSyncMutation } from "@/lib/sync/mutation-scope";
 
 type SyncableRecord = { id: string; userId: string };
 
@@ -66,6 +67,10 @@ async function enqueueSyncMutation(
     payload: unknown;
   },
 ) {
+  if (shouldSuppressSyncMutation()) {
+    return;
+  }
+
   if (unsyncedStoreNames.has(params.entityType)) {
     return;
   }

@@ -1,5 +1,5 @@
 const DATABASE_NAME = "moat-db";
-const DATABASE_VERSION = 7;
+const DATABASE_VERSION = 8;
 
 export const storeNames = {
   meta: "meta",
@@ -151,6 +151,12 @@ function runMigrations(database: IDBDatabase, transaction: IDBTransaction, oldVe
     }
   }
 
+  if (oldVersion < 8) {
+    for (const storeName of Object.values(storeNames)) {
+      ensureStore(database, storeName);
+    }
+  }
+
   addAllKnownIndexes(transaction);
 }
 
@@ -209,7 +215,7 @@ export function getIndexedDbStoreIndexes(storeName: StoreName): string[] {
 }
 
 export function getIndexedDbMigrationVersions(oldVersion: number): number[] {
-  const versions = [1, 4, 5, 6, 7];
+  const versions = [1, 4, 5, 6, 7, 8];
   return versions.filter((version) => oldVersion < version);
 }
 

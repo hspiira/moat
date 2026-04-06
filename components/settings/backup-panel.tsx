@@ -259,6 +259,8 @@ export function BackupPanel() {
     }
   }
 
+  const shouldShowDriveReminder = drivePreferences.wasConnected && !drivePreferences.lastBackupAt;
+
   async function handleDriveDisconnect() {
     await driveClient.signOut();
     setIsDriveConnected(false);
@@ -272,14 +274,19 @@ export function BackupPanel() {
 
   return (
     <Card className="border-border/30 shadow-none">
-      <CardHeader className="pb-3">
+        <CardHeader className="pb-3">
         <CardTitle className="text-base">Encrypted backup</CardTitle>
         <CardDescription>
           Download an AES-GCM encrypted backup of all your data, protected by a PIN you choose.
           Use this to protect against accidental data loss or to move data between devices.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+        <CardContent className="space-y-4">
+        {shouldShowDriveReminder ? (
+          <p className="text-xs text-muted-foreground">
+            Google Drive was connected before, but no recent backup metadata is stored on this device yet. Upload a fresh encrypted backup after reconnecting.
+          </p>
+        ) : null}
         {success ? (
           <p className="text-xs text-muted-foreground">{success}</p>
         ) : null}

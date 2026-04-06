@@ -227,14 +227,14 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[110px]">Date</TableHead>
-                      <TableHead className="w-[140px]">Category</TableHead>
-                      <TableHead className="w-[140px]">Type</TableHead>
-                      <TableHead className="w-[180px]">Payee</TableHead>
+                      <TableHead className="w-27.5">Date</TableHead>
+                      <TableHead className="w-35">Category</TableHead>
+                      <TableHead className="w-35">Type</TableHead>
+                      <TableHead className="w-45">Payee</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="w-[140px] text-right">Debit</TableHead>
-                      <TableHead className="w-[140px] text-right">Credit</TableHead>
-                      <TableHead className="w-[160px] text-right">Running balance</TableHead>
+                      <TableHead className="w-35 text-right">Debit</TableHead>
+                      <TableHead className="w-35 text-right">Credit</TableHead>
+                      <TableHead className="w-40 text-right">Running balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
