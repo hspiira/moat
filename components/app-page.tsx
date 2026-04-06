@@ -92,15 +92,19 @@ export function AppAsideIntro({
   title,
   description,
   children,
+  headerClassName,
+  contentClassName,
 }: {
   badge?: string;
   title: string;
   description: string;
   children: ReactNode;
+  headerClassName?: string;
+  contentClassName?: string;
 }) {
   return (
     <>
-      <CardHeader className="space-y-3">
+      <CardHeader className={cn("space-y-3", headerClassName)}>
         {badge ? (
           <Badge variant="outline" className="w-fit bg-background/70">
             {badge}
@@ -109,7 +113,7 @@ export function AppAsideIntro({
         <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription className="leading-6">{description}</CardDescription>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className={contentClassName}>{children}</CardContent>
     </>
   );
 }

@@ -10,7 +10,7 @@ import type {
 export const navItems: NavItem[] = [
   {
     href: "/",
-    label: "Dashboard",
+    label: "Home",
     description: "Monthly overview and spending summary.",
   },
   {
