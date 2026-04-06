@@ -36,17 +36,19 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
           <AppAsideIntro
             title="Built for how money moves locally"
             description="One clean system for tracking, building buffers, and choosing safer next steps."
+            headerClassName="pb-2"
+            contentClassName="pb-0"
           >
-            <div className="grid gap-5 p-6 pt-0">
-              <div className="grid gap-3 sm:grid-cols-[0.8fr_1fr]">
-                <div className="moat-pie aspect-square w-full border border-border/20" />
-                <div className="grid content-between gap-4">
-                  <div>
+            <div className="grid gap-5">
+              <div className="grid grid-cols-[minmax(0,220px)_1fr] items-start gap-4">
+                <div className="moat-pie aspect-square w-full max-w-[220px]" />
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
                     <div className="text-4xl font-semibold tracking-tight">3</div>
-                    <p className="text-sm text-muted-foreground">track, decide, automate</p>
+                    <p className="text-sm text-muted-foreground">Track, decide, automate</p>
                   </div>
                   <div className="text-sm leading-6 text-muted-foreground">
-                    Emergency fund first, investment guidance second.
+                    Emergency fund first. Investment guidance second.
                   </div>
                 </div>
               </div>
@@ -63,6 +65,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
             </div>
           </AppAsideIntro>
         }
+        asideClassName="gap-0 bg-transparent py-0 ring-0"
       />
 
       <section className="grid gap-4">

@@ -402,28 +402,28 @@ This phase has no optional items. Until it is complete, the product should not b
 
 ### 0.1 Legal Compliance
 
-- Draft and publish a privacy policy written to DPPA 2019 standards: what is collected, why, retention period, user rights, contact for requests
-- Add a consent notice to the onboarding flow that requires explicit acceptance before any data is stored
-- Register with the Personal Data Protection Office (PDPO) under NITA-U
-- Add a data subject rights flow: export all my data, delete my account and all records
-- Document a data retention policy (how long transaction records are kept, what is deleted on account closure)
+- ✅ Draft and publish a privacy policy written to DPPA 2019 standards — `app/privacy/page.tsx` covers data collected, retention, user rights, and contact
+- ✅ Add a consent notice to the onboarding flow that requires explicit acceptance before any data is stored — checkbox with privacy policy link added to `components/onboarding-workspace.tsx`; submit button disabled until checked
+- ⏳ Register with the Personal Data Protection Office (PDPO) under NITA-U — administrative step, not a code task
+- ✅ Add a data subject rights flow: export all my data, delete my account and all records — `app/settings/page.tsx` with Data Export panel (JSON download) and Delete Account panel (requires typing "delete everything" to confirm)
+- ✅ Document a data retention policy (how long transaction records are kept, what is deleted on account closure) — covered in privacy policy Section 6
 
 **Why**: Operating without PDPO registration while collecting personal financial data is a criminal offence under DPPA Section 29. This is not a best-practice item — it is a legal requirement.
 
 ### 0.2 Data Security
 
-- Implement an app-level PIN lock using a key derived via PBKDF2 from the Web Crypto API
-- Encrypt all IndexedDB records at rest using the derived key
-- Add session timeout with auto-lock after configurable inactivity period
-- Clear derived key from memory on explicit logout
+- ✅ Implement an app-level PIN lock using a key derived via PBKDF2 from the Web Crypto API — `lib/security/pin-crypto.ts` (PBKDF2 310k iterations / SHA-256 / AES-GCM 256-bit), `lib/security/pin-lock-context.tsx` (PinLockProvider), `components/pin-lock-screen.tsx` (full-screen lock overlay); wired into `app/layout.tsx`
+- ✅ Session timeout with auto-lock after 5 minutes of inactivity — implemented in PinLockProvider with activity listener reset
+- ✅ Derived key cleared from memory on explicit logout — key never persisted; only the PBKDF2-encrypted sentinel lives in localStorage to verify the PIN
+- ⏳ Encrypt individual IndexedDB records at rest using the derived key — not yet done; requires wrapping repository writes with AES-GCM encryption per record. Deferred to a future security hardening pass.
 
 **Why**: IndexedDB is unencrypted. On shared devices — common in Uganda — any browser session can read another user's financial data without any barrier.
 
 ### 0.3 Backup and Data Portability
 
-- Add full JSON export of all user data (satisfies DPPA portability right)
-- Add encrypted backup file download: JSON export encrypted with user PIN, downloadable to any storage the user controls
-- Add encrypted backup restore flow: user uploads backup file, enters PIN, data is restored to IndexedDB
+- ✅ Full JSON export of all user data (satisfies DPPA portability right) — `lib/security/data-export.ts` `collectFullExport()` + `downloadJson()`, surfaced in Settings → Export your data
+- ✅ Encrypted backup file download — JSON export encrypted with AES-GCM using user-chosen PIN (separate from app PIN), downloadable as `.enc` file; `components/settings/backup-panel.tsx`
+- ✅ Encrypted backup restore flow — user uploads `.enc` file, enters backup PIN, data is decrypted and written back to all IndexedDB stores; same panel
 
 **Why**: Local-only storage with no backup means a device reset or storage clear destroys all financial history. No user will trust a financial app that can silently lose their data.
 

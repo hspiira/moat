@@ -95,7 +95,7 @@ export function TransactionRulesPanel({
               onChange={(event) =>
                 setForm((current) => ({ ...current, name: event.target.value }))
               }
-              placeholder="MTN salary alert"
+              placeholder="Incoming payment alert"
             />
           </div>
           <div className="grid gap-2">
@@ -141,7 +141,7 @@ export function TransactionRulesPanel({
               onChange={(event) =>
                 setForm((current) => ({ ...current, payeePattern: event.target.value }))
               }
-              placeholder="salary"
+              placeholder="employer"
             />
           </div>
           <div className="grid gap-2">
@@ -151,7 +151,7 @@ export function TransactionRulesPanel({
               onChange={(event) =>
                 setForm((current) => ({ ...current, keywordPattern: event.target.value }))
               }
-              placeholder="allowance"
+              placeholder="payment"
             />
           </div>
           <div className="grid gap-2">
@@ -161,7 +161,7 @@ export function TransactionRulesPanel({
               onChange={(event) =>
                 setForm((current) => ({ ...current, amountPattern: event.target.value }))
               }
-              placeholder="1763170"
+              placeholder="100000"
             />
           </div>
           <div className="grid gap-2">
@@ -171,7 +171,7 @@ export function TransactionRulesPanel({
               onChange={(event) =>
                 setForm((current) => ({ ...current, effectPayee: event.target.value }))
               }
-              placeholder="Minet Uganda"
+              placeholder="Employer Ltd"
             />
           </div>
           <div className="grid gap-2">

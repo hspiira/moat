@@ -13,6 +13,15 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#111111",
     theme_color: "#111111",
     categories: ["finance", "productivity", "utilities"],
+    share_target: {
+      action: "/transactions",
+      method: "GET",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+      },
+    },
     icons: [
       {
         src: "/icons/logo.svg",

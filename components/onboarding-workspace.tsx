@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
@@ -55,6 +56,7 @@ function buildTimestamp() {
 export function OnboardingWorkspace() {
   const router = useRouter();
   const [form, setForm] = useState<OnboardingFormState>(defaultForm);
+  const [consentGiven, setConsentGiven] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +188,29 @@ export function OnboardingWorkspace() {
               required
             />
 
-            <Button disabled={isSubmitting} type="submit" className="w-full">
+            <div className="flex items-start gap-3 rounded-md border border-border/40 bg-muted/20 px-4 py-3">
+              <input
+                id="consent"
+                type="checkbox"
+                checked={consentGiven}
+                onChange={(e) => setConsentGiven(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                required
+              />
+              <label htmlFor="consent" className="cursor-pointer text-xs leading-relaxed text-muted-foreground">
+                I understand that all my financial data is stored locally on this device only. I
+                have read the{" "}
+                <Link
+                  href="/privacy"
+                  className="inline underline underline-offset-4 hover:text-foreground"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                and consent to the collection of personal financial data I enter into this app.
+              </label>
+            </div>
+
+            <Button disabled={isSubmitting || !consentGiven} type="submit" className="w-full">
               {isSubmitting ? "Setting up..." : "Start tracking"}
             </Button>
           </form>

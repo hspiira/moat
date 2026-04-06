@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { normalizeAmountToUgx } from "@/lib/currency";
+import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import {
   getRememberedFxDefault,
   normalizePayeeKey,
@@ -40,6 +41,7 @@ import {
   defaultTransactionForm,
   type TransactionFormState,
 } from "./transaction-form";
+import type { CaptureIntent } from "./capture-intent-panel";
 
 const repositories = createIndexedDbRepositories();
 
@@ -110,6 +112,8 @@ export function useTransactionsWorkspace() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [rememberedFxHint, setRememberedFxHint] = useState<string | null>(null);
+  const [captureIntent, setCaptureIntent] = useState<CaptureIntent>(null);
+  const [sharedCaptureInput, setSharedCaptureInput] = useState("");
   const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
   const suggestedRecurringObligations = useMemo(
     () =>
@@ -226,12 +230,30 @@ export function useTransactionsWorkspace() {
   }, [loadWorkspace]);
 
   useEffect(() => {
+    const capture = searchParams.get("capture");
     const type = searchParams.get("type");
     const accountId = searchParams.get("accountId");
     const amount = searchParams.get("amount");
     const payee = searchParams.get("payee");
+    const sharedTitle = searchParams.get("title");
+    const sharedText = searchParams.get("text");
+    const sharedUrl = searchParams.get("url");
+    const nextSharedInput = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n");
+    const nextCaptureIntent: CaptureIntent =
+      capture === "expense" ||
+      capture === "income" ||
+      capture === "transfer" ||
+      capture === "import" ||
+      capture === "text"
+        ? capture
+        : nextSharedInput
+          ? "text"
+          : null;
 
-    if (!type && !accountId && !amount && !payee) return;
+    setCaptureIntent(nextCaptureIntent);
+    setSharedCaptureInput(nextSharedInput);
+
+    if (!capture && !type && !accountId && !amount && !payee && !nextSharedInput) return;
 
     setTransactionForm((current) => ({
       ...current,
@@ -542,6 +564,76 @@ export function useTransactionsWorkspace() {
     ],
   );
 
+  const saveCapturedTransactions = useCallback(
+    async (candidates: ParsedCaptureCandidate[]) => {
+      if (!profile || candidates.length === 0) return;
+
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        const timestamp = new Date().toISOString();
+        const rules = await repositories.transactionRules.listByUser(profile.id);
+
+        await Promise.all(
+          candidates.map(async (candidate) => {
+            const normalizedAmount = normalizeAmountToUgx(
+              candidate.originalAmount,
+              candidate.currency,
+              candidate.fxRateToUgx,
+            );
+
+            if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+              throw new Error("One or more captured rows has an invalid amount or FX rate.");
+            }
+
+            const baseTransaction: Transaction = {
+              id: `transaction:${crypto.randomUUID()}`,
+              userId: profile.id,
+              accountId: candidate.accountId,
+              type: candidate.type,
+              amount: Math.abs(normalizedAmount),
+              currency: candidate.currency,
+              originalAmount: Math.abs(candidate.originalAmount),
+              fxRateToUgx: candidate.currency === "UGX" ? undefined : candidate.fxRateToUgx,
+              occurredOn: candidate.occurredOn,
+              categoryId: candidate.categoryId,
+              payee: candidate.payee.trim() || undefined,
+              rawPayee: candidate.payee.trim() || undefined,
+              note: candidate.note.trim() || undefined,
+              reconciliationState: "reviewed",
+              source: candidate.source,
+              messageHash: candidate.messageHash,
+              reviewedAt: timestamp,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            };
+
+            const proposed =
+              applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
+
+            await repositories.transactions.upsert(proposed);
+          }),
+        );
+
+        await refreshAccounts(profile.id);
+        await refreshMonthCloseState(profile.id);
+        const message = "Captured transactions saved locally";
+        setLastSavedAt(timestamp);
+        setSuccessMessage(message);
+        announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
+        await loadWorkspace();
+      } catch (captureError) {
+        setError(
+          captureError instanceof Error ? captureError.message : "Unable to save captured transactions.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [loadWorkspace, profile, refreshAccounts, refreshMonthCloseState],
+  );
+
   const saveRule = useCallback(
     async (rule: Omit<TransactionRule, "id" | "userId" | "createdAt" | "updatedAt">) => {
       if (!profile) return;
@@ -768,6 +860,8 @@ export function useTransactionsWorkspace() {
     lastSavedAt,
     successMessage,
     rememberedFxHint,
+    captureIntent,
+    sharedCaptureInput,
     setError,
     setTransactionForm,
     setBudgetForm,
@@ -776,6 +870,7 @@ export function useTransactionsWorkspace() {
     handleTransactionSubmit,
     beginTransactionEdit,
     handleDeleteTransaction,
+    saveCapturedTransactions,
     saveRule,
     toggleRule,
     saveObligation,

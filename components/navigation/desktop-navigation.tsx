@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { navItems } from "@/lib/data";
 
+import { IconSettings } from "@tabler/icons-react";
+
 import { AppBrand, isActiveRoute, navIcons, ThemeToggle } from "./navigation-shared";
 
 export function DesktopNavigation({
@@ -63,7 +65,22 @@ export function DesktopNavigation({
           </div>
         </nav>
 
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className={[
+              "h-10 w-10 border-border/30",
+              isActiveRoute(pathname, "/settings")
+                ? "text-foreground"
+                : "text-muted-foreground/80 hover:text-foreground",
+            ].join(" ")}
+          >
+            <Link href="/settings" aria-label="Settings">
+              <IconSettings className="h-4 w-4" />
+            </Link>
+          </Button>
           <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
         </div>
       </div>

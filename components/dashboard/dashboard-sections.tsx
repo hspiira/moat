@@ -272,3 +272,25 @@ export function DashboardContinueLinks({
     </section>
   );
 }
+
+export function DashboardQuickActions({
+  actions,
+}: {
+  actions: { href: string; title: string }[];
+}) {
+  return (
+    <section className="grid gap-3 lg:hidden">
+      <div className="space-y-0.5">
+        <h2 className="text-sm font-medium text-foreground">Quick actions</h2>
+        <p className="text-xs text-muted-foreground">Jump straight into the next task.</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {actions.map((action) => (
+          <Button key={action.href} asChild variant="outline" className="h-10 justify-center px-3 text-xs">
+            <Link href={action.href}>{action.title}</Link>
+          </Button>
+        ))}
+      </div>
+    </section>
+  );
+}
