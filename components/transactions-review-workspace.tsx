@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
 import { MonthClosePanel } from "./transactions/month-close-panel";
+import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
 import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
@@ -18,11 +22,19 @@ export function TransactionsReviewWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
+      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
-      <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CaptureReviewSectionLinks current="month-close" />
+          <Button asChild size="sm" variant="outline">
+            <Link href="/transactions/review/capture">Open capture inbox</Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <MonthClosePanel
           period={workspace.closePeriod}
           monthClose={workspace.monthClose}
@@ -46,6 +58,7 @@ export function TransactionsReviewWorkspace() {
           onSaveObligation={(obligation) => void workspace.saveObligation(obligation)}
           onToggleObligation={(obligation) => void workspace.toggleObligation(obligation)}
         />
+        </div>
       </div>
     </TransactionsWorkspaceFrame>
   );

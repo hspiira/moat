@@ -2,6 +2,7 @@
 
 import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
 
+import { CorrectionLogPanel } from "./transactions/correction-log-panel";
 import { TransactionRulesPanel } from "./transactions/transaction-rules-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
@@ -19,7 +20,7 @@ export function TransactionsToolsWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
+      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
@@ -46,6 +47,8 @@ export function TransactionsToolsWorkspace() {
           onDelete={(budgetId) => void workspace.deleteBudget(budgetId)}
           onCancelEdit={workspace.cancelBudgetEdit}
         />
+
+        <CorrectionLogPanel profile={workspace.profile} />
       </div>
     </TransactionsWorkspaceFrame>
   );

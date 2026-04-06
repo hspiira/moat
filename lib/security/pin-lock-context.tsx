@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { deriveSessionKey, encryptWithPin, verifyPin, type EncryptedPayload } from "./pin-crypto";
+import { encryptWithPin, verifyPin, type EncryptedPayload } from "./pin-crypto";
 
 const PIN_HASH_KEY = "moat:pin_hash";
 const PIN_SALT_KEY = "moat:pin_salt";
@@ -51,25 +51,23 @@ export function usePinLock(): PinLockContextValue {
 }
 
 export function PinLockProvider({ children }: { children: React.ReactNode }) {
-  const [lockState, setLockState] = useState<PinLockState>({ status: "no_pin" });
+  const [lockState, setLockState] = useState<PinLockState>(() => {
+    if (typeof window === "undefined") {
+      return { status: "no_pin" };
+    }
+
+    return localStorage.getItem(PIN_HASH_KEY) ? { status: "locked" } : { status: "no_pin" };
+  });
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load initial state from localStorage
-  useEffect(() => {
-    const record = localStorage.getItem(PIN_HASH_KEY);
-    if (record) {
-      setLockState({ status: "locked" });
-    }
-  }, []);
-
-  function resetInactivityTimer() {
+  const resetInactivityTimer = useCallback((): void => {
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
     }
     inactivityTimer.current = setTimeout(() => {
       setLockState((s) => (s.status === "unlocked" ? { status: "locked" } : s));
     }, INACTIVITY_TIMEOUT_MS);
-  }
+  }, []);
 
   // Track user activity to reset inactivity timer
   useEffect(() => {
@@ -96,8 +94,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener(event, handleActivity);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockState.status]);
+  }, [lockState.status, resetInactivityTimer]);
 
   const setPin = useCallback(async (pin: string): Promise<boolean> => {
     if (pin.length < 4) {
@@ -117,7 +114,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     setLockState({ status: "unlocked" });
     resetInactivityTimer();
     return true;
-  }, []);
+  }, [resetInactivityTimer]);
 
   const unlock = useCallback(async (pin: string): Promise<boolean> => {
     const raw = localStorage.getItem(PIN_HASH_KEY);
@@ -134,7 +131,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     }
 
     return valid;
-  }, []);
+  }, [resetInactivityTimer]);
 
   const lock = useCallback(() => {
     setLockState((s) => (s.status === "no_pin" ? s : { status: "locked" }));

@@ -6,6 +6,7 @@ import { PinLockProvider } from "@/lib/security/pin-lock-context";
 import { PinLockScreen } from "@/components/pin-lock-screen";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -57,6 +58,7 @@ export default function RootLayout({
           <PinLockProvider>
             <PinLockScreen />
             <PwaRegister />
+            <NativeCaptureBridgeRegister />
             {children}
           </PinLockProvider>
         </ThemeProvider>

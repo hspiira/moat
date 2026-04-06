@@ -1,0 +1,14 @@
+{
+  "appId": "ug.co.moat.app",
+  "appName": "Moat",
+  "webDir": ".next",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

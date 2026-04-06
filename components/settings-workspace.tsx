@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { BackupPanel } from "./settings/backup-panel";
+import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PinLockPanel } from "./settings/pin-lock-panel";
@@ -26,6 +27,17 @@ export function SettingsWorkspace() {
           </p>
         </div>
         <PinLockPanel />
+      </section>
+
+      <section className="grid gap-4">
+        <div className="space-y-0.5">
+          <h2 className="text-base font-semibold">Capture automation</h2>
+          <p className="text-xs text-muted-foreground">
+            Control native capture channels and allowlisted sources before machine-derived records
+            are sent into review.
+          </p>
+        </div>
+        <CaptureAutomationPanel />
       </section>
 
       <section className="grid gap-4">

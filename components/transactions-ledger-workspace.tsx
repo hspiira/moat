@@ -22,16 +22,16 @@ export function TransactionsLedgerWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
+      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-5">
-        {(workspace.reviewCount > 0 || workspace.duplicateCount > 0) && (
+        {(workspace.reviewCount > 0 || workspace.captureReviewCount > 0 || workspace.duplicateCount > 0) && (
           <Card className="border-border/20 bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="text-sm text-muted-foreground">
-                {workspace.reviewCount} item(s) need review and {workspace.duplicateCount} duplicate group(s) are flagged.
+                {workspace.reviewCount} transaction item(s), {workspace.captureReviewCount} captured item(s), and {workspace.duplicateCount} duplicate group(s) need attention.
               </div>
               <Button asChild size="sm" variant="outline">
                 <Link href="/transactions/review">Open review</Link>
