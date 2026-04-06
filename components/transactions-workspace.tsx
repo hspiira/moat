@@ -1,7 +1,13 @@
 "use client";
 
 import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
-import { Card, CardContent } from "@/components/ui/card";
+import { MetricChip } from "@/components/page-shell/metric-chip";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+  SetupRequiredCard,
+} from "@/components/page-shell/page-state";
 
 import { TransactionForm } from "./transactions/transaction-form";
 import { CsvImportPanel } from "./transactions/csv-import-panel";
@@ -55,46 +61,28 @@ export function TransactionsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-          <p className="text-sm text-muted-foreground">
-            Record income, expenses, transfers, and savings in one clean stream.
-          </p>
-        </div>
-        {transactions.length > 0 ? (
-          <div className="moat-panel-yellow border border-border/20 px-4 py-3 text-right text-sm text-muted-foreground">
-            <div className="text-2xl font-semibold tracking-tight text-foreground">
-              {transactions.length}
-            </div>
-            <div className="text-xs">recorded</div>
-          </div>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Transactions"
+        description="Record income, expenses, transfers, and savings in one clean stream."
+        aside={
+          transactions.length > 0 ? (
+            <MetricChip
+              value={<span className="text-2xl font-semibold tracking-tight">{transactions.length}</span>}
+              label="Recorded"
+              className="moat-panel-yellow border-border/20"
+            />
+          ) : null
+        }
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading transactions...
-          </CardContent>
-        </Card>
-      ) : null}
-
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading transactions..." /> : null}
       {!isLoading && !profile ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Complete onboarding and add at least one account before recording transactions.{" "}
-            <a href="/onboarding" className="underline underline-offset-4 hover:text-foreground">
-              Get started
-            </a>
-          </CardContent>
-        </Card>
+        <SetupRequiredCard
+          message="Complete onboarding and add at least one account before recording transactions."
+          href="/onboarding"
+          cta="Get started"
+        />
       ) : null}
 
       {!isLoading && profile ? (

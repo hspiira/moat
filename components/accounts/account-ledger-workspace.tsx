@@ -4,6 +4,13 @@ import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
+import { MetricChip } from "@/components/page-shell/metric-chip";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+  SetupRequiredCard,
+} from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -143,52 +150,32 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
   return (
     <div className="grid gap-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            Account ledger
+      <PageHeader
+        title={account?.name ?? "Account"}
+        description="Trace the current balance from opening balance and recorded movements."
+        aside={
+          <div className="flex items-center gap-2">
+            {account ? (
+              <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
+            ) : null}
+            <Button asChild size="sm" variant="outline">
+              <Link href="/accounts">Back to accounts</Link>
+            </Button>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {account?.name ?? "Account"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Trace the current balance from opening balance and recorded movements.
-          </p>
-        </div>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/accounts">Back to accounts</Link>
-        </Button>
-      </div>
+        }
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading ledger...
-          </CardContent>
-        </Card>
-      ) : null}
-
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading ledger..." /> : null}
       {!isLoading && !profile ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Complete onboarding first to view account ledgers.
-          </CardContent>
-        </Card>
+        <SetupRequiredCard
+          message="Complete onboarding first to view account ledgers."
+          href="/onboarding"
+          cta="Set up your profile"
+        />
       ) : null}
 
-      {!isLoading && profile && !account ? (
-        <Card className="border-border/20 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Account not found.
-          </CardContent>
-        </Card>
-      ) : null}
+      {!isLoading && profile && !account ? <LoadingStateCard message="Account not found." /> : null}
 
       {!isLoading && profile && account ? (
         <>

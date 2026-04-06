@@ -1,6 +1,9 @@
 "use client";
-
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+} from "@/components/page-shell/page-state";
 
 import {
   InvestmentEmptyState,
@@ -30,26 +33,13 @@ export function InvestmentCompassWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Investment Compass</h1>
-        <p className="text-sm text-muted-foreground">
-          Rule-based guidance for Uganda. No stock picks, no guaranteed returns.
-        </p>
-      </div>
+      <PageHeader
+        title="Investment Compass"
+        description="Rule-based guidance for Uganda. No stock picks, no guaranteed returns."
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading guidance...
-          </CardContent>
-        </Card>
-      ) : null}
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading guidance..." /> : null}
 
       {!isLoading && !profile ? <InvestmentEmptyState /> : null}
 

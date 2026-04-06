@@ -4,9 +4,15 @@ import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { formatMoney } from "@/lib/currency";
 import { AmountIndicator } from "@/components/amount-indicator";
 import { getAccountTotals } from "@/lib/domain/accounts";
+import { MetricChip } from "@/components/page-shell/metric-chip";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+  SetupRequiredCard,
+} from "@/components/page-shell/page-state";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -43,36 +49,24 @@ export function AccountsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage the accounts where you hold and move money.
-        </p>
-      </div>
+      <PageHeader
+        title="Accounts"
+        description="Manage the accounts where you hold and move money."
+        aside={
+          accounts.length > 0 ? (
+            <MetricChip value={accountTotals.activeAccounts} label="Active accounts" />
+          ) : null
+        }
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading accounts...
-          </CardContent>
-        </Card>
-      ) : null}
-
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading accounts..." /> : null}
       {!isLoading && !profile ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Complete onboarding to start adding accounts.{" "}
-            <a href="/onboarding" className="underline underline-offset-4 hover:text-foreground">
-              Set up your profile
-            </a>
-          </CardContent>
-        </Card>
+        <SetupRequiredCard
+          message="Complete onboarding to start adding accounts."
+          href="/onboarding"
+          cta="Set up your profile"
+        />
       ) : null}
 
       {!isLoading && profile ? (

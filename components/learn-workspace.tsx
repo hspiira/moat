@@ -1,12 +1,16 @@
 "use client";
-
-import Link from "next/link";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { AccentCardHeader, type AccentTone } from "@/components/accent-card-header";
+import { MetricChip } from "@/components/page-shell/metric-chip";
+import { PageHeader } from "@/components/page-shell/page-header";
+import {
+  ErrorStateCard,
+  LoadingStateCard,
+  SetupRequiredCard,
+} from "@/components/page-shell/page-state";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type { ResourceLink, UserProfile } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -81,47 +85,27 @@ export function LearnWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Learn Uganda</h1>
-          <p className="text-sm text-muted-foreground">
-            Official and research-grade sources behind this app&apos;s Uganda-first assumptions.
-          </p>
-        </div>
-        <div className="moat-panel-yellow border border-border/20 px-4 py-3 text-right text-sm text-muted-foreground">
-          <div className="text-2xl font-semibold tracking-tight text-foreground">
-            {resources.length}
-          </div>
-          <div className="text-xs">sources</div>
-        </div>
-      </div>
+      <PageHeader
+        title="Learn Uganda"
+        description="Official and research-grade sources behind this app&apos;s Uganda-first assumptions."
+        aside={
+          <MetricChip
+            value={<span className="text-2xl font-semibold tracking-tight">{resources.length}</span>}
+            label="Sources"
+            className="moat-panel-yellow border-border/20"
+          />
+        }
+      />
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
-
-      {isLoading ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading resources...
-          </CardContent>
-        </Card>
-      ) : null}
+      {error ? <ErrorStateCard message={error} /> : null}
+      {isLoading ? <LoadingStateCard message="Loading resources..." /> : null}
 
       {!isLoading && !profile ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="grid gap-4 px-5 py-6 text-sm text-muted-foreground">
-            <p>
-              These resources are available to everyone. Set up your profile to unlock
-              personalised guidance and tracking.
-            </p>
-            <Button asChild size="sm">
-              <Link href="/onboarding">Get started</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <SetupRequiredCard
+          message="These resources are available to everyone. Set up your profile to unlock personalised guidance and tracking."
+          href="/onboarding"
+          cta="Get started"
+        />
       ) : null}
 
       {!isLoading ? (
