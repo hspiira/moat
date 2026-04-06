@@ -277,51 +277,6 @@ export function useTransactionsWorkspace() {
     });
   }, [loadWorkspace]);
 
-  const ingestNativeCapturePayload = useCallback(
-    async (payload: NativeCapturePayload) => {
-      if (!profile) return;
-
-      if (payload.channel === "notification") {
-        const settings = loadCaptureAutomationSettings();
-        const packageAllowed =
-          payload.sourceApp && settings.allowedNotificationPackages.includes(payload.sourceApp);
-        if (!settings.notificationCaptureEnabled || !packageAllowed) {
-          return;
-        }
-      }
-
-      setIsSubmitting(true);
-      setError(null);
-
-      try {
-        const envelope = createEnvelopeFromNativePayload({
-          userId: profile.id,
-          payload,
-        });
-
-        await persistCaptureEnvelopes({
-          envelopes: [envelope],
-          sourceOverride: payload.channel === "notification" ? "notification" : "sms",
-        });
-      } catch (nativeCaptureError) {
-        setError(
-          nativeCaptureError instanceof Error
-            ? nativeCaptureError.message
-            : "Unable to ingest native capture payload.",
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [persistCaptureEnvelopes, profile],
-  );
-
-  useEffect(() => {
-    return subscribeToNativeCapture((payload) => {
-      void ingestNativeCapturePayload(payload);
-    });
-  }, [ingestNativeCapturePayload]);
-
   useEffect(() => {
     const capture = searchParams.get("capture");
     const type = searchParams.get("type");
@@ -526,6 +481,51 @@ export function useTransactionsWorkspace() {
       transactions,
     ],
   );
+
+  const ingestNativeCapturePayload = useCallback(
+    async (payload: NativeCapturePayload) => {
+      if (!profile) return;
+
+      if (payload.channel === "notification") {
+        const settings = loadCaptureAutomationSettings();
+        const packageAllowed =
+          payload.sourceApp && settings.allowedNotificationPackages.includes(payload.sourceApp);
+        if (!settings.notificationCaptureEnabled || !packageAllowed) {
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        const envelope = createEnvelopeFromNativePayload({
+          userId: profile.id,
+          payload,
+        });
+
+        await persistCaptureEnvelopes({
+          envelopes: [envelope],
+          sourceOverride: payload.channel === "notification" ? "notification" : "sms",
+        });
+      } catch (nativeCaptureError) {
+        setError(
+          nativeCaptureError instanceof Error
+            ? nativeCaptureError.message
+            : "Unable to ingest native capture payload.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [persistCaptureEnvelopes, profile],
+  );
+
+  useEffect(() => {
+    return subscribeToNativeCapture((payload) => {
+      void ingestNativeCapturePayload(payload);
+    });
+  }, [ingestNativeCapturePayload]);
 
   const handleTransactionSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {

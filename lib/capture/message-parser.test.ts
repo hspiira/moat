@@ -46,7 +46,7 @@ describe("parseCaptureText", () => {
     });
 
     expect(rows[0]?.currency).toBe("USD");
-    expect(rows[0]?.issues).toContain("Missing FX rate");
+    expect(rows[0]?.fieldWarnings.some((warning) => warning.field === "currency")).toBe(true);
   });
 
   it("detects likely duplicates by message hash or equivalent transaction data", () => {

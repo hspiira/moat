@@ -10,22 +10,24 @@ import { Label } from "@/components/ui/label";
 
 export function PinLockScreen() {
   const { lockState, unlock } = usePinLock();
+
+  if (lockState.status !== "locked") {
+    return null;
+  }
+
+  return <LockedPinScreen unlock={unlock} />;
+}
+
+function LockedPinScreen({ unlock }: { unlock: (pin: string) => Promise<boolean> }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (lockState.status === "locked") {
-      setPin("");
-      setError(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [lockState.status]);
-
-  if (lockState.status !== "locked") {
-    return null;
-  }
+    const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

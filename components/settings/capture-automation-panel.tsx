@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   defaultCaptureAutomationSettings,
@@ -41,11 +41,12 @@ function NotificationSourceRow({
 }
 
 export function CaptureAutomationPanel() {
-  const [settings, setSettings] = useState<CaptureAutomationSettings>(defaultCaptureAutomationSettings);
-
-  useEffect(() => {
-    setSettings(loadCaptureAutomationSettings());
-  }, []);
+  const [settings, setSettings] = useState<CaptureAutomationSettings>(() => {
+    if (typeof window === "undefined") {
+      return defaultCaptureAutomationSettings;
+    }
+    return loadCaptureAutomationSettings();
+  });
 
   function updateSettings(next: CaptureAutomationSettings) {
     setSettings(next);
