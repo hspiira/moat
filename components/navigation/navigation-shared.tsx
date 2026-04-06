@@ -7,6 +7,7 @@ import {
   IconCompass,
   IconFileImport,
   IconHome2,
+  IconLock,
   IconMenu2,
   IconMessage2,
   IconMoon,
@@ -43,10 +44,39 @@ export const navIcons: Record<string, Icon> = {
   "/goals": IconTargetArrow,
   "/investment-compass": IconCompass,
   "/learn": IconSchool,
+  "/settings": IconSettings,
+  "/privacy": IconLock,
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
+const mobileContextNav = [
+  {
+    href: "/goals",
+    label: "Goals",
+    description: "Emergency fund and savings goal tracking.",
+  },
+  {
+    href: "/investment-compass",
+    label: "Compass",
+    description: "Rule-based guidance for Uganda investing decisions.",
+  },
+  {
+    href: "/learn",
+    label: "Learn",
+    description: "Official Uganda finance sources and explainers.",
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    description: "PIN lock, backup, data export, privacy.",
+  },
+  {
+    href: "/privacy",
+    label: "Privacy",
+    description: "How Moat stores and protects your financial records.",
+  },
+] as const;
 export const mobileCaptureActions = [
   {
     href: "/transactions/capture?capture=expense&type=expense",
@@ -116,8 +146,20 @@ export function getMobileTopBarTitle(pathname: string) {
     return "Account ledger";
   }
 
+  if (pathname === "/settings") {
+    return "Settings";
+  }
+
+  if (pathname === "/privacy") {
+    return "Privacy";
+  }
+
   const matchedItem = navItems.find((item) => isActiveRoute(pathname, item.href));
   return matchedItem?.label ?? "Moat";
+}
+
+export function getMobileContextNavItem(pathname: string) {
+  return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
 }
 
 export function AppBrand() {
@@ -163,16 +205,65 @@ export function ThemeToggle({
 export function QuickActionLinks() {
   return (
     <div className="grid gap-2">
-      <Button asChild variant="outline" className="justify-start">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
         <Link href="/transactions/capture">Capture transactions</Link>
       </Button>
-      <Button asChild variant="outline" className="justify-start">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
         <Link href="/transactions/import">Import statements</Link>
       </Button>
-      <Button asChild variant="outline" className="justify-start">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
         <Link href="/transactions/review">Review month close</Link>
       </Button>
     </div>
+  );
+}
+
+function DrawerSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="grid gap-3">
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        {title}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function DrawerNavRow({
+  href,
+  label,
+  description,
+  icon: IconComponent,
+  active,
+}: {
+  href: string;
+  label: string;
+  description: string;
+  icon: Icon;
+  active?: boolean;
+}) {
+  return (
+    <Button
+      asChild
+      variant={active ? "secondary" : "ghost"}
+      className="h-auto justify-start px-0 py-0 shadow-none"
+    >
+      <Link href={href} className="grid w-full gap-1 border-b border-border/15 py-3 text-left">
+        <span className="flex items-start gap-3">
+          <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="text-left">
+            <span className="block text-sm font-medium text-foreground">{label}</span>
+            <span className="block text-xs text-muted-foreground">{description}</span>
+          </span>
+        </span>
+      </Link>
+    </Button>
   );
 }
 
@@ -191,7 +282,7 @@ export function MobileCaptureSheet() {
       </SheetTrigger>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="px-6">
           <SheetTitle>Capture</SheetTitle>
@@ -199,7 +290,7 @@ export function MobileCaptureSheet() {
             Start with the fastest capture path, then send machine-derived items into review before posting.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-2 px-6">
+        <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
           {mobileCaptureActions.map((action) => {
             const IconComponent =
               action.label === "Import"
@@ -245,83 +336,53 @@ export function MobileUtilitySheet({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6">
+        <SheetHeader className="px-6 pb-3">
           <SheetTitle>Navigation and actions</SheetTitle>
           <SheetDescription>
             Move between routes, manage quick actions, and switch theme.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-6 px-6">
-          <Card className="border-border/30 shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <QuickActionLinks />
-            </CardContent>
-          </Card>
-          <Card className="border-border/30 shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">More places</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2">
+        <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-6 pb-2">
+          <DrawerSection title="Quick actions">
+            <QuickActionLinks />
+          </DrawerSection>
+
+          <DrawerSection title="More places">
+            <div className="grid">
               {mobileSecondaryNav.map((href) => {
                 const item = navItems.find((entry) => entry.href === href);
                 if (!item) return null;
                 const IconComponent = navIcons[item.href];
-                const isActive = isActiveRoute(pathname, item.href);
 
                 return (
-                  <Button
+                  <DrawerNavRow
                     key={item.href}
-                    asChild
-                    variant={isActive ? "secondary" : "ghost"}
-                    className="h-auto justify-start px-3 py-3"
-                  >
-                    <Link href={item.href}>
-                      <span className="flex items-start gap-3">
-                        <IconComponent className="mt-0.5 h-4 w-4" />
-                        <span className="text-left">
-                          <span className="block text-sm font-medium">{item.label}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            {item.description}
-                          </span>
-                        </span>
-                      </span>
-                    </Link>
-                  </Button>
+                    href={item.href}
+                    label={item.label}
+                    description={item.description}
+                    icon={IconComponent}
+                    active={isActiveRoute(pathname, item.href)}
+                  />
                 );
               })}
-            </CardContent>
-          </Card>
-          <Card className="border-border/30 shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Theme &amp; settings</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">
-                  Switch between light and dark mode.
-                </div>
-                <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
-              </div>
-              <Button asChild variant="ghost" className="h-auto justify-start px-3 py-3">
-                <Link href="/settings">
-                  <span className="flex items-start gap-3">
-                    <IconSettings className="mt-0.5 h-4 w-4" />
-                    <span className="text-left">
-                      <span className="block text-sm font-medium">Settings</span>
-                      <span className="block text-xs text-muted-foreground">
-                        PIN lock, backup, data export, privacy
-                      </span>
-                    </span>
-                  </span>
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Theme & settings">
+            <div className="flex items-center justify-between gap-3 border-b border-border/15 py-2">
+              <div className="text-sm text-muted-foreground">Switch between light and dark mode.</div>
+              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
+            </div>
+            <DrawerNavRow
+              href="/settings"
+              label="Settings"
+              description="PIN lock, backup, data export, privacy"
+              icon={IconSettings}
+              active={isActiveRoute(pathname, "/settings")}
+            />
+          </DrawerSection>
         </div>
       </SheetContent>
     </Sheet>
@@ -360,7 +421,9 @@ export function MobileMoreButton({
   pathname: string;
   onToggleTheme: () => void;
 }) {
-  const isActive = mobileSecondaryNav.some((href) => isActiveRoute(pathname, href));
+  const activeContextItem = getMobileContextNavItem(pathname);
+  const isActive = Boolean(activeContextItem);
+  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconPlus;
 
   return (
     <MobileUtilitySheet
@@ -380,9 +443,9 @@ export function MobileMoreButton({
               isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
             ].join(" ")}
           >
-            <IconPlus className="h-4 w-4" />
+            <IconComponent className="h-4 w-4" />
           </span>
-          <span className="leading-none">More</span>
+          <span className="leading-none">{activeContextItem?.label ?? "More"}</span>
         </Button>
       }
     />
