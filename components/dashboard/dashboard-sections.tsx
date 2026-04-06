@@ -161,53 +161,35 @@ export function DashboardSavingsOverview({
 
   return (
     <Card className="moat-panel-sage border-border/20 shadow-none">
-      <CardContent className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-4">
+      <CardContent className="grid gap-6 p-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.85fr)] lg:items-center">
+        <div className="space-y-4 lg:self-center">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
               <div className="min-w-0 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                  <span>Savings rate</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="size-4.5 text-foreground/60 hover:text-foreground"
-                        aria-label="Savings rate explanation"
-                      >
-                        <IconInfoCircle className="size-3.5" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="max-w-xs">
-                      <PopoverHeader>
-                        <PopoverTitle>Savings rate</PopoverTitle>
-                        <PopoverDescription>
-                          Based only on the selected period. This uses inflow minus outflow.
-                          Tagged savings contributions stay separate to avoid double counting.
-                          Current account balances below include opening balances and prior history.
-                        </PopoverDescription>
-                      </PopoverHeader>
-                    </PopoverContent>
-                  </Popover>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {([
-                  ["rate", "Rate"],
-                  ["flow", "Flow"],
-                  ["allocation", "Allocation"],
-                ] as const).map(([value, label]) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    size="xs"
-                    variant={chartMode === value ? "default" : "outline"}
-                    className="px-1.5"
-                    onClick={() => setChartMode(value)}
-                  >
-                    {label}
-                  </Button>
-                ))}
+                <span>Savings rate</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="size-4.5 text-foreground/60 hover:text-foreground"
+                      aria-label="Savings rate explanation"
+                    >
+                      <IconInfoCircle className="size-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="max-w-xs">
+                    <PopoverHeader>
+                      <PopoverTitle>Savings rate</PopoverTitle>
+                      <PopoverDescription>
+                        Based only on the selected period. This uses inflow minus outflow.
+                        Tagged savings contributions stay separate to avoid double counting.
+                        Current account balances below include opening balances and prior history.
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <AmountIndicator
@@ -222,7 +204,25 @@ export function DashboardSavingsOverview({
             <span className="font-medium text-foreground">{formatCurrency(allocatedSavings)}</span>
           </div>
         </div>
-        <div className="grid content-end gap-2">
+        <div className="grid gap-3 lg:self-center">
+          <div className="flex items-center justify-start gap-1 lg:justify-end">
+            {([
+              ["rate", "Rate"],
+              ["flow", "Flow"],
+              ["allocation", "Allocation"],
+            ] as const).map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                size="xs"
+                variant={chartMode === value ? "default" : "outline"}
+                className="px-1.5"
+                onClick={() => setChartMode(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
           {chartMode === "rate"
             ? renderRateChart()
             : chartMode === "flow"
