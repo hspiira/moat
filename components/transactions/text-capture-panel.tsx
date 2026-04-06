@@ -97,7 +97,9 @@ export function TextCapturePanel({
           label="Pasted messages"
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder={"Example:\nReceived UGX 1,763,170 from Minet Uganda on 27-03-2026\n\nPaid USh 300,000 to School fees on 06-04-2026"}
+          placeholder={
+            "Example:\nReceived UGX 500,000 from Employer Ltd on 27-03-2026\n\nPaid USh 45,000 to Grocery store on 06-04-2026"
+          }
           className="min-h-32"
         />
 

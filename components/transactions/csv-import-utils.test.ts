@@ -27,7 +27,7 @@ const category: Category = {
 describe("csv import preview", () => {
   it("retains source currency and FX while normalizing to UGX", () => {
     const preview = buildImportPreviewRows({
-      rows: [["2026-04-01", "100", "USD", "3700", "Minet", "Salary", "income", "Salary", "Bank"]],
+      rows: [["2026-04-01", "100", "USD", "3700", "Employer Ltd", "Income payment", "income", "Salary", "Bank"]],
       csvHeaders: ["date", "amount", "currency", "fx", "payee", "note", "type", "category", "account"],
       csvMappings: {
         ...defaultCsvMappings,

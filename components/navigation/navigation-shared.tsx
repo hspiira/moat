@@ -12,6 +12,7 @@ import {
   IconMoon,
   IconPlus,
   IconSchool,
+  IconSettings,
   IconSun,
   IconTargetArrow,
   IconTransfer,
@@ -277,13 +278,28 @@ export function MobileUtilitySheet({
           </Card>
           <Card className="border-border/30 shadow-none">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Theme</CardTitle>
+              <CardTitle className="text-base">Theme &amp; settings</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
-                Switch between light and dark mode.
+            <CardContent className="grid gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm text-muted-foreground">
+                  Switch between light and dark mode.
+                </div>
+                <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
               </div>
-              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
+              <Button asChild variant="ghost" className="h-auto justify-start px-3 py-3">
+                <Link href="/settings">
+                  <span className="flex items-start gap-3">
+                    <IconSettings className="mt-0.5 h-4 w-4" />
+                    <span className="text-left">
+                      <span className="block text-sm font-medium">Settings</span>
+                      <span className="block text-xs text-muted-foreground">
+                        PIN lock, backup, data export, privacy
+                      </span>
+                    </span>
+                  </span>
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

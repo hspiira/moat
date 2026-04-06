@@ -6,7 +6,7 @@ import { parseCaptureText } from "./message-parser";
 
 const categories: Category[] = [
   { id: "income", userId: "u1", name: "Salary", kind: "income", isDefault: true, createdAt: "2026-01-01T00:00:00.000Z" },
-  { id: "expense", userId: "u1", name: "School fees", kind: "expense", isDefault: true, createdAt: "2026-01-01T00:00:00.000Z" },
+  { id: "expense", userId: "u1", name: "Groceries", kind: "expense", isDefault: true, createdAt: "2026-01-01T00:00:00.000Z" },
   { id: "savings", userId: "u1", name: "Savings", kind: "savings", isDefault: true, createdAt: "2026-01-01T00:00:00.000Z" },
 ];
 
@@ -14,7 +14,7 @@ describe("parseCaptureText", () => {
   it("parses income and expense messages from pasted text blocks", () => {
     const rows = parseCaptureText({
       input:
-        "Received UGX 1763170 from Minet Uganda on 27-03-2026\n\nPaid USh 300000 to School fees on 06-04-2026",
+        "Received UGX 500000 from Employer Ltd on 27-03-2026\n\nPaid USh 45000 to Grocery store on 06-04-2026",
       source: "sms",
       accountId: "account:bank",
       categories,
@@ -26,13 +26,13 @@ describe("parseCaptureText", () => {
       type: "income",
       occurredOn: "2026-03-27",
       currency: "UGX",
-      originalAmount: 1763170,
+      originalAmount: 500000,
       accountId: "account:bank",
     });
     expect(rows[1]).toMatchObject({
       type: "expense",
       occurredOn: "2026-04-06",
-      originalAmount: 300000,
+      originalAmount: 45000,
     });
   });
 
@@ -56,16 +56,16 @@ describe("parseCaptureText", () => {
         userId: "u1",
         accountId: "account:bank",
         type: "expense",
-        amount: 300000,
+        amount: 45000,
         currency: "UGX",
-        originalAmount: 300000,
+        originalAmount: 45000,
         occurredOn: "2026-04-06",
         categoryId: "expense",
         reconciliationState: "reviewed",
         source: "sms",
-        payee: "School fees",
-        rawPayee: "School fees",
-        note: "Paid USh 300000 to School fees on 06-04-2026",
+        payee: "Grocery store",
+        rawPayee: "Grocery store",
+        note: "Paid USh 45000 to Grocery store on 06-04-2026",
         messageHash: "capture:123",
         reviewedAt: "2026-04-06T00:00:00.000Z",
         createdAt: "2026-04-06T00:00:00.000Z",
@@ -74,7 +74,7 @@ describe("parseCaptureText", () => {
     ];
 
     const rows = parseCaptureText({
-      input: "Paid USh 300000 to School fees on 06-04-2026",
+      input: "Paid USh 45000 to Grocery store on 06-04-2026",
       source: "sms",
       accountId: "account:bank",
       categories,

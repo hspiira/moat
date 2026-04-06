@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { PinLockProvider } from "@/lib/security/pin-lock-context";
+import { PinLockScreen } from "@/components/pin-lock-screen";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
 
@@ -52,8 +54,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PwaRegister />
-          {children}
+          <PinLockProvider>
+            <PinLockScreen />
+            <PwaRegister />
+            {children}
+          </PinLockProvider>
         </ThemeProvider>
       </body>
     </html>
