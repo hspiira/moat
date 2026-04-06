@@ -276,7 +276,8 @@ export type RecurringObligationType =
   | "school_fees"
   | "data_airtime"
   | "sacco_contribution"
-  | "salary";
+  | "salary"
+  | "loan_repayment";
 
 export type RecurringCadence = "weekly" | "monthly" | "custom";
 

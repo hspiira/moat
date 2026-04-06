@@ -12,6 +12,15 @@ export type FxMemory = {
   updatedAt: string;
 };
 
+export type RememberedFxDefault = {
+  payeeKey: string;
+  displayPayee: string;
+  currency: SupportedCurrency;
+  rateToUgx: number;
+  hint: string;
+  updatedAt: string;
+};
+
 function readMemories(): FxMemory[] {
   if (typeof window === "undefined") return [];
 
@@ -40,6 +49,21 @@ export function findFxMemory(payee: string, currency: SupportedCurrency) {
     readMemories().find((memory) => memory.payeeKey === payeeKey && memory.currency === currency) ??
     null
   );
+}
+
+export function getRememberedFxDefault(
+  payee: string,
+  currency: SupportedCurrency,
+): RememberedFxDefault | null {
+  const memory = findFxMemory(payee, currency);
+  if (!memory) return null;
+
+  return {
+    ...memory,
+    hint: `Remembered ${memory.currency} → UGX rate ${memory.rateToUgx.toLocaleString(
+      "en-UG",
+    )} for ${memory.displayPayee}.`,
+  };
 }
 
 export function saveFxMemory(entry: FxMemory) {

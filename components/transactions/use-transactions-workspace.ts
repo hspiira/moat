@@ -6,7 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { normalizeAmountToUgx } from "@/lib/currency";
-import { findFxMemory, normalizePayeeKey, saveFxMemory } from "@/lib/preferences/fx-memory";
+import {
+  getRememberedFxDefault,
+  normalizePayeeKey,
+  saveFxMemory,
+} from "@/lib/preferences/fx-memory";
+import { readDebtPlannerSettings } from "@/lib/preferences/debt-planner";
 import type {
   Account,
   BudgetTarget,
@@ -18,7 +23,10 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { evaluateRecurringObligations } from "@/lib/domain/recurring";
+import {
+  buildSuggestedRecurringObligations,
+  evaluateRecurringObligations,
+} from "@/lib/domain/recurring";
 import {
   buildMonthCloseRecord,
   evaluateMonthClose,
@@ -102,10 +110,26 @@ export function useTransactionsWorkspace() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [rememberedFxHint, setRememberedFxHint] = useState<string | null>(null);
+  const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
+  const suggestedRecurringObligations = useMemo(
+    () =>
+      buildSuggestedRecurringObligations(
+        accounts,
+        transactions,
+        debtPlannerSettings.strategy,
+        debtPlannerSettings.extraMonthlyPayment,
+      ),
+    [accounts, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy, transactions],
+  );
 
   const recurringEvaluations = useMemo(
-    () => evaluateRecurringObligations(recurringObligations, transactions, closePeriod),
-    [closePeriod, recurringObligations, transactions],
+    () =>
+      evaluateRecurringObligations(
+        [...recurringObligations, ...suggestedRecurringObligations],
+        transactions,
+        closePeriod,
+      ),
+    [closePeriod, recurringObligations, suggestedRecurringObligations, transactions],
   );
 
   const loadWorkspace = useCallback(async () => {
@@ -234,15 +258,13 @@ export function useTransactionsWorkspace() {
       return;
     }
 
-    const memory = findFxMemory(payee, transactionForm.currency);
+    const memory = getRememberedFxDefault(payee, transactionForm.currency);
     if (!memory) {
       setRememberedFxHint(null);
       return;
     }
 
-    setRememberedFxHint(
-      `Remembered ${memory.currency} → UGX rate ${memory.rateToUgx.toLocaleString("en-UG")} for ${memory.displayPayee}.`,
-    );
+    setRememberedFxHint(memory.hint);
     setTransactionForm((current) => {
       if (current.fxRateToUgx) return current;
       if (current.currency !== memory.currency) return current;
@@ -260,15 +282,24 @@ export function useTransactionsWorkspace() {
 
   const refreshMonthCloseState = useCallback(
     async (userId: string) => {
-      const [storedTransactions, storedCategories, storedObligations, existingMonthClose] =
+      const [storedAccounts, storedTransactions, storedCategories, storedObligations, existingMonthClose] =
         await Promise.all([
+          repositories.accounts.listByUser(userId),
           repositories.transactions.listByUser(userId),
           repositories.categories.listByUser(userId),
           repositories.recurringObligations.listByUser(userId),
           repositories.monthCloses.getByPeriod(userId, closePeriod),
         ]);
       const nextRecurringEvaluations = evaluateRecurringObligations(
-        storedObligations,
+        [
+          ...storedObligations,
+          ...buildSuggestedRecurringObligations(
+            storedAccounts,
+            storedTransactions,
+            debtPlannerSettings.strategy,
+            debtPlannerSettings.extraMonthlyPayment,
+          ),
+        ],
         storedTransactions,
         closePeriod,
       );
@@ -287,7 +318,7 @@ export function useTransactionsWorkspace() {
       setMonthClose(nextRecord);
       setMonthCloseEvaluation(evaluation);
     },
-    [closePeriod],
+    [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
   );
 
   const handleTransactionSubmit = useCallback(

@@ -20,7 +20,6 @@ export function TransactionsWorkspace() {
     transactions,
     budgets,
     transactionRules,
-    recurringObligations,
     recurringEvaluations,
     monthClose,
     monthCloseEvaluation,
@@ -149,7 +148,6 @@ export function TransactionsWorkspace() {
             <RecurringObligationsPanel
               accounts={accounts}
               categories={categories}
-              obligations={recurringObligations}
               evaluations={recurringEvaluations}
               isSubmitting={isSubmitting}
               onSaveObligation={(obligation) => void saveObligation(obligation)}

@@ -63,6 +63,7 @@ export const recurringObligationTypeLabels: Record<RecurringObligation["type"], 
   data_airtime: "Data / airtime",
   sacco_contribution: "SACCO contribution",
   salary: "Salary",
+  loan_repayment: "Loan repayment",
 };
 
 export const recurringCadenceLabels: Record<RecurringObligation["cadence"], string> = {
