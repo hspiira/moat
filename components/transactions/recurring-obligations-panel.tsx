@@ -5,17 +5,18 @@ import { useState } from "react";
 import type { Account, Category, RecurringObligation } from "@/lib/types";
 import type { RecurringEvaluation } from "@/lib/domain/recurring";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { SelectField } from "@/components/forms/select-field";
+import {
+  accountOptions,
+  categoryOptions,
+  optionsFromRecord,
+  recurringCadenceLabels,
+  recurringObligationTypeLabels,
+} from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type ObligationFormState = {
   name: string;
@@ -69,6 +70,7 @@ export function RecurringObligationsPanel({
   onToggleObligation,
 }: Props) {
   const [form, setForm] = useState<ObligationFormState>(defaultObligationForm);
+  const linkedAccountOptions = [{ value: "__none__", label: "Any account" }, ...accountOptions(accounts)];
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -90,47 +92,28 @@ export function RecurringObligationsPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Type</Label>
-            <Select
+            <SelectField
+              label="Type"
               value={form.type}
+              options={optionsFromRecord(recurringObligationTypeLabels)}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   type: value as RecurringObligation["type"],
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rent">Rent</SelectItem>
-                <SelectItem value="school_fees">School fees</SelectItem>
-                <SelectItem value="data_airtime">Data / airtime</SelectItem>
-                <SelectItem value="sacco_contribution">SACCO contribution</SelectItem>
-                <SelectItem value="salary">Salary</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Category</Label>
-            <Select
+            <SelectField
+              label="Category"
               value={form.categoryId}
+              placeholder="Select category"
+              options={categoryOptions(categories)}
               onValueChange={(value) =>
                 setForm((current) => ({ ...current, categoryId: value }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
             <Label>Expected amount</Label>
@@ -143,25 +126,17 @@ export function RecurringObligationsPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Cadence</Label>
-            <Select
+            <SelectField
+              label="Cadence"
               value={form.cadence}
+              options={optionsFromRecord(recurringCadenceLabels)}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   cadence: value as RecurringObligation["cadence"],
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
             <Label>Due day</Label>
@@ -174,28 +149,18 @@ export function RecurringObligationsPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Linked account</Label>
-            <Select
+            <SelectField
+              label="Linked account"
               value={form.linkedAccountId || "__none__"}
+              placeholder="Any account"
+              options={linkedAccountOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   linkedAccountId: value === "__none__" ? "" : value,
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Any account" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Any account</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
             <Label>Payee</Label>

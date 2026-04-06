@@ -4,17 +4,12 @@ import type { BudgetTarget, Category } from "@/lib/types";
 import { getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { AmountIndicator } from "@/components/amount-indicator";
+import { SelectField } from "@/components/forms/select-field";
+import { categoryOptions } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
@@ -53,6 +48,9 @@ export function BudgetManagerPanel({
     transaction.occurredOn.startsWith(month),
   );
   const envelopes = getBudgetEnvelopes(budgets, categories, monthTransactions);
+  const expenseCategoryOptions = categoryOptions(
+    categories.filter((category) => category.kind === "expense"),
+  );
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -64,26 +62,15 @@ export function BudgetManagerPanel({
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
           <div className="grid gap-2">
-            <Label>Category</Label>
-            <Select
+            <SelectField
+              label="Category"
               value={form.categoryId}
+              placeholder="Select category"
+              options={expenseCategoryOptions}
               onValueChange={(value) =>
                 onFormChange((current) => ({ ...current, categoryId: value }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories
-                  .filter((category) => category.kind === "expense")
-                  .map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
             <Label>Allocated (UGX)</Label>

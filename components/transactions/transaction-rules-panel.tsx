@@ -4,17 +4,18 @@ import { useState } from "react";
 
 import type { Account, Category, TransactionRule, TransactionSource, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { SelectField } from "@/components/forms/select-field";
+import {
+  accountOptions,
+  categoryOptions,
+  optionsFromRecord,
+  transactionSourceLabels,
+  transactionTypeLabels,
+} from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type RuleFormState = {
   name: string;
@@ -62,6 +63,20 @@ export function TransactionRulesPanel({
   onToggleRule,
 }: Props) {
   const [form, setForm] = useState<RuleFormState>(defaultRuleForm);
+  const sourceOptions = [
+    { value: "any", label: "Any source" },
+    ...optionsFromRecord(transactionSourceLabels),
+  ];
+  const reviewOptions = [
+    { value: "no", label: "No" },
+    { value: "yes", label: "Yes" },
+  ];
+  const categorySelectOptions = [{ value: "__none__", label: "Keep current" }, ...categoryOptions(categories)];
+  const accountSelectOptions = [{ value: "__none__", label: "Keep current" }, ...accountOptions(accounts)];
+  const effectTypeOptions = [
+    { value: "keep", label: "Keep current" },
+    ...optionsFromRecord(transactionTypeLabels).filter((option) => option.value !== "transfer"),
+  ];
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
@@ -93,47 +108,30 @@ export function TransactionRulesPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Source</Label>
-            <Select
+            <SelectField
+              label="Source"
               value={form.source}
+              options={sourceOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   source: value as RuleFormState["source"],
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any source</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="notification">Notification</SelectItem>
-                <SelectItem value="sms">SMS</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Auto mark reviewed</Label>
-            <Select
+            <SelectField
+              label="Auto mark reviewed"
               value={form.autoMarkReviewed}
+              options={reviewOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   autoMarkReviewed: value as RuleFormState["autoMarkReviewed"],
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no">No</SelectItem>
-                <SelectItem value="yes">Yes</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
             <Label>Payee pattern</Label>
@@ -176,75 +174,45 @@ export function TransactionRulesPanel({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Effect category</Label>
-            <Select
+            <SelectField
+              label="Effect category"
               value={form.effectCategoryId || "__none__"}
+              placeholder="Keep current"
+              options={categorySelectOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   effectCategoryId: value === "__none__" ? "" : value,
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Keep current" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Keep current</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Effect account</Label>
-            <Select
+            <SelectField
+              label="Effect account"
               value={form.effectAccountId || "__none__"}
+              placeholder="Keep current"
+              options={accountSelectOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   effectAccountId: value === "__none__" ? "" : value,
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Keep current" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Keep current</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
           <div className="grid gap-2">
-            <Label>Effect type</Label>
-            <Select
+            <SelectField
+              label="Effect type"
               value={form.effectTransactionType}
+              options={effectTypeOptions}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
                   effectTransactionType: value as RuleFormState["effectTransactionType"],
                 }))
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="keep">Keep current</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-                <SelectItem value="savings_contribution">Savings contribution</SelectItem>
-                <SelectItem value="debt_payment">Debt payment</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
         </div>
 

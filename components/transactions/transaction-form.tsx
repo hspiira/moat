@@ -2,7 +2,14 @@
 
 import type { Account, Category, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { SelectField } from "@/components/forms/select-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
+import {
+  accountOptions,
+  categoryOptions,
+  optionsFromRecord,
+  transactionTypeLabels,
+} from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,14 +18,9 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+export { transactionTypeLabels } from "@/lib/select-options";
 
 export type TransactionFormState = {
   type: TransactionType;
@@ -40,14 +42,6 @@ export const defaultTransactionForm: TransactionFormState = {
   amount: "",
   occurredOn: new Date().toISOString().slice(0, 10),
   note: "",
-};
-
-export const transactionTypeLabels: Record<TransactionType, string> = {
-  expense: "Expense",
-  income: "Income",
-  savings_contribution: "Savings contribution",
-  debt_payment: "Debt payment",
-  transfer: "Transfer",
 };
 
 export function categoryMatchesType(category: Category, type: TransactionType) {
@@ -104,9 +98,11 @@ export function TransactionForm({
           />
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-type">Type</Label>
-            <Select
+            <SelectField
+              id="tx-type"
+              label="Type"
               value={form.type}
+              options={optionsFromRecord(transactionTypeLabels)}
               onValueChange={(v) => {
                 const nextType = v as TransactionType;
                 onFormChange((c) => ({
@@ -116,79 +112,42 @@ export function TransactionForm({
                     categories.find((cat) => categoryMatchesType(cat, nextType))?.id ?? "",
                 }));
               }}
-            >
-              <SelectTrigger id="tx-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(transactionTypeLabels) as TransactionType[]).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {transactionTypeLabels[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-account">
-              {form.type === "transfer" ? "From account" : "Account"}
-            </Label>
-            <Select
+            <SelectField
+              id="tx-account"
+              label={form.type === "transfer" ? "From account" : "Account"}
               value={form.accountId}
+              placeholder="Select account"
+              options={accountOptions(accounts)}
               onValueChange={(v) => onFormChange((c) => ({ ...c, accountId: v }))}
-            >
-              <SelectTrigger id="tx-account">
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           {form.type === "transfer" ? (
             <div className="grid gap-2">
-              <Label htmlFor="tx-dest">To account</Label>
-              <Select
+              <SelectField
+                id="tx-dest"
+                label="To account"
                 value={form.destinationAccountId}
+                placeholder="Select destination"
+                options={accountOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
-              >
-                <SelectTrigger id="tx-dest">
-                  <SelectValue placeholder="Select destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="tx-category">Category</Label>
-            <Select
+            <SelectField
+              id="tx-category"
+              label="Category"
               value={form.categoryId}
+              placeholder="Select category"
+              options={categoryOptions(availableCategories)}
               onValueChange={(v) => onFormChange((c) => ({ ...c, categoryId: v }))}
-            >
-              <SelectTrigger id="tx-category">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="grid gap-2">

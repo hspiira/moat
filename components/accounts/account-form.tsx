@@ -7,7 +7,15 @@ import type {
   DebtRepaymentFrequency,
 } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { SelectField } from "@/components/forms/select-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
+import {
+  accountTypeOptions,
+  debtInterestModelLabels,
+  debtLenderTypeLabels,
+  debtRepaymentFrequencyLabels,
+  optionsFromRecord,
+} from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,14 +23,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+export { accountTypeLabels } from "@/lib/select-options";
 
 export type AccountFormState = {
   name: string;
@@ -52,15 +55,6 @@ export const defaultAccountForm: AccountFormState = {
   debtTermMonths: "",
   debtRepaymentFrequency: "monthly",
   notes: "",
-};
-
-export const accountTypeLabels: Record<AccountType, string> = {
-  cash: "Cash",
-  mobile_money: "Mobile Money",
-  bank: "Bank Account",
-  sacco: "SACCO",
-  investment: "Investment",
-  debt: "Debt / Obligation",
 };
 
 type Props = {
@@ -117,24 +111,15 @@ export function AccountForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="account-type">Account type</Label>
-            <Select
+            <SelectField
+              id="account-type"
+              label="Account type"
               value={form.type}
+              options={accountTypeOptions(accountTypes)}
               onValueChange={(value) =>
                 onFormChange((c) => ({ ...c, type: value as AccountType }))
               }
-            >
-              <SelectTrigger id="account-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {accountTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {accountTypeLabels[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="grid gap-2">
@@ -187,46 +172,32 @@ export function AccountForm({
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-interest-model">Interest model</Label>
-                  <Select
+                  <SelectField
+                    id="debt-interest-model"
+                    label="Interest model"
                     value={form.debtInterestModel}
+                    options={optionsFromRecord(debtInterestModelLabels)}
                     onValueChange={(value) =>
                       onFormChange((c) => ({
                         ...c,
                         debtInterestModel: value as DebtInterestModel,
                       }))
                     }
-                  >
-                    <SelectTrigger id="debt-interest-model">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="reducing_balance">Reducing balance</SelectItem>
-                      <SelectItem value="flat">Flat rate</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="debt-lender-type">Lender type</Label>
-                  <Select
+                  <SelectField
+                    id="debt-lender-type"
+                    label="Lender type"
                     value={form.debtLenderType}
+                    options={optionsFromRecord(debtLenderTypeLabels)}
                     onValueChange={(value) =>
                       onFormChange((c) => ({
                         ...c,
                         debtLenderType: value as DebtLenderType,
                       }))
                     }
-                  >
-                    <SelectTrigger id="debt-lender-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bank">Bank</SelectItem>
-                      <SelectItem value="sacco">SACCO</SelectItem>
-                      <SelectItem value="microfinance">Microfinance</SelectItem>
-                      <SelectItem value="informal">Informal</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
               </div>
 
@@ -256,24 +227,18 @@ export function AccountForm({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="debt-frequency">Repayment frequency</Label>
-                <Select
+                <SelectField
+                  id="debt-frequency"
+                  label="Repayment frequency"
                   value={form.debtRepaymentFrequency}
+                  options={optionsFromRecord(debtRepaymentFrequencyLabels)}
                   onValueChange={(value) =>
                     onFormChange((c) => ({
                       ...c,
                       debtRepaymentFrequency: value as DebtRepaymentFrequency,
                     }))
                   }
-                >
-                  <SelectTrigger id="debt-frequency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </>
           ) : null}
