@@ -23,6 +23,10 @@ A living tracker for project state, decisions, open questions, ideation backlog,
 - Account management at `/accounts` — full CRUD via IndexedDB repository, balance reconciliation
 - Transaction recording at `/transactions` — manual entry for all types, transfer pair logic, CSV import with column mapping and duplicate detection
 - Accounting depth baseline — running ledgers, period opening/movement/closing balances, reconciliation states, rule engine, recurring obligations, month close, and property-based accounting tests
+- Phase 2 capture inbox baseline — pasted/shared/file-derived captures persist as envelopes and review items before posting
+- Capture review route at `/transactions/review/capture` — supports `New`, `Needs review`, `Duplicates`, and `Resolved` style review-first capture handling
+- In-app text, image, and document extraction capture — reviewed candidates can be sent into the capture inbox instead of directly creating transactions
+- Parser and dedupe foundation — message hash linkage, duplicate hints, source metadata, and first MTN/Airtel/bank-style template matching
 - Goals at `/goals` — target-based goals, monthly contribution math, progress from savings transactions, emergency fund priority
 - Investment Compass at `/investment-compass` — rule-based guidance engine, horizon + liquidity + emergency coverage + debt signals
 - Learn Uganda at `/learn` — official and research resources grouped by topic
@@ -35,11 +39,11 @@ A living tracker for project state, decisions, open questions, ideation backlog,
 
 - Authentication / multi-device sync
 - PDF statement parsing (MTN, Stanbic, DFCU)
-- Native mobile app for SMS auto-import
+- Native Android host shell / Capacitor bridge for mobile capture
+- Android notification listener ingestion
+- Correction logging and parser refinement workflow
+- Provider-grade parser packs with broad MTN, Airtel, and bank fixture coverage
 - Push notifications / reminders
-- Debt payoff planner
-- Budget targets with monthly limits
-- Recurring transaction detection
 - Institution verification workflows
 
 ---
@@ -178,13 +182,25 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 
 Suggested priority order after current state:
 
-1. **Phase 2 capture inbox and review flow** — tracked in `#53`
-2. **Android host shell and native bridge** — tracked in `#55`
-3. **Share-to-app intake** — tracked in `#27`
-4. **Android notification capture** — tracked in `#25`
-5. **Deterministic parse pipeline and metadata** — tracked in `#34`
-6. **MTN, Airtel, and bank parser packs** — tracked in `#30`
-7. **Correction logging for parser refinement** — tracked in `#54`
+1. **Android host shell and native bridge** — tracked in `#55`
+2. **Share-to-app intake completion on native Android** — tracked in `#27`
+3. **Android notification capture** — tracked in `#25`
+4. **Deterministic parse pipeline hardening** — tracked in `#34`
+5. **MTN, Airtel, and bank parser packs expansion** — tracked in `#30`
+6. **Correction logging for parser refinement** — tracked in `#54`
+
+### Phase 2 status snapshot
+
+| Issue | Scope | Status |
+|------|--------|--------|
+| `#56` | Phase 2 epic | In progress — foundation work exists, native/mobile channels still missing |
+| `#53` | Capture inbox and review queue | Implemented in code; ready for review/board update |
+| `#27` | Share-to-app and paste-to-app intake | Partial — paste flow and web share-target exist; native Android share intent still missing |
+| `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial — source metadata, hashes, duplicate hints, and basic confidence exist; no canonical pipeline modules or field-level confidence model yet |
+| `#30` | MTN, Airtel, and bank parser templates | Partial — first generic templates exist; not yet provider-grade or fixture-complete |
+| `#55` | Android host shell and native bridge | Not started |
+| `#25` | Android notification listener ingestion | Not started |
+| `#54` | Correction logging and parser refinement workflow | Not started |
 
 ---
 

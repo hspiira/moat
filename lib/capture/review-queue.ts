@@ -2,7 +2,9 @@ import { buildStableHash } from "@/lib/hash";
 import type {
   CaptureEnvelope,
   CaptureEnvelopeSource,
+  CaptureReviewSnapshot,
   CaptureReviewItem,
+  CorrectionLog,
   Transaction,
   TransactionSource,
 } from "@/lib/types";
@@ -66,6 +68,27 @@ export function createCaptureReviewItem(params: {
   capturedAt?: string;
 }): CaptureReviewItem {
   const timestamp = params.capturedAt ?? new Date().toISOString();
+  const originalSnapshot: CaptureReviewSnapshot = {
+    accountId: params.candidate.accountId,
+    occurredOn: params.candidate.occurredOn,
+    originalAmount: params.candidate.originalAmount,
+    currency: params.candidate.currency,
+    fxRateToUgx: params.candidate.fxRateToUgx,
+    normalizedAmount: params.candidate.normalizedAmount,
+    type: params.candidate.type,
+    categoryId: params.candidate.categoryId,
+    payee: params.candidate.payee,
+    note: params.candidate.note,
+    parserLabel: params.candidate.parserLabel,
+    confidenceScore: params.candidate.confidence,
+    issues: validateCaptureReviewItem({
+      originalAmount: params.candidate.originalAmount,
+      currency: params.candidate.currency,
+      fxRateToUgx: params.candidate.fxRateToUgx,
+      duplicateTransactionId: params.candidate.duplicateTransactionId,
+    }),
+    fieldWarnings: params.candidate.fieldWarnings,
+  };
 
   return {
     id: `capture-review:${crypto.randomUUID()}`,
@@ -86,13 +109,11 @@ export function createCaptureReviewItem(params: {
     parserLabel: params.candidate.parserLabel,
     confidenceScore: params.candidate.confidence,
     status: resolveReviewStatus(params.candidate),
-    issues: validateCaptureReviewItem({
-      originalAmount: params.candidate.originalAmount,
-      currency: params.candidate.currency,
-      fxRateToUgx: params.candidate.fxRateToUgx,
-      duplicateTransactionId: params.candidate.duplicateTransactionId,
-    }),
+    issues: originalSnapshot.issues,
+    fieldWarnings: params.candidate.fieldWarnings,
+    originalSnapshot,
     duplicateTransactionId: params.candidate.duplicateTransactionId,
+    duplicateCaptureReviewItemId: params.candidate.duplicateCaptureReviewItemId,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -134,6 +155,26 @@ export function buildTransactionFromCaptureReviewItem(params: {
 
 export function getOpenCaptureReviewItems(items: CaptureReviewItem[]) {
   return items.filter((item) => item.status !== "approved" && item.status !== "rejected");
+}
+
+export function createCorrectionLog(params: {
+  userId: string;
+  item: CaptureReviewItem;
+  approvedSnapshot: CaptureReviewSnapshot;
+  createdAt?: string;
+}): CorrectionLog {
+  return {
+    id: `correction-log:${crypto.randomUUID()}`,
+    userId: params.userId,
+    reviewItemId: params.item.id,
+    envelopeId: params.item.envelopeId,
+    source: params.item.source,
+    parserLabel: params.item.parserLabel,
+    confidenceScore: params.item.confidenceScore,
+    originalSnapshot: params.item.originalSnapshot,
+    approvedSnapshot: params.approvedSnapshot,
+    createdAt: params.createdAt ?? new Date().toISOString(),
+  };
 }
 
 export function inferEnvelopeSourceFromTransactionSource(

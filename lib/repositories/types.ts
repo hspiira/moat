@@ -4,6 +4,7 @@ import type {
   CaptureEnvelope,
   CaptureReviewItem,
   Category,
+  CorrectionLog,
   Goal,
   ImportBatch,
   InvestmentProfile,
@@ -69,6 +70,7 @@ export interface RepositoryBundle {
   transactions: TransactionRepository;
   captureEnvelopes: Repository<CaptureEnvelope>;
   captureReviewItems: Repository<CaptureReviewItem>;
+  correctionLogs: Repository<CorrectionLog>;
   transactionRules: TransactionRuleRepository;
   recurringObligations: RecurringObligationRepository;
   monthCloses: MonthCloseRepository;

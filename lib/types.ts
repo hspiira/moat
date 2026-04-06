@@ -33,6 +33,14 @@ export type CaptureReviewStatus =
   | "duplicate"
   | "approved"
   | "rejected";
+export type CaptureConfidenceField =
+  | "amount"
+  | "date"
+  | "type"
+  | "payee"
+  | "currency"
+  | "balance";
+export type CaptureWarningLevel = "info" | "warning";
 
 export type GoalType =
   | "emergency_fund"
@@ -273,6 +281,29 @@ export type CaptureEnvelope = {
   updatedAt: string;
 };
 
+export type CaptureFieldWarning = {
+  field: CaptureConfidenceField;
+  level: CaptureWarningLevel;
+  message: string;
+};
+
+export type CaptureReviewSnapshot = {
+  accountId: string;
+  occurredOn: string;
+  originalAmount: number;
+  currency: SupportedCurrency;
+  fxRateToUgx?: number;
+  normalizedAmount: number;
+  type: Exclude<TransactionType, "transfer">;
+  categoryId: string;
+  payee: string;
+  note: string;
+  parserLabel?: string;
+  confidenceScore: number;
+  issues: string[];
+  fieldWarnings: CaptureFieldWarning[];
+};
+
 export type CaptureReviewItem = {
   id: string;
   userId: string;
@@ -293,6 +324,8 @@ export type CaptureReviewItem = {
   confidenceScore: number;
   status: CaptureReviewStatus;
   issues: string[];
+  fieldWarnings: CaptureFieldWarning[];
+  originalSnapshot: CaptureReviewSnapshot;
   duplicateTransactionId?: string;
   duplicateCaptureReviewItemId?: string;
   approvedTransactionId?: string;
@@ -300,6 +333,19 @@ export type CaptureReviewItem = {
   resolvedAt?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CorrectionLog = {
+  id: string;
+  userId: string;
+  reviewItemId: string;
+  envelopeId: string;
+  source: TransactionSource;
+  parserLabel?: string;
+  confidenceScore: number;
+  originalSnapshot: CaptureReviewSnapshot;
+  approvedSnapshot: CaptureReviewSnapshot;
+  createdAt: string;
 };
 
 export type TransactionRule = {

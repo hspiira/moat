@@ -19,6 +19,7 @@ import type {
   CaptureEnvelope,
   CaptureReviewItem,
   Category,
+  CorrectionLog,
   Goal,
   ImportBatch,
   InvestmentProfile,
@@ -140,6 +141,10 @@ export function createCaptureEnvelopeRepository() {
 
 export function createCaptureReviewItemRepository() {
   return createUserScopedRepository<CaptureReviewItem>("captureReviewItems");
+}
+
+export function createCorrectionLogRepository() {
+  return createUserScopedRepository<CorrectionLog>("correctionLogs");
 }
 
 export function createTransactionRuleRepository(): TransactionRuleRepository {
