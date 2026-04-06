@@ -1,8 +1,8 @@
 "use client";
 
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { InputField } from "@/components/forms/input-field";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import {
@@ -56,9 +56,12 @@ export function CsvImportPanel(props: Props) {
         description="Upload, map, review, then confirm."
       />
       <CardContent className="grid gap-4 p-5 pt-6">
-        <Input
+        <InputField
+          id="csv-import-file"
+          label="CSV file"
           accept=".csv,text/csv"
           type="file"
+          name="csv-import-file"
           onChange={(event) => void handleCsvFileChange(event)}
           className="cursor-pointer"
         />

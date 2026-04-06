@@ -49,27 +49,27 @@ export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
 export const mobileCaptureActions = [
   {
-    href: "/transactions?capture=expense&type=expense",
+    href: "/transactions/capture?capture=expense&type=expense",
     label: "Expense",
     description: "Record money spent now.",
   },
   {
-    href: "/transactions?capture=income&type=income",
+    href: "/transactions/capture?capture=income&type=income",
     label: "Income",
     description: "Record incoming money.",
   },
   {
-    href: "/transactions?capture=transfer&type=transfer",
+    href: "/transactions/capture?capture=transfer&type=transfer",
     label: "Transfer",
     description: "Move money between accounts.",
   },
   {
-    href: "/transactions?capture=text",
+    href: "/transactions/capture?capture=text",
     label: "Paste text",
     description: "Parse SMS and notification text.",
   },
   {
-    href: "/transactions?capture=import",
+    href: "/transactions/import",
     label: "Import",
     description: "Bring in statement rows from CSV.",
   },
@@ -88,6 +88,22 @@ export function isPrimaryMobileRoute(pathname: string) {
 }
 
 export function getMobileTopBarTitle(pathname: string) {
+  if (pathname === "/transactions/capture") {
+    return "Capture";
+  }
+
+  if (pathname === "/transactions/import") {
+    return "Import";
+  }
+
+  if (pathname === "/transactions/review") {
+    return "Review";
+  }
+
+  if (pathname === "/transactions/tools") {
+    return "Tools";
+  }
+
   if (pathname === "/accounts") {
     return "Accounts";
   }
@@ -144,13 +160,13 @@ export function QuickActionLinks() {
   return (
     <div className="grid gap-2">
       <Button asChild variant="outline" className="justify-start">
-        <Link href="/transactions">Add or import transactions</Link>
+        <Link href="/transactions/capture">Capture transactions</Link>
       </Button>
       <Button asChild variant="outline" className="justify-start">
-        <Link href="/accounts">Add or update accounts</Link>
+        <Link href="/transactions/import">Import statements</Link>
       </Button>
       <Button asChild variant="outline" className="justify-start">
-        <Link href="/goals">Create or review goals</Link>
+        <Link href="/transactions/review">Review month close</Link>
       </Button>
     </div>
   );

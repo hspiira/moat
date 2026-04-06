@@ -40,8 +40,8 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
             contentClassName="pb-0"
           >
             <div className="grid gap-5">
-              <div className="grid grid-cols-[minmax(0,220px)_1fr] items-start gap-4">
-                <div className="moat-pie aspect-square w-full max-w-[220px]" />
+              <div className="flex items-start gap-4">
+                <div className="moat-pie aspect-square w-14 shrink-0 sm:w-20 md:w-28" />
                 <div className="grid gap-4">
                   <div className="grid gap-1">
                     <div className="text-4xl font-semibold tracking-tight">3</div>

@@ -44,8 +44,10 @@ export function TransactionList({
   return (
     <Card className="border-border/20 shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">Recent transactions</CardTitle>
-        <CardDescription>Transfers appear as paired records.</CardDescription>
+        <CardTitle className="text-base">Ledger</CardTitle>
+        <CardDescription>
+          Posted movements first. Transfers appear as paired records.
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
         {transactions.length === 0 ? (

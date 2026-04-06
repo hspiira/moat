@@ -136,6 +136,32 @@ export function useTransactionsWorkspace() {
     [closePeriod, recurringObligations, suggestedRecurringObligations, transactions],
   );
 
+  const periodTransactions = useMemo(
+    () => transactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
+    [closePeriod, transactions],
+  );
+
+  const periodSummary = useMemo(
+    () => getSummaryForTransactions(periodTransactions, categories),
+    [categories, periodTransactions],
+  );
+
+  const reviewCount = useMemo(
+    () =>
+      periodTransactions.filter(
+        (transaction) =>
+          transaction.reconciliationState === "draft" ||
+          transaction.reconciliationState === "parsed" ||
+          transaction.reconciliationState === "reviewed",
+      ).length,
+    [periodTransactions],
+  );
+
+  const duplicateCount = useMemo(
+    () => monthCloseEvaluation.duplicateGroups.length,
+    [monthCloseEvaluation.duplicateGroups.length],
+  );
+
   const loadWorkspace = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -845,6 +871,10 @@ export function useTransactionsWorkspace() {
     accounts,
     categories,
     transactions,
+    periodTransactions,
+    periodSummary,
+    reviewCount,
+    duplicateCount,
     budgets,
     transactionRules,
     recurringObligations,
