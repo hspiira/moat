@@ -30,6 +30,7 @@ function createDefaultSyncProfile(user: UserProfile): SyncProfile {
     userId: user.id,
     mode: "local_only",
     hostedSyncEnabled: false,
+    deviceId: `device:${crypto.randomUUID()}`,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -39,7 +40,9 @@ export function SyncModePanel() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [syncProfile, setSyncProfile] = useState<SyncProfile | null>(null);
   const [pendingItems, setPendingItems] = useState<SyncOutboxItem[]>([]);
+  const [conflictItems, setConflictItems] = useState<SyncOutboxItem[]>([]);
   const [postgresSyncUrl, setPostgresSyncUrl] = useState("");
+  const [syncAuthToken, setSyncAuthToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,13 +61,15 @@ export function SyncModePanel() {
 
     const [storedSyncProfile, outbox] = await Promise.all([
       repositories.syncProfiles.getByUser(user.id),
-      repositories.syncOutbox.listPendingByUser(user.id),
+      repositories.syncOutbox.listByUser(user.id),
     ]);
 
     const nextProfile = storedSyncProfile ?? createDefaultSyncProfile(user);
     setSyncProfile(nextProfile);
     setPostgresSyncUrl(nextProfile.postgresSyncUrl ?? "");
-    setPendingItems(outbox);
+    setSyncAuthToken(nextProfile.syncAuthToken ?? "");
+    setPendingItems(outbox.filter((item) => item.status === "pending" || item.status === "failed"));
+    setConflictItems(outbox.filter((item) => item.status === "conflict"));
   }, []);
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export function SyncModePanel() {
           setSuccess(
             summary.attempted === 0
               ? "Nothing to sync right now."
-              : `Sync complete. ${summary.synced} change${summary.synced === 1 ? "" : "s"} uploaded.`,
+              : `Sync complete. ${summary.synced} synced, ${summary.failed} failed, ${summary.conflicts} conflict${summary.conflicts === 1 ? "" : "s"}.`,
           );
         }
         await loadState();
@@ -179,6 +184,8 @@ export function SyncModePanel() {
                     hostedSyncEnabled: option.value === "hosted_opt_in",
                     postgresSyncUrl:
                       option.value === "hosted_opt_in" ? postgresSyncUrl.trim() || undefined : undefined,
+                    syncAuthToken:
+                      option.value === "hosted_opt_in" ? syncAuthToken.trim() || undefined : undefined,
                     updatedAt: timestamp,
                   });
                 }}
@@ -204,6 +211,15 @@ export function SyncModePanel() {
               autoComplete="off"
               hint="Optional today. Local writes continue even if this is unreachable."
             />
+            <InputField
+              id="sync-auth-token"
+              label="Sync bearer token"
+              value={syncAuthToken}
+              onChange={(event) => setSyncAuthToken(event.target.value)}
+              placeholder="Optional bearer token"
+              autoComplete="off"
+              hint="Only needed when the hosted sync backend requires authentication."
+            />
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -216,6 +232,7 @@ export function SyncModePanel() {
                     hostedSyncEnabled: true,
                     mode: "hosted_opt_in",
                     postgresSyncUrl: postgresSyncUrl.trim() || undefined,
+                    syncAuthToken: syncAuthToken.trim() || undefined,
                     updatedAt: timestamp,
                   });
                 }}
@@ -235,10 +252,24 @@ export function SyncModePanel() {
                 Pending local changes: {pendingItems.length}
               </div>
               <div className="text-xs text-muted-foreground">
+                Conflicts requiring review: {conflictItems.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
                 {isOnline ? "Online" : "Offline"}
                 {syncProfile.lastSyncedAt ? ` · Last synced ${syncProfile.lastSyncedAt}` : ""}
               </div>
             </div>
+            {conflictItems.length > 0 ? (
+              <div className="grid gap-2 border border-destructive/20 p-3 text-xs">
+                <div className="text-foreground">Hosted sync conflicts</div>
+                {conflictItems.map((item) => (
+                  <div key={item.id} className="text-muted-foreground">
+                    {item.entityType}:{item.entityId}
+                    {item.lastError ? ` · ${item.lastError}` : ""}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="text-xs text-muted-foreground">

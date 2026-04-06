@@ -1,5 +1,7 @@
 "use client";
 
+// Orchestrates the main transactions workspace by loading ledger data, handling capture intake, and deriving month-close state for the UI.
+
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 

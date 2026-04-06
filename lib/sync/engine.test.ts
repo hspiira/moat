@@ -14,7 +14,7 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
   let currentProfile = { ...profile };
 
   const syncOutbox = {
-    getById: vi.fn(),
+    getById: vi.fn(async (id: string) => outbox.find((item) => item.id === id) ?? null),
     listByUser: vi.fn(async () => outbox),
     listPendingByUser: vi.fn(async () =>
       outbox.filter((item) => item.status === "pending" || item.status === "failed"),
@@ -38,18 +38,65 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
 
   return {
     userProfile: {} as RepositoryBundle["userProfile"],
-    accounts: {} as RepositoryBundle["accounts"],
-    transactions: {} as RepositoryBundle["transactions"],
+    accounts: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["accounts"],
+    transactions: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      listByMonth: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["transactions"],
     captureEnvelopes: {} as RepositoryBundle["captureEnvelopes"],
     captureReviewItems: {} as RepositoryBundle["captureReviewItems"],
     correctionLogs: {} as RepositoryBundle["correctionLogs"],
-    transactionRules: {} as RepositoryBundle["transactionRules"],
-    recurringObligations: {} as RepositoryBundle["recurringObligations"],
-    monthCloses: {} as RepositoryBundle["monthCloses"],
-    categories: {} as RepositoryBundle["categories"],
-    goals: {} as RepositoryBundle["goals"],
-    budgets: {} as RepositoryBundle["budgets"],
-    investmentProfiles: {} as RepositoryBundle["investmentProfiles"],
+    transactionRules: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["transactionRules"],
+    recurringObligations: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["recurringObligations"],
+    monthCloses: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      getByPeriod: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["monthCloses"],
+    categories: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      listDefaults: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["categories"],
+    goals: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["goals"],
+    budgets: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      listByMonth: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["budgets"],
+    investmentProfiles: {
+      getByUser: vi.fn(),
+      save: vi.fn(async (value) => value),
+    } as RepositoryBundle["investmentProfiles"],
     imports: {} as RepositoryBundle["imports"],
     resources: {} as RepositoryBundle["resources"],
     syncProfiles,
@@ -87,15 +134,26 @@ describe("runHostedSync", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            syncedAt: "2026-04-06T12:00:00.000Z",
-            results: [{ outboxId: "sync-outbox:1", status: "synced" }],
-          }),
-          { status: 200 },
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              syncedAt: "2026-04-06T12:00:00.000Z",
+              results: [{ outboxId: "sync-outbox:1", status: "synced", strategy: "manual_review" }],
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              syncedAt: "2026-04-06T12:00:01.000Z",
+              records: [],
+            }),
+            { status: 200 },
+          ),
         ),
-      ),
     );
 
     const result = await runHostedSync({
@@ -108,6 +166,7 @@ describe("runHostedSync", () => {
       attempted: 1,
       synced: 1,
       failed: 0,
+      conflicts: 0,
       syncedAt: "2026-04-06T12:00:00.000Z",
     });
   });
@@ -130,5 +189,95 @@ describe("runHostedSync", () => {
     });
 
     expect(result.error).toBe("Device is offline.");
+    expect(result.conflicts).toBe(0);
+  });
+
+  it("keeps manual-review conflicts in the outbox", async () => {
+    const repositories = createRepositories(
+      [
+        {
+          id: "sync-outbox:1",
+          userId: "u1",
+          entityType: "transactions",
+          entityId: "t1",
+          operation: "upsert",
+          payload: "{\"id\":\"t1\"}",
+          status: "pending",
+          attempts: 0,
+          queuedAt: "2026-04-06T00:00:00.000Z",
+          updatedAt: "2026-04-06T00:00:00.000Z",
+        },
+      ],
+      {
+        id: "sync-profile:u1",
+        userId: "u1",
+        mode: "hosted_opt_in",
+        hostedSyncEnabled: true,
+        postgresSyncUrl: "https://sync.example.com",
+        createdAt: "2026-04-06T00:00:00.000Z",
+        updatedAt: "2026-04-06T00:00:00.000Z",
+      },
+    );
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              syncedAt: "2026-04-06T12:00:00.000Z",
+              results: [
+                {
+                  outboxId: "sync-outbox:1",
+                  status: "conflict",
+                  strategy: "manual_review",
+                  error: "Manual review required before this ledger-affecting record can be synced.",
+                  serverRecord: {
+                    entityType: "transactions",
+                    entityId: "t1",
+                    payload: "{\"id\":\"t1\",\"amount\":100}",
+                    deleted: false,
+                    updatedAt: "2026-04-06T12:00:00.000Z",
+                    serverVersionToken: "sv:1",
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              syncedAt: "2026-04-06T12:00:01.000Z",
+              records: [
+                {
+                  entityType: "transactions",
+                  entityId: "t1",
+                  payload: "{\"id\":\"t1\",\"amount\":100}",
+                  deleted: false,
+                  updatedAt: "2026-04-06T12:00:00.000Z",
+                  serverVersionToken: "sv:1",
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        ),
+    );
+
+    const result = await runHostedSync({
+      repositories,
+      profile: await repositories.syncProfiles.getByUser("u1") as SyncProfile,
+      isOnline: true,
+    });
+
+    expect(result.conflicts).toBe(1);
+    expect(result.failed).toBe(0);
+    const persistedConflict = await repositories.syncOutbox.getById("sync-outbox:1");
+    expect(persistedConflict).toMatchObject({
+      status: "conflict",
+    });
   });
 });

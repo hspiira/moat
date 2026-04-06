@@ -1,5 +1,7 @@
 import type { StoreName } from "@/lib/repositories/indexeddb/client";
 
+// Wraps the host storage bridge so the app can issue typed storage commands and handle native responses consistently.
+
 export type NativeStorageRecord = Record<string, unknown>;
 
 export type NativeStorageCommand =

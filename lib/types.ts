@@ -43,7 +43,7 @@ export type CaptureConfidenceField =
 export type CaptureWarningLevel = "info" | "warning";
 export type SyncMode = "local_only" | "hosted_opt_in";
 export type SyncOutboxOperation = "upsert" | "remove";
-export type SyncOutboxStatus = "pending" | "syncing" | "failed" | "synced";
+export type SyncOutboxStatus = "pending" | "syncing" | "failed" | "synced" | "conflict";
 
 export type GoalType =
   | "emergency_fund"
@@ -357,7 +357,10 @@ export type SyncProfile = {
   mode: SyncMode;
   hostedSyncEnabled: boolean;
   postgresSyncUrl?: string;
+  deviceId?: string;
+  syncAuthToken?: string;
   lastSyncedAt?: string;
+  lastPulledAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -374,6 +377,7 @@ export type SyncOutboxItem = {
   queuedAt: string;
   updatedAt: string;
   lastError?: string;
+  conflictPayload?: string;
 };
 
 export type TransactionRule = {

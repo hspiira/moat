@@ -1,5 +1,7 @@
 "use client";
 
+// Manages the capture review inbox: loading review items, validating edits, and resolving them into approved or rejected outcomes.
+
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
 import { announceLocalSave } from "@/lib/local-save";

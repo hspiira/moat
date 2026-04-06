@@ -1,5 +1,7 @@
 "use client";
 
+// Powers the CSV import flow by parsing uploaded files, building preview rows, and persisting valid transactions into the ledger.
+
 import { useMemo, useState } from "react";
 
 import { applyTransactionRules } from "@/lib/domain/rules";

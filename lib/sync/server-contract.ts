@@ -64,9 +64,27 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
     device: {
       app: "moat",
       platform: device.platform as "web" | "android" | "ios",
+      id: typeof device.id === "string" ? device.id : undefined,
     },
     items: normalizedItems,
   };
+}
+
+export function validateSyncBearerToken(headerValue: string | null) {
+  const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
+  if (!expectedToken) {
+    return;
+  }
+
+  const value = headerValue?.trim();
+  if (!value?.startsWith("Bearer ")) {
+    throw new Error("Hosted sync requires a bearer token.");
+  }
+
+  const token = value.slice("Bearer ".length).trim();
+  if (token !== expectedToken) {
+    throw new Error("Hosted sync bearer token is invalid.");
+  }
 }
 
 export function createSyncStubResponse(request: SyncPushRequest): SyncPushResponse {
@@ -75,6 +93,7 @@ export function createSyncStubResponse(request: SyncPushRequest): SyncPushRespon
     results: request.items.map((item) => ({
       outboxId: item.outboxId,
       status: "synced" as const,
+      strategy: "client_wins" as const,
     })),
   };
 }

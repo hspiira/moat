@@ -1,5 +1,7 @@
 import type { CaptureEnvelopeSource } from "@/lib/types";
 
+// Bridges native capture payloads into the web app by queueing, dispatching, and subscribing to host-provided capture events.
+
 export type NativeCapturePayload = {
   channel: "shared_text" | "notification";
   source: CaptureEnvelopeSource;
