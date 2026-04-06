@@ -1,12 +1,27 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { evaluateRecurringObligations } from "@/lib/domain/recurring";
+import {
+  buildMonthCloseRecord,
+  evaluateMonthClose,
+  type MonthCloseEvaluation,
+} from "@/lib/domain/reconciliation";
 import { applyTransactionRules } from "@/lib/domain/rules";
+import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+import type {
+  Account,
+  Category,
+  MonthClose,
+  RecurringObligation,
+  Transaction,
+  TransactionRule,
+  UserProfile,
+} from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 
 import {
@@ -16,7 +31,10 @@ import {
   defaultTransactionForm,
 } from "./transactions/transaction-form";
 import { CsvImportPanel } from "./transactions/csv-import-panel";
+import { MonthClosePanel } from "./transactions/month-close-panel";
+import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
 import { TransactionList } from "./transactions/transaction-list";
+import { TransactionRulesPanel } from "./transactions/transaction-rules-panel";
 
 const repositories = createIndexedDbRepositories();
 
@@ -28,10 +46,22 @@ function sortTransactions(transactions: Transaction[]) {
 }
 
 export function TransactionsWorkspace() {
+  const closePeriod = new Date().toISOString().slice(0, 7);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactionRules, setTransactionRules] = useState<TransactionRule[]>([]);
+  const [recurringObligations, setRecurringObligations] = useState<RecurringObligation[]>([]);
+  const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
+  const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
+    unresolvedTransactions: [],
+    duplicateGroups: [],
+    missingCategoryTransactions: [],
+    recurringDueCount: 0,
+    recurringMissingCount: 0,
+    isReadyToClose: false,
+  });
   const [transactionForm, setTransactionForm] =
     useState<TransactionFormState>(defaultTransactionForm);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -41,7 +71,7 @@ export function TransactionsWorkspace() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  async function loadWorkspace() {
+  const loadWorkspace = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -53,6 +83,9 @@ export function TransactionsWorkspace() {
         setAccounts([]);
         setCategories([]);
         setTransactions([]);
+        setTransactionRules([]);
+        setRecurringObligations([]);
+        setMonthClose(null);
         return;
       }
 
@@ -61,6 +94,11 @@ export function TransactionsWorkspace() {
         repositories.categories.listByUser(nextProfile.id),
         repositories.transactions.listByUser(nextProfile.id),
       ]);
+      const [storedRules, storedObligations, storedMonthClose] = await Promise.all([
+        repositories.transactionRules.listByUser(nextProfile.id),
+        repositories.recurringObligations.listByUser(nextProfile.id),
+        repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
+      ]);
 
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
       await Promise.all(reconciledAccounts.map((a) => repositories.accounts.upsert(a)));
@@ -68,6 +106,30 @@ export function TransactionsWorkspace() {
       setAccounts(reconciledAccounts);
       setCategories(storedCategories);
       setTransactions(sortTransactions(storedTransactions));
+      setTransactionRules(storedRules);
+      setRecurringObligations(storedObligations);
+      setMonthClose(storedMonthClose);
+
+      const recurringEvaluations = evaluateRecurringObligations(
+        storedObligations,
+        storedTransactions,
+        closePeriod,
+      );
+      setMonthCloseEvaluation(
+        evaluateMonthClose(
+          storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
+          storedCategories,
+          recurringEvaluations.map((evaluation) => ({
+            obligation: evaluation.obligation,
+            status:
+              evaluation.state === "paid"
+                ? "paid"
+                : evaluation.state === "partial"
+                  ? "partial"
+                  : "missing",
+          })),
+        ),
+      );
 
       setTransactionForm((c) => ({
         ...c,
@@ -83,19 +145,48 @@ export function TransactionsWorkspace() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [closePeriod]);
 
   useEffect(() => {
     startTransition(() => {
       void loadWorkspace();
     });
-  }, []);
+  }, [loadWorkspace]);
 
   async function refreshAccounts(userId: string) {
     const storedAccounts = await repositories.accounts.listByUser(userId);
     const storedTransactions = await repositories.transactions.listByUser(userId);
     const reconciled = reconcileAccountBalances(storedAccounts, storedTransactions);
     await Promise.all(reconciled.map((a) => repositories.accounts.upsert(a)));
+  }
+
+  async function refreshMonthCloseState(userId: string) {
+    const [storedTransactions, storedCategories, storedObligations, existingMonthClose] =
+      await Promise.all([
+        repositories.transactions.listByUser(userId),
+        repositories.categories.listByUser(userId),
+        repositories.recurringObligations.listByUser(userId),
+        repositories.monthCloses.getByPeriod(userId, closePeriod),
+      ]);
+    const recurringEvaluations = evaluateRecurringObligations(
+      storedObligations,
+      storedTransactions,
+      closePeriod,
+    );
+    const evaluation = evaluateMonthClose(
+      storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
+      storedCategories,
+      recurringEvaluations.map((entry) => ({
+        obligation: entry.obligation,
+        status:
+          entry.state === "paid" ? "paid" : entry.state === "partial" ? "partial" : "missing",
+      })),
+    );
+    const nextRecord = buildMonthCloseRecord(existingMonthClose, userId, closePeriod, evaluation);
+    await repositories.monthCloses.upsert(nextRecord);
+    setRecurringObligations(storedObligations);
+    setMonthClose(nextRecord);
+    setMonthCloseEvaluation(evaluation);
   }
 
   async function handleTransactionSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -186,6 +277,7 @@ export function TransactionsWorkspace() {
       }
 
       await refreshAccounts(profile.id);
+      await refreshMonthCloseState(profile.id);
       const message = wasEditing
         ? "Transaction updated locally"
         : "Transaction saved locally";
@@ -252,6 +344,7 @@ export function TransactionsWorkspace() {
       setSuccessMessage(message);
       announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
       await refreshAccounts(profile.id);
+      await refreshMonthCloseState(profile.id);
       await loadWorkspace();
     } catch (deleteError) {
       setError(
@@ -307,42 +400,206 @@ export function TransactionsWorkspace() {
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-          <TransactionForm
-            accounts={accounts}
-            categories={categories}
+        <div className="grid gap-5">
+          <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+            <TransactionForm
+              accounts={accounts}
+              categories={categories}
               form={transactionForm}
               editingId={editingTransactionId}
               isSubmitting={isSubmitting}
               lastSavedAt={lastSavedAt}
               successMessage={successMessage}
               onFormChange={setTransactionForm}
-            onSubmit={(e) => void handleTransactionSubmit(e)}
-            onCancelEdit={() => {
-              setEditingTransactionId(null);
-              setTransactionForm(defaultTransactionForm);
-            }}
-          />
-
-          <div className="grid gap-5 content-start">
-            <CsvImportPanel
-              accounts={accounts}
-              categories={categories}
-              transactions={transactions}
-              profile={profile}
-              onImportSuccess={() => void loadWorkspace()}
-              onError={setError}
+              onSubmit={(e) => void handleTransactionSubmit(e)}
+              onCancelEdit={() => {
+                setEditingTransactionId(null);
+                setTransactionForm(defaultTransactionForm);
+              }}
             />
 
-            <TransactionList
+            <div className="grid gap-5 content-start">
+              <CsvImportPanel
+                accounts={accounts}
+                categories={categories}
+                transactions={transactions}
+                profile={profile}
+                onImportSuccess={() => void loadWorkspace()}
+                onError={setError}
+              />
+
+              <TransactionList
+                accounts={accounts}
+                categories={categories}
+                transactions={transactions}
+                isSubmitting={isSubmitting}
+                onEdit={beginTransactionEdit}
+                onDelete={(t) => void handleDeleteTransaction(t)}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+            <TransactionRulesPanel
               accounts={accounts}
               categories={categories}
-              transactions={transactions}
+              rules={transactionRules}
               isSubmitting={isSubmitting}
-              onEdit={beginTransactionEdit}
-              onDelete={(t) => void handleDeleteTransaction(t)}
+              onSaveRule={(rule) =>
+                void (async () => {
+                  if (!profile) return;
+                  setIsSubmitting(true);
+                  try {
+                    const timestamp = new Date().toISOString();
+                    await repositories.transactionRules.upsert({
+                      id: `rule:${crypto.randomUUID()}`,
+                      userId: profile.id,
+                      createdAt: timestamp,
+                      updatedAt: timestamp,
+                      ...rule,
+                    });
+                    await loadWorkspace();
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                })()
+              }
+              onToggleRule={(rule) =>
+                void (async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await repositories.transactionRules.upsert({
+                      ...rule,
+                      enabled: !rule.enabled,
+                      updatedAt: new Date().toISOString(),
+                    });
+                    await loadWorkspace();
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                })()
+              }
+            />
+
+            <RecurringObligationsPanel
+              accounts={accounts}
+              categories={categories}
+              obligations={recurringObligations}
+              evaluations={evaluateRecurringObligations(recurringObligations, transactions, closePeriod)}
+              isSubmitting={isSubmitting}
+              onSaveObligation={(obligation) =>
+                void (async () => {
+                  if (!profile) return;
+                  setIsSubmitting(true);
+                  try {
+                    const timestamp = new Date().toISOString();
+                    await repositories.recurringObligations.upsert({
+                      id: `obligation:${crypto.randomUUID()}`,
+                      userId: profile.id,
+                      createdAt: timestamp,
+                      updatedAt: timestamp,
+                      ...obligation,
+                    });
+                    await refreshMonthCloseState(profile.id);
+                    await loadWorkspace();
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                })()
+              }
+              onToggleObligation={(obligation) =>
+                void (async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await repositories.recurringObligations.upsert({
+                      ...obligation,
+                      status: obligation.status === "active" ? "paused" : "active",
+                      updatedAt: new Date().toISOString(),
+                    });
+                    if (profile) {
+                      await refreshMonthCloseState(profile.id);
+                    }
+                    await loadWorkspace();
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                })()
+              }
             />
           </div>
+
+          <MonthClosePanel
+            period={closePeriod}
+            monthClose={monthClose}
+            evaluation={monthCloseEvaluation}
+            recurringEvaluations={evaluateRecurringObligations(
+              recurringObligations,
+              transactions,
+              closePeriod,
+            )}
+            isSubmitting={isSubmitting}
+            onRefresh={() => {
+              if (profile) {
+                void refreshMonthCloseState(profile.id);
+              }
+            }}
+            onClose={() =>
+              void (async () => {
+                if (!profile || !monthCloseEvaluation.isReadyToClose) return;
+                setIsSubmitting(true);
+                try {
+                  const timestamp = new Date().toISOString();
+                  await repositories.monthCloses.upsert({
+                    ...(monthClose ??
+                      buildMonthCloseRecord(null, profile.id, closePeriod, monthCloseEvaluation)),
+                    state: "closed",
+                    closedAt: timestamp,
+                    updatedAt: timestamp,
+                  });
+                  await loadWorkspace();
+                } finally {
+                  setIsSubmitting(false);
+                }
+              })()
+            }
+            onExport={() => {
+              const periodTransactions = transactions.filter((transaction) =>
+                transaction.occurredOn.startsWith(closePeriod),
+              );
+              const summary = getSummaryForTransactions(periodTransactions, categories);
+              const csvLines = [
+                ["Metric", "Value"].join(","),
+                ["Opening balance", String(summary.openingBalance)].join(","),
+                ["Inflow", String(summary.inflow)].join(","),
+                ["Outflow", String(summary.outflow)].join(","),
+                ["Saved", String(summary.savings)].join(","),
+                ["Allocated savings", String(summary.allocatedSavings)].join(","),
+                ["Movement", String(summary.movement)].join(","),
+                ["Closing balance", String(summary.closingBalance)].join(","),
+                "",
+                ["Date", "Type", "Account", "Category", "Payee", "Amount", "State", "Note"].join(","),
+                ...periodTransactions.map((transaction) =>
+                  [
+                    transaction.occurredOn,
+                    transaction.type,
+                    transaction.accountId,
+                    transaction.categoryId,
+                    transaction.payee ?? transaction.rawPayee ?? "",
+                    String(transaction.amount),
+                    transaction.reconciliationState,
+                    (transaction.note ?? "").replaceAll(",", " "),
+                  ].join(","),
+                ),
+              ];
+              const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = `month-close-${closePeriod}.csv`;
+              anchor.click();
+              URL.revokeObjectURL(url);
+            }}
+          />
         </div>
       ) : null}
     </div>
