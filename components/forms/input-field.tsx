@@ -15,7 +15,7 @@ export function InputField({ id, label, hint, ...inputProps }: Props) {
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} {...inputProps} />
+      <Input id={id} name={inputProps.name ?? id} {...inputProps} />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );

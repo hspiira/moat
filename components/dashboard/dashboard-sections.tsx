@@ -1,15 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
+import { IconInfoCircle } from "@tabler/icons-react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { Account, Transaction } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
+import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
@@ -23,18 +34,163 @@ export function DashboardSavingsOverview({
   savingsRate,
   allocatedSavings,
   chartLabel,
+  chartSeries,
 }: {
   savingsRate: number;
   allocatedSavings: number;
   chartLabel: string;
+  chartSeries: DashboardChartPoint[];
 }) {
+  const [chartMode, setChartMode] = useState<"rate" | "flow" | "allocation">("flow");
+  const maxRate = useMemo(
+    () => Math.max(...chartSeries.map((point) => Math.abs(point.savingsRate)), 0.1),
+    [chartSeries],
+  );
+  const maxFlow = useMemo(
+    () => Math.max(...chartSeries.flatMap((point) => [Math.abs(point.saved), point.outflow]), 1),
+    [chartSeries],
+  );
+
+  function renderRateChart() {
+    const hasNegative = chartSeries.some((point) => point.savingsRate < 0);
+    return (
+      <div className="grid gap-2">
+        <div className="relative grid h-28 grid-cols-6 items-stretch gap-2">
+          {hasNegative ? (
+            <div className="absolute inset-x-0 top-1/2 border-t border-border/30" />
+          ) : null}
+          {chartSeries.map((point, index) => {
+            const height = Math.max((Math.abs(point.savingsRate) / maxRate) * 100, point.savingsRate === 0 ? 4 : 10);
+            const isCurrent = index === chartSeries.length - 1;
+            return (
+              <div key={point.key} className="relative flex items-end justify-center">
+                <div
+                  className={`w-full ${
+                    point.savingsRate > 0
+                      ? isCurrent
+                        ? "bg-foreground"
+                        : "bg-foreground/45"
+                      : point.savingsRate < 0
+                        ? "bg-destructive"
+                        : "bg-foreground/15"
+                  } ${hasNegative ? "absolute" : ""}`}
+                  style={
+                    hasNegative
+                      ? point.savingsRate >= 0
+                        ? { height: `${height / 2}%`, bottom: "50%" }
+                        : { height: `${height / 2}%`, top: "50%" }
+                      : { height: `${height}%` }
+                  }
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
+          <span>{chartSeries[0]?.label ?? chartLabel}</span>
+          <span>{chartSeries[chartSeries.length - 1]?.label ?? "Current"}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderFlowChart() {
+    return (
+      <div className="grid gap-2">
+        <div className="grid h-28 grid-cols-6 items-end gap-2">
+          {chartSeries.map((point, index) => {
+            const savedHeight = Math.max((Math.abs(point.saved) / maxFlow) * 100, point.saved === 0 ? 2 : 8);
+            const outflowHeight = Math.max((point.outflow / maxFlow) * 100, point.outflow === 0 ? 2 : 8);
+            const isCurrent = index === chartSeries.length - 1;
+
+            return (
+              <div key={point.key} className="grid h-full grid-cols-2 items-end gap-1">
+                <div
+                  className={
+                    point.saved >= 0
+                      ? isCurrent
+                        ? "bg-foreground"
+                        : "bg-foreground/45"
+                      : "bg-destructive"
+                  }
+                  style={{ height: `${savedHeight}%` }}
+                />
+                <div className="bg-destructive/65" style={{ height: `${outflowHeight}%` }} />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
+          <span>Saved</span>
+          <span>Outflow</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderAllocationChart() {
+    return (
+      <div className="grid gap-2">
+        <div className="grid h-28 grid-cols-6 items-end gap-2">
+          {chartSeries.map((point, index) => {
+            const inflow = Math.max(point.inflow, 0);
+            const savedShare = inflow > 0 ? Math.max(point.saved, 0) / inflow : 0;
+            const spentShare = inflow > 0 ? Math.min(point.outflow / inflow, 1) : 0;
+            const isCurrent = index === chartSeries.length - 1;
+            return (
+              <div key={point.key} className="flex h-full flex-col justify-end border border-border/20">
+                <div
+                  className={isCurrent ? "bg-foreground" : "bg-foreground/45"}
+                  style={{ height: `${savedShare * 100}%` }}
+                />
+                <div
+                  className="bg-destructive/65"
+                  style={{ height: `${spentShare * 100}%` }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
+          <span>Saved share</span>
+          <span>Spent share</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card className="moat-panel-sage border-border/20 shadow-none">
-      <CardContent className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-              Savings rate
+      <CardContent className="grid gap-6 p-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.85fr)] lg:items-center">
+        <div className="space-y-4 lg:self-center">
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+              <div className="min-w-0 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+                <span>Savings rate</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="size-4.5 text-foreground/60 hover:text-foreground"
+                      aria-label="Savings rate explanation"
+                    >
+                      <IconInfoCircle className="size-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="max-w-xs">
+                    <PopoverHeader>
+                      <PopoverTitle>Savings rate</PopoverTitle>
+                      <PopoverDescription>
+                        Based only on the selected period. This uses inflow minus outflow.
+                        Tagged savings contributions stay separate to avoid double counting.
+                        Current account balances below include opening balances and prior history.
+                      </PopoverDescription>
+                    </PopoverHeader>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <AmountIndicator
               tone={savingsRate > 0 ? "positive" : savingsRate < 0 ? "negative" : "neutral"}
@@ -43,29 +199,37 @@ export function DashboardSavingsOverview({
               className="text-6xl font-semibold tracking-tight"
             />
           </div>
-          <p className="max-w-md text-sm leading-6 text-foreground/75">
-            Based only on the selected period. This rate uses inflow minus outflow, while
-            explicit savings contributions stay separate to avoid double counting. Current
-            account balances below include opening balances and prior history too.
-          </p>
           <div className="text-xs text-foreground/65">
             Tagged savings contributions:{" "}
             <span className="font-medium text-foreground">{formatCurrency(allocatedSavings)}</span>
           </div>
         </div>
-        <div className="grid content-end gap-2">
-          <div className="grid grid-cols-6 items-end gap-2">
-            {[28, 42, 36, 58, 44, 68].map((height, index) => (
-              <div
-                key={height}
-                className={index === 4 ? "bg-foreground" : "bg-foreground/25"}
-                style={{ height: `${height}px` }}
-              />
+        <div className="grid gap-3 lg:self-center">
+          <div className="flex items-center justify-start gap-1 lg:justify-end">
+            {([
+              ["rate", "Rate"],
+              ["flow", "Flow"],
+              ["allocation", "Allocation"],
+            ] as const).map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                size="xs"
+                variant={chartMode === value ? "default" : "outline"}
+                className="px-1.5"
+                onClick={() => setChartMode(value)}
+              >
+                {label}
+              </Button>
             ))}
           </div>
-          <div className="flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/55">
-            <span>{chartLabel}</span>
-            <span className="text-right">Current</span>
+          {chartMode === "rate"
+            ? renderRateChart()
+            : chartMode === "flow"
+              ? renderFlowChart()
+              : renderAllocationChart()}
+          <div className="text-[11px] text-foreground/55">
+            Last six {chartLabel.toLowerCase()} periods.
           </div>
         </div>
       </CardContent>
@@ -78,11 +242,13 @@ export function DashboardCashFlowSection({
   savingsRate,
   allocatedSavings,
   chartLabel,
+  chartSeries,
 }: {
   summaryTiles: SummaryTile[];
   savingsRate: number;
   allocatedSavings: number;
   chartLabel: string;
+  chartSeries: DashboardChartPoint[];
 }) {
   return (
     <div className="grid gap-3 xl:grid-cols-[1.35fr_1fr]">
@@ -90,6 +256,7 @@ export function DashboardCashFlowSection({
         savingsRate={savingsRate}
         allocatedSavings={allocatedSavings}
         chartLabel={chartLabel}
+        chartSeries={chartSeries}
       />
       <DashboardSummaryTiles items={summaryTiles} />
     </div>

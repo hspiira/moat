@@ -16,6 +16,7 @@ export default function manifest(): MetadataRoute.Manifest {
     share_target: {
       action: "/transactions",
       method: "GET",
+      enctype: "application/x-www-form-urlencoded",
       params: {
         title: "title",
         text: "text",

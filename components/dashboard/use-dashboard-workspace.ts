@@ -7,6 +7,7 @@ import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import {
   buildPeriodWindow,
+  buildDashboardChartSeries,
   getAggregateBalanceAtDate,
   getChangePercent,
   getPeriodChartLabel,
@@ -92,6 +93,10 @@ export function useDashboardWorkspace(profile: UserProfile) {
     [accounts, currentTransactions, period, summary],
   );
   const chartLabel = getPeriodChartLabel(period);
+  const chartSeries = useMemo(
+    () => buildDashboardChartSeries(transactions, categories, period, new Date()),
+    [categories, period, transactions],
+  );
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthTransactions = useMemo(
     () => transactions.filter((transaction) => transaction.occurredOn.startsWith(currentMonth)),
@@ -215,6 +220,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     savingsRate,
     insights,
     chartLabel,
+    chartSeries,
     budgetCoverage,
     budgetEnvelopes,
     topAccounts,

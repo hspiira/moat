@@ -30,6 +30,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     savingsRate,
     insights,
     chartLabel,
+    chartSeries,
     budgetCoverage,
     budgetEnvelopes,
     topAccounts,
@@ -40,7 +41,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   } = useDashboardWorkspace(profile);
 
   const quickActions = [
-    { href: "/transactions", title: "Add transaction" },
+    { href: "/transactions/capture", title: "Add transaction" },
     { href: "/accounts", title: "Accounts" },
     { href: "/goals", title: "Set goal" },
   ];
@@ -85,6 +86,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             savingsRate={savingsRate}
             allocatedSavings={summary.allocatedSavings}
             chartLabel={chartLabel}
+            chartSeries={chartSeries}
           />
 
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">

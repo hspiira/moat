@@ -15,8 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { InputField } from "@/components/forms/input-field";
 
 type RuleFormState = {
   name: string;
@@ -88,26 +87,24 @@ export function TransactionRulesPanel({
       />
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="grid gap-2">
-            <Label>Name</Label>
-            <Input
-              value={form.name}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, name: event.target.value }))
-              }
-              placeholder="Incoming payment alert"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Priority</Label>
-            <Input
-              inputMode="numeric"
-              value={form.priority}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, priority: event.target.value }))
-              }
-            />
-          </div>
+          <InputField
+            id="rule-name"
+            label="Name"
+            value={form.name}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, name: event.target.value }))
+            }
+            placeholder="Incoming payment alert"
+          />
+          <InputField
+            id="rule-priority"
+            label="Priority"
+            inputMode="numeric"
+            value={form.priority}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, priority: event.target.value }))
+            }
+          />
           <div className="grid gap-2">
             <SelectField
               label="Source"
@@ -134,46 +131,42 @@ export function TransactionRulesPanel({
               }
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Payee pattern</Label>
-            <Input
-              value={form.payeePattern}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, payeePattern: event.target.value }))
-              }
-              placeholder="employer"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Keyword pattern</Label>
-            <Input
-              value={form.keywordPattern}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, keywordPattern: event.target.value }))
-              }
-              placeholder="payment"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Amount pattern</Label>
-            <Input
-              value={form.amountPattern}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, amountPattern: event.target.value }))
-              }
-              placeholder="100000"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Normalized payee</Label>
-            <Input
-              value={form.effectPayee}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, effectPayee: event.target.value }))
-              }
-              placeholder="Employer Ltd"
-            />
-          </div>
+          <InputField
+            id="rule-payee-pattern"
+            label="Payee pattern"
+            value={form.payeePattern}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, payeePattern: event.target.value }))
+            }
+            placeholder="employer"
+          />
+          <InputField
+            id="rule-keyword-pattern"
+            label="Keyword pattern"
+            value={form.keywordPattern}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, keywordPattern: event.target.value }))
+            }
+            placeholder="payment"
+          />
+          <InputField
+            id="rule-amount-pattern"
+            label="Amount pattern"
+            value={form.amountPattern}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, amountPattern: event.target.value }))
+            }
+            placeholder="100000"
+          />
+          <InputField
+            id="rule-normalized-payee"
+            label="Normalized payee"
+            value={form.effectPayee}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, effectPayee: event.target.value }))
+            }
+            placeholder="Employer Ltd"
+          />
           <div className="grid gap-2">
             <SelectField
               label="Effect category"

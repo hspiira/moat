@@ -1,6 +1,6 @@
-import { getAggregateOpeningBalance } from "@/lib/domain/summaries";
+import { getAggregateOpeningBalance, getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Category, Transaction } from "@/lib/types";
 
 export type PeriodFilter = "week" | "month" | "year" | "all";
 
@@ -17,6 +17,15 @@ export type PeriodWindow = {
 export type ChangeMetric = {
   kind: "delta" | "new" | "none";
   value: number | null;
+};
+
+export type DashboardChartPoint = {
+  key: string;
+  label: string;
+  inflow: number;
+  outflow: number;
+  saved: number;
+  savingsRate: number;
 };
 
 export function getPeriodOverviewLabel(period: PeriodFilter, now: Date) {
@@ -160,4 +169,47 @@ export function getAggregateBalanceAtDate(
   }, 0);
 
   return openingBalance + priorMovement;
+}
+
+function formatChartLabel(date: Date, period: PeriodFilter) {
+  if (period === "week") {
+    return new Intl.DateTimeFormat("en-UG", { day: "numeric", month: "short" }).format(date);
+  }
+  if (period === "month") {
+    return new Intl.DateTimeFormat("en-UG", { month: "short" }).format(date);
+  }
+  return String(date.getFullYear());
+}
+
+export function buildDashboardChartSeries(
+  transactions: Transaction[],
+  categories: Category[],
+  period: PeriodFilter,
+  now: Date,
+): DashboardChartPoint[] {
+  const effectivePeriod: Exclude<PeriodFilter, "all"> = period === "all" ? "year" : period;
+  const bucketCount = 6;
+  const currentStart =
+    effectivePeriod === "week"
+      ? startOfWeek(now)
+      : effectivePeriod === "month"
+        ? startOfMonth(now)
+        : startOfYear(now);
+
+  return Array.from({ length: bucketCount }, (_, index) => {
+    const offset = index - (bucketCount - 1);
+    const start = shiftDate(currentStart, effectivePeriod, offset);
+    const end = shiftDate(start, effectivePeriod, 1);
+    const bucketTransactions = filterTransactionsByRange(transactions, start, end);
+    const summary = getSummaryForTransactions(bucketTransactions, categories);
+
+    return {
+      key: `${effectivePeriod}-${start.toISOString()}`,
+      label: formatChartLabel(start, effectivePeriod),
+      inflow: summary.inflow,
+      outflow: summary.outflow,
+      saved: summary.savings,
+      savingsRate: getSavingsRate(summary),
+    };
+  });
 }
