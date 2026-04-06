@@ -100,6 +100,10 @@ export function getMobileTopBarTitle(pathname: string) {
     return "Review";
   }
 
+  if (pathname === "/transactions/review/capture") {
+    return "Capture review";
+  }
+
   if (pathname === "/transactions/tools") {
     return "Tools";
   }
@@ -192,7 +196,7 @@ export function MobileCaptureSheet() {
         <SheetHeader className="px-6">
           <SheetTitle>Capture</SheetTitle>
           <SheetDescription>
-            Start with the fastest capture path. Text, image, and document capture can plug into this same entry point later.
+            Start with the fastest capture path, then send machine-derived items into review before posting.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-2 px-6">

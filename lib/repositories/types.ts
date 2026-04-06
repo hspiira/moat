@@ -1,6 +1,8 @@
 import type {
   Account,
   BudgetTarget,
+  CaptureEnvelope,
+  CaptureReviewItem,
   Category,
   Goal,
   ImportBatch,
@@ -65,6 +67,8 @@ export interface RepositoryBundle {
   userProfile: UserProfileRepository;
   accounts: AccountRepository;
   transactions: TransactionRepository;
+  captureEnvelopes: Repository<CaptureEnvelope>;
+  captureReviewItems: Repository<CaptureReviewItem>;
   transactionRules: TransactionRuleRepository;
   recurringObligations: RecurringObligationRepository;
   monthCloses: MonthCloseRepository;

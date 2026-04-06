@@ -64,7 +64,7 @@ export function TextCapturePanel({
       <AccentCardHeader
         tone="sage"
         title="Text capture"
-        description="Paste raw transaction messages, review the extracted candidates, then save them to the books."
+        description="Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox."
       />
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-3 md:grid-cols-[0.8fr_1fr_0.8fr]">
@@ -256,7 +256,7 @@ export function TextCapturePanel({
 
             <div className="flex gap-2">
               <Button type="button" size="sm" disabled={isSubmitting} onClick={() => void handleSave()}>
-                Save reviewed candidates
+                Send reviewed candidates to inbox
               </Button>
             </div>
           </div>

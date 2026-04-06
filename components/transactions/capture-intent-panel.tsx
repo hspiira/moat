@@ -19,11 +19,11 @@ const captureCopy: Record<Exclude<CaptureIntent, null>, { title: string; body: s
   },
   import: {
     title: "Quick import capture",
-    body: "Use the CSV import panel below for statement-style capture. Text, SMS, image, and document capture will attach here later.",
+    body: "Use the CSV import panel below for statement-style capture without crowding the main ledger.",
   },
   text: {
     title: "Quick text capture",
-    body: "Paste SMS or notification text, review the extracted candidates, then save the cleaned transactions.",
+    body: "Paste SMS or notification text, review the extracted candidates, then send them into the capture inbox.",
   },
 };
 

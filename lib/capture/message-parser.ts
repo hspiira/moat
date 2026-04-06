@@ -27,6 +27,7 @@ export type ParsedCaptureCandidate = {
   parserLabel?: string;
   confidence: number;
   duplicate: boolean;
+  duplicateTransactionId?: string;
   issues: string[];
 };
 
@@ -137,16 +138,18 @@ function inferCategoryId(categories: Category[], type: Exclude<TransactionType, 
 }
 
 function detectDuplicate(candidate: ParsedCaptureCandidate, existing: Transaction[]) {
-  return existing.some(
-    (transaction) =>
-      transaction.messageHash === candidate.messageHash ||
-      (transaction.accountId === candidate.accountId &&
-        transaction.occurredOn === candidate.occurredOn &&
-        transaction.type === candidate.type &&
-        transaction.amount === candidate.normalizedAmount &&
-        normalizeName(transaction.payee ?? transaction.rawPayee ?? "") ===
-          normalizeName(candidate.payee) &&
-        normalizeName(transaction.note ?? "") === normalizeName(candidate.note)),
+  return (
+    existing.find(
+      (transaction) =>
+        transaction.messageHash === candidate.messageHash ||
+        (transaction.accountId === candidate.accountId &&
+          transaction.occurredOn === candidate.occurredOn &&
+          transaction.type === candidate.type &&
+          transaction.amount === candidate.normalizedAmount &&
+          normalizeName(transaction.payee ?? transaction.rawPayee ?? "") ===
+            normalizeName(candidate.payee) &&
+          normalizeName(transaction.note ?? "") === normalizeName(candidate.note)),
+    ) ?? null
   );
 }
 
@@ -215,8 +218,10 @@ export function parseCaptureText(params: {
       issues,
     };
 
-    candidate.duplicate = detectDuplicate(candidate, params.existingTransactions);
-    if (candidate.duplicate) {
+    const duplicateTransaction = detectDuplicate(candidate, params.existingTransactions);
+    candidate.duplicate = Boolean(duplicateTransaction);
+    candidate.duplicateTransactionId = duplicateTransaction?.id;
+    if (duplicateTransaction) {
       candidate.issues.push("Likely duplicate");
     }
 

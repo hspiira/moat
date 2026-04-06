@@ -1,10 +1,12 @@
 const DATABASE_NAME = "uganda-finance-app";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 export const storeNames = {
   userProfiles: "userProfiles",
   accounts: "accounts",
   transactions: "transactions",
+  captureEnvelopes: "captureEnvelopes",
+  captureReviewItems: "captureReviewItems",
   transactionRules: "transactionRules",
   recurringObligations: "recurringObligations",
   monthCloses: "monthCloses",

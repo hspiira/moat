@@ -26,6 +26,13 @@ export type ReconciliationState =
   | "matched";
 
 export type TransactionSource = "manual" | "csv" | "notification" | "sms";
+export type CaptureEnvelopeSource = "pasted_text" | "shared_text" | "file_extract" | "notification";
+export type CaptureReviewStatus =
+  | "new"
+  | "needs_review"
+  | "duplicate"
+  | "approved"
+  | "rejected";
 
 export type GoalType =
   | "emergency_fund"
@@ -167,6 +174,10 @@ export type Transaction = {
   rawPayee?: string;
   note?: string;
   messageHash?: string;
+  captureEnvelopeId?: string;
+  captureReviewItemId?: string;
+  parserLabel?: string;
+  confidenceScore?: number;
   isRecurringCandidate?: boolean;
   matchedRuleId?: string;
   reviewedAt?: string;
@@ -247,6 +258,48 @@ export type ImportBatch = {
   sourceName: string;
   importedAt: string;
   rowCount: number;
+};
+
+export type CaptureEnvelope = {
+  id: string;
+  userId: string;
+  source: CaptureEnvelopeSource;
+  rawContent: string;
+  contentHash: string;
+  sourceTitle?: string;
+  sourceApp?: string;
+  capturedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CaptureReviewItem = {
+  id: string;
+  userId: string;
+  envelopeId: string;
+  source: TransactionSource;
+  accountId: string;
+  occurredOn: string;
+  originalAmount: number;
+  currency: SupportedCurrency;
+  fxRateToUgx?: number;
+  normalizedAmount: number;
+  type: Exclude<TransactionType, "transfer">;
+  categoryId: string;
+  payee: string;
+  note: string;
+  messageHash: string;
+  parserLabel?: string;
+  confidenceScore: number;
+  status: CaptureReviewStatus;
+  issues: string[];
+  duplicateTransactionId?: string;
+  duplicateCaptureReviewItemId?: string;
+  approvedTransactionId?: string;
+  reviewedAt?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TransactionRule = {

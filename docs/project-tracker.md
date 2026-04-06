@@ -111,9 +111,9 @@ Reference: `docs/pilot-readiness-checklist.md`
 
 **Phase 1 (now):** CSV import — already built. Covers MTN mini-statements, Stanbic, DFCU, Centenary exports.
 
-**Phase 2 (post-pilot):** PDF statement parsing — MTN Uganda format is consistent enough to build a parser. Accept PDF uploads alongside CSV. Targets: MTN Mobile Money statement, Stanbic bank statement.
+**Phase 2 (current implementation plan):** simple capture platform. Start with share-to-app, capture inbox, Android notification listener, parser packs, confidence, deduplication, and correction logging. Reference: `docs/phase-2-simple-capture-implementation-plan.md`.
 
-**Phase 3 (v2 native):** React Native or Flutter app with `READ_SMS` permission on Android. Every MTN/Airtel transaction sends a parseable SMS. This is the killer feature — real-time automatic import with no API partnership needed. iOS will never support this.
+**Phase 3 (later / native expansion):** deeper native Android capture beyond notification listener, including any policy-approved SMS-adjacent capabilities if distribution constraints and platform rules make them viable.
 
 **Phase 4 (partnership/later):** MTN MoMo Open API integration for balance display and goal funding via payment requests.
 
@@ -129,7 +129,7 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 ### High potential
 
 - **PDF statement parser**: MTN Uganda and major bank statements are parseable. Would dramatically reduce manual entry friction. Android + iOS compatible.
-- **SMS auto-import (Android native)**: The real killer feature. Requires React Native/Flutter. Reads MTN/Airtel confirmation SMS in real time. Zero manual entry for mobile money transactions.
+- **Deep Android message capture**: After Phase 2 share intake and notification capture, evaluate whether stricter Android-native channels are worth the distribution and policy cost.
 - **Balance sync via MTN MoMo API**: Show live wallet balance without statement import. Low complexity, high trust signal.
 - **Smart categorisation from notes**: Use transaction notes to suggest categories (e.g. "boda" → Transport). Simple keyword matching to start.
 - **Recurring transaction detection**: Detect regular patterns (monthly rent, airtime) and prompt the user to confirm rather than re-enter.
@@ -178,13 +178,13 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 
 Suggested priority order after current state:
 
-1. **Finish Phase 1.5** — multi-currency transaction fields, monthly budgets, and structured debt tracking
-2. **Spot-check all source links** in Learn Uganda and Investment Compass
-3. **Compliance review** of investment guidance copy
-4. **JSON export/import** — cheap backup mechanism before sync is built
-5. **PDF statement parser** — MTN Uganda format first
-6. **Share-to-app intake** — paste/share capture before restricted channels
-7. **Notification capture** — Android-first, review-first
+1. **Phase 2 capture inbox and review flow** — tracked in `#53`
+2. **Android host shell and native bridge** — tracked in `#55`
+3. **Share-to-app intake** — tracked in `#27`
+4. **Android notification capture** — tracked in `#25`
+5. **Deterministic parse pipeline and metadata** — tracked in `#34`
+6. **MTN, Airtel, and bank parser packs** — tracked in `#30`
+7. **Correction logging for parser refinement** — tracked in `#54`
 
 ---
 

@@ -14,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#111111",
     categories: ["finance", "productivity", "utilities"],
     share_target: {
-      action: "/transactions",
+      action: "/transactions/capture",
       method: "GET",
       enctype: "application/x-www-form-urlencoded",
       params: {

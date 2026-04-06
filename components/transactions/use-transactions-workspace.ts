@@ -8,6 +8,12 @@ import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { normalizeAmountToUgx } from "@/lib/currency";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import {
+  createCaptureEnvelope,
+  createCaptureReviewItem,
+  getOpenCaptureReviewItems,
+  inferEnvelopeSourceFromTransactionSource,
+} from "@/lib/capture/review-queue";
+import {
   getRememberedFxDefault,
   normalizePayeeKey,
   saveFxMemory,
@@ -16,6 +22,7 @@ import { readDebtPlannerSettings } from "@/lib/preferences/debt-planner";
 import type {
   Account,
   BudgetTarget,
+  CaptureReviewItem,
   Category,
   MonthClose,
   RecurringObligation,
@@ -85,6 +92,7 @@ export function useTransactionsWorkspace() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
+  const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [transactionRules, setTransactionRules] = useState<TransactionRule[]>([]);
   const [recurringObligations, setRecurringObligations] = useState<RecurringObligation[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
@@ -157,6 +165,11 @@ export function useTransactionsWorkspace() {
     [periodTransactions],
   );
 
+  const captureReviewCount = useMemo(
+    () => getOpenCaptureReviewItems(captureReviewItems).length,
+    [captureReviewItems],
+  );
+
   const duplicateCount = useMemo(
     () => monthCloseEvaluation.duplicateGroups.length,
     [monthCloseEvaluation.duplicateGroups.length],
@@ -175,6 +188,7 @@ export function useTransactionsWorkspace() {
         setCategories([]);
         setTransactions([]);
         setBudgets([]);
+        setCaptureReviewItems([]);
         setTransactionRules([]);
         setRecurringObligations([]);
         setMonthClose(null);
@@ -186,7 +200,8 @@ export function useTransactionsWorkspace() {
         repositories.categories.listByUser(nextProfile.id),
         repositories.transactions.listByUser(nextProfile.id),
       ]);
-      const [storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
+      const [storedCaptureReviewItems, storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
+        repositories.captureReviewItems.listByUser(nextProfile.id),
         repositories.transactionRules.listByUser(nextProfile.id),
         repositories.recurringObligations.listByUser(nextProfile.id),
         repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
@@ -200,6 +215,7 @@ export function useTransactionsWorkspace() {
       setCategories(storedCategories);
       setTransactions(sortTransactions(storedTransactions));
       setBudgets(storedBudgets);
+      setCaptureReviewItems(storedCaptureReviewItems);
       setTransactionRules(storedRules);
       setRecurringObligations(storedObligations);
       setMonthClose(storedMonthClose);
@@ -613,38 +629,66 @@ export function useTransactionsWorkspace() {
               throw new Error("One or more captured rows has an invalid amount or FX rate.");
             }
 
-            const baseTransaction: Transaction = {
-              id: `transaction:${crypto.randomUUID()}`,
+            const normalizedCandidate = {
+              ...candidate,
+              normalizedAmount,
+            };
+            const envelope = createCaptureEnvelope({
               userId: profile.id,
-              accountId: candidate.accountId,
-              type: candidate.type,
-              amount: Math.abs(normalizedAmount),
-              currency: candidate.currency,
-              originalAmount: Math.abs(candidate.originalAmount),
-              fxRateToUgx: candidate.currency === "UGX" ? undefined : candidate.fxRateToUgx,
-              occurredOn: candidate.occurredOn,
-              categoryId: candidate.categoryId,
-              payee: candidate.payee.trim() || undefined,
-              rawPayee: candidate.payee.trim() || undefined,
-              note: candidate.note.trim() || undefined,
+              rawContent: candidate.rawText,
+              source: inferEnvelopeSourceFromTransactionSource(
+                candidate.source,
+                Boolean(sharedCaptureInput.trim()),
+              ),
+              capturedAt: timestamp,
+            });
+            const reviewItem = createCaptureReviewItem({
+              userId: profile.id,
+              envelopeId: envelope.id,
+              candidate: normalizedCandidate,
+              capturedAt: timestamp,
+            });
+            const rulePreview: Transaction = {
+              id: `transaction:preview:${reviewItem.id}`,
+              userId: profile.id,
+              accountId: reviewItem.accountId,
+              type: reviewItem.type,
+              amount: Math.abs(reviewItem.normalizedAmount),
+              currency: reviewItem.currency,
+              originalAmount: Math.abs(reviewItem.originalAmount),
+              fxRateToUgx: reviewItem.currency === "UGX" ? undefined : reviewItem.fxRateToUgx,
+              occurredOn: reviewItem.occurredOn,
+              categoryId: reviewItem.categoryId,
+              payee: reviewItem.payee.trim() || undefined,
+              rawPayee: reviewItem.payee.trim() || undefined,
+              note: reviewItem.note.trim() || undefined,
               reconciliationState: "reviewed",
-              source: candidate.source,
-              messageHash: candidate.messageHash,
+              source: reviewItem.source,
+              messageHash: reviewItem.messageHash,
+              parserLabel: reviewItem.parserLabel,
+              confidenceScore: reviewItem.confidenceScore,
               reviewedAt: timestamp,
               createdAt: timestamp,
               updatedAt: timestamp,
             };
+            const ruledPreview =
+              applyTransactionRules(rulePreview, rules)?.proposedTransaction ?? rulePreview;
 
-            const proposed =
-              applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
-
-            await repositories.transactions.upsert(proposed);
+            await repositories.captureEnvelopes.upsert(envelope);
+            await repositories.captureReviewItems.upsert({
+              ...reviewItem,
+              accountId: ruledPreview.accountId,
+              type: ruledPreview.type as CaptureReviewItem["type"],
+              categoryId: ruledPreview.categoryId,
+              payee: ruledPreview.payee ?? reviewItem.payee,
+              note: ruledPreview.note ?? reviewItem.note,
+              updatedAt: timestamp,
+            });
           }),
         );
 
-        await refreshAccounts(profile.id);
         await refreshMonthCloseState(profile.id);
-        const message = "Captured transactions saved locally";
+        const message = "Captured items sent to review locally";
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
         announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
@@ -657,7 +701,7 @@ export function useTransactionsWorkspace() {
         setIsSubmitting(false);
       }
     },
-    [loadWorkspace, profile, refreshAccounts, refreshMonthCloseState],
+    [loadWorkspace, profile, refreshMonthCloseState, sharedCaptureInput],
   );
 
   const saveRule = useCallback(
@@ -874,8 +918,10 @@ export function useTransactionsWorkspace() {
     periodTransactions,
     periodSummary,
     reviewCount,
+    captureReviewCount,
     duplicateCount,
     budgets,
+    captureReviewItems,
     transactionRules,
     recurringObligations,
     recurringEvaluations,

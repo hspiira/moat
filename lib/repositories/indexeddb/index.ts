@@ -1,6 +1,8 @@
 import {
   createAccountRepository,
   createBudgetTargetRepository,
+  createCaptureEnvelopeRepository,
+  createCaptureReviewItemRepository,
   createCategoryRepository,
   createGoalRepository,
   createImportBatchRepository,
@@ -19,6 +21,8 @@ export function createIndexedDbRepositories(): RepositoryBundle {
     userProfile: createUserProfileRepository(),
     accounts: createAccountRepository(),
     transactions: createTransactionRepository(),
+    captureEnvelopes: createCaptureEnvelopeRepository(),
+    captureReviewItems: createCaptureReviewItemRepository(),
     transactionRules: createTransactionRuleRepository(),
     recurringObligations: createRecurringObligationRepository(),
     monthCloses: createMonthCloseRepository(),

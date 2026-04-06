@@ -16,6 +16,8 @@ import type {
 import type {
   Account,
   BudgetTarget,
+  CaptureEnvelope,
+  CaptureReviewItem,
   Category,
   Goal,
   ImportBatch,
@@ -130,6 +132,14 @@ export function createTransactionRepository(): TransactionRepository {
       return records.filter((record) => record.occurredOn.startsWith(month));
     },
   };
+}
+
+export function createCaptureEnvelopeRepository() {
+  return createUserScopedRepository<CaptureEnvelope>("captureEnvelopes");
+}
+
+export function createCaptureReviewItemRepository() {
+  return createUserScopedRepository<CaptureReviewItem>("captureReviewItems");
 }
 
 export function createTransactionRuleRepository(): TransactionRuleRepository {
