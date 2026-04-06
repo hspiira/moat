@@ -15,11 +15,10 @@ import {
 } from "@/lib/domain/dashboard";
 import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
 
-const repositories = createIndexedDbRepositories();
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {

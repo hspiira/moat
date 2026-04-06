@@ -9,7 +9,7 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { ResourceLink, UserProfile } from "@/lib/types";
 import { AccentMetricCard } from "@/components/ui/accent-metric-card";
 import {
@@ -17,7 +17,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 
-const repositories = createIndexedDbRepositories();
 
 const topicCopy: Record<string, { title: string; summary: string }> = {
   "money-behaviour": {

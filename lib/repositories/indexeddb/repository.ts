@@ -1,4 +1,13 @@
-import { openFinanceDatabase, type StoreName } from "@/lib/repositories/indexeddb/client";
+import {
+  openFinanceDatabase,
+  USER_ID_INDEX,
+  USER_ID_IS_DEFAULT_INDEX,
+  USER_ID_MONTH_INDEX,
+  USER_ID_OCCURRED_ON_INDEX,
+  USER_ID_PERIOD_INDEX,
+  USER_ID_STATUS_INDEX,
+  type StoreName,
+} from "@/lib/repositories/indexeddb/client";
 import type {
   BudgetTargetRepository,
   CategoryRepository,
@@ -61,6 +70,25 @@ async function readAll<T>(storeName: StoreName): Promise<T[]> {
   });
 }
 
+async function readAllByIndex<T>(
+  storeName: StoreName,
+  indexName: string,
+  query: IDBValidKey | IDBKeyRange,
+): Promise<T[]> {
+  const database = await openFinanceDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, "readonly");
+    const store = transaction.objectStore(storeName);
+    const index = store.index(indexName);
+    const request = index.getAll(query);
+
+    request.onsuccess = () => resolve(request.result as T[]);
+    request.onerror = () =>
+      reject(request.error ?? new Error(`Unable to read indexed records from ${storeName}.`));
+  });
+}
+
 async function putOne<T>(storeName: StoreName, entity: T): Promise<T> {
   const database = await openFinanceDatabase();
 
@@ -104,8 +132,8 @@ async function removeOne(storeName: StoreName, id: string): Promise<void> {
 }
 
 async function readSyncProfileByUser(userId: string): Promise<SyncProfile | null> {
-  const profiles = await readAll<SyncProfile>("syncProfiles");
-  return profiles.find((profile) => profile.userId === userId) ?? null;
+  const profiles = await readAllByIndex<SyncProfile>("syncProfiles", USER_ID_INDEX, userId);
+  return profiles[0] ?? null;
 }
 
 async function enqueueSyncMutation(params: {
@@ -148,8 +176,7 @@ function createUserScopedRepository<T extends { id: string; userId: string }>(
       return getOne<T>(storeName, id);
     },
     async listByUser(userId) {
-      const records = await readAll<T>(storeName);
-      return records.filter((record) => record.userId === userId);
+      return readAllByIndex<T>(storeName, USER_ID_INDEX, userId);
     },
     async upsert(entity) {
       const saved = await putOne(storeName, entity);
@@ -205,8 +232,11 @@ export function createTransactionRepository(): TransactionRepository {
   return {
     ...repository,
     async listByMonth(userId, month) {
-      const records = await repository.listByUser(userId);
-      return records.filter((record) => record.occurredOn.startsWith(month));
+      return readAllByIndex<Transaction>(
+        "transactions",
+        USER_ID_OCCURRED_ON_INDEX,
+        IDBKeyRange.bound([userId, month], [userId, `${month}\uffff`]),
+      );
     },
   };
 }
@@ -237,8 +267,12 @@ export function createMonthCloseRepository(): MonthCloseRepository {
   return {
     ...repository,
     async getByPeriod(userId, period) {
-      const records = await repository.listByUser(userId);
-      return records.find((record) => record.period === period) ?? null;
+      const records = await readAllByIndex<MonthClose>(
+        "monthCloses",
+        USER_ID_PERIOD_INDEX,
+        IDBKeyRange.only([userId, period]),
+      );
+      return records[0] ?? null;
     },
   };
 }
@@ -249,8 +283,11 @@ export function createCategoryRepository(): CategoryRepository {
   return {
     ...repository,
     async listDefaults(userId) {
-      const categories = await repository.listByUser(userId);
-      return categories.filter((category) => category.isDefault);
+      return readAllByIndex<Category>(
+        "categories",
+        USER_ID_IS_DEFAULT_INDEX,
+        IDBKeyRange.only([userId, true]),
+      );
     },
   };
 }
@@ -265,8 +302,11 @@ export function createBudgetTargetRepository(): BudgetTargetRepository {
   return {
     ...repository,
     async listByMonth(userId, month) {
-      const budgets = await repository.listByUser(userId);
-      return budgets.filter((budget) => budget.month === month);
+      return readAllByIndex<BudgetTarget>(
+        "budgets",
+        USER_ID_MONTH_INDEX,
+        IDBKeyRange.only([userId, month]),
+      );
     },
   };
 }
@@ -274,8 +314,12 @@ export function createBudgetTargetRepository(): BudgetTargetRepository {
 export function createInvestmentProfileRepository(): InvestmentProfileRepository {
   return {
     async getByUser(userId) {
-      const records = await readAll<InvestmentProfile>("investmentProfiles");
-      return records.find((record) => record.userId === userId) ?? null;
+      const records = await readAllByIndex<InvestmentProfile>(
+        "investmentProfiles",
+        USER_ID_INDEX,
+        userId,
+      );
+      return records[0] ?? null;
     },
     async save(profile) {
       const saved = await putOne("investmentProfiles", profile);
@@ -336,8 +380,19 @@ export function createSyncOutboxRepository(): SyncOutboxRepository {
   return {
     ...repository,
     async listPendingByUser(userId) {
-      const items = await repository.listByUser(userId);
-      return items.filter((item) => item.status === "pending" || item.status === "failed");
+      const [pending, failed] = await Promise.all([
+        readAllByIndex<SyncOutboxItem>(
+          "syncOutbox",
+          USER_ID_STATUS_INDEX,
+          IDBKeyRange.only([userId, "pending"]),
+        ),
+        readAllByIndex<SyncOutboxItem>(
+          "syncOutbox",
+          USER_ID_STATUS_INDEX,
+          IDBKeyRange.only([userId, "failed"]),
+        ),
+      ]);
+      return [...pending, ...failed];
     },
   };
 }

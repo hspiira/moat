@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/types";
 import { runHostedSync } from "@/lib/sync/engine";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
 
-const repositories = createIndexedDbRepositories();
 
 const syncModeOptions: { value: SyncMode; label: string; body: string }[] = [
   {

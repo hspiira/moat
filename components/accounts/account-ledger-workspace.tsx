@@ -29,13 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getLedgerRows, reconcileAccountBalances } from "@/lib/domain/accounts";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 import { accountTypeLabels } from "./account-form";
 
-const repositories = createIndexedDbRepositories();
 
 function normalizeAccountId(value: string) {
   try {

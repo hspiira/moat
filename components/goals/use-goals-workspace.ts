@@ -6,10 +6,9 @@ import { defaultGoalForm, type GoalFormState } from "@/components/goals/goal-for
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
 
-const repositories = createIndexedDbRepositories();
 
 function sortGoals(goals: Goal[]) {
   return [...goals].sort((left, right) => left.priority - right.priority);

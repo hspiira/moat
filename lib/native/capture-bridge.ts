@@ -16,9 +16,6 @@ declare global {
     moatNativeCapture?: {
       ingest: (payload: NativeCapturePayload) => void;
     };
-    moatHostBridge?: {
-      updateCaptureSettings?: (settingsJson: string) => void;
-    };
     __moatPendingCapturePayloads?: NativeCapturePayload[];
     __moatNativeCaptureListenerCount?: number;
   }

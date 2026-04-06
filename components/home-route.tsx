@@ -5,10 +5,8 @@ import { startTransition, useEffect, useState } from "react";
 import { DashboardWorkspace } from "@/components/dashboard-workspace";
 import { HomeOverview } from "@/components/home-overview";
 import { modulePreviews } from "@/lib/data";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { UserProfile } from "@/lib/types";
-
-const repositories = createIndexedDbRepositories();
 
 export function HomeRoute() {
   const [profile, setProfile] = useState<UserProfile | null>(null);

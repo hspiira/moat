@@ -4,7 +4,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { useSearchParams } from "next/navigation";
 
 import { announceLocalSave } from "@/lib/local-save";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import { normalizeAmountToUgx } from "@/lib/currency";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import {
@@ -56,7 +56,6 @@ import {
 } from "./transaction-form";
 import type { CaptureIntent } from "./capture-intent-panel";
 
-const repositories = createIndexedDbRepositories();
 
 export type BudgetFormState = {
   budgetId: string | null;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
-import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
+import { repositories } from "@/lib/repositories/instance";
 import type { IncomeType, RiskComfort, SalaryCycle, UserProfile } from "@/lib/types";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
@@ -13,7 +13,6 @@ import { optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-const repositories = createIndexedDbRepositories();
 
 type OnboardingFormState = {
   displayName: string;
