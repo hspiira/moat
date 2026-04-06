@@ -41,6 +41,7 @@ export function TransactionsWorkspace() {
     successMessage,
     rememberedFxHint,
     captureIntent,
+    sharedCaptureInput,
     setError,
     setTransactionForm,
     setBudgetForm,
@@ -115,6 +116,7 @@ export function TransactionsWorkspace() {
                 existingTransactions={transactions}
                 isSubmitting={isSubmitting}
                 active={captureIntent === "text"}
+                initialInput={sharedCaptureInput}
                 onSaveCaptured={saveCapturedTransactions}
               />
 

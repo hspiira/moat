@@ -1,18 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
-import { accountOptions, categoryOptions, optionsFromRecord, transactionSourceLabels, transactionTypeLabels } from "@/lib/select-options";
+import { categoryOptions } from "@/lib/select-options";
 import type { Account, Category, TransactionSource, TransactionType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { parseCaptureText, type ParsedCaptureCandidate } from "@/lib/capture/message-parser";
+import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { formatMoney } from "@/lib/currency";
+import { useTextCapturePanel } from "./use-text-capture-panel";
 
 type Props = {
   accounts: Account[];
@@ -20,12 +19,9 @@ type Props = {
   existingTransactions: import("@/lib/types").Transaction[];
   isSubmitting: boolean;
   active: boolean;
+  initialInput?: string;
   onSaveCaptured: (candidates: ParsedCaptureCandidate[]) => Promise<void>;
 };
-
-type CaptureSourceOption = TransactionSource;
-
-const captureSourceOptions = optionsFromRecord(transactionSourceLabels, ["sms", "notification", "manual"]);
 
 export function TextCapturePanel({
   accounts,
@@ -33,36 +29,34 @@ export function TextCapturePanel({
   existingTransactions,
   isSubmitting,
   active,
+  initialInput,
   onSaveCaptured,
 }: Props) {
-  const [input, setInput] = useState("");
-  const [source, setSource] = useState<CaptureSourceOption>("sms");
-  const [accountId, setAccountId] = useState("");
-  const [fallbackFxRate, setFallbackFxRate] = useState("");
-  const [candidates, setCandidates] = useState<ParsedCaptureCandidate[]>([]);
-
-  const accountSelectOptions = useMemo(() => accountOptions(accounts), [accounts]);
-  const typeOptions = useMemo(
-    () => optionsFromRecord(transactionTypeLabels).filter((option) => option.value !== "transfer"),
-    [],
-  );
-
-  function handleParse() {
-    const parsed = parseCaptureText({
-      input,
-      source,
-      accountId: accountId || accounts[0]?.id || "",
-      categories,
-      existingTransactions,
-      fallbackFxRate: Number(fallbackFxRate || 0) || undefined,
-    });
-    setCandidates(parsed);
-  }
+  const {
+    input,
+    setInput,
+    source,
+    setSource,
+    accountId,
+    setAccountId,
+    fallbackFxRate,
+    setFallbackFxRate,
+    candidates,
+    isExtractingFiles,
+    fileError,
+    accountSelectOptions,
+    typeOptions,
+    captureSourceOptions,
+    parseMessages,
+    appendFiles,
+    resetReview,
+    updateCandidate,
+  } = useTextCapturePanel({ accounts, categories, existingTransactions, initialInput });
 
   async function handleSave() {
     await onSaveCaptured(candidates);
+    resetReview();
     setInput("");
-    setCandidates([]);
   }
 
   return (
@@ -79,7 +73,7 @@ export function TextCapturePanel({
             label="Source"
             value={source}
             options={captureSourceOptions}
-            onValueChange={(value) => setSource(value as CaptureSourceOption)}
+            onValueChange={(value) => setSource(value as TransactionSource)}
           />
           <SelectField
             id="capture-account"
@@ -107,12 +101,34 @@ export function TextCapturePanel({
           className="min-h-32"
         />
 
+        <div className="grid gap-2">
+          <InputField
+            id="capture-files"
+            label="Image or document"
+            type="file"
+            accept="image/*,.pdf,text/plain,text/csv"
+            multiple
+            onChange={(event) => {
+              const files = Array.from(event.target.files ?? []);
+              if (files.length > 0) {
+                void appendFiles(files);
+              }
+              event.target.value = "";
+            }}
+            hint="Upload screenshots, PDFs, or text files to extract transaction text into the same review flow."
+          />
+          {isExtractingFiles ? (
+            <div className="text-xs text-muted-foreground">Extracting text from file…</div>
+          ) : null}
+          {fileError ? <div className="text-xs text-destructive">{fileError}</div> : null}
+        </div>
+
         <div className="flex gap-2">
-          <Button type="button" size="sm" disabled={!input.trim()} onClick={handleParse}>
+          <Button type="button" size="sm" disabled={!input.trim()} onClick={parseMessages}>
             Parse messages
           </Button>
           {candidates.length > 0 ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => setCandidates([])}>
+            <Button type="button" size="sm" variant="outline" onClick={resetReview}>
               Clear review
             </Button>
           ) : null}
@@ -146,24 +162,18 @@ export function TextCapturePanel({
                     value={candidate.type}
                     options={typeOptions}
                     onValueChange={(value) =>
-                      setCandidates((current) =>
-                        current.map((entry) =>
-                          entry.id === candidate.id
-                            ? {
-                                ...entry,
-                                type: value as Exclude<TransactionType, "transfer">,
-                                categoryId:
-                                  categories.find((category) =>
-                                    value === "income"
-                                      ? category.kind === "income"
-                                      : value === "savings_contribution"
-                                        ? category.kind === "savings"
-                                        : category.kind === "expense",
-                                  )?.id ?? entry.categoryId,
-                              }
-                            : entry,
-                        ),
-                      )
+                      updateCandidate(candidate.id, (entry) => ({
+                        ...entry,
+                        type: value as Exclude<TransactionType, "transfer">,
+                        categoryId:
+                          categories.find((category) =>
+                            value === "income"
+                              ? category.kind === "income"
+                              : value === "savings_contribution"
+                                ? category.kind === "savings"
+                                : category.kind === "expense",
+                          )?.id ?? entry.categoryId,
+                      }))
                     }
                   />
                   <SelectField
@@ -172,9 +182,7 @@ export function TextCapturePanel({
                     value={candidate.categoryId}
                     options={categoryOptions(categories)}
                     onValueChange={(value) =>
-                      setCandidates((current) =>
-                        current.map((entry) => (entry.id === candidate.id ? { ...entry, categoryId: value } : entry)),
-                      )
+                      updateCandidate(candidate.id, (entry) => ({ ...entry, categoryId: value }))
                     }
                   />
                   <InputField
@@ -182,9 +190,7 @@ export function TextCapturePanel({
                     label="Date"
                     value={candidate.occurredOn}
                     onChange={(event) =>
-                      setCandidates((current) =>
-                        current.map((entry) => (entry.id === candidate.id ? { ...entry, occurredOn: event.target.value } : entry)),
-                      )
+                      updateCandidate(candidate.id, (entry) => ({ ...entry, occurredOn: event.target.value }))
                     }
                   />
                   <InputField
@@ -192,9 +198,7 @@ export function TextCapturePanel({
                     label="Payee / source"
                     value={candidate.payee}
                     onChange={(event) =>
-                      setCandidates((current) =>
-                        current.map((entry) => (entry.id === candidate.id ? { ...entry, payee: event.target.value } : entry)),
-                      )
+                      updateCandidate(candidate.id, (entry) => ({ ...entry, payee: event.target.value }))
                     }
                   />
                   <InputField
@@ -203,13 +207,10 @@ export function TextCapturePanel({
                     inputMode="decimal"
                     value={String(candidate.originalAmount)}
                     onChange={(event) =>
-                      setCandidates((current) =>
-                        current.map((entry) =>
-                          entry.id === candidate.id
-                            ? { ...entry, originalAmount: Number(event.target.value) || 0 }
-                            : entry,
-                        ),
-                      )
+                      updateCandidate(candidate.id, (entry) => ({
+                        ...entry,
+                        originalAmount: Number(event.target.value) || 0,
+                      }))
                     }
                   />
                   {candidate.currency !== "UGX" ? (
@@ -219,13 +220,10 @@ export function TextCapturePanel({
                       inputMode="decimal"
                       value={String(candidate.fxRateToUgx ?? "")}
                       onChange={(event) =>
-                        setCandidates((current) =>
-                          current.map((entry) =>
-                            entry.id === candidate.id
-                              ? { ...entry, fxRateToUgx: Number(event.target.value) || undefined }
-                              : entry,
-                          ),
-                        )
+                        updateCandidate(candidate.id, (entry) => ({
+                          ...entry,
+                          fxRateToUgx: Number(event.target.value) || undefined,
+                        }))
                       }
                     />
                   ) : null}
@@ -236,13 +234,14 @@ export function TextCapturePanel({
                   label="Raw note"
                   value={candidate.note}
                   onChange={(event) =>
-                    setCandidates((current) =>
-                      current.map((entry) => (entry.id === candidate.id ? { ...entry, note: event.target.value } : entry)),
-                    )
+                    updateCandidate(candidate.id, (entry) => ({ ...entry, note: event.target.value }))
                   }
                   className="min-h-20"
                 />
 
+                {candidate.parserLabel ? (
+                  <div className="text-xs text-muted-foreground">Matched template: {candidate.parserLabel}</div>
+                ) : null}
                 {candidate.issues.length > 0 ? (
                   <div className="grid gap-1 text-xs text-destructive">
                     {candidate.issues.map((issue) => (

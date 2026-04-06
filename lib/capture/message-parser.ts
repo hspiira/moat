@@ -1,5 +1,6 @@
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { buildStableHash } from "@/lib/hash";
+import { parseWithTemplates } from "@/lib/capture/parser-templates";
 import type {
   Category,
   SupportedCurrency,
@@ -23,6 +24,7 @@ export type ParsedCaptureCandidate = {
   note: string;
   source: TransactionSource;
   messageHash: string;
+  parserLabel?: string;
   confidence: number;
   duplicate: boolean;
   issues: string[];
@@ -160,18 +162,19 @@ export function parseCaptureText(params: {
 
   return messages.map<ParsedCaptureCandidate>((rawText, index) => {
     const source = params.source;
-    const type = inferType(rawText);
-    const currency = inferCurrency(rawText);
-    const originalAmount = Math.abs(parseAmount(rawText));
+    const templateMatch = parseWithTemplates(rawText);
+    const type = templateMatch?.type ?? inferType(rawText);
+    const currency = templateMatch?.currency ?? inferCurrency(rawText);
+    const originalAmount = Math.abs(templateMatch?.originalAmount ?? parseAmount(rawText));
     const fxRateToUgx =
       currency === "UGX" ? undefined : params.fallbackFxRate && params.fallbackFxRate > 0 ? params.fallbackFxRate : undefined;
     const normalizedAmount = normalizeAmountToUgx(originalAmount, currency, fxRateToUgx);
-    const occurredOn = parseDate(rawText);
-    const payee = inferPayee(rawText);
+    const occurredOn = templateMatch?.occurredOn ?? parseDate(rawText);
+    const payee = templateMatch?.payee ?? inferPayee(rawText);
     const categoryId = inferCategoryId(params.categories, type);
     const messageHash = buildStableHash([source, rawText, occurredOn, String(originalAmount)], "capture");
     const issues: string[] = [];
-    let confidence = 0.35;
+    let confidence = 0.35 + (templateMatch?.confidenceBoost ?? 0);
 
     if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
       issues.push("Invalid amount");
@@ -203,9 +206,10 @@ export function parseCaptureText(params: {
       categoryId,
       accountId: params.accountId,
       payee,
-      note: rawText,
+      note: templateMatch?.note ?? rawText,
       source,
       messageHash,
+      parserLabel: templateMatch?.templateId,
       confidence: Math.min(0.95, confidence),
       duplicate: false,
       issues,

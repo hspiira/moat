@@ -113,6 +113,7 @@ export function useTransactionsWorkspace() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [rememberedFxHint, setRememberedFxHint] = useState<string | null>(null);
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>(null);
+  const [sharedCaptureInput, setSharedCaptureInput] = useState("");
   const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
   const suggestedRecurringObligations = useMemo(
     () =>
@@ -234,18 +235,25 @@ export function useTransactionsWorkspace() {
     const accountId = searchParams.get("accountId");
     const amount = searchParams.get("amount");
     const payee = searchParams.get("payee");
-
-    setCaptureIntent(
+    const sharedTitle = searchParams.get("title");
+    const sharedText = searchParams.get("text");
+    const sharedUrl = searchParams.get("url");
+    const nextSharedInput = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n");
+    const nextCaptureIntent: CaptureIntent =
       capture === "expense" ||
-        capture === "income" ||
-        capture === "transfer" ||
-        capture === "import" ||
-        capture === "text"
+      capture === "income" ||
+      capture === "transfer" ||
+      capture === "import" ||
+      capture === "text"
         ? capture
-        : null,
-    );
+        : nextSharedInput
+          ? "text"
+          : null;
 
-    if (!capture && !type && !accountId && !amount && !payee) return;
+    setCaptureIntent(nextCaptureIntent);
+    setSharedCaptureInput(nextSharedInput);
+
+    if (!capture && !type && !accountId && !amount && !payee && !nextSharedInput) return;
 
     setTransactionForm((current) => ({
       ...current,
@@ -853,6 +861,7 @@ export function useTransactionsWorkspace() {
     successMessage,
     rememberedFxHint,
     captureIntent,
+    sharedCaptureInput,
     setError,
     setTransactionForm,
     setBudgetForm,
