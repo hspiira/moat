@@ -85,8 +85,20 @@ export function AccountList({ accounts, transactions, onEdit }: Props) {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Balance</span>
                 <AmountIndicator
-                  tone={account.balance < 0 ? "negative" : "neutral"}
-                  sign={account.balance < 0 ? "negative" : "none"}
+                  tone={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "neutral"
+                  }
+                  sign={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "none"
+                  }
                   value={formatCurrency(account.balance)}
                   className="text-base font-semibold"
                 />

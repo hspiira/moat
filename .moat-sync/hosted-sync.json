@@ -1,0 +1,38 @@
+{
+  "users": {
+    "hosted-test-user-1": {
+      "records": {
+        "categories:category:1": {
+          "entityType": "categories",
+          "entityId": "category:1",
+          "payload": "{\"id\":\"category:1\",\"userId\":\"hosted-test-user-1\",\"name\":\"Food\",\"kind\":\"expense\",\"isDefault\":true,\"createdAt\":\"2026-04-06T00:00:00.000Z\"}",
+          "deleted": false,
+          "updatedAt": "2026-04-06T17:16:24.715Z",
+          "serverVersionToken": "sv:72fbc753-51cc-4cac-9caa-cf6fcf06639b",
+          "lastOutboxId": "sync-outbox:hosted-1",
+          "lastDeviceId": "device:web-1"
+        }
+      },
+      "appliedOutboxIds": {
+        "sync-outbox:hosted-1": "2026-04-06T17:16:24.720Z"
+      }
+    },
+    "hosted-test-user-2": {
+      "records": {
+        "transactions:transaction:1": {
+          "entityType": "transactions",
+          "entityId": "transaction:1",
+          "payload": "{\"id\":\"transaction:1\",\"amount\":100}",
+          "deleted": false,
+          "updatedAt": "2026-04-06T17:16:24.724Z",
+          "serverVersionToken": "sv:92fcaa31-bdbe-44a4-a758-6e77601f9cf7",
+          "lastOutboxId": "sync-outbox:hosted-2a",
+          "lastDeviceId": "device:web-1"
+        }
+      },
+      "appliedOutboxIds": {
+        "sync-outbox:hosted-2a": "2026-04-06T17:16:24.724Z"
+      }
+    }
+  }
+}

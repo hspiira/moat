@@ -428,8 +428,20 @@ export function DashboardAccountBalances({
                     <Link href={`/accounts/${encodeURIComponent(account.id)}`}>Ledger</Link>
                   </Button>
                   <AmountIndicator
-                    tone={account.balance < 0 ? "negative" : "neutral"}
-                    sign={account.balance < 0 ? "negative" : "none"}
+                    tone={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "neutral"
+                    }
+                    sign={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "none"
+                    }
                     value={formatCurrency(account.balance)}
                     className="text-sm font-medium"
                   />

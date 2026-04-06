@@ -154,7 +154,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
         title={account?.name ?? "Account"}
         description="Trace the current balance from opening balance and recorded movements."
         aside={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start gap-2 sm:items-center">
             {account ? (
               <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
             ) : null}
@@ -187,8 +187,20 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 </CardDescription>
                 <CardTitle className="text-4xl tracking-tight">
                   <AmountIndicator
-                    tone={account.balance < 0 ? "negative" : "neutral"}
-                    sign={account.balance < 0 ? "negative" : "none"}
+                    tone={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "neutral"
+                    }
+                    sign={
+                      account.balance > 0
+                        ? "positive"
+                        : account.balance < 0
+                          ? "negative"
+                          : "none"
+                    }
                     value={formatCurrency(account.balance)}
                     className="text-4xl font-semibold tracking-tight"
                   />
