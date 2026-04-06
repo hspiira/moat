@@ -11,6 +11,13 @@ import {
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
+import { DashboardBalanceBridge } from "@/components/dashboard/dashboard-balance-bridge";
+import { DashboardBudgetCoverage } from "@/components/dashboard/dashboard-budget-coverage";
+import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
+import {
+  DashboardSummaryTiles,
+  type SummaryTile,
+} from "@/components/dashboard/dashboard-summary-tiles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -139,7 +146,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const outflowChange = getChangePercent(summary.outflow, previousSummary.outflow);
   const savingsChange = getChangePercent(summary.savings, previousSummary.savings);
 
-  const summaryTiles = [
+  const summaryTiles: SummaryTile[] = [
     {
       label: "Inflow",
       value: formatCurrency(summary.inflow),
@@ -245,25 +252,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
           </h1>
           <p className="text-sm text-muted-foreground">{periodWindow.overviewLabel}</p>
         </div>
-        <div className="flex items-center gap-1 border border-border/30 p-1">
-          {[
-            { id: "week", label: "W" },
-            { id: "month", label: "M" },
-            { id: "year", label: "Y" },
-            { id: "all", label: "All" },
-          ].map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              size="sm"
-              variant={period === option.id ? "secondary" : "ghost"}
-              className="min-w-9"
-              onClick={() => setPeriod(option.id as PeriodFilter)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+        <DashboardPeriodFilter period={period} onChange={setPeriod} />
       </div>
 
       {error ? (
@@ -336,53 +325,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
               </CardContent>
             </Card>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {summaryTiles.map((item) => (
-                <Card
-                  key={item.label}
-                  className={`${item.className} border-border/20 shadow-none`}
-                >
-                  <CardHeader className="gap-2 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <CardDescription className="text-foreground/65">
-                        {item.label}
-                      </CardDescription>
-                      <AmountIndicator
-                        tone={item.changeTone}
-                        direction={item.changeDirection}
-                        showIcon={item.change.kind !== "none"}
-                        sign={
-                          item.change.kind === "new"
-                            ? "positive"
-                            : item.change.kind === "delta" && (item.change.value ?? 0) > 0
-                            ? "positive"
-                            : item.change.kind === "delta" && (item.change.value ?? 0) < 0
-                              ? "negative"
-                              : "none"
-                        }
-                        value={
-                          item.change.kind === "none"
-                            ? "—"
-                            : item.change.kind === "new"
-                              ? "New"
-                              : `${Math.abs(item.change.value ?? 0).toFixed(0)}%`
-                        }
-                        className="text-xs font-medium"
-                        iconClassName="h-3.5 w-3.5"
-                      />
-                    </div>
-                    <CardTitle className="text-2xl tracking-tight">
-                      <AmountIndicator
-                        tone={item.tone}
-                        sign={item.sign}
-                        value={item.value}
-                        className="text-2xl font-semibold tracking-tight"
-                      />
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <DashboardSummaryTiles items={summaryTiles} />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
@@ -490,136 +433,22 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/20 shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-base">Budget coverage</CardTitle>
-                  <CardDescription>
-                    Current month only. Envelopes track allocated, spent, and remaining.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-2">
-                  {budgets.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      No budgets set yet. Add envelopes from Transactions.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid gap-2 border border-border/20 px-4 py-3">
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-foreground/72">Allocated</span>
-                          <AmountIndicator
-                            tone="neutral"
-                            sign="none"
-                            value={formatCurrency(budgetCoverage.allocated)}
-                            className="text-sm font-medium"
-                          />
-                        </div>
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-foreground/72">Spent</span>
-                          <AmountIndicator
-                            tone="negative"
-                            sign="negative"
-                            value={formatCurrency(budgetCoverage.spent)}
-                            className="text-sm font-medium"
-                          />
-                        </div>
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-foreground/72">Remaining</span>
-                          <AmountIndicator
-                            tone={
-                              budgetCoverage.remaining > 0
-                                ? "positive"
-                                : budgetCoverage.remaining < 0
-                                  ? "negative"
-                                  : "neutral"
-                            }
-                            sign={
-                              budgetCoverage.remaining > 0
-                                ? "positive"
-                                : budgetCoverage.remaining < 0
-                                  ? "negative"
-                                  : "none"
-                            }
-                            value={formatCurrency(Math.abs(budgetCoverage.remaining))}
-                            className="text-sm font-medium"
-                          />
-                        </div>
-                      </div>
+              <DashboardBudgetCoverage
+                hasBudgets={budgets.length > 0}
+                allocated={budgetCoverage.allocated}
+                spent={budgetCoverage.spent}
+                remaining={budgetCoverage.remaining}
+                envelopes={budgetEnvelopes}
+              />
 
-                      {budgetEnvelopes.map((envelope) => (
-                        <div
-                          key={envelope.categoryId}
-                          className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3 text-sm"
-                        >
-                          <span className="text-foreground">{envelope.categoryName}</span>
-                          <AmountIndicator
-                            tone={
-                              envelope.remaining > 0
-                                ? "positive"
-                                : envelope.remaining < 0
-                                  ? "negative"
-                                  : "neutral"
-                            }
-                            sign={
-                              envelope.remaining > 0
-                                ? "positive"
-                                : envelope.remaining < 0
-                                  ? "negative"
-                                  : "none"
-                            }
-                            value={formatCurrency(Math.abs(envelope.remaining))}
-                            className="text-sm font-medium"
-                          />
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="moat-panel-lilac border-border/20 shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-base">Period balance bridge</CardTitle>
-                  <CardDescription className="text-foreground/65">
-                    Opening plus movement equals closing for the selected period.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-2 text-sm">
-                  {[
-                    ["Opening balance", summary.openingBalance],
-                    ["Inflow", summary.inflow],
-                    ["Outflow", -summary.outflow],
-                    ["Allocated savings", -summary.allocatedSavings],
-                    ["Movement", summary.movement],
-                    ["Closing balance", summary.closingBalance],
-                  ].map(([label, amount]) => (
-                    <div
-                      key={label}
-                      className="flex items-center justify-between gap-3 border-b border-border/15 pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <span className="text-foreground/72">{label}</span>
-                      <AmountIndicator
-                        tone={
-                          Number(amount) > 0
-                            ? "positive"
-                            : Number(amount) < 0
-                              ? "negative"
-                              : "neutral"
-                        }
-                        sign={
-                          Number(amount) > 0
-                            ? "positive"
-                            : Number(amount) < 0
-                              ? "negative"
-                              : "none"
-                        }
-                        value={formatCurrency(Math.abs(Number(amount)))}
-                        className="text-sm font-medium"
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <DashboardBalanceBridge
+                openingBalance={summary.openingBalance}
+                inflow={summary.inflow}
+                outflow={summary.outflow}
+                allocatedSavings={summary.allocatedSavings}
+                movement={summary.movement}
+                closingBalance={summary.closingBalance}
+              />
 
               <Card className="moat-panel-lilac border-border/20 shadow-none">
                 <CardHeader>

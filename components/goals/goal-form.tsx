@@ -3,6 +3,7 @@
 import type { Account, GoalType } from "@/lib/types";
 import { formatMoney } from "@/lib/currency";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { InputField } from "@/components/forms/input-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { SelectField } from "@/components/forms/select-field";
@@ -12,9 +13,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export type GoalFormState = {
   name: string;
@@ -152,14 +151,12 @@ export function GoalForm({
             required
           />
 
-          <div className="grid gap-2">
-            <Label htmlFor="target-date">Target date</Label>
-            <DatePicker
-              id="target-date"
-              value={form.targetDate}
-              onChange={(v) => onFormChange((c) => ({ ...c, targetDate: v }))}
-            />
-          </div>
+          <DatePickerField
+            id="target-date"
+            label="Target date"
+            value={form.targetDate}
+            onChange={(v) => onFormChange((c) => ({ ...c, targetDate: v }))}
+          />
 
           <InputField
             id="goal-priority"

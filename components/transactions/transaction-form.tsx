@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -21,8 +22,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
 
 export { transactionTypeLabels } from "@/lib/select-options";
 
@@ -232,14 +231,12 @@ export function TransactionForm({
             </>
           ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="tx-date">Date</Label>
-            <DatePicker
-              id="tx-date"
-              value={form.occurredOn}
-              onChange={(v) => onFormChange((c) => ({ ...c, occurredOn: v }))}
-            />
-          </div>
+          <DatePickerField
+            id="tx-date"
+            label="Date"
+            value={form.occurredOn}
+            onChange={(v) => onFormChange((c) => ({ ...c, occurredOn: v }))}
+          />
 
           <TextareaField
             id="tx-note"
