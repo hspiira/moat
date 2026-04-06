@@ -42,8 +42,8 @@ export const navIcons: Record<string, Icon> = {
   "/learn": IconSchool,
 };
 
-export const mobilePrimaryNav = ["/", "/transactions", "/goals", "/investment-compass"] as const;
-export const mobileSecondaryNav = ["/accounts", "/learn"] as const;
+export const mobilePrimaryNav = ["/", "/transactions", "/accounts", "/goals"] as const;
+export const mobileSecondaryNav = ["/investment-compass", "/learn"] as const;
 
 export function isActiveRoute(pathname: string, href: string) {
   if (href === "/") {
@@ -51,6 +51,23 @@ export function isActiveRoute(pathname: string, href: string) {
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function isPrimaryMobileRoute(pathname: string) {
+  return navItems.some((item) => item.href === pathname);
+}
+
+export function getMobileTopBarTitle(pathname: string) {
+  if (pathname === "/accounts") {
+    return "Accounts";
+  }
+
+  if (pathname.startsWith("/accounts/")) {
+    return "Account ledger";
+  }
+
+  const matchedItem = navItems.find((item) => isActiveRoute(pathname, item.href));
+  return matchedItem?.label ?? "Moat";
 }
 
 export function AppBrand() {
