@@ -1,6 +1,11 @@
 "use client";
 
-import type { AccountType } from "@/lib/types";
+import type {
+  AccountType,
+  DebtInterestModel,
+  DebtLenderType,
+  DebtRepaymentFrequency,
+} from "@/lib/types";
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
@@ -24,6 +29,13 @@ export type AccountFormState = {
   type: AccountType;
   institutionName: string;
   openingBalance: string;
+  debtPrincipal: string;
+  debtInterestRate: string;
+  debtInterestModel: DebtInterestModel;
+  debtLenderType: DebtLenderType;
+  debtStartDate: string;
+  debtTermMonths: string;
+  debtRepaymentFrequency: DebtRepaymentFrequency;
   notes: string;
 };
 
@@ -32,6 +44,13 @@ export const defaultAccountForm: AccountFormState = {
   type: "cash",
   institutionName: "",
   openingBalance: "0",
+  debtPrincipal: "",
+  debtInterestRate: "",
+  debtInterestModel: "reducing_balance",
+  debtLenderType: "bank",
+  debtStartDate: new Date().toISOString().slice(0, 10),
+  debtTermMonths: "",
+  debtRepaymentFrequency: "monthly",
   notes: "",
 };
 
@@ -138,6 +157,126 @@ export function AccountForm({
               required
             />
           </div>
+
+          {form.type === "debt" ? (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-principal">Principal (UGX)</Label>
+                  <Input
+                    id="debt-principal"
+                    inputMode="decimal"
+                    value={form.debtPrincipal}
+                    onChange={(e) =>
+                      onFormChange((c) => ({ ...c, debtPrincipal: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-interest-rate">Interest rate (%)</Label>
+                  <Input
+                    id="debt-interest-rate"
+                    inputMode="decimal"
+                    value={form.debtInterestRate}
+                    onChange={(e) =>
+                      onFormChange((c) => ({ ...c, debtInterestRate: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-interest-model">Interest model</Label>
+                  <Select
+                    value={form.debtInterestModel}
+                    onValueChange={(value) =>
+                      onFormChange((c) => ({
+                        ...c,
+                        debtInterestModel: value as DebtInterestModel,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="debt-interest-model">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="reducing_balance">Reducing balance</SelectItem>
+                      <SelectItem value="flat">Flat rate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-lender-type">Lender type</Label>
+                  <Select
+                    value={form.debtLenderType}
+                    onValueChange={(value) =>
+                      onFormChange((c) => ({
+                        ...c,
+                        debtLenderType: value as DebtLenderType,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="debt-lender-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank">Bank</SelectItem>
+                      <SelectItem value="sacco">SACCO</SelectItem>
+                      <SelectItem value="microfinance">Microfinance</SelectItem>
+                      <SelectItem value="informal">Informal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-start-date">Start date</Label>
+                  <Input
+                    id="debt-start-date"
+                    type="date"
+                    value={form.debtStartDate}
+                    onChange={(e) =>
+                      onFormChange((c) => ({ ...c, debtStartDate: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="debt-term-months">Term (months)</Label>
+                  <Input
+                    id="debt-term-months"
+                    inputMode="numeric"
+                    value={form.debtTermMonths}
+                    onChange={(e) =>
+                      onFormChange((c) => ({ ...c, debtTermMonths: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="debt-frequency">Repayment frequency</Label>
+                <Select
+                  value={form.debtRepaymentFrequency}
+                  onValueChange={(value) =>
+                    onFormChange((c) => ({
+                      ...c,
+                      debtRepaymentFrequency: value as DebtRepaymentFrequency,
+                    }))
+                  }
+                >
+                  <SelectTrigger id="debt-frequency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : null}
 
           <div className="grid gap-2">
             <Label htmlFor="account-notes">Notes</Label>

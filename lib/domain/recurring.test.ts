@@ -10,6 +10,8 @@ function buildTransaction(
     userId: "user:default",
     reconciliationState: "posted",
     source: "manual",
+    currency: "UGX",
+    originalAmount: Math.abs(values.amount),
     createdAt: "2026-04-01T00:00:00.000Z",
     updatedAt: "2026-04-01T00:00:00.000Z",
     ...values,

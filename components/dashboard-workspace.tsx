@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { modulePreviews } from "@/lib/data";
+import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { reconcileAccountBalances, getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { getMonthlyInsights } from "@/lib/domain/insights";
 import {
@@ -28,7 +29,7 @@ import {
   getSummaryForTransactions,
 } from "@/lib/domain/summaries";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
 
 const repositories = createIndexedDbRepositories();
 
@@ -240,6 +241,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [period, setPeriod] = useState<PeriodFilter>("month");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -249,15 +251,18 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     setError(null);
 
     try {
-      const [storedAccounts, storedCategories, storedTransactions] = await Promise.all([
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const [storedAccounts, storedCategories, storedTransactions, storedBudgets] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
         repositories.transactions.listByUser(profile.id),
+        repositories.budgets.listByMonth(profile.id, currentMonth),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
       setCategories(storedCategories);
       setTransactions(storedTransactions);
+      setBudgets(storedBudgets);
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Unable to load dashboard.",
@@ -297,6 +302,19 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     [accounts, currentTransactions, period, summary],
   );
   const chartLabel = getPeriodChartLabel(period);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthTransactions = useMemo(
+    () => transactions.filter((transaction) => transaction.occurredOn.startsWith(currentMonth)),
+    [currentMonth, transactions],
+  );
+  const budgetCoverage = useMemo(
+    () => getBudgetCoverage(budgets, monthTransactions),
+    [budgets, monthTransactions],
+  );
+  const budgetEnvelopes = useMemo(
+    () => getBudgetEnvelopes(budgets, categories, monthTransactions).slice(0, 4),
+    [budgets, categories, monthTransactions],
+  );
 
   const topAccounts = [...accounts]
     .filter((account) => !account.isArchived)
@@ -654,6 +672,93 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                         />
                       </div>
                     ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/20 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Budget coverage</CardTitle>
+                  <CardDescription>
+                    Current month only. Envelopes track allocated, spent, and remaining.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  {budgets.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No budgets set yet. Add envelopes from Transactions.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid gap-2 border border-border/20 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground/72">Allocated</span>
+                          <AmountIndicator
+                            tone="neutral"
+                            sign="none"
+                            value={formatCurrency(budgetCoverage.allocated)}
+                            className="text-sm font-medium"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground/72">Spent</span>
+                          <AmountIndicator
+                            tone="negative"
+                            sign="negative"
+                            value={formatCurrency(budgetCoverage.spent)}
+                            className="text-sm font-medium"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground/72">Remaining</span>
+                          <AmountIndicator
+                            tone={
+                              budgetCoverage.remaining > 0
+                                ? "positive"
+                                : budgetCoverage.remaining < 0
+                                  ? "negative"
+                                  : "neutral"
+                            }
+                            sign={
+                              budgetCoverage.remaining > 0
+                                ? "positive"
+                                : budgetCoverage.remaining < 0
+                                  ? "negative"
+                                  : "none"
+                            }
+                            value={formatCurrency(Math.abs(budgetCoverage.remaining))}
+                            className="text-sm font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      {budgetEnvelopes.map((envelope) => (
+                        <div
+                          key={envelope.categoryId}
+                          className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3 text-sm"
+                        >
+                          <span className="text-foreground">{envelope.categoryName}</span>
+                          <AmountIndicator
+                            tone={
+                              envelope.remaining > 0
+                                ? "positive"
+                                : envelope.remaining < 0
+                                  ? "negative"
+                                  : "neutral"
+                            }
+                            sign={
+                              envelope.remaining > 0
+                                ? "positive"
+                                : envelope.remaining < 0
+                                  ? "negative"
+                                  : "none"
+                            }
+                            value={formatCurrency(Math.abs(envelope.remaining))}
+                            className="text-sm font-medium"
+                          />
+                        </div>
+                      ))}
+                    </>
                   )}
                 </CardContent>
               </Card>

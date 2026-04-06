@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { accountTypeLabels } from "./account-form";
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
+import { DebtSummary } from "./debt-summary";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-UG", {
@@ -96,6 +97,11 @@ export function AccountList({ accounts, transactions, onEdit }: Props) {
                   compact
                 />
               </div>
+              {account.type === "debt" ? (
+                <div className="mt-3">
+                  <DebtSummary account={account} transactions={transactions} />
+                </div>
+              ) : null}
             </div>
           ))
         )}

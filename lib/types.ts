@@ -6,6 +6,10 @@ export type AccountType =
   | "investment"
   | "debt";
 
+export type DebtInterestModel = "flat" | "reducing_balance";
+export type DebtLenderType = "bank" | "sacco" | "microfinance" | "informal";
+export type DebtRepaymentFrequency = "weekly" | "monthly";
+
 export type TransactionType =
   | "income"
   | "expense"
@@ -133,6 +137,13 @@ export type Account = {
   openingBalance: number;
   balance: number;
   notes?: string;
+  debtPrincipal?: number;
+  debtInterestRate?: number;
+  debtInterestModel?: DebtInterestModel;
+  debtLenderType?: DebtLenderType;
+  debtStartDate?: string;
+  debtTermMonths?: number;
+  debtRepaymentFrequency?: DebtRepaymentFrequency;
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -144,6 +155,9 @@ export type Transaction = {
   accountId: string;
   type: TransactionType;
   amount: number;
+  currency: string;
+  originalAmount: number;
+  fxRateToUgx?: number;
   occurredOn: string;
   categoryId: string;
   reconciliationState: ReconciliationState;
@@ -190,6 +204,8 @@ export type BudgetTarget = {
   month: string;
   categoryId: string;
   targetAmount: number;
+  rolloverAmount?: number;
+  incomeTransactionId?: string;
   createdAt: string;
   updatedAt: string;
 };

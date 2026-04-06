@@ -4,7 +4,7 @@
 | ------------ | ------------------------------------ |
 | Status       | Active development                   |
 | Owner        | Piira                                |
-| Last updated | 2026-04-05                           |
+| Last updated | 2026-04-06                           |
 | Stack        | Next.js 16, TypeScript, shadcn/ui, IndexedDB |
 
 ---
@@ -22,6 +22,7 @@ A living tracker for project state, decisions, open questions, ideation backlog,
 - Onboarding flow at `/onboarding` — creates profile, seeds categories and resources, redirects to dashboard
 - Account management at `/accounts` — full CRUD via IndexedDB repository, balance reconciliation
 - Transaction recording at `/transactions` — manual entry for all types, transfer pair logic, CSV import with column mapping and duplicate detection
+- Accounting depth baseline — running ledgers, period opening/movement/closing balances, reconciliation states, rule engine, recurring obligations, month close, and property-based accounting tests
 - Goals at `/goals` — target-based goals, monthly contribution math, progress from savings transactions, emergency fund priority
 - Investment Compass at `/investment-compass` — rule-based guidance engine, horizon + liquidity + emergency coverage + debt signals
 - Learn Uganda at `/learn` — official and research resources grouped by topic
@@ -177,13 +178,13 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 
 Suggested priority order after current state:
 
-1. **Run lint + test + mobile QA** — clear the pilot readiness gates
+1. **Finish Phase 1.5** — multi-currency transaction fields, monthly budgets, and structured debt tracking
 2. **Spot-check all source links** in Learn Uganda and Investment Compass
 3. **Compliance review** of investment guidance copy
 4. **JSON export/import** — cheap backup mechanism before sync is built
 5. **PDF statement parser** — MTN Uganda format first
-6. **Budget targets** — monthly category limits with progress UI
-7. **Recurring transaction detection** — detect and confirm patterns
+6. **Share-to-app intake** — paste/share capture before restricted channels
+7. **Notification capture** — Android-first, review-first
 
 ---
 

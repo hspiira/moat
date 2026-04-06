@@ -52,6 +52,8 @@ const transactionArbitrary = fc
       accountId: account.id,
       type: entry.type,
       amount,
+      currency: "UGX",
+      originalAmount: Math.abs(amount),
       occurredOn: entry.occurredOn,
       categoryId: entry.categoryId,
       reconciliationState: "posted" as const,

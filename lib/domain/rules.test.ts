@@ -9,6 +9,8 @@ const transaction: Transaction = {
   accountId: "account:bank",
   type: "expense",
   amount: 25_000,
+  currency: "UGX",
+  originalAmount: 25_000,
   occurredOn: "2026-04-06",
   categoryId: "category:misc",
   payee: "MTN MOMO charge",

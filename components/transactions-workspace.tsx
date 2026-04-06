@@ -11,10 +11,12 @@ import {
 } from "@/lib/domain/reconciliation";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
+import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
 import { announceLocalSave } from "@/lib/local-save";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import type {
   Account,
+  BudgetTarget,
   Category,
   MonthClose,
   RecurringObligation,
@@ -51,6 +53,7 @@ export function TransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [transactionRules, setTransactionRules] = useState<TransactionRule[]>([]);
   const [recurringObligations, setRecurringObligations] = useState<RecurringObligation[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
@@ -70,6 +73,11 @@ export function TransactionsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [budgetForm, setBudgetForm] = useState({
+    categoryId: "",
+    targetAmount: "",
+    rolloverAmount: "",
+  });
 
   const loadWorkspace = useCallback(async () => {
     setIsLoading(true);
@@ -83,6 +91,7 @@ export function TransactionsWorkspace() {
         setAccounts([]);
         setCategories([]);
         setTransactions([]);
+        setBudgets([]);
         setTransactionRules([]);
         setRecurringObligations([]);
         setMonthClose(null);
@@ -94,10 +103,11 @@ export function TransactionsWorkspace() {
         repositories.categories.listByUser(nextProfile.id),
         repositories.transactions.listByUser(nextProfile.id),
       ]);
-      const [storedRules, storedObligations, storedMonthClose] = await Promise.all([
+      const [storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
         repositories.transactionRules.listByUser(nextProfile.id),
         repositories.recurringObligations.listByUser(nextProfile.id),
         repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
+        repositories.budgets.listByMonth(nextProfile.id, closePeriod),
       ]);
 
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
@@ -106,6 +116,7 @@ export function TransactionsWorkspace() {
       setAccounts(reconciledAccounts);
       setCategories(storedCategories);
       setTransactions(sortTransactions(storedTransactions));
+      setBudgets(storedBudgets);
       setTransactionRules(storedRules);
       setRecurringObligations(storedObligations);
       setMonthClose(storedMonthClose);
@@ -138,6 +149,13 @@ export function TransactionsWorkspace() {
         categoryId:
           c.categoryId ||
           storedCategories.find((cat) => categoryMatchesType(cat, c.type))?.id ||
+          "",
+      }));
+      setBudgetForm((current) => ({
+        ...current,
+        categoryId:
+          current.categoryId ||
+          storedCategories.find((category) => category.kind === "expense")?.id ||
           "",
       }));
     } catch (loadError) {
@@ -222,6 +240,8 @@ export function TransactionsWorkspace() {
             accountId: transactionForm.accountId,
             type: "transfer",
             amount: -Math.abs(amount),
+            currency: "UGX",
+            originalAmount: Math.abs(amount),
             occurredOn: transactionForm.occurredOn,
             categoryId: transactionForm.categoryId,
             payee: transactionForm.payee.trim() || undefined,
@@ -239,6 +259,8 @@ export function TransactionsWorkspace() {
             accountId: transactionForm.destinationAccountId,
             type: "transfer",
             amount: Math.abs(amount),
+            currency: "UGX",
+            originalAmount: Math.abs(amount),
             occurredOn: transactionForm.occurredOn,
             categoryId: transactionForm.categoryId,
             payee: transactionForm.payee.trim() || undefined,
@@ -259,6 +281,8 @@ export function TransactionsWorkspace() {
           accountId: transactionForm.accountId,
           type: transactionForm.type,
           amount: Math.abs(amount),
+          currency: "UGX",
+          originalAmount: Math.abs(amount),
           occurredOn: transactionForm.occurredOn,
           categoryId: transactionForm.categoryId,
           payee: transactionForm.payee.trim() || undefined,
@@ -599,6 +623,46 @@ export function TransactionsWorkspace() {
               anchor.click();
               URL.revokeObjectURL(url);
             }}
+          />
+
+          <BudgetManagerPanel
+            month={closePeriod}
+            categories={categories}
+            budgets={budgets}
+            transactions={transactions}
+            form={budgetForm}
+            isSubmitting={isSubmitting}
+            onFormChange={setBudgetForm}
+            onSave={() =>
+              void (async () => {
+                if (!profile || !budgetForm.categoryId) return;
+                setIsSubmitting(true);
+                try {
+                  const timestamp = new Date().toISOString();
+                  const existing = budgets.find(
+                    (budget) => budget.categoryId === budgetForm.categoryId,
+                  );
+                  await repositories.budgets.upsert({
+                    id: existing?.id ?? `budget:${closePeriod}:${budgetForm.categoryId}`,
+                    userId: profile.id,
+                    month: closePeriod,
+                    categoryId: budgetForm.categoryId,
+                    targetAmount: Number(budgetForm.targetAmount) || 0,
+                    rolloverAmount: Number(budgetForm.rolloverAmount) || 0,
+                    createdAt: existing?.createdAt ?? timestamp,
+                    updatedAt: timestamp,
+                  });
+                  setBudgetForm((current) => ({
+                    ...current,
+                    targetAmount: "",
+                    rolloverAmount: "",
+                  }));
+                  await loadWorkspace();
+                } finally {
+                  setIsSubmitting(false);
+                }
+              })()
+            }
           />
         </div>
       ) : null}

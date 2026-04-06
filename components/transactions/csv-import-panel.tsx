@@ -319,6 +319,8 @@ export function CsvImportPanel({
           accountId: row.accountId,
           type: row.type as Exclude<TransactionType, "transfer">,
           amount: row.amount,
+          currency: "UGX",
+          originalAmount: row.amount,
           occurredOn: row.occurredOn,
           categoryId: row.categoryId,
           payee: row.payee || undefined,

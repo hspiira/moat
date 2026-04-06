@@ -117,6 +117,26 @@ export function AccountsWorkspace() {
         openingBalance,
         balance: openingBalance,
         notes: accountForm.notes.trim() || undefined,
+        debtPrincipal:
+          accountForm.type === "debt" && accountForm.debtPrincipal
+            ? Number(accountForm.debtPrincipal)
+            : undefined,
+        debtInterestRate:
+          accountForm.type === "debt" && accountForm.debtInterestRate
+            ? Number(accountForm.debtInterestRate)
+            : undefined,
+        debtInterestModel:
+          accountForm.type === "debt" ? accountForm.debtInterestModel : undefined,
+        debtLenderType:
+          accountForm.type === "debt" ? accountForm.debtLenderType : undefined,
+        debtStartDate:
+          accountForm.type === "debt" ? accountForm.debtStartDate : undefined,
+        debtTermMonths:
+          accountForm.type === "debt" && accountForm.debtTermMonths
+            ? Number(accountForm.debtTermMonths)
+            : undefined,
+        debtRepaymentFrequency:
+          accountForm.type === "debt" ? accountForm.debtRepaymentFrequency : undefined,
         isArchived: false,
         createdAt: accounts.find((a) => a.id === accountId)?.createdAt ?? timestamp,
         updatedAt: timestamp,
@@ -180,6 +200,13 @@ export function AccountsWorkspace() {
       type: account.type,
       institutionName: account.institutionName ?? "",
       openingBalance: String(Math.abs(account.openingBalance)),
+      debtPrincipal: account.debtPrincipal ? String(account.debtPrincipal) : "",
+      debtInterestRate: account.debtInterestRate ? String(account.debtInterestRate) : "",
+      debtInterestModel: account.debtInterestModel ?? "reducing_balance",
+      debtLenderType: account.debtLenderType ?? "bank",
+      debtStartDate: account.debtStartDate ?? new Date().toISOString().slice(0, 10),
+      debtTermMonths: account.debtTermMonths ? String(account.debtTermMonths) : "",
+      debtRepaymentFrequency: account.debtRepaymentFrequency ?? "monthly",
       notes: account.notes ?? "",
     });
   }
