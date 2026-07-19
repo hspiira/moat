@@ -1,6 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import {
+  IconCloudLock,
+  IconDatabaseExport,
+  IconLockSquareRounded,
+  IconRss,
+  IconShieldLock,
+  type Icon,
+} from "@tabler/icons-react";
 
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
@@ -9,71 +17,86 @@ import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PinLockPanel } from "./settings/pin-lock-panel";
 import { SyncModePanel } from "./settings/sync-mode-panel";
 
+function SettingsSection({
+  icon: IconComponent,
+  title,
+  description,
+  children,
+}: {
+  icon: Icon;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="grid gap-4">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden
+          className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
+        >
+          <IconComponent className="size-4.5" />
+        </span>
+        <div className="space-y-0.5">
+          <h2 className="font-display text-base font-semibold">{title}</h2>
+          <p className="max-w-2xl text-xs leading-5 text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function SettingsWorkspace() {
   return (
     <div className="grid gap-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Security, privacy, and data management for your Moat account.
         </p>
       </div>
 
-      <section className="grid gap-4">
-        <div className="space-y-0.5">
-          <h2 className="text-base font-semibold">Security</h2>
-          <p className="text-xs text-muted-foreground">
-            Protect your data on shared devices. Keys are derived in-browser using PBKDF2 and
-            never sent anywhere.
-          </p>
-        </div>
+      <SettingsSection
+        icon={IconShieldLock}
+        title="Security"
+        description="Protect your data on shared devices. Keys are derived in-browser using PBKDF2 and never sent anywhere."
+      >
         <PinLockPanel />
-      </section>
+      </SettingsSection>
 
-      <section className="grid gap-4">
-        <div className="space-y-0.5">
-          <h2 className="text-base font-semibold">Capture automation</h2>
-          <p className="text-xs text-muted-foreground">
-            Control native capture channels and allowlisted sources before machine-derived records
-            are sent into review.
-          </p>
-        </div>
+      <SettingsSection
+        icon={IconRss}
+        title="Capture automation"
+        description="Control native capture channels and allowlisted sources before machine-derived records are sent into review."
+      >
         <CaptureAutomationPanel />
-      </section>
+      </SettingsSection>
 
-      <section className="grid gap-4">
-        <div className="space-y-0.5">
-          <h2 className="text-base font-semibold">Storage and sync</h2>
-          <p className="text-xs text-muted-foreground">
-            Moat always writes locally first. Hosted sync is optional and remains an explicit
-            opt-in mode.
-          </p>
-        </div>
+      <SettingsSection
+        icon={IconCloudLock}
+        title="Storage and sync"
+        description="Moat always writes locally first. Hosted sync is optional and remains an explicit opt-in mode."
+      >
         <SyncModePanel />
-      </section>
+      </SettingsSection>
 
-      <section className="grid gap-4">
-        <div className="space-y-0.5">
-          <h2 className="text-base font-semibold">Backup and restore</h2>
-          <p className="text-xs text-muted-foreground">
-            Your data is stored locally only. A device reset or browser clear will delete it.
-            Download an encrypted backup regularly or keep a recovery copy in Google Drive.
-          </p>
-        </div>
+      <SettingsSection
+        icon={IconLockSquareRounded}
+        title="Backup and restore"
+        description="Your data is stored locally only. A device reset or browser clear will delete it. Download an encrypted backup regularly or keep a recovery copy in Google Drive."
+      >
         <BackupPanel />
-      </section>
+      </SettingsSection>
 
-      <section className="grid gap-4">
-        <div className="space-y-0.5">
-          <h2 className="text-base font-semibold">Your data</h2>
-          <p className="text-xs text-muted-foreground">
-            Export or delete all data stored on this device. These rights are guaranteed under
-            the Uganda Data Protection and Privacy Act 2019.
-          </p>
-        </div>
+      <SettingsSection
+        icon={IconDatabaseExport}
+        title="Your data"
+        description="Export or delete all data stored on this device. These rights are guaranteed under the Uganda Data Protection and Privacy Act 2019."
+      >
         <DataExportPanel />
         <DeleteAccountPanel />
-      </section>
+      </SettingsSection>
 
       <section className="grid gap-2">
         <div className="text-xs text-muted-foreground">
