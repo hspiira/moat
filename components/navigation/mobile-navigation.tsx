@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
   mobilePrimaryNav,
   MobileMoreButton,
   MobileNavTrigger,
+  MoatMark,
   navIcons,
 } from "./navigation-shared";
 
@@ -61,17 +61,10 @@ export function MobileNavigation({
 
   return (
     <>
-      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-[backdrop-filter]:bg-background/84 lg:hidden">
+      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-backdrop-filter:bg-background/84 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
-            <Image
-              src="/icons/logo.svg"
-              alt="Moat logo"
-              width={36}
-              height={36}
-              className="h-9 w-9 shrink-0"
-              priority
-            />
+            <MoatMark className="h-9 w-9 shrink-0" />
             <div className="min-w-0">
               {isPrimaryRoute ? (
                 <div className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -94,7 +87,7 @@ export function MobileNavigation({
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-[backdrop-filter]:bg-background/88 lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-backdrop-filter:bg-background/88 lg:hidden">
         <div className="px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))] pt-1">
           <nav className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] items-center gap-1">
             {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}

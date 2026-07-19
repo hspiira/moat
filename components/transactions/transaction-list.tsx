@@ -1,8 +1,17 @@
 "use client";
 
-import { formatMoney } from "@/lib/currency";
-import { AmountIndicator } from "@/components/amount-indicator";
-import type { Account, Category, Transaction } from "@/lib/types";
+import {
+  IconArrowDownLeft,
+  IconArrowsExchange,
+  IconArrowUpRight,
+  IconPencil,
+  IconPigMoney,
+  IconReceipt2,
+  IconTrash,
+} from "@tabler/icons-react";
+
+import { Money } from "@/components/ui/money";
+import type { Account, Category, Transaction, TransactionType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +32,38 @@ type Props = {
   onDelete: (transaction: Transaction) => void;
 };
 
+type RowPresentation = {
+  icon: typeof IconArrowDownLeft;
+  iconClass: string;
+  tone: "positive" | "negative" | "neutral";
+  signed: boolean;
+};
+
+const presentationByType: Record<TransactionType, RowPresentation> = {
+  income: { icon: IconArrowDownLeft, iconClass: "bg-pos/12 text-pos", tone: "positive", signed: true },
+  expense: { icon: IconArrowUpRight, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
+  debt_payment: { icon: IconReceipt2, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
+  savings_contribution: {
+    icon: IconPigMoney,
+    iconClass: "bg-pos/12 text-pos",
+    tone: "positive",
+    signed: false,
+  },
+  transfer: {
+    icon: IconArrowsExchange,
+    iconClass: "bg-muted text-muted-foreground",
+    tone: "neutral",
+    signed: false,
+  },
+};
+
+function formatDate(iso: string) {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString("en-UG", { day: "numeric", month: "short" });
+}
+
 export function TransactionList({
   accounts,
   categories,
@@ -31,120 +72,92 @@ export function TransactionList({
   onEdit,
   onDelete,
 }: Props) {
-  function getTransactionTone(transaction: Transaction) {
-    if (transaction.type === "income") {
-      return { tone: "positive" as const, sign: "positive" as const };
-    }
-    if (transaction.type === "transfer") {
-      return { tone: "neutral" as const, sign: "none" as const, direction: "transfer" as const };
-    }
-    return { tone: "negative" as const, sign: "negative" as const };
-  }
-
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-base">Ledger</CardTitle>
-        <CardDescription>
-          Posted movements first. Transfers appear as paired records.
-        </CardDescription>
+        <CardTitle>Ledger</CardTitle>
+        <CardDescription>Posted movements first. Transfers appear as paired records.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-2">
+      <CardContent className="px-0">
         {transactions.length === 0 ? (
-          <EmptyState>No transactions yet.</EmptyState>
+          <div className="px-4">
+            <EmptyState>No transactions yet.</EmptyState>
+          </div>
         ) : (
-          transactions.map((transaction, index) => {
-            const account = accounts.find((a) => a.id === transaction.accountId);
-            const category = categories.find((c) => c.id === transaction.categoryId);
-            const isTransfer = transaction.type === "transfer";
-            const presentation = getTransactionTone(transaction);
+          <ul className="divide-y divide-border/60">
+            {transactions.map((transaction) => {
+              const account = accounts.find((a) => a.id === transaction.accountId);
+              const category = categories.find((c) => c.id === transaction.categoryId);
+              const isTransfer = transaction.type === "transfer";
+              const presentation = presentationByType[transaction.type];
+              const Icon = presentation.icon;
+              const title =
+                transaction.payee ??
+                transaction.rawPayee ??
+                category?.name ??
+                transactionTypeLabels[transaction.type];
 
-            return (
-              <div
-                key={transaction.id}
-                className={`border px-3 py-3 ${
-                  index === 0
-                    ? "moat-panel-mint border-border/20"
-                    : index % 2 === 0
-                      ? "moat-panel-sage border-border/20"
-                      : "bg-muted/20 border-border/20"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2 text-sm">
-                      <AmountIndicator
-                        tone={presentation.tone}
-                        sign={presentation.sign}
-                        direction={presentation.direction}
-                        showIcon={transaction.type === "transfer"}
-                        value={formatMoney(Math.abs(transaction.amount), "UGX")}
-                        className="text-base font-semibold"
-                      />
-                      <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+              return (
+                <li
+                  key={transaction.id}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+                >
+                  <span
+                    aria-hidden
+                    className={`grid size-9 shrink-0 place-items-center rounded-full ${presentation.iconClass}`}
+                  >
+                    <Icon className="size-4.5" />
+                  </span>
+
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">{title}</span>
+                      <span className="shrink-0 text-[0.65rem] font-medium tracking-[0.12em] text-muted-foreground uppercase">
                         {transactionTypeLabels[transaction.type]}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {transaction.occurredOn} · {account?.name ?? "—"} ·{" "}
-                      {category?.name ?? "—"}
+                    <div className="truncate text-xs text-muted-foreground">
+                      {formatDate(transaction.occurredOn)} · {account?.name ?? "—"}
+                      {category && !isTransfer ? ` · ${category.name}` : ""}
+                      {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
                     </div>
-                    {transaction.payee || transaction.rawPayee ? (
-                      <div className="text-xs text-muted-foreground">
-                        {transaction.payee ?? transaction.rawPayee}
-                        {transaction.source ? ` · ${transaction.source}` : ""}
-                        {transaction.reconciliationState
-                          ? ` · ${transaction.reconciliationState}`
-                          : ""}
-                      </div>
-                    ) : null}
-                    {transaction.currency !== "UGX" ? (
-                      <div className="text-xs text-muted-foreground">
-                        Source amount {formatMoney(transaction.originalAmount, transaction.currency)}
-                        {transaction.fxRateToUgx
-                          ? ` · FX ${transaction.fxRateToUgx.toLocaleString("en-UG")}`
-                          : ""}
-                      </div>
-                    ) : null}
-                    {transaction.note ? (
-                      <div className="text-xs text-muted-foreground">{transaction.note}</div>
-                    ) : null}
                   </div>
-                  {!isTransfer ? (
-                    <div className="flex gap-1">
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Money
+                      amount={transaction.amount}
+                      currency="UGX"
+                      tone={presentation.tone}
+                      signed={presentation.signed}
+                      className="text-sm font-semibold sm:text-base"
+                    />
+                    <div className="flex">
+                      {!isTransfer ? (
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          aria-label={`Edit ${title}`}
+                          onClick={() => onEdit(transaction)}
+                        >
+                          <IconPencil />
+                        </Button>
+                      ) : null}
                       <Button
-                        size="sm"
+                        size="icon-sm"
                         variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => onEdit(transaction)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-destructive hover:text-destructive"
+                        aria-label={`Delete ${title}`}
+                        className="text-muted-foreground hover:text-destructive"
                         disabled={isSubmitting}
                         onClick={() => onDelete(transaction)}
                       >
-                        Delete
+                        <IconTrash />
                       </Button>
                     </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs text-destructive hover:text-destructive"
-                      disabled={isSubmitting}
-                      onClick={() => onDelete(transaction)}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </CardContent>
     </Card>

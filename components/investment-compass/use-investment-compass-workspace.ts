@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
+import { deriveGoalCurrentAmount } from "@/lib/domain/goals";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
@@ -60,7 +61,7 @@ function getEmergencyFundMonthsCovered(
   const emergencyGoal = goals.find((goal) => goal.goalType === "emergency_fund") ?? null;
   const monthSummary = getMonthSummary(transactions, [], month);
   if (!emergencyGoal || monthSummary.outflow <= 0) return 0;
-  return emergencyGoal.currentAmount / monthSummary.outflow;
+  return deriveGoalCurrentAmount(emergencyGoal, transactions) / monthSummary.outflow;
 }
 
 function hasHighCostDebt(transactions: Transaction[]) {

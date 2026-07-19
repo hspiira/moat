@@ -1,18 +1,18 @@
 "use client";
 
-// Orchestrates the main transactions workspace by loading ledger data, handling capture intake, and deriving month-close state for the UI.
+// Orchestrates the main transactions workspace: loads ledger data, handles
+// capture intake, and derives month-close state for the UI. Budget and
+// rule/obligation slices live in their own hooks; transaction construction
+// and the month-close CSV are pure modules with their own tests.
 
-import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
-import { normalizeAmountToUgx } from "@/lib/currency";
 import { persistReviewedCaptureCandidates } from "@/lib/capture/persistence";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
-import {
-  getOpenCaptureReviewItems,
-} from "@/lib/capture/review-queue";
+import { getOpenCaptureReviewItems } from "@/lib/capture/review-queue";
 import {
   getRememberedFxDefault,
   normalizePayeeKey,
@@ -21,13 +21,10 @@ import {
 import { readDebtPlannerSettings } from "@/lib/preferences/debt-planner";
 import type {
   Account,
-  BudgetTarget,
   CaptureReviewItem,
   Category,
   MonthClose,
-  RecurringObligation,
   Transaction,
-  TransactionRule,
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
@@ -40,7 +37,6 @@ import {
   evaluateMonthClose,
   type MonthCloseEvaluation,
 } from "@/lib/domain/reconciliation";
-import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import {
@@ -49,15 +45,20 @@ import {
   type TransactionFormState,
 } from "./transaction-form";
 import type { CaptureIntent } from "./capture-intent-panel";
+import { buildManualTransaction, buildTransferPair } from "./transaction-builder";
+import { buildMonthCloseCsv } from "./month-close-export";
+import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
+import { useRulesAndObligations } from "./use-rules-and-obligations";
 
+export type { BudgetFormState };
 
-export type BudgetFormState = {
-  budgetId: string | null;
-  categoryId: string;
-  targetAmount: string;
-  rolloverAmount: string;
-  incomeTransactionId: string;
-};
+function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref;
+}
 
 function sortTransactions(transactions: Transaction[]) {
   return [...transactions].sort((a, b) => {
@@ -90,10 +91,7 @@ export function useTransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
-  const [transactionRules, setTransactionRules] = useState<TransactionRule[]>([]);
-  const [recurringObligations, setRecurringObligations] = useState<RecurringObligation[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
   const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
     unresolvedTransactions: [],
@@ -105,13 +103,6 @@ export function useTransactionsWorkspace() {
   });
   const [transactionForm, setTransactionForm] =
     useState<TransactionFormState>(defaultTransactionForm);
-  const [budgetForm, setBudgetForm] = useState<BudgetFormState>({
-    budgetId: null,
-    categoryId: "",
-    targetAmount: "",
-    rolloverAmount: "",
-    incomeTransactionId: "",
-  });
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,6 +113,63 @@ export function useTransactionsWorkspace() {
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>(null);
   const [sharedCaptureInput, setSharedCaptureInput] = useState("");
   const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
+
+  const refreshMonthCloseState = useCallback(
+    async (userId: string) => {
+      const [storedAccounts, storedTransactions, storedCategories, storedObligations, existingMonthClose] =
+        await Promise.all([
+          repositories.accounts.listByUser(userId),
+          repositories.transactions.listByUser(userId),
+          repositories.categories.listByUser(userId),
+          repositories.recurringObligations.listByUser(userId),
+          repositories.monthCloses.getByPeriod(userId, closePeriod),
+        ]);
+      const nextRecurringEvaluations = evaluateRecurringObligations(
+        [
+          ...storedObligations,
+          ...buildSuggestedRecurringObligations(
+            storedAccounts,
+            storedTransactions,
+            debtPlannerSettings.strategy,
+            debtPlannerSettings.extraMonthlyPayment,
+          ),
+        ],
+        storedTransactions,
+        closePeriod,
+      );
+      const evaluation = evaluateMonthClose(
+        storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
+        storedCategories,
+        nextRecurringEvaluations.map((entry) => ({
+          obligation: entry.obligation,
+          status:
+            entry.state === "paid" ? "paid" : entry.state === "partial" ? "partial" : "missing",
+        })),
+      );
+      const nextRecord = buildMonthCloseRecord(existingMonthClose, userId, closePeriod, evaluation);
+      await repositories.monthCloses.upsert(nextRecord);
+      setMonthClose(nextRecord);
+      setMonthCloseEvaluation(evaluation);
+    },
+    [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
+  );
+
+  const budgetPlanner = useBudgetPlanner({
+    profile,
+    categories,
+    closePeriod,
+    onMutated: () => loadWorkspaceRef.current(),
+    setIsSubmitting,
+  });
+  const rulesAndObligations = useRulesAndObligations({
+    profile,
+    onMutated: () => loadWorkspaceRef.current(),
+    onObligationsChanged: refreshMonthCloseState,
+    setIsSubmitting,
+  });
+  const { setBudgets, setBudgetForm } = budgetPlanner;
+  const { setTransactionRules, setRecurringObligations } = rulesAndObligations;
+
   const suggestedRecurringObligations = useMemo(
     () =>
       buildSuggestedRecurringObligations(
@@ -136,11 +184,11 @@ export function useTransactionsWorkspace() {
   const recurringEvaluations = useMemo(
     () =>
       evaluateRecurringObligations(
-        [...recurringObligations, ...suggestedRecurringObligations],
+        [...rulesAndObligations.recurringObligations, ...suggestedRecurringObligations],
         transactions,
         closePeriod,
       ),
-    [closePeriod, recurringObligations, suggestedRecurringObligations, transactions],
+    [closePeriod, rulesAndObligations.recurringObligations, suggestedRecurringObligations, transactions],
   );
 
   const periodTransactions = useMemo(
@@ -207,8 +255,9 @@ export function useTransactionsWorkspace() {
         repositories.budgets.listByMonth(nextProfile.id, closePeriod),
       ]);
 
+      // Reconcile in memory for display only. Loading is a read — persisting
+      // balances here would churn storage and the sync outbox on every view.
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
-      await Promise.all(reconciledAccounts.map((account) => repositories.accounts.upsert(account)));
 
       setAccounts(reconciledAccounts);
       setCategories(storedCategories);
@@ -262,7 +311,11 @@ export function useTransactionsWorkspace() {
     } finally {
       setIsLoading(false);
     }
-  }, [closePeriod]);
+  }, [closePeriod, setBudgetForm, setBudgets, setRecurringObligations, setTransactionRules]);
+
+  // Stable indirection so the sub-hooks can trigger a reload without a
+  // circular dependency between hook definitions.
+  const loadWorkspaceRef = useLatest(loadWorkspace);
 
   useEffect(() => {
     startTransition(() => {
@@ -336,53 +389,21 @@ export function useTransactionsWorkspace() {
     });
   }, [transactionForm.currency, transactionForm.payee]);
 
-  const refreshAccounts = useCallback(async (userId: string) => {
+  /**
+   * Persists reconciled balances after a ledger mutation. Only accounts
+   * whose stored balance actually changed are written, so the sync outbox
+   * is not flooded with no-op upserts.
+   */
+  const persistReconciledBalances = useCallback(async (userId: string) => {
     const storedAccounts = await repositories.accounts.listByUser(userId);
     const storedTransactions = await repositories.transactions.listByUser(userId);
     const reconciled = reconcileAccountBalances(storedAccounts, storedTransactions);
-    await Promise.all(reconciled.map((account) => repositories.accounts.upsert(account)));
+    const storedBalances = new Map(storedAccounts.map((account) => [account.id, account.balance]));
+    const changed = reconciled.filter(
+      (account) => storedBalances.get(account.id) !== account.balance,
+    );
+    await Promise.all(changed.map((account) => repositories.accounts.upsert(account)));
   }, []);
-
-  const refreshMonthCloseState = useCallback(
-    async (userId: string) => {
-      const [storedAccounts, storedTransactions, storedCategories, storedObligations, existingMonthClose] =
-        await Promise.all([
-          repositories.accounts.listByUser(userId),
-          repositories.transactions.listByUser(userId),
-          repositories.categories.listByUser(userId),
-          repositories.recurringObligations.listByUser(userId),
-          repositories.monthCloses.getByPeriod(userId, closePeriod),
-        ]);
-      const nextRecurringEvaluations = evaluateRecurringObligations(
-        [
-          ...storedObligations,
-          ...buildSuggestedRecurringObligations(
-            storedAccounts,
-            storedTransactions,
-            debtPlannerSettings.strategy,
-            debtPlannerSettings.extraMonthlyPayment,
-          ),
-        ],
-        storedTransactions,
-        closePeriod,
-      );
-      const evaluation = evaluateMonthClose(
-        storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
-        storedCategories,
-        nextRecurringEvaluations.map((entry) => ({
-          obligation: entry.obligation,
-          status:
-            entry.state === "paid" ? "paid" : entry.state === "partial" ? "partial" : "missing",
-        })),
-      );
-      const nextRecord = buildMonthCloseRecord(existingMonthClose, userId, closePeriod, evaluation);
-      await repositories.monthCloses.upsert(nextRecord);
-      setRecurringObligations(storedObligations);
-      setMonthClose(nextRecord);
-      setMonthCloseEvaluation(evaluation);
-    },
-    [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
-  );
 
   const handleTransactionSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -394,119 +415,27 @@ export function useTransactionsWorkspace() {
 
       try {
         const timestamp = new Date().toISOString();
-        const originalAmount = Number(transactionForm.amount);
-        const normalizedAmount = normalizeAmountToUgx(
-          originalAmount,
-          transactionForm.currency,
-          Number(transactionForm.fxRateToUgx || 0),
-        );
         const wasEditing = Boolean(editingTransactionId);
-        const rules = await repositories.transactionRules.listByUser(profile.id);
-
-        if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
-          throw new Error("Amount must be greater than zero.");
-        }
-        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-          throw new Error("Enter a valid currency and FX rate.");
-        }
+        const buildInput = {
+          form: transactionForm,
+          userId: profile.id,
+          timestamp,
+          editingTransactionId,
+          existingTransactions: transactions,
+        };
 
         if (transactionForm.type === "transfer") {
-          if (!transactionForm.accountId || !transactionForm.destinationAccountId) {
-            throw new Error("Transfer requires a source and destination account.");
-          }
-          if (transactionForm.accountId === transactionForm.destinationAccountId) {
-            throw new Error("Source and destination must be different accounts.");
-          }
-
-          const transferGroupId =
-            editingTransactionId?.split(":")[0] ?? `transfer:${crypto.randomUUID()}`;
-          const sourceId = `${transferGroupId}:source`;
-          const destinationId = `${transferGroupId}:destination`;
-
+          const [source, destination] = buildTransferPair(buildInput);
           await Promise.all([
-            repositories.transactions.upsert({
-              id: sourceId,
-              userId: profile.id,
-              accountId: transactionForm.accountId,
-              type: "transfer",
-              amount: -Math.abs(normalizedAmount),
-              currency: transactionForm.currency,
-              originalAmount: Math.abs(originalAmount),
-              fxRateToUgx:
-                transactionForm.currency === "UGX"
-                  ? undefined
-                  : Number(transactionForm.fxRateToUgx),
-              occurredOn: transactionForm.occurredOn,
-              categoryId: transactionForm.categoryId,
-              payee: transactionForm.payee.trim() || undefined,
-              rawPayee: transactionForm.payee.trim() || undefined,
-              note: transactionForm.note.trim() || undefined,
-              reconciliationState: "posted",
-              source: "manual",
-              transferGroupId,
-              createdAt: transactions.find((transaction) => transaction.id === sourceId)?.createdAt ?? timestamp,
-              updatedAt: timestamp,
-            }),
-            repositories.transactions.upsert({
-              id: destinationId,
-              userId: profile.id,
-              accountId: transactionForm.destinationAccountId,
-              type: "transfer",
-              amount: Math.abs(normalizedAmount),
-              currency: transactionForm.currency,
-              originalAmount: Math.abs(originalAmount),
-              fxRateToUgx:
-                transactionForm.currency === "UGX"
-                  ? undefined
-                  : Number(transactionForm.fxRateToUgx),
-              occurredOn: transactionForm.occurredOn,
-              categoryId: transactionForm.categoryId,
-              payee: transactionForm.payee.trim() || undefined,
-              rawPayee: transactionForm.payee.trim() || undefined,
-              note: transactionForm.note.trim() || undefined,
-              reconciliationState: "posted",
-              source: "manual",
-              transferGroupId,
-              createdAt:
-                transactions.find((transaction) => transaction.id === destinationId)?.createdAt ??
-                timestamp,
-              updatedAt: timestamp,
-            }),
+            repositories.transactions.upsert(source),
+            repositories.transactions.upsert(destination),
           ]);
         } else {
-          const transactionId = editingTransactionId ?? `transaction:${crypto.randomUUID()}`;
-          const baseTransaction: Transaction = {
-            id: transactionId,
-            userId: profile.id,
-            accountId: transactionForm.accountId,
-            type: transactionForm.type,
-            amount: Math.abs(normalizedAmount),
-            currency: transactionForm.currency,
-            originalAmount: Math.abs(originalAmount),
-            fxRateToUgx:
-              transactionForm.currency === "UGX"
-                ? undefined
-                : Number(transactionForm.fxRateToUgx),
-            occurredOn: transactionForm.occurredOn,
-            categoryId: transactionForm.categoryId,
-            payee: transactionForm.payee.trim() || undefined,
-            rawPayee: transactionForm.payee.trim() || undefined,
-            note: transactionForm.note.trim() || undefined,
-            reconciliationState: "posted",
-            source: "manual",
-            reviewedAt: timestamp,
-            createdAt:
-              transactions.find((transaction) => transaction.id === transactionId)?.createdAt ??
-              timestamp,
-            updatedAt: timestamp,
-          };
-          const proposed =
-            applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
-
-          await repositories.transactions.upsert(proposed);
+          const rules = await repositories.transactionRules.listByUser(profile.id);
+          await repositories.transactions.upsert(buildManualTransaction(buildInput, rules));
         }
 
-        await refreshAccounts(profile.id);
+        await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
         if (transactionForm.currency !== "UGX" && transactionForm.payee.trim()) {
           saveFxMemory({
@@ -535,8 +464,8 @@ export function useTransactionsWorkspace() {
       categories,
       editingTransactionId,
       loadWorkspace,
+      persistReconciledBalances,
       profile,
-      refreshAccounts,
       refreshMonthCloseState,
       transactionForm,
       transactions,
@@ -586,7 +515,7 @@ export function useTransactionsWorkspace() {
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
         announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
-        await refreshAccounts(profile.id);
+        await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
         await loadWorkspace();
       } catch (deleteError) {
@@ -598,8 +527,8 @@ export function useTransactionsWorkspace() {
     [
       editingTransactionId,
       loadWorkspace,
+      persistReconciledBalances,
       profile,
-      refreshAccounts,
       refreshMonthCloseState,
       transactions,
     ],
@@ -635,86 +564,6 @@ export function useTransactionsWorkspace() {
     [loadWorkspace, profile, refreshMonthCloseState, sharedCaptureInput],
   );
 
-  const saveRule = useCallback(
-    async (rule: Omit<TransactionRule, "id" | "userId" | "createdAt" | "updatedAt">) => {
-      if (!profile) return;
-      setIsSubmitting(true);
-      try {
-        const timestamp = new Date().toISOString();
-        await repositories.transactionRules.upsert({
-          id: `rule:${crypto.randomUUID()}`,
-          userId: profile.id,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          ...rule,
-        });
-        await loadWorkspace();
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [loadWorkspace, profile],
-  );
-
-  const toggleRule = useCallback(
-    async (rule: TransactionRule) => {
-      setIsSubmitting(true);
-      try {
-        await repositories.transactionRules.upsert({
-          ...rule,
-          enabled: !rule.enabled,
-          updatedAt: new Date().toISOString(),
-        });
-        await loadWorkspace();
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [loadWorkspace],
-  );
-
-  const saveObligation = useCallback(
-    async (obligation: Omit<RecurringObligation, "id" | "userId" | "createdAt" | "updatedAt">) => {
-      if (!profile) return;
-      setIsSubmitting(true);
-      try {
-        const timestamp = new Date().toISOString();
-        await repositories.recurringObligations.upsert({
-          id: `obligation:${crypto.randomUUID()}`,
-          userId: profile.id,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          ...obligation,
-        });
-        await refreshMonthCloseState(profile.id);
-        await loadWorkspace();
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [loadWorkspace, profile, refreshMonthCloseState],
-  );
-
-  const toggleObligation = useCallback(
-    async (obligation: RecurringObligation) => {
-      setIsSubmitting(true);
-      try {
-        await repositories.recurringObligations.upsert({
-          ...obligation,
-          status: obligation.status === "active" ? "paused" : "active",
-          updatedAt: new Date().toISOString(),
-        });
-        if (profile) {
-          await refreshMonthCloseState(profile.id);
-        }
-        await loadWorkspace();
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [loadWorkspace, profile, refreshMonthCloseState],
-  );
-
   const closeMonth = useCallback(async () => {
     if (!profile || !monthCloseEvaluation.isReadyToClose) return;
     setIsSubmitting(true);
@@ -733,35 +582,8 @@ export function useTransactionsWorkspace() {
   }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile]);
 
   const exportMonthClose = useCallback(() => {
-    const periodTransactions = transactions.filter((transaction) =>
-      transaction.occurredOn.startsWith(closePeriod),
-    );
-    const summary = getSummaryForTransactions(periodTransactions, categories);
-    const csvLines = [
-      ["Metric", "Value"].join(","),
-      ["Opening balance", String(summary.openingBalance)].join(","),
-      ["Inflow", String(summary.inflow)].join(","),
-      ["Outflow", String(summary.outflow)].join(","),
-      ["Saved", String(summary.savings)].join(","),
-      ["Allocated savings", String(summary.allocatedSavings)].join(","),
-      ["Movement", String(summary.movement)].join(","),
-      ["Closing balance", String(summary.closingBalance)].join(","),
-      "",
-      ["Date", "Type", "Account", "Category", "Payee", "Amount", "State", "Note"].join(","),
-      ...periodTransactions.map((transaction) =>
-        [
-          transaction.occurredOn,
-          transaction.type,
-          transaction.accountId,
-          transaction.categoryId,
-          transaction.payee ?? transaction.rawPayee ?? "",
-          String(transaction.amount),
-          transaction.reconciliationState,
-          (transaction.note ?? "").replaceAll(",", " "),
-        ].join(","),
-      ),
-    ];
-    const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const csv = buildMonthCloseCsv(transactions, categories, closePeriod);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -769,76 +591,6 @@ export function useTransactionsWorkspace() {
     anchor.click();
     URL.revokeObjectURL(url);
   }, [categories, closePeriod, transactions]);
-
-  const saveBudget = useCallback(async () => {
-    if (!profile || !budgetForm.categoryId) return;
-    setIsSubmitting(true);
-    try {
-      const timestamp = new Date().toISOString();
-      const existing =
-        budgets.find((budget) => budget.id === budgetForm.budgetId) ??
-        budgets.find((budget) => budget.categoryId === budgetForm.categoryId);
-      await repositories.budgets.upsert({
-        id: existing?.id ?? `budget:${closePeriod}:${budgetForm.categoryId}`,
-        userId: profile.id,
-        month: closePeriod,
-        categoryId: budgetForm.categoryId,
-        targetAmount: Number(budgetForm.targetAmount) || 0,
-        rolloverAmount: Number(budgetForm.rolloverAmount) || 0,
-        incomeTransactionId: budgetForm.incomeTransactionId || undefined,
-        createdAt: existing?.createdAt ?? timestamp,
-        updatedAt: timestamp,
-      });
-      setBudgetForm({
-        budgetId: null,
-        categoryId:
-          categories.find((category) => category.kind === "expense")?.id ?? "",
-        targetAmount: "",
-        rolloverAmount: "",
-        incomeTransactionId: "",
-      });
-      await loadWorkspace();
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [budgetForm, budgets, categories, closePeriod, loadWorkspace, profile]);
-
-  const editBudget = useCallback(
-    (budgetId: string) => {
-      const budget = budgets.find((entry) => entry.id === budgetId);
-      if (!budget) return;
-
-      setBudgetForm({
-        budgetId: budget.id,
-        categoryId: budget.categoryId,
-        targetAmount: String(budget.targetAmount),
-        rolloverAmount: String(budget.rolloverAmount ?? 0),
-        incomeTransactionId: budget.incomeTransactionId ?? "",
-      });
-    },
-    [budgets],
-  );
-
-  const deleteBudget = useCallback(async (budgetId: string) => {
-    setIsSubmitting(true);
-    try {
-      await repositories.budgets.remove(budgetId);
-      setBudgetForm((current) =>
-        current.budgetId === budgetId
-          ? {
-              budgetId: null,
-              categoryId: categories.find((category) => category.kind === "expense")?.id ?? "",
-              targetAmount: "",
-              rolloverAmount: "",
-              incomeTransactionId: "",
-            }
-          : current,
-      );
-      await loadWorkspace();
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [categories, loadWorkspace]);
 
   return {
     closePeriod,
@@ -851,15 +603,15 @@ export function useTransactionsWorkspace() {
     reviewCount,
     captureReviewCount,
     duplicateCount,
-    budgets,
+    budgets: budgetPlanner.budgets,
     captureReviewItems,
-    transactionRules,
-    recurringObligations,
+    transactionRules: rulesAndObligations.transactionRules,
+    recurringObligations: rulesAndObligations.recurringObligations,
     recurringEvaluations,
     monthClose,
     monthCloseEvaluation,
     transactionForm,
-    budgetForm,
+    budgetForm: budgetPlanner.budgetForm,
     editingTransactionId,
     isLoading,
     isSubmitting,
@@ -878,27 +630,19 @@ export function useTransactionsWorkspace() {
     beginTransactionEdit,
     handleDeleteTransaction,
     saveCapturedTransactions,
-    saveRule,
-    toggleRule,
-    saveObligation,
-    toggleObligation,
+    saveRule: rulesAndObligations.saveRule,
+    toggleRule: rulesAndObligations.toggleRule,
+    saveObligation: rulesAndObligations.saveObligation,
+    toggleObligation: rulesAndObligations.toggleObligation,
     closeMonth,
     exportMonthClose,
-    saveBudget,
-    editBudget,
-    deleteBudget,
+    saveBudget: budgetPlanner.saveBudget,
+    editBudget: budgetPlanner.editBudget,
+    deleteBudget: budgetPlanner.deleteBudget,
     cancelEdit: () => {
       setEditingTransactionId(null);
       setTransactionForm(getResetTransactionForm(accounts, categories));
     },
-    cancelBudgetEdit: () => {
-      setBudgetForm({
-        budgetId: null,
-        categoryId: categories.find((category) => category.kind === "expense")?.id ?? "",
-        targetAmount: "",
-        rolloverAmount: "",
-        incomeTransactionId: "",
-      });
-    },
+    cancelBudgetEdit: budgetPlanner.cancelBudgetEdit,
   };
 }

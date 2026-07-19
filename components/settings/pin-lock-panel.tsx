@@ -3,6 +3,11 @@
 import { useState } from "react";
 
 import { usePinLock } from "@/lib/security/pin-lock-context";
+import {
+  MIN_PIN_LENGTH,
+  PIN_REQUIREMENT_MESSAGE,
+  isValidPin,
+} from "@/lib/security/pin-policy";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,8 +44,8 @@ export function PinLockPanel() {
     event.preventDefault();
     setError(null);
 
-    if (pin.length < 4) {
-      setError("PIN must be at least 4 digits.");
+    if (!isValidPin(pin)) {
+      setError(PIN_REQUIREMENT_MESSAGE);
       return;
     }
     if (pin !== confirmPin) {
@@ -131,7 +136,7 @@ export function PinLockPanel() {
         {mode === "set" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleSetPin(e)}>
             <div className="grid gap-2">
-              <Label htmlFor="new-pin" className="text-xs">New PIN (minimum 4 digits)</Label>
+              <Label htmlFor="new-pin" className="text-xs">{`New PIN (minimum ${MIN_PIN_LENGTH} digits)`}</Label>
               <Input
                 id="new-pin"
                 type="password"

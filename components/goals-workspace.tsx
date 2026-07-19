@@ -1,8 +1,9 @@
 "use client";
 
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
-import { AmountIndicator } from "@/components/amount-indicator";
 import { formatMoney } from "@/lib/currency";
+import { MoatRing } from "@/components/moat/moat-ring";
+import { Money } from "@/components/ui/money";
 import { Card, CardContent } from "@/components/ui/card";
 import { GoalForm } from "@/components/goals/goal-form";
 import { GoalList } from "@/components/goals/goal-list";
@@ -63,35 +64,61 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
-            <Card className="moat-panel-mint border-border/20 shadow-none">
-              <CardContent className="grid gap-3 p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+          <Card className="ring-1 ring-primary/15">
+            <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
+              <MoatRing
+                value={
+                  emergencyFundSuggestion > 0 && emergencyFundGoal
+                    ? emergencyFundGoal.currentAmount / emergencyFundSuggestion
+                    : 0
+                }
+                tone={
+                  emergencyFundGoal &&
+                  emergencyFundSuggestion > 0 &&
+                  emergencyFundGoal.currentAmount >= emergencyFundSuggestion
+                    ? "positive"
+                    : "moat"
+                }
+                ariaLabel={
+                  emergencyFundGoal && emergencyFundSuggestion > 0
+                    ? `Emergency fund: ${Math.round(
+                        (emergencyFundGoal.currentAmount / emergencyFundSuggestion) * 100,
+                      )}% of the suggested moat`
+                    : "Emergency fund: no goal yet"
+                }
+                label={
+                  emergencyFundGoal && emergencyFundSuggestion > 0
+                    ? `${Math.min(
+                        999,
+                        Math.round(
+                          (emergencyFundGoal.currentAmount / emergencyFundSuggestion) * 100,
+                        ),
+                      )}%`
+                    : "—"
+                }
+                sublabel="of moat"
+                size={124}
+                thickness={10}
+                className="justify-self-center sm:justify-self-start"
+              />
+              <div className="min-w-0 space-y-1.5">
+                <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                   Suggested emergency moat
-                </div>
-                <AmountIndicator
-                  tone={emergencyFundSuggestion > 0 ? "positive" : "neutral"}
-                  sign={emergencyFundSuggestion > 0 ? "positive" : "none"}
-                  value={formatMoney(emergencyFundSuggestion)}
-                  className="text-4xl font-semibold tracking-tight"
-                />
-                <p className="max-w-lg text-sm leading-6 text-foreground/75">
-                  Based on three months of current outflow. Use it as a planning floor, not a ceiling.
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="moat-panel-yellow border-border/20 shadow-none">
-              <CardContent className="grid gap-2 p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                  Active goals
+                <div className="font-display text-3xl leading-none font-semibold tracking-tight">
+                  <Money amount={emergencyFundSuggestion} tone="neutral" className="font-display" />
                 </div>
-                <div className="text-4xl font-semibold tracking-tight">{goals.length}</div>
-                <div className="text-sm text-foreground/75">
-                  Prioritise buffers first, then longer-dated ambitions.
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                <p className="max-w-lg text-sm leading-6 text-muted-foreground">
+                  Based on three months of current outflow. Use it as a planning floor, not a
+                  ceiling.
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:text-right">
+                <p className="text-xs text-muted-foreground">Active goals</p>
+                <p className="text-3xl font-semibold tabular-nums">{goals.length}</p>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
             <GoalForm

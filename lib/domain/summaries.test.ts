@@ -106,6 +106,7 @@ describe("getMonthSummary", () => {
     expect(summary.outflow).toBe(300_000);
     expect(summary.savings).toBe(1_700_000);
     expect(summary.allocatedSavings).toBe(400_000);
+    expect(summary.net).toBe(1_300_000);
     expect(summary.transfers).toBe(0);
     expect(summary.movement).toBe(1_300_000);
     expect(summary.closingBalance).toBe(1_300_000);

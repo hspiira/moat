@@ -1,6 +1,5 @@
 "use client";
 
-import { AmountIndicator } from "@/components/amount-indicator";
 import { getGoalContributionPlan } from "@/lib/domain/goals";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -12,17 +11,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MoatRing } from "@/components/moat/moat-ring";
+import { Money } from "@/components/ui/money";
 import { Separator } from "@/components/ui/separator";
 
 import { goalTypeLabels } from "./goal-form";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -34,9 +27,9 @@ type Props = {
 
 export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Props) {
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-base">Your goals</CardTitle>
+        <CardTitle>Your goals</CardTitle>
         <CardDescription>Targets are calculated from amount, deadline, and progress.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
@@ -45,104 +38,93 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
             No goals yet. Create your first goal to start building.
           </EmptyState>
         ) : (
-          goals.map((goal, index) => {
+          goals.map((goal) => {
             const plan = getGoalContributionPlan(goal);
             const linkedAccount = accounts.find((a) => a.id === goal.linkedAccountId);
-            const progressPercent =
-              goal.targetAmount > 0
-                ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100))
-                : 0;
+            const progressRatio =
+              goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0;
+            const progressPercent = Math.min(100, Math.round(progressRatio * 100));
 
             return (
-              <Card
+              <div
                 key={goal.id}
-                className={`border-border/20 shadow-none ${
-                  index === 0
-                    ? "moat-panel-mint"
-                    : index % 2 === 0
-                      ? "moat-panel-sage"
-                      : "bg-muted/20"
-                }`}
+                className="rounded-md border border-border/60 bg-card px-4 py-4"
               >
-                <CardContent className="px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="text-sm font-medium text-foreground">{goal.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {goalTypeLabels[goal.goalType]}
-                        {linkedAccount ? ` · ${linkedAccount.name}` : ""}
+                <div className="flex items-start gap-4">
+                  <MoatRing
+                    value={progressRatio}
+                    tone={progressRatio >= 1 ? "positive" : "moat"}
+                    ariaLabel={`${goal.name}: ${progressPercent}% of target`}
+                    label={`${progressPercent}%`}
+                    size={64}
+                    thickness={6}
+                    className="mt-0.5 shrink-0 [&_div]:text-sm"
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="truncate text-sm font-medium text-foreground">
+                          {goal.name}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {goalTypeLabels[goal.goalType]}
+                          {linkedAccount ? ` · ${linkedAccount.name}` : ""}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => onEdit(goal)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={isSubmitting}
+                          onClick={() => onDelete(goal.id)}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => onEdit(goal)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-destructive hover:text-destructive"
-                        disabled={isSubmitting}
-                        onClick={() => onDelete(goal.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
 
-                  <div className="mt-3">
-                    <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                      <AmountIndicator
-                        tone={goal.currentAmount > 0 ? "positive" : "neutral"}
-                        sign={goal.currentAmount > 0 ? "positive" : "none"}
-                        value={formatCurrency(goal.currentAmount)}
-                      />
+                    <div className="mt-1.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                      <Money amount={goal.currentAmount} tone="positive" />
                       <span>
-                        {progressPercent}% of {formatCurrency(goal.targetAmount)}
+                        of <Money amount={goal.targetAmount} tone="muted" />
                       </span>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden bg-muted">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
                   </div>
+                </div>
 
-                  <Separator className="my-3" />
+                <Separator className="my-3" />
 
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Monthly target</div>
-                      <AmountIndicator
-                        tone={plan.isBehindSchedule ? "negative" : "neutral"}
-                        sign={plan.isBehindSchedule ? "negative" : "none"}
-                        value={formatCurrency(plan.monthlyContribution)}
-                        className="font-medium"
-                      />
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Deadline</div>
-                      <div className="font-medium">{goal.targetDate}</div>
-                    </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Monthly target</div>
+                    <Money
+                      amount={plan.monthlyContribution}
+                      tone={plan.isBehindSchedule ? "negative" : "neutral"}
+                      className="font-medium"
+                    />
                   </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Deadline</div>
+                    <div className="font-medium">{goal.targetDate}</div>
+                  </div>
+                </div>
 
-                  {plan.isBehindSchedule ? (
-                    <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-                      This goal is behind schedule — increase contributions to stay on track.
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {plan.monthsRemaining} month
-                      {plan.monthsRemaining !== 1 ? "s" : ""} remaining.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                {plan.isBehindSchedule ? (
+                  <p className="mt-3 text-xs font-medium text-clay">
+                    This goal is behind schedule — increase contributions to stay on track.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {plan.monthsRemaining} month
+                    {plan.monthsRemaining !== 1 ? "s" : ""} remaining.
+                  </p>
+                )}
+              </div>
             );
           })
         )}

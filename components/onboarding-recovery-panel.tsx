@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createGoogleDriveBackupClient,
@@ -52,9 +52,9 @@ export function OnboardingRecoveryPanel({
     });
   }
 
-  async function refreshDriveFiles() {
+  const refreshDriveFiles = useCallback(async () => {
     setDriveFiles(await driveClient.listBackups());
-  }
+  }, [driveClient]);
 
   useEffect(() => {
     if (mode !== "drive") {
@@ -85,7 +85,7 @@ export function OnboardingRecoveryPanel({
     return () => {
       cancelled = true;
     };
-  }, [driveClient, drivePreferences.wasConnected, mode]);
+  }, [driveClient, drivePreferences.wasConnected, mode, refreshDriveFiles]);
 
   async function handleFileRestore(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

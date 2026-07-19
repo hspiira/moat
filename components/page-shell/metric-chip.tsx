@@ -13,9 +13,9 @@ export function MetricChip({
 }) {
   return (
     <Card className={`shadow-none ${className}`}>
-      <CardContent className="px-4 py-3 text-sm">
+      <CardContent className="min-w-0 px-4 py-3 text-sm">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="font-medium tabular-nums">{value}</div>
+        <div className="min-w-0 font-medium tabular-nums wrap-anywhere">{value}</div>
       </CardContent>
     </Card>
   );

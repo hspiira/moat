@@ -133,7 +133,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
                   <Button
                     asChild
                     variant="ghost"
-                    className="h-auto w-full items-start justify-start px-4 py-5 text-left"
+                    className="h-auto w-full items-start justify-start px-4 py-5 text-left whitespace-normal"
                   >
                     <Link href={module.href}>
                       <span className="block">

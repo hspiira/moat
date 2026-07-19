@@ -1,4 +1,4 @@
-# Uganda Finance App PRD
+# Moat PRD
 
 
 | Field            | Value                                  |
@@ -7,12 +7,12 @@
 | Status           | Draft                                  |
 | Owner            | Piira                                  |
 | Last Updated     | 2026-04-05                             |
-| Based On         | `docs/uganda-finance-mvp-blueprint.md` |
+| Based On         | `docs/product/blueprint.md` |
 
 
 ## Product Summary
 
-The Uganda Finance App is a mobile-first personal finance product built for young salaried Ugandans with occasional side income. It helps users track spending, understand monthly cash flow, build savings habits, and choose safer long-term money paths without relying on fragile financial integrations in v1.
+The Moat is a mobile-first personal finance product built for young salaried Ugandans with occasional side income. It helps users track spending, understand monthly cash flow, build savings habits, and choose safer long-term money paths without relying on fragile financial integrations in v1.
 
 The product is built around three user jobs:
 
@@ -45,7 +45,7 @@ The first release is optimized for a young salaried Ugandan who:
 
 ### Business Goals
 
-- establish a credible Uganda-first personal finance foundation
+- establish Moat as a credible personal finance foundation for the Ugandan market
 - validate that manual and CSV-based money tracking can drive recurring use
 - create a roadmap-ready base for future automation and integrations
 

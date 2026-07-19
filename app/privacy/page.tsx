@@ -215,7 +215,7 @@ function PrivacySection({
 }) {
   return (
     <section id={id} className="scroll-mt-24 grid gap-2">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <h2 className="font-display text-base font-semibold text-foreground">{title}</h2>
       <div className="grid gap-1.5 text-sm leading-[1.55] text-muted-foreground">{children}</div>
     </section>
   );
@@ -235,7 +235,7 @@ export default function PrivacyPage() {
         </div>
 
         <div className="grid gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Privacy Policy</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Privacy Policy</h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
             How Moat handles your financial records, local storage, and privacy rights while keeping
             the experience inside the app.

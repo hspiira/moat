@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createGoogleDriveBackupClient,
@@ -17,6 +17,7 @@ import {
   restoreEncryptedBackupPayload,
 } from "@/lib/security/encrypted-backup";
 import { downloadBlob } from "@/lib/security/data-export";
+import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -61,10 +62,10 @@ export function BackupPanel() {
     }
   }
 
-  async function refreshDriveFiles() {
+  const refreshDriveFiles = useCallback(async () => {
     const files = await driveClient.listBackups();
     setDriveFiles(files);
-  }
+  }, [driveClient]);
 
   function updateDrivePreferences(
     updater: (current: GoogleDriveBackupPreferences) => GoogleDriveBackupPreferences,
@@ -108,12 +109,12 @@ export function BackupPanel() {
     return () => {
       cancelled = true;
     };
-  }, [driveClient]);
+  }, [driveClient, refreshDriveFiles]);
 
   async function handleBackup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (backupPin.length < 4) {
-      setError("Backup PIN must be at least 4 digits.");
+    if (backupPin.length < MIN_PIN_LENGTH) {
+      setError(`Backup PIN must be at least ${MIN_PIN_LENGTH} digits.`);
       return;
     }
 
@@ -146,6 +147,7 @@ export function BackupPanel() {
       setError("Select a backup file first.");
       return;
     }
+    // Restores accept legacy 4-digit PINs so older backups stay recoverable.
     if (restorePin.length < 4) {
       setError("Enter the PIN used to create this backup.");
       return;
@@ -195,8 +197,8 @@ export function BackupPanel() {
   }
 
   async function handleDriveUpload() {
-    if (driveBackupPin.length < 4) {
-      setError("Backup PIN must be at least 4 digits before uploading to Google Drive.");
+    if (driveBackupPin.length < MIN_PIN_LENGTH) {
+      setError(`Backup PIN must be at least ${MIN_PIN_LENGTH} digits before uploading to Google Drive.`);
       return;
     }
 
@@ -224,6 +226,7 @@ export function BackupPanel() {
   }
 
   async function handleDriveRestore(fileId: string) {
+    // Restores accept legacy 4-digit PINs so older backups stay recoverable.
     if (driveRestorePin.length < 4) {
       setError("Enter the backup PIN used for the selected Google Drive backup.");
       return;
@@ -350,7 +353,7 @@ export function BackupPanel() {
           <form className="grid gap-4" onSubmit={(e) => void handleBackup(e)}>
             <div className="grid gap-2">
               <Label htmlFor="backup-pin" className="text-xs">
-                Backup PIN (minimum 4 digits — you need this to restore)
+                {`Backup PIN (minimum ${MIN_PIN_LENGTH} digits — you need this to restore)`}
               </Label>
               <Input
                 id="backup-pin"

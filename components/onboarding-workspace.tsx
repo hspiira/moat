@@ -9,6 +9,12 @@ import { defaultAccountTypes, defaultGoalTypes } from "@/lib/app-state/defaults"
 import { normalizeOpeningBalance } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
+import { usePinLock } from "@/lib/security/pin-lock-context";
+import {
+  MIN_PIN_LENGTH,
+  PIN_REQUIREMENT_MESSAGE,
+  isValidPin,
+} from "@/lib/security/pin-policy";
 import type {
   Account,
   Goal,
@@ -18,7 +24,14 @@ import type {
   SalaryCycle,
   UserProfile,
 } from "@/lib/types";
+import {
+  IconBrandGoogleDrive,
+  IconFileShredder,
+  IconSparkles,
+} from "@tabler/icons-react";
+
 import { goalTypeLabels } from "@/components/goals/goal-form";
+import { MoatMark } from "@/components/navigation/navigation-shared";
 import { InputField } from "@/components/forms/input-field";
 import { OnboardingRecoveryPanel } from "@/components/onboarding-recovery-panel";
 import { SelectField } from "@/components/forms/select-field";
@@ -34,7 +47,7 @@ const HORIZON_PRESETS = [
   { value: "5", unit: "years" as const, label: "5 years" },
 ];
 
-type OnboardingStep = "profile" | "account" | "goal";
+type OnboardingStep = "profile" | "account" | "goal" | "security";
 type OnboardingMode = "choose" | "fresh" | "restore_file" | "restore_drive";
 
 type OnboardingFormState = {
@@ -60,6 +73,13 @@ type GoalSetupState = {
   goalType: GoalType;
   targetAmount: string;
   targetDate: string;
+};
+
+/** Never persisted to the draft — PINs must not touch localStorage. */
+type SecuritySetupState = {
+  enabled: boolean;
+  pin: string;
+  confirmPin: string;
 };
 
 type DraftState = {
@@ -95,6 +115,12 @@ const defaultGoal: GoalSetupState = {
   targetDate: "",
 };
 
+const defaultSecurity: SecuritySetupState = {
+  enabled: true,
+  pin: "",
+  confirmPin: "",
+};
+
 const incomeTypeLabels: Record<IncomeType, string> = {
   salary: "Salary only",
   salary_plus_side_income: "Salary plus side income",
@@ -113,7 +139,14 @@ const riskComfortLabels: Record<RiskComfort, string> = {
   high: "High — I am comfortable with long-term volatility",
 };
 
-const steps: OnboardingStep[] = ["profile", "account", "goal"];
+const steps: OnboardingStep[] = ["profile", "account", "goal", "security"];
+
+const stepLabels: Record<OnboardingStep, string> = {
+  profile: "Profile",
+  account: "First account",
+  goal: "First goal",
+  security: "Security",
+};
 
 function buildTimestamp() {
   return new Date().toISOString();
@@ -216,6 +249,7 @@ function getStepError(params: {
   profile: OnboardingFormState;
   account: AccountSetupState;
   goal: GoalSetupState;
+  security: SecuritySetupState;
   consentGiven: boolean;
 }) {
   if (params.step === "profile") {
@@ -262,17 +296,29 @@ function getStepError(params: {
     }
   }
 
+  if (params.step === "security" && params.security.enabled) {
+    if (!isValidPin(params.security.pin)) {
+      return PIN_REQUIREMENT_MESSAGE;
+    }
+
+    if (params.security.pin !== params.security.confirmPin) {
+      return "PINs do not match.";
+    }
+  }
+
   return null;
 }
 
 export function OnboardingWorkspace() {
   const router = useRouter();
+  const { setPin } = usePinLock();
   const [form, setForm] = useState<OnboardingFormState>(defaultForm);
   const [account, setAccount] = useState<AccountSetupState>(defaultAccount);
   const [goal, setGoal] = useState<GoalSetupState>({
     ...defaultGoal,
     targetDate: defaultGoalDate(),
   });
+  const [security, setSecurity] = useState<SecuritySetupState>(defaultSecurity);
   const [consentGiven, setConsentGiven] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("profile");
   const [mode, setMode] = useState<OnboardingMode>("choose");
@@ -324,8 +370,8 @@ export function OnboardingWorkspace() {
 
   const stepIndex = steps.indexOf(step);
   const stepError = useMemo(
-    () => getStepError({ step, profile: form, account, goal, consentGiven }),
-    [account, consentGiven, form, goal, step],
+    () => getStepError({ step, profile: form, account, goal, security, consentGiven }),
+    [account, consentGiven, form, goal, security, step],
   );
 
   async function handleNext() {
@@ -352,7 +398,9 @@ export function OnboardingWorkspace() {
     event.preventDefault();
     setError(null);
 
-    const finalError = getStepError({ step: "goal", profile: form, account, goal, consentGiven });
+    const finalError =
+      getStepError({ step: "goal", profile: form, account, goal, security, consentGiven }) ??
+      getStepError({ step: "security", profile: form, account, goal, security, consentGiven });
     if (finalError) {
       setError(finalError);
       return;
@@ -361,6 +409,15 @@ export function OnboardingWorkspace() {
     setIsSubmitting(true);
 
     try {
+      // Enable encryption before the first record is written so every entity
+      // is stored encrypted from day one.
+      if (security.enabled) {
+        const pinSet = await setPin(security.pin);
+        if (!pinSet) {
+          throw new Error(PIN_REQUIREMENT_MESSAGE);
+        }
+      }
+
       const timestamp = buildTimestamp();
       const horizonMonths = convertHorizonToMonths(
         form.investmentHorizonValue,
@@ -436,46 +493,67 @@ export function OnboardingWorkspace() {
   }
 
   if (mode === "choose") {
+    const modeOptions = [
+      {
+        mode: "fresh" as const,
+        icon: IconSparkles,
+        title: "Start fresh",
+        description:
+          "Create a new local profile, first account, and optional first goal on this device.",
+      },
+      {
+        mode: "restore_file" as const,
+        icon: IconFileShredder,
+        title: "Restore encrypted file",
+        description:
+          "Use a backup file you previously downloaded and restore it with your backup PIN.",
+      },
+      {
+        mode: "restore_drive" as const,
+        icon: IconBrandGoogleDrive,
+        title: "Restore from Google Drive",
+        description:
+          "Connect Google Drive, choose a Moat backup, and restore it with your backup PIN.",
+      },
+    ];
+
     return (
       <div className="mx-auto grid w-full max-w-2xl gap-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Get back into Moat</h1>
+          <MoatMark className="h-12 w-12" />
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            Get back into Moat
+          </h1>
           <p className="text-sm text-muted-foreground">
             Start fresh on this device or restore an encrypted backup you already control.
           </p>
         </div>
 
         <div className="grid gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("fresh")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Start fresh</div>
-            <div className="text-sm text-muted-foreground">
-              Create a new local profile, first account, and optional first goal on this device.
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("restore_file")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Restore encrypted file</div>
-            <div className="text-sm text-muted-foreground">
-              Use a backup file you previously downloaded and restore it with your backup PIN.
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("restore_drive")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Restore from Google Drive</div>
-            <div className="text-sm text-muted-foreground">
-              Connect Google Drive, choose a Moat backup, and restore it with your backup PIN.
-            </div>
-          </button>
+          {modeOptions.map((option) => {
+            const OptionIcon = option.icon;
+            return (
+              <button
+                key={option.mode}
+                type="button"
+                onClick={() => setMode(option.mode)}
+                className="flex items-start gap-3 rounded-md border border-border/60 bg-card px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
+              >
+                <span
+                  aria-hidden
+                  className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
+                >
+                  <OptionIcon className="size-4.5" />
+                </span>
+                <span className="grid gap-1">
+                  <span className="text-sm font-medium text-foreground">{option.title}</span>
+                  <span className="text-sm leading-6 text-muted-foreground">
+                    {option.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -485,7 +563,7 @@ export function OnboardingWorkspace() {
     return (
       <div className="mx-auto grid w-full max-w-2xl gap-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
             {mode === "restore_file" ? "Restore your backup file" : "Restore from Google Drive"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -508,31 +586,43 @@ export function OnboardingWorkspace() {
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-6">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <ol
+          aria-label="Onboarding steps"
+          className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+        >
           {steps.map((currentStep, index) => (
-            <div
+            <li
               key={currentStep}
-              className={`rounded-full border px-3 py-1 ${
-                index <= stepIndex ? "border-primary text-foreground" : "border-border/30"
+              aria-current={index === stepIndex ? "step" : undefined}
+              className={`rounded-full border px-3 py-1 transition-colors ${
+                index === stepIndex
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : index < stepIndex
+                    ? "border-primary/40 text-foreground"
+                    : "border-border/40"
               }`}
             >
-              {index + 1}. {currentStep === "profile" ? "Profile" : currentStep === "account" ? "First account" : "First goal"}
-            </div>
+              {index + 1}. {stepLabels[currentStep]}
+            </li>
           ))}
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        </ol>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
           {step === "profile"
             ? "Set up your profile"
             : step === "account"
               ? "Add your first account"
-              : "Add your first goal"}
+              : step === "goal"
+                ? "Add your first goal"
+                : "Protect your data"}
         </h1>
         <p className="text-sm text-muted-foreground">
           {step === "profile"
             ? "Start with the basics. This stays local to your device."
             : step === "account"
               ? "A first account makes the ledger immediately usable."
-              : "Goals are optional, but adding one makes the dashboard more useful on day one."}
+              : step === "goal"
+                ? "Goals are optional, but adding one makes the dashboard more useful on day one."
+                : "A PIN encrypts your financial records on this device. This is the recommended default."}
         </p>
       </div>
 
@@ -825,6 +915,76 @@ export function OnboardingWorkspace() {
               </>
             ) : null}
 
+            {step === "security" ? (
+              <>
+                <div className="flex items-start gap-3 rounded-md border border-border/40 bg-muted/20 px-4 py-3">
+                  <input
+                    id="security-enabled"
+                    type="checkbox"
+                    checked={security.enabled}
+                    onChange={(e) =>
+                      setSecurity((c) => ({ ...c, enabled: e.target.checked }))
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  />
+                  <label
+                    htmlFor="security-enabled"
+                    className="cursor-pointer text-sm leading-relaxed text-muted-foreground"
+                  >
+                    Protect Moat with a PIN and encrypt my data on this device
+                  </label>
+                </div>
+
+                {security.enabled ? (
+                  <>
+                    <InputField
+                      id="security-pin"
+                      type="password"
+                      label={`Choose a PIN (minimum ${MIN_PIN_LENGTH} digits)`}
+                      inputMode="numeric"
+                      value={security.pin}
+                      onChange={(e) =>
+                        setSecurity((c) => ({
+                          ...c,
+                          pin: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      placeholder="e.g. 6 or more digits"
+                      autoComplete="new-password"
+                      required
+                    />
+
+                    <InputField
+                      id="security-pin-confirm"
+                      type="password"
+                      label="Confirm PIN"
+                      inputMode="numeric"
+                      value={security.confirmPin}
+                      onChange={(e) =>
+                        setSecurity((c) => ({
+                          ...c,
+                          confirmPin: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      autoComplete="new-password"
+                      required
+                    />
+
+                    <p className="text-xs text-muted-foreground">
+                      Moat locks after 5 minutes of inactivity. There is no PIN recovery —
+                      if you forget it, restore from an encrypted backup instead.
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                    Without a PIN your financial records are stored unencrypted on this
+                    device. Anyone with access to it can read them. You can enable a PIN
+                    later from Settings.
+                  </div>
+                )}
+              </>
+            ) : null}
+
             <div className="flex flex-wrap gap-2 pt-2">
               {stepIndex > 0 ? (
                 <Button type="button" variant="outline" onClick={handleBack}>
@@ -832,7 +992,7 @@ export function OnboardingWorkspace() {
                 </Button>
               ) : null}
 
-              {step !== "goal" ? (
+              {step !== "security" ? (
                 <Button type="button" onClick={() => void handleNext()}>
                   Continue
                 </Button>

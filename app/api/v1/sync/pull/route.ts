@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { pullHostedSyncChanges, validateSyncPullRequest } from "@/lib/sync/hosted-store";
-import { validateSyncBearerToken } from "@/lib/sync/server-contract";
+import { isHostedBackendUsable, validateSyncBearerToken } from "@/lib/sync/server-contract";
+
+// DEV-ONLY BACKEND. See the note in ./../push/route.ts — the hosted store is
+// a development stand-in, not a production sync service.
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +27,13 @@ export async function POST(request: NextRequest) {
           contract: "/api/v1/sync/pull",
         },
         { status: 501 },
+      );
+    }
+
+    if (!isHostedBackendUsable()) {
+      return NextResponse.json(
+        { error: "Hosted sync backend requires MOAT_SYNC_BEARER_TOKEN to be set." },
+        { status: 503 },
       );
     }
 
