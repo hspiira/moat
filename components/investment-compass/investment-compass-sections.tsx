@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 
-import { AmountIndicator } from "@/components/amount-indicator";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { MoatRing } from "@/components/moat/moat-ring";
+import { Money } from "@/components/ui/money";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
@@ -36,13 +37,6 @@ export const goalFocusOptions: { value: InvestmentProfile["goalFocus"]; label: s
   { value: "house_construction", label: "House / Construction" },
 ];
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export function InvestmentEmptyState() {
   return (
@@ -72,34 +66,32 @@ export function InvestmentMetricCards({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Card className="moat-panel-sage border-border/20 shadow-none">
-        <CardHeader className="gap-2 p-5">
-          <CardDescription className="text-foreground/72">Monthly outflow baseline</CardDescription>
-          <CardTitle className="text-xl text-foreground">
-            <AmountIndicator
-              tone="negative"
-              sign="negative"
-              value={formatCurrency(monthlyOutflow)}
-              className="text-xl font-semibold"
-            />
-          </CardTitle>
-        </CardHeader>
-      </Card>
-      <Card className="moat-panel-mint border-border/20 shadow-none">
-        <CardHeader className="gap-2 p-5">
-          <CardDescription className="text-foreground/72">Emergency coverage</CardDescription>
-          <CardTitle className="text-xl text-foreground">
-            <AmountIndicator
-              tone={emergencyFundMonthsCovered > 0 ? "positive" : "neutral"}
-              sign={emergencyFundMonthsCovered > 0 ? "positive" : "none"}
-              value={`${emergencyFundMonthsCovered.toFixed(1)} month${emergencyFundMonthsCovered !== 1 ? "s" : ""}`}
-              className="text-xl font-semibold"
-            />
-          </CardTitle>
-        </CardHeader>
-      </Card>
-    </div>
+    <Card className="ring-1 ring-primary/15">
+      <CardContent className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:gap-8">
+        <MoatRing
+          value={emergencyFundMonthsCovered / 3}
+          tone={emergencyFundMonthsCovered >= 3 ? "positive" : "moat"}
+          ariaLabel={`Emergency coverage: ${emergencyFundMonthsCovered.toFixed(1)} of 3 target months`}
+          label={emergencyFundMonthsCovered.toFixed(1)}
+          sublabel="months"
+          size={104}
+          thickness={9}
+          className="justify-self-center sm:justify-self-start"
+        />
+        <div className="space-y-0.5">
+          <p className="text-xs text-muted-foreground">Emergency coverage</p>
+          <p className="text-xl font-semibold">
+            {emergencyFundMonthsCovered.toFixed(1)} month
+            {emergencyFundMonthsCovered !== 1 ? "s" : ""}
+            <span className="text-sm font-normal text-muted-foreground"> of 3 target</span>
+          </p>
+        </div>
+        <div className="space-y-0.5">
+          <p className="text-xs text-muted-foreground">Monthly outflow baseline</p>
+          <Money amount={monthlyOutflow} tone="negative" className="text-xl font-semibold" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -220,9 +212,9 @@ export function InvestmentGuidancePanels({
 }) {
   return (
     <div className="grid gap-4 content-start">
-      <Card className="moat-panel-lilac border-border/20 shadow-none">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-base">Suggested product classes</CardTitle>
+          <CardTitle>Suggested product classes</CardTitle>
           <CardDescription>
             These are regulated or capital-preserving categories, not specific product recommendations.
           </CardDescription>
