@@ -2,6 +2,7 @@
 
 import { DashboardBalanceBridge } from "@/components/dashboard/dashboard-balance-bridge";
 import { DashboardBudgetCoverage } from "@/components/dashboard/dashboard-budget-coverage";
+import { DashboardMoatHero } from "@/components/dashboard/dashboard-moat-hero";
 import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
 import {
   DashboardAccountBalances,
@@ -12,12 +13,33 @@ import {
   DashboardTopSpendingCategories,
 } from "@/components/dashboard/dashboard-sections";
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
-import { Card, CardContent } from "@/components/ui/card";
+import { ErrorStateCard } from "@/components/page-shell/page-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "@/lib/types";
 
 type DashboardWorkspaceProps = {
   profile: UserProfile;
 };
+
+function DashboardSkeleton() {
+  return (
+    <div className="grid gap-5" aria-busy="true" aria-live="polite">
+      <span className="sr-only" role="status">
+        Loading your overview…
+      </span>
+      <Skeleton className="h-44 w-full rounded-xl" />
+      <div className="grid grid-cols-3 gap-3">
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-20 rounded-xl" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
 export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const {
@@ -37,6 +59,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     summaryTiles,
     budgets,
     transactions,
+    accounts,
     modulePreviews,
   } = useDashboardWorkspace(profile);
 
@@ -46,38 +69,38 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     { href: "/goals", title: "Set goal" },
   ];
 
+  const activeAccounts = accounts.filter((account) => !account.isArchived);
+  const totalBalance = activeAccounts.reduce((sum, account) => sum + account.balance, 0);
+
   return (
     <div className="grid gap-5">
-      <div className="flex items-start justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {profile.displayName}&apos;s overview
+          <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+            {periodWindow.title}
+          </p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
+            {profile.displayName}&apos;s money
           </h1>
-          <p className="text-sm text-muted-foreground">{periodWindow.overviewLabel}</p>
         </div>
         <DashboardPeriodFilter period={period} onChange={setPeriod} />
-      </div>
+      </header>
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
+      {error ? <ErrorStateCard message={error} /> : null}
 
       {isLoading ? (
-        <Card className="border-border/40 shadow-none">
-          <CardContent className="px-5 py-8 text-sm text-muted-foreground">
-            Loading dashboard...
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {!isLoading ? (
+        <DashboardSkeleton />
+      ) : (
         <>
-          <div className="space-y-0.5">
-            <h2 className="text-sm font-medium text-foreground">{periodWindow.title}</h2>
-            <p className="text-xs text-muted-foreground">{periodWindow.caption}</p>
-          </div>
+          <DashboardMoatHero
+            totalBalance={totalBalance}
+            accountCount={activeAccounts.length}
+            monthlyOutflow={summary.outflow}
+            inflow={summary.inflow}
+            outflow={summary.outflow}
+            net={summary.net}
+            periodLabel={periodWindow.caption}
+          />
 
           <DashboardQuickActions actions={quickActions} />
 
@@ -92,7 +115,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <DashboardTopSpendingCategories categories={summary.topCategories} />
 
-            <div className="grid gap-5 content-start">
+            <div className="grid content-start gap-5">
               <DashboardAccountBalances accounts={topAccounts} transactions={transactions} />
 
               <DashboardBudgetCoverage
@@ -120,7 +143,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             <DashboardContinueLinks modules={modulePreviews} />
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

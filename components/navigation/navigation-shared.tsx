@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   IconBuildingBank,
@@ -156,19 +155,31 @@ export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
 }
 
+export function MoatMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 44 44"
+      className={className}
+      role="img"
+      aria-label="Moat"
+      fill="none"
+    >
+      {/* The moat: a protective ring around what you're building. */}
+      <circle cx="22" cy="22" r="18.5" stroke="var(--primary)" strokeWidth="3" />
+      <circle cx="22" cy="22" r="12" stroke="var(--primary)" strokeOpacity="0.4" strokeWidth="2" />
+      <circle cx="22" cy="22" r="6" fill="var(--primary)" />
+    </svg>
+  );
+}
+
 export function AppBrand() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <Image
-        src="/icons/logo.svg"
-        alt="Moat logo"
-        width={44}
-        height={44}
-        className="h-11 w-11"
-        priority
-      />
+      <MoatMark className="h-10 w-10 shrink-0" />
       <span>
-        <span className="block text-base font-semibold tracking-tight text-foreground">Moat</span>
+        <span className="block font-display text-base font-semibold tracking-tight text-foreground">
+          Moat
+        </span>
         <span className="block text-xs text-muted-foreground">Personal finance for Uganda</span>
       </span>
     </Link>
@@ -199,13 +210,13 @@ export function ThemeToggle({
 export function QuickActionLinks() {
   return (
     <div className="grid gap-2">
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
         <Link href="/transactions/capture">Capture transactions</Link>
       </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
         <Link href="/transactions/import">Import statements</Link>
       </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
         <Link href="/transactions/review">Review month close</Link>
       </Button>
     </div>
@@ -246,7 +257,7 @@ function DrawerNavRow({
     <Button
       asChild
       variant={active ? "secondary" : "ghost"}
-      className="h-auto justify-start px-0 py-0 shadow-none"
+      className="h-auto justify-start px-0 py-0 whitespace-normal shadow-none"
     >
       <Link href={href} className="grid w-full gap-1 border-b border-border/15 py-3 text-left">
         <span className="flex items-start gap-3">
@@ -298,7 +309,7 @@ export function MobileCaptureSheet() {
                 key={action.href}
                 asChild
                 variant="ghost"
-                className="h-auto justify-start px-0 py-0 shadow-none"
+                className="h-auto justify-start px-0 py-0 whitespace-normal shadow-none"
               >
                 <Link href={action.href} className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left">
                   <span className="flex items-center gap-3 text-sm font-medium text-foreground">
