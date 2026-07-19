@@ -106,6 +106,10 @@ Reference: `docs/testing/pilot-readiness.md`
 | CSV parser scope | Current column-mapping approach | Decided — keep |
 | PDF statement parsing | Build parser per institution | Future — post-pilot |
 
+### Open strategy questions
+
+Four product/business questions are unanswered and need founder decisions rather than engineering: monetization, distribution/go-to-market, analytics instrumentation, and PDPO registration ownership (plus Learn-content governance). These do not block the local-first pilot but block scaling beyond it. See [product/open-questions.md](product/open-questions.md).
+
 ---
 
 ## Mobile Money API Research

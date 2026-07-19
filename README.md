@@ -1,6 +1,6 @@
 # Moat
 
-Moat is a Uganda-first, local-first personal finance app: spending visibility, goal-based savings, and rule-based investment guidance for people managing money across cash, mobile money, bank, and SACCO accounts. Data lives on the device (IndexedDB on web, SQLite via a native bridge inside the Android shell), protected by a PIN-derived encryption key, with optional encrypted backups.
+Moat is a local-first money app for people in Uganda managing cash, mobile money, bank, and SACCO accounts: spending visibility, goal-based savings, and rule-based investment guidance. Data lives on the device (IndexedDB on web, SQLite via a native bridge inside the Android shell), protected by a PIN-derived encryption key, with optional encrypted backups.
 
 ## Status
 

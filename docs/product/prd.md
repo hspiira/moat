@@ -45,7 +45,7 @@ The first release is optimized for a young salaried Ugandan who:
 
 ### Business Goals
 
-- establish a credible Uganda-first personal finance foundation
+- establish Moat as a credible personal finance foundation for the Ugandan market
 - validate that manual and CSV-based money tracking can drive recurring use
 - create a roadmap-ready base for future automation and integrations
 

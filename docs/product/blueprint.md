@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-This document defines the first ground-up blueprint for a Uganda-first personal finance app designed to help users build a financial moat for their future selves. The product is not just a spending tracker. It is a personal money operating system that helps users understand where money comes from, where it goes, what they are building toward, and which safe investment paths fit their stage of life.
+This document defines the first ground-up blueprint for Moat, a personal finance app for the Ugandan market designed to help users build a financial moat for their future selves. The product is not just a spending tracker. It is a personal money operating system that helps users understand where money comes from, where it goes, what they are building toward, and which safe investment paths fit their stage of life.
 
 The first version is built for young salaried Ugandans who often live across multiple financial systems at once: salary through a bank account, daily spending through mobile money or cash, family obligations paid informally, and future wealth ambitions tied to land, SACCOs, farming, side businesses, Treasury instruments, unit trusts, and long-term savings. That mix is common in Uganda and is one reason many global personal finance products do not fit local realities.
 

@@ -9,6 +9,7 @@ The documentation is organized by purpose. When docs disagree, [tracker.md](trac
 | [tracker.md](tracker.md) | **Single source of truth** for project status, decisions, and backlog |
 | [product/blueprint.md](product/blueprint.md) | Founding product vision, personas, and MVP scope |
 | [product/prd.md](product/prd.md) | Product requirements with acceptance criteria |
+| [product/open-questions.md](product/open-questions.md) | Unanswered strategy questions (monetization, distribution, analytics, compliance ownership) |
 | [architecture/overview.md](architecture/overview.md) | Current system architecture as implemented |
 | [architecture/storage-security.md](architecture/storage-security.md) | Storage backends, encryption, and backup design |
 | [architecture/sync.md](architecture/sync.md) | Sync API contract and conflict rules (server side is dev-only) |
