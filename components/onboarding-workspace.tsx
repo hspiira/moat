@@ -24,7 +24,14 @@ import type {
   SalaryCycle,
   UserProfile,
 } from "@/lib/types";
+import {
+  IconBrandGoogleDrive,
+  IconFileShredder,
+  IconSparkles,
+} from "@tabler/icons-react";
+
 import { goalTypeLabels } from "@/components/goals/goal-form";
+import { MoatMark } from "@/components/navigation/navigation-shared";
 import { InputField } from "@/components/forms/input-field";
 import { OnboardingRecoveryPanel } from "@/components/onboarding-recovery-panel";
 import { SelectField } from "@/components/forms/select-field";
@@ -486,46 +493,67 @@ export function OnboardingWorkspace() {
   }
 
   if (mode === "choose") {
+    const modeOptions = [
+      {
+        mode: "fresh" as const,
+        icon: IconSparkles,
+        title: "Start fresh",
+        description:
+          "Create a new local profile, first account, and optional first goal on this device.",
+      },
+      {
+        mode: "restore_file" as const,
+        icon: IconFileShredder,
+        title: "Restore encrypted file",
+        description:
+          "Use a backup file you previously downloaded and restore it with your backup PIN.",
+      },
+      {
+        mode: "restore_drive" as const,
+        icon: IconBrandGoogleDrive,
+        title: "Restore from Google Drive",
+        description:
+          "Connect Google Drive, choose a Moat backup, and restore it with your backup PIN.",
+      },
+    ];
+
     return (
       <div className="mx-auto grid w-full max-w-2xl gap-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Get back into Moat</h1>
+          <MoatMark className="h-12 w-12" />
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            Get back into Moat
+          </h1>
           <p className="text-sm text-muted-foreground">
             Start fresh on this device or restore an encrypted backup you already control.
           </p>
         </div>
 
         <div className="grid gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("fresh")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Start fresh</div>
-            <div className="text-sm text-muted-foreground">
-              Create a new local profile, first account, and optional first goal on this device.
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("restore_file")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Restore encrypted file</div>
-            <div className="text-sm text-muted-foreground">
-              Use a backup file you previously downloaded and restore it with your backup PIN.
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("restore_drive")}
-            className="grid gap-1 border border-border/30 px-4 py-4 text-left"
-          >
-            <div className="text-sm text-foreground">Restore from Google Drive</div>
-            <div className="text-sm text-muted-foreground">
-              Connect Google Drive, choose a Moat backup, and restore it with your backup PIN.
-            </div>
-          </button>
+          {modeOptions.map((option) => {
+            const OptionIcon = option.icon;
+            return (
+              <button
+                key={option.mode}
+                type="button"
+                onClick={() => setMode(option.mode)}
+                className="flex items-start gap-3 rounded-md border border-border/60 bg-card px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
+              >
+                <span
+                  aria-hidden
+                  className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
+                >
+                  <OptionIcon className="size-4.5" />
+                </span>
+                <span className="grid gap-1">
+                  <span className="text-sm font-medium text-foreground">{option.title}</span>
+                  <span className="text-sm leading-6 text-muted-foreground">
+                    {option.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -535,7 +563,7 @@ export function OnboardingWorkspace() {
     return (
       <div className="mx-auto grid w-full max-w-2xl gap-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
             {mode === "restore_file" ? "Restore your backup file" : "Restore from Google Drive"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -558,19 +586,27 @@ export function OnboardingWorkspace() {
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-6">
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <ol
+          aria-label="Onboarding steps"
+          className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+        >
           {steps.map((currentStep, index) => (
-            <div
+            <li
               key={currentStep}
-              className={`rounded-full border px-3 py-1 ${
-                index <= stepIndex ? "border-primary text-foreground" : "border-border/30"
+              aria-current={index === stepIndex ? "step" : undefined}
+              className={`rounded-full border px-3 py-1 transition-colors ${
+                index === stepIndex
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : index < stepIndex
+                    ? "border-primary/40 text-foreground"
+                    : "border-border/40"
               }`}
             >
               {index + 1}. {stepLabels[currentStep]}
-            </div>
+            </li>
           ))}
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        </ol>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
           {step === "profile"
             ? "Set up your profile"
             : step === "account"
