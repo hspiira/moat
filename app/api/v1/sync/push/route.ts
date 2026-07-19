@@ -3,9 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyHostedSyncPush } from "@/lib/sync/hosted-store";
 import {
   createSyncStubResponse,
+  isHostedBackendUsable,
   validateSyncBearerToken,
   validateSyncPushRequest,
 } from "@/lib/sync/server-contract";
+
+// DEV-ONLY BACKEND. The hosted store behind MOAT_ENABLE_SYNC_BACKEND is a
+// single-process JSON file with shared-token auth and no per-user tenancy.
+// It exists to exercise the sync contract in development and must not be
+// enabled for real users. Default behavior (both flags unset) is 501.
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +21,12 @@ export async function POST(request: NextRequest) {
     const syncRequest = validateSyncPushRequest(body);
 
     if (process.env.MOAT_ENABLE_SYNC_BACKEND === "true") {
+      if (!isHostedBackendUsable()) {
+        return NextResponse.json(
+          { error: "Hosted sync backend requires MOAT_SYNC_BEARER_TOKEN to be set." },
+          { status: 503 },
+        );
+      }
       return NextResponse.json(await applyHostedSyncPush(syncRequest));
     }
 

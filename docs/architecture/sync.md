@@ -2,10 +2,19 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.0 |
-| Status | Active contract |
+| Document Version | 1.1 |
+| Status | Active contract — **server implementation is dev-only** |
 | Owner | Piira |
-| Last Updated | 06-04-2026 |
+| Last Updated | 2026-07-19 |
+
+> **⚠️ The server side of this contract is a development stub.** The hosted
+> store (`lib/sync/hosted-store.ts`) is a single-process JSON file with a
+> shared bearer token, no per-user authentication, and no tenancy — `userId`
+> is trusted from the request body. Routes return 501 unless explicitly
+> flag-enabled and fail closed (503) if `MOAT_SYNC_BEARER_TOKEN` is unset.
+> Before hosted sync is offered to anyone: per-user auth, a real database,
+> rate limiting, and a threat-model review are prerequisites. The client
+> engine, outbox, and conflict rules below are real and tested.
 
 ## Purpose
 

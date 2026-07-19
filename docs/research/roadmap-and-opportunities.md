@@ -1,4 +1,4 @@
-# Uganda Accounting Roadmap: SMS Capture, Accounting Depth, and Growth Opportunities
+# Moat — Roadmap Research: SMS Capture, Accounting Depth, and Growth Opportunities
 
 | Field | Value |
 | --- | --- |

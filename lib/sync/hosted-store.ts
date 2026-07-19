@@ -1,3 +1,9 @@
+// DEV-ONLY sync store. This is a single-process, file-backed JSON stand-in
+// used to exercise the sync contract locally. It has no locking (concurrent
+// requests race on read-modify-write), no per-user tenancy, and no real
+// authentication. It must be replaced by a real database with per-user auth
+// before hosted sync is offered to anyone.
+
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 

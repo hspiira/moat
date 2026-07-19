@@ -70,6 +70,13 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
   };
 }
 
+/**
+ * DEV-ONLY AUTH. A single shared bearer token gives no per-user identity or
+ * tenancy: `userId` is trusted from the request body, so any caller holding
+ * the token can read or write any user's data. Real hosted sync requires
+ * per-user authentication and a real database before it ships — see
+ * docs/architecture/sync.md.
+ */
 export function validateSyncBearerToken(headerValue: string | null) {
   const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
   if (!expectedToken) {
@@ -85,6 +92,15 @@ export function validateSyncBearerToken(headerValue: string | null) {
   if (token !== expectedToken) {
     throw new Error("Hosted sync bearer token is invalid.");
   }
+}
+
+/**
+ * Guards the file-backed dev store: refuse to run the hosted backend when no
+ * bearer token is configured, so an unset env var can never expose an
+ * unauthenticated sync endpoint.
+ */
+export function isHostedBackendUsable(): boolean {
+  return Boolean(process.env.MOAT_SYNC_BEARER_TOKEN?.trim());
 }
 
 export function createSyncStubResponse(request: SyncPushRequest): SyncPushResponse {

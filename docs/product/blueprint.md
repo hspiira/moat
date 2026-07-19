@@ -1,4 +1,4 @@
-# Uganda Finance App MVP Blueprint
+# Moat MVP Blueprint
 
 
 | Field            | Value                              |

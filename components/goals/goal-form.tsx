@@ -144,7 +144,7 @@ export function GoalForm({
 
           <InputField
             id="current-amount"
-            label="Current amount saved (UGX)"
+            label="Starting amount already saved (UGX)"
             inputMode="decimal"
             value={form.currentAmount}
             onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}

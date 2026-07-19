@@ -15,10 +15,17 @@ import {
   verifyPin,
   type EncryptedPayload,
 } from "./pin-crypto";
+import {
+  INITIAL_ATTEMPT_STATE,
+  getRemainingLockoutMs,
+  isValidPin,
+  readAttemptState,
+  recordFailedAttempt,
+  writeAttemptState,
+} from "./pin-policy";
 import { setActiveRecordCryptoKey } from "./record-crypto";
 
 const PIN_HASH_KEY = "moat:pin_hash";
-const PIN_SALT_KEY = "moat:pin_salt";
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 /** Stored in localStorage: a small encrypted sentinel used to verify the PIN. */
@@ -34,10 +41,12 @@ type PinLockState =
 
 type PinLockContextValue = {
   lockState: PinLockState;
-  /** Set a new PIN (replaces any existing one). Returns false if PIN is too short. */
+  /** Set a new PIN (replaces any existing one). Returns false if PIN is invalid. */
   setPin: (pin: string) => Promise<boolean>;
-  /** Unlock with a PIN. Returns false if PIN is wrong. */
+  /** Unlock with a PIN. Returns false if PIN is wrong or attempts are throttled. */
   unlock: (pin: string) => Promise<boolean>;
+  /** Milliseconds until the next unlock attempt is allowed. 0 when not throttled. */
+  getUnlockLockoutMs: () => number;
   /** Lock the session immediately. */
   lock: () => void;
   /** Remove PIN lock entirely. Requires current PIN to confirm. */
@@ -112,7 +121,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   }, [lockState.status, resetInactivityTimer]);
 
   const setPin = useCallback(async (pin: string): Promise<boolean> => {
-    if (pin.length < 4) {
+    if (!isValidPin(pin)) {
       return false;
     }
 
@@ -132,9 +141,22 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [resetInactivityTimer]);
 
+  const getUnlockLockoutMs = useCallback((): number => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+
+    return getRemainingLockoutMs(readAttemptState(localStorage), Date.now());
+  }, []);
+
   const unlock = useCallback(async (pin: string): Promise<boolean> => {
     const raw = localStorage.getItem(PIN_HASH_KEY);
     if (!raw) {
+      return false;
+    }
+
+    const attemptState = readAttemptState(localStorage);
+    if (getRemainingLockoutMs(attemptState, Date.now()) > 0) {
       return false;
     }
 
@@ -142,11 +164,14 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     const valid = await verifyPin(record.payload, pin);
 
     if (valid) {
+      writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(
         await deriveSessionKey(pin, base64ToUint8Array(record.payload.salt)),
       );
       setLockState({ status: "unlocked" });
       resetInactivityTimer();
+    } else {
+      writeAttemptState(localStorage, recordFailedAttempt(attemptState, Date.now()));
     }
 
     return valid;
@@ -171,7 +196,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
     if (valid) {
       localStorage.removeItem(PIN_HASH_KEY);
-      localStorage.removeItem(PIN_SALT_KEY);
+      writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(null);
       setLockState({ status: "no_pin" });
     }
@@ -183,7 +208,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <PinLockContext.Provider
-      value={{ lockState, setPin, unlock, lock, removePin, hasPinLock }}
+      value={{ lockState, setPin, unlock, getUnlockLockoutMs, lock, removePin, hasPinLock }}
     >
       {children}
     </PinLockContext.Provider>

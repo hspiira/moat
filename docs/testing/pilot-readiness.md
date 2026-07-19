@@ -1,11 +1,11 @@
-# Uganda Finance MVP Pilot Readiness Checklist
+# Moat — Pilot Readiness Checklist
 
 
 | Field         | Value      |
 | ------------- | ---------- |
 | Status        | Draft      |
 | Owner         | `Piira`    |
-| Last updated  | 2026-04-05 |
+| Last updated  | 2026-07-19 |
 | Related issue | `#10`      |
 
 
@@ -17,10 +17,9 @@ This checklist is the release-quality handoff for the first Uganda pilot. It def
 
 The pilot is ready only when all of the following are true:
 
-- `npm run typecheck` passes.
-- `npm run lint` passes.
-- `npm run test` passes.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` pass (enforced in CI; see `docs/tracker.md` for last verified date).
 - Core routes work end-to-end with local-first persistence:
+  - `/onboarding` (including the default PIN + encryption step)
   - `/accounts`
   - `/transactions`
   - `/goals`

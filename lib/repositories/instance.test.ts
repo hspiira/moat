@@ -81,13 +81,13 @@ describe("repository instance", () => {
       createIndexedDbRepositories: () => indexedDbBundle,
     }));
 
-    const module = await import("@/lib/repositories/instance");
-    await module.repositories.userProfile.get();
+    const instance = await import("@/lib/repositories/instance");
+    await instance.repositories.userProfile.get();
 
     expect(sqliteBundle.userProfile.get).toHaveBeenCalledTimes(1);
     expect(indexedDbBundle.userProfile.get).not.toHaveBeenCalled();
-    expect(module.getRepositoryBackend()).toBe("sqlite");
-    expect(module.getRepositoryBackendWarning()).toBeNull();
+    expect(instance.getRepositoryBackend()).toBe("sqlite");
+    expect(instance.getRepositoryBackendWarning()).toBeNull();
   });
 
   it("falls back to indexeddb when sqlite initialization fails", async () => {
@@ -105,11 +105,11 @@ describe("repository instance", () => {
       createIndexedDbRepositories: () => indexedDbBundle,
     }));
 
-    const module = await import("@/lib/repositories/instance");
-    await module.repositories.userProfile.get();
+    const instance = await import("@/lib/repositories/instance");
+    await instance.repositories.userProfile.get();
 
     expect(indexedDbBundle.userProfile.get).toHaveBeenCalledTimes(1);
-    expect(module.getRepositoryBackend()).toBe("indexeddb");
-    expect(module.getRepositoryBackendWarning()).toContain("bridge init failed");
+    expect(instance.getRepositoryBackend()).toBe("indexeddb");
+    expect(instance.getRepositoryBackendWarning()).toContain("bridge init failed");
   });
 });

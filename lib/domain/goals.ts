@@ -1,4 +1,33 @@
-import type { Goal, GoalContributionPlan } from "@/lib/types";
+import type { Goal, GoalContributionPlan, Transaction } from "@/lib/types";
+
+/**
+ * Goal progress is derived, not stored: `goal.currentAmount` is the manual
+ * starting amount, and savings contributions recorded against the goal's
+ * linked account accrue on top of it. Goals without a linked account fall
+ * back to the manually entered amount.
+ */
+export function deriveGoalCurrentAmount(goal: Goal, transactions: Transaction[]): number {
+  if (!goal.linkedAccountId) {
+    return goal.currentAmount;
+  }
+
+  const contributed = transactions
+    .filter(
+      (transaction) =>
+        transaction.type === "savings_contribution" &&
+        transaction.accountId === goal.linkedAccountId,
+    )
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+
+  return goal.currentAmount + contributed;
+}
+
+export function withDerivedGoalProgress(goals: Goal[], transactions: Transaction[]): Goal[] {
+  return goals.map((goal) => ({
+    ...goal,
+    currentAmount: deriveGoalCurrentAmount(goal, transactions),
+  }));
+}
 
 function differenceInMonths(targetDate: string, referenceDate: Date): number {
   const target = new Date(targetDate);

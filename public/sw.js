@@ -1,16 +1,22 @@
-const CACHE_NAME = "moat-v1";
+const CACHE_NAME = "moat-v2";
 const OFFLINE_URL = "/offline";
 const APP_SHELL_URLS = [
   OFFLINE_URL,
   "/",
   "/manifest.webmanifest",
   "/icons/icon.svg",
+  "/icons/logo.svg",
+  "/icons/logo.png",
   "/icons/maskable-icon.svg",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL_URLS)),
+    caches.open(CACHE_NAME).then((cache) =>
+      // Add entries individually so one missing asset cannot abort the
+      // whole install and leave the app without any offline support.
+      Promise.allSettled(APP_SHELL_URLS.map((url) => cache.add(url))),
+    ),
   );
   self.skipWaiting();
 });
@@ -38,11 +44,24 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
+    // Network-first, falling back to the cached copy of the same route so
+    // previously visited pages keep working offline, then to /offline.
     event.respondWith(
-      fetch(request).catch(async () => {
-        const cache = await caches.open(CACHE_NAME);
-        return cache.match(OFFLINE_URL);
-      }),
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(request, responseClone));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          const cachedPage = await cache.match(request);
+          return cachedPage ?? cache.match(OFFLINE_URL);
+        }),
     );
     return;
   }

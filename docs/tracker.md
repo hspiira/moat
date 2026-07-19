@@ -4,8 +4,8 @@
 | ------------ | ------------------------------------ |
 | Status       | Active development                   |
 | Owner        | Piira                                |
-| Last updated | 2026-04-06                           |
-| Stack        | Next.js 16, TypeScript, shadcn/ui, IndexedDB |
+| Last updated | 2026-07-19                           |
+| Stack        | Next.js 16, TypeScript, shadcn/ui, IndexedDB / SQLite (native) |
 
 ---
 
@@ -15,7 +15,22 @@ A living tracker for project state, decisions, open questions, ideation backlog,
 
 ---
 
-## Current State (April 2026)
+## Consolidation Update (2026-07-19)
+
+A consolidation pass reconciled the docs with the code and closed several review findings:
+
+- **Naming**: the product is **Moat** everywhere. `package.json` renamed, "Uganda Finance App" retired from all docs, stray root files and the vestigial `capacitor.config.json` removed (the native shell is a hand-rolled WebView host, not Capacitor).
+- **Docs restructure**: docs now live under `docs/{product,architecture,plans,research,testing}` with an index at `docs/README.md`. The stale pre-build architecture doc was removed and replaced by `docs/architecture/overview.md`, which describes the system as implemented.
+- **CI added**: `.github/workflows/ci.yml` runs typecheck, lint, test, and build on every push/PR. All four verified green on 2026-07-19 (101 tests).
+- **Encryption posture decided and implemented**: PIN + at-rest encryption is the onboarding default. Minimum PIN is 6 digits with escalating unlock throttling (30s after 5 failures, doubling, 15-minute cap). Onboarding sets the PIN before the first record is written. Restores still accept legacy 4-digit backup PINs.
+- **Goal progress is now derived**: goal progress = manual starting amount + savings contributions on the linked account (`deriveGoalCurrentAmount`), resolving the contradiction between the pilot checklist and the old stored-only `currentAmount`. `MonthSummary.net` now means inflow − outflow − allocated savings (previously a duplicate of `savings`).
+- **Service worker fixed**: precache now covers the icons the manifest actually uses, installs resiliently, and caches visited pages so previously opened routes work offline.
+- **Transactions workspace refactored**: balance reconciliation moved off the read path (loads no longer write to storage; only changed balances persist after mutations). Transaction construction and the month-close CSV are pure, tested modules; budgets and rules/obligations live in their own hooks.
+- **Sync backend loudly marked dev-only**: routes refuse to run the hosted file-backed store without a bearer token, and code/docs state that per-user auth and a real database are prerequisites for real hosted sync.
+
+---
+
+## Current State (July 2026)
 
 ### What is built and working
 
@@ -33,32 +48,38 @@ A living tracker for project state, decisions, open questions, ideation backlog,
 - Dashboard at `/` — monthly summary, top categories, account balances, monthly prompts
 - Light / dark theme toggle in navigation
 - All forms use shadcn/ui components — no native input/select/textarea in any user-facing component
-- Local-first persistence via IndexedDB — no backend, no auth in v1
+- Local-first persistence via IndexedDB (web) and SQLite (native bridge) behind one repository interface
+- PIN lock with at-rest record encryption — onboarding default, min 6 digits, throttled unlock
+- Encrypted backup and restore — local `.enc` file and Google Drive (appdata scope)
+- PWA install, offline shell, and share-target intake; hand-rolled Android WebView host shell with share-to-app capture implemented in code (not device-verified)
+- Client-side sync engine, outbox, and per-entity conflict rules with a manual-review queue at `/settings/sync-conflicts` (server side is a dev-only stub)
+- CI: typecheck, lint, test, build on every push/PR
 
 ### What is not yet built
 
-- Authentication / multi-device sync
+- Hosted multi-device sync backend (per-user auth + real database; current server is a dev-only file stub)
 - PDF statement parsing (MTN, Stanbic, DFCU)
-- Native Android host shell / Capacitor bridge for mobile capture
-- Android notification listener ingestion
+- Android notification listener rollout — service code exists but there is no permission-grant UX and it is not device-verified
 - Correction logging and parser refinement workflow
 - Provider-grade parser packs with broad MTN, Airtel, and bank fixture coverage
 - Push notifications / reminders
 - Institution verification workflows
+- Component/E2E test coverage of the interactive UI layer
 
 ---
 
 ## Pilot Readiness
 
-Reference: `docs/pilot-readiness-checklist.md`
+Reference: `docs/testing/pilot-readiness.md`
 
-### Gate status (self-assessed, April 2026)
+### Gate status (verified 2026-07-19)
 
 | Gate | Status | Notes |
 |------|--------|-------|
-| `npm run typecheck` passes | ✅ | Confirmed |
-| `npm run lint` passes | Unverified | Run before pilot |
-| `npm run test` passes | Unverified | Run before pilot |
+| `pnpm typecheck` passes | ✅ | Verified 2026-07-19; enforced in CI |
+| `pnpm lint` passes | ✅ | Verified 2026-07-19; enforced in CI |
+| `pnpm test` passes | ✅ | 101 tests, verified 2026-07-19; enforced in CI |
+| `pnpm build` passes | ✅ | Verified 2026-07-19; enforced in CI |
 | `/accounts` works end-to-end | ✅ | Full CRUD, balance reconciliation |
 | `/transactions` works end-to-end | ✅ | Manual + CSV import |
 | `/goals` works end-to-end | ✅ | Contribution plans, delete |
@@ -77,8 +98,9 @@ Reference: `docs/pilot-readiness-checklist.md`
 
 | Decision | Options | Status |
 |----------|---------|--------|
-| Data backup / restore | JSON export/import, server sync, none | Unresolved |
-| Auth model | Local-only forever, optional account, required account | Unresolved |
+| Data backup / restore | JSON export/import, server sync, none | **Resolved** — encrypted `.enc` backup/restore to file and Google Drive (plaintext JSON export also exists) |
+| Encryption posture | Opt-in PIN, default PIN, mandatory PIN | **Resolved (2026-07-19)** — PIN + encryption is the onboarding default, ≥6 digits, throttled unlock; explicit opt-out with warning |
+| Auth model | Local-only forever, optional account, required account | Unresolved — blocks hosted sync; current sync server is dev-only |
 | Goal–account linking in UI | Required, optional, not shown | Optional (implemented) |
 | Reminders | In-app only, push/email, none in v1 | None in v1 |
 | CSV parser scope | Current column-mapping approach | Decided — keep |
@@ -115,7 +137,7 @@ Reference: `docs/pilot-readiness-checklist.md`
 
 **Phase 1 (now):** CSV import — already built. Covers MTN mini-statements, Stanbic, DFCU, Centenary exports.
 
-**Phase 2 (current implementation plan):** simple capture platform. Start with share-to-app, capture inbox, Android notification listener, parser packs, confidence, deduplication, and correction logging. Reference: `docs/phase-2-simple-capture-implementation-plan.md`.
+**Phase 2 (current implementation plan):** simple capture platform. Start with share-to-app, capture inbox, Android notification listener, parser packs, confidence, deduplication, and correction logging. Reference: `docs/plans/phase-2-capture.md`.
 
 **Phase 3 (later / native expansion):** deeper native Android capture beyond notification listener, including any policy-approved SMS-adjacent capabilities if distribution constraints and platform rules make them viable.
 
@@ -175,6 +197,11 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 | 2026-04-05 | Rule-based investment guidance, not LLM | Explainability, compliance safety, deterministic behaviour |
 | 2026-04-05 | shadcn/ui for all components | Consistent design system, full dark/light theme support, accessible |
 | 2026-04-05 | Next.js App Router | Familiar stack, server component readiness for post-IndexedDB phase |
+| 2026-07-19 | PIN + encryption as onboarding default (≥6 digits, throttled unlock) | Financial data on shared/lost devices; opt-in encryption left most users unprotected |
+| 2026-07-19 | Balance reconciliation off the read path | Loads were writing reconciled balances back on every view, churning storage and the sync outbox |
+| 2026-07-19 | Goal progress derived from linked-account savings contributions | Stored-only `currentAmount` went stale and contradicted the pilot checklist |
+| 2026-07-19 | Sync server stays dev-only until per-user auth + real database exist | Shared-token file store has no tenancy; routes now fail closed without a token |
+| 2026-07-19 | Docs restructured under `docs/{product,architecture,plans,research,testing}` | Two doc generations had drifted; tracker is now the single status source |
 
 ---
 
@@ -199,7 +226,7 @@ Suggested priority order after current state:
 | `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial — canonical pipeline modules, source adapters, provider packs, hashes, duplicate hints, and field warnings exist; provider coverage and refinement loop still incomplete |
 | `#30` | MTN, Airtel, and bank parser templates | Partial — first generic templates exist; not yet provider-grade or fixture-complete |
 | `#55` | Android host shell and native bridge | Implemented in code — WebView host, payload queue, JS bridge, and review-route handoff are present; needs device verification and notification-specific follow-up |
-| `#25` | Android notification listener ingestion | Not started |
+| `#25` | Android notification listener ingestion | Implemented in code (manifest service, allowlist gating, settings sync) but **not rolled out** — no permission-grant UX, no device verification, Play policy review pending |
 | `#54` | Correction logging and parser refinement workflow | Not started |
 
 ---

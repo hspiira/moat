@@ -1,4 +1,4 @@
-# Phase 2 Implementation Plan: Simple Capture Platform
+# Moat — Phase 2 Implementation Plan: Simple Capture Platform
 
 | Field | Value |
 | --- | --- |

@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { defaultGoalForm, type GoalFormState } from "@/components/goals/goal-form";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { withDerivedGoalProgress } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
@@ -76,8 +77,13 @@ export function useGoalsWorkspace() {
     () => getMonthSummary(transactions, [], currentMonth),
     [currentMonth, transactions],
   );
+  const goalsWithProgress = useMemo(
+    () => withDerivedGoalProgress(goals, transactions),
+    [goals, transactions],
+  );
   const emergencyFundSuggestion = monthlySummary.outflow * 3;
-  const emergencyFundGoal = goals.find((goal) => goal.goalType === "emergency_fund") ?? null;
+  const emergencyFundGoal =
+    goalsWithProgress.find((goal) => goal.goalType === "emergency_fund") ?? null;
 
   async function handleGoalSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -120,15 +126,18 @@ export function useGoalsWorkspace() {
   }
 
   function beginGoalEdit(goal: Goal) {
-    setEditingGoalId(goal.id);
+    // Edit from the stored goal, not the derived one, so the manually
+    // entered starting amount round-trips without absorbing contributions.
+    const storedGoal = goals.find((candidate) => candidate.id === goal.id) ?? goal;
+    setEditingGoalId(storedGoal.id);
     setGoalForm({
-      name: goal.name,
-      goalType: goal.goalType,
-      targetAmount: String(goal.targetAmount),
-      currentAmount: String(goal.currentAmount),
-      targetDate: goal.targetDate,
-      priority: String(goal.priority),
-      linkedAccountId: goal.linkedAccountId ?? "",
+      name: storedGoal.name,
+      goalType: storedGoal.goalType,
+      targetAmount: String(storedGoal.targetAmount),
+      currentAmount: String(storedGoal.currentAmount),
+      targetDate: storedGoal.targetDate,
+      priority: String(storedGoal.priority),
+      linkedAccountId: storedGoal.linkedAccountId ?? "",
     });
   }
 
@@ -163,7 +172,7 @@ export function useGoalsWorkspace() {
   return {
     profile,
     accounts,
-    goals,
+    goals: goalsWithProgress,
     goalForm,
     editingGoalId,
     isLoading,
