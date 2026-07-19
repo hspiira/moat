@@ -1,7 +1,7 @@
 "use client";
 import { startTransition, useEffect, useMemo, useState } from "react";
+import { IconExternalLink, IconRosetteDiscountCheck } from "@tabler/icons-react";
 
-import { AccentCardHeader, type AccentTone } from "@/components/accent-card-header";
 import { MetricChip } from "@/components/page-shell/metric-chip";
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
@@ -11,10 +11,12 @@ import {
 } from "@/components/page-shell/page-state";
 import { repositories } from "@/lib/repositories/instance";
 import type { ResourceLink, UserProfile } from "@/lib/types";
-import { AccentMetricCard } from "@/components/ui/accent-metric-card";
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 
 
@@ -81,7 +83,6 @@ export function LearnWorkspace() {
   }, [resources]);
 
   const topicEntries = Object.entries(resourcesByTopic);
-  const topicTones: AccentTone[] = ["yellow", "lilac", "mint"];
 
   return (
     <div className="grid gap-5">
@@ -92,7 +93,6 @@ export function LearnWorkspace() {
           <MetricChip
             value={<span className="text-2xl font-semibold tracking-tight">{resources.length}</span>}
             label="Sources"
-            className="moat-panel-yellow border-border/20"
           />
         }
       />
@@ -110,64 +110,60 @@ export function LearnWorkspace() {
 
       {!isLoading ? (
         <div className="grid gap-5">
-          <div className="grid gap-3 lg:grid-cols-3">
-            <AccentMetricCard
-              tone="yellow"
-              kicker="Official first"
-              value="Verify before you move money"
-            />
-            <AccentMetricCard
-              tone="lilac"
-              kicker="Product research"
-              value="Use data, not promises"
-            />
-            <AccentMetricCard
-              tone="mint"
-              kicker="Guidance boundary"
-              value="Education, not hot picks"
-            />
-          </div>
+          <Card className="ring-1 ring-primary/15">
+            <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-3 sm:gap-6">
+              {[
+                { kicker: "Official first", value: "Verify before you move money" },
+                { kicker: "Product research", value: "Use data, not promises" },
+                { kicker: "Guidance boundary", value: "Education, not hot picks" },
+              ].map((principle) => (
+                <div key={principle.kicker} className="space-y-1">
+                  <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                    {principle.kicker}
+                  </p>
+                  <p className="font-display text-base leading-snug font-medium">
+                    {principle.value}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
 
-          {topicEntries.map(([topic, topicResources], index) => {
+          {topicEntries.map(([topic, topicResources]) => {
             const copy = topicCopy[topic] ?? {
               title: topic,
               summary: "Reference material.",
             };
-            const tone = topicTones[index % topicTones.length];
-
             return (
-              <Card key={topic} className="gap-0 pt-0 border-border/20 shadow-none">
-                <AccentCardHeader
-                  tone={tone}
-                  title={copy.title}
-                  description={copy.summary}
-                  descriptionClassName="max-w-3xl"
-                />
-                <CardContent className="grid gap-2 p-5 md:grid-cols-2">
-                  {topicResources.map((resource, resourceIndex) => (
+              <Card key={topic}>
+                <CardHeader className="border-b border-border/60 pb-4 [.border-b]:pb-4">
+                  <CardTitle className="font-display text-lg">{copy.title}</CardTitle>
+                  <CardDescription className="max-w-3xl leading-6">{copy.summary}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2 md:grid-cols-2">
+                  {topicResources.map((resource) => (
                     <a
                       key={resource.id}
                       href={resource.url}
                       rel="noreferrer"
                       target="_blank"
-                      className={`flex items-start justify-between gap-3 border px-4 py-3 transition-colors hover:border-foreground/30 ${
-                        resourceIndex === 0
-                          ? "moat-panel-sage border-border/20"
-                          : resourceIndex % 2 === 0
-                            ? "moat-panel-mint border-border/20"
-                            : "bg-muted/20 border-border/20"
-                      }`}
+                      className="group flex items-start justify-between gap-3 rounded-md border border-border/60 px-4 py-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
                     >
-                      <div>
-                        <div className="text-sm font-medium text-foreground">
-                          {resource.title}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                          <span className="truncate">{resource.title}</span>
+                          <IconExternalLink
+                            aria-hidden
+                            className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                          />
                         </div>
-                        <div className="mt-0.5 text-xs text-muted-foreground">
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
                           {resource.sourceName}
                         </div>
                       </div>
                       {resource.isOfficial ? (
-                        <span className="shrink-0 rounded border border-border/40 px-2 py-0.5 text-xs text-muted-foreground">
+                        <span className="flex shrink-0 items-center gap-1 rounded-sm bg-pos/10 px-2 py-0.5 text-xs font-medium text-pos">
+                          <IconRosetteDiscountCheck aria-hidden className="size-3.5" />
                           Official
                         </span>
                       ) : null}
