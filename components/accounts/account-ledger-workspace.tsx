@@ -13,6 +13,7 @@ import {
 } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Money } from "@/components/ui/money";
 import {
   Card,
   CardContent,
@@ -180,29 +181,16 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
       {!isLoading && profile && account ? (
         <>
           <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
-            <Card className="moat-panel-sage border-border/20 shadow-none">
+            <Card className="ring-1 ring-primary/15">
               <CardHeader className="gap-2 p-5">
-                <CardDescription className="text-foreground/65">
+                <CardDescription className="text-xs font-medium tracking-[0.14em] uppercase">
                   {accountTypeLabels[account.type]}
                 </CardDescription>
-                <CardTitle className="text-4xl tracking-tight">
-                  <AmountIndicator
-                    tone={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "neutral"
-                    }
-                    sign={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "none"
-                    }
-                    value={formatCurrency(account.balance)}
-                    className="text-4xl font-semibold tracking-tight"
+                <CardTitle className="font-display text-3xl leading-none tracking-tight">
+                  <Money
+                    amount={account.balance}
+                    tone={account.balance < 0 ? "negative" : "neutral"}
+                    className="font-display"
                   />
                 </CardTitle>
               </CardHeader>

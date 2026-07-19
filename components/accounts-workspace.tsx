@@ -1,8 +1,6 @@
 "use client";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
-import { formatMoney } from "@/lib/currency";
-import { AmountIndicator } from "@/components/amount-indicator";
 import { getAccountTotals } from "@/lib/domain/accounts";
 import { MetricChip } from "@/components/page-shell/metric-chip";
 import { PageHeader } from "@/components/page-shell/page-header";
@@ -11,11 +9,10 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
+import { Money } from "@/components/ui/money";
 import {
   Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent,
 } from "@/components/ui/card";
 
 import {
@@ -78,54 +75,37 @@ export function AccountsWorkspace() {
             onRepair={handleRepairAccounts}
           />
 
-          <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr_1fr]">
-            <Card className="moat-panel-sage border-border/20 shadow-none">
-              <CardHeader className="gap-2 p-5">
-                <CardDescription className="text-foreground/65">Total balance</CardDescription>
-                <CardTitle className="text-4xl tracking-tight">
-                  <AmountIndicator
-                    tone={
-                      accountTotals.totalBalance > 0
-                        ? "positive"
-                        : accountTotals.totalBalance < 0
-                          ? "negative"
-                          : "neutral"
-                    }
-                    sign={
-                      accountTotals.totalBalance > 0
-                        ? "positive"
-                        : accountTotals.totalBalance < 0
-                          ? "negative"
-                          : "none"
-                    }
-                    value={formatMoney(accountTotals.totalBalance, "UGX")}
-                    className="text-4xl font-semibold tracking-tight"
+          <Card className="ring-1 ring-primary/15">
+            <CardContent className="grid gap-6 px-5 py-5 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-end sm:px-6">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                  Total balance
+                </p>
+                <div className="font-display text-3xl leading-none font-semibold tracking-tight">
+                  <Money
+                    amount={accountTotals.totalBalance}
+                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
+                    className="font-display"
                   />
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="moat-panel-yellow border-border/20 shadow-none">
-              <CardHeader className="gap-2 p-5">
-                <CardDescription>Active accounts</CardDescription>
-                <CardTitle className="text-3xl tracking-tight">
-                  {accountTotals.activeAccounts}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="moat-panel-mint border-border/20 shadow-none">
-              <CardHeader className="gap-2 p-5">
-                <CardDescription>Account types set up</CardDescription>
-                <CardTitle className="text-3xl tracking-tight">
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground">Active accounts</p>
+                <p className="text-2xl font-semibold tabular-nums">{accountTotals.activeAccounts}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground">Account types set up</p>
+                <p className="text-2xl font-semibold tabular-nums">
                   {
                     defaultAccountTypes.filter(
                       (type) => accountTotals.accountsByType[type] > 0,
                     ).length
-                  }{" "}
-                  / {defaultAccountTypes.length}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
+                  }
+                  <span className="text-base text-muted-foreground"> / {defaultAccountTypes.length}</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
             <AccountForm
