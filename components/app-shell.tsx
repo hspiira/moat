@@ -15,7 +15,10 @@ export function AppShell({ children }: AppShellProps) {
         <AppNavigation />
         <PwaStatus />
         <NativeCaptureIntake />
-        <main className="min-w-0">{children}</main>
+        {/* Clip stray horizontal overflow from page content so it can never
+            widen the page and drag the sticky nav sideways. Vertical stays
+            visible; nested scroll containers (e.g. wide tables) still scroll. */}
+        <main className="min-w-0 overflow-x-clip">{children}</main>
       </div>
     </div>
   );

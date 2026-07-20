@@ -61,9 +61,11 @@ export function useAccountsWorkspace() {
     });
   }, []);
 
-  async function handleAccountSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAccountSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<boolean> {
     event.preventDefault();
-    if (!profile) return;
+    if (!profile) return false;
 
     setIsSubmitting(true);
     setError(null);
@@ -119,8 +121,10 @@ export function useAccountsWorkspace() {
       setAccountForm(defaultAccountForm);
       setEditingAccountId(null);
       await loadWorkspace();
+      return true;
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save account.");
+      return false;
     } finally {
       setIsSubmitting(false);
     }

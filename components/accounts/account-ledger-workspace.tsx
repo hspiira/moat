@@ -1,17 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { AmountIndicator } from "@/components/amount-indicator";
-import { MetricChip } from "@/components/page-shell/metric-chip";
-import { PageHeader } from "@/components/page-shell/page-header";
 import {
   ErrorStateCard,
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 import {
@@ -43,14 +38,6 @@ function normalizeAccountId(value: string) {
   } catch {
     return value;
   }
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatLedgerDate(date: string) {
@@ -151,20 +138,16 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title={account?.name ?? "Account"}
-        description="Trace the current balance from opening balance and recorded movements."
-        aside={
-          <div className="flex flex-wrap items-start gap-2 sm:items-center">
-            {account ? (
-              <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
-            ) : null}
-            <Button asChild size="sm" variant="outline">
-              <Link href="/accounts">Back to accounts</Link>
-            </Button>
-          </div>
-        }
-      />
+      <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
+          {account?.name ?? "Account"}
+        </h1>
+        {account ? (
+          <span className="text-xs text-muted-foreground">
+            · {accountTypeLabels[account.type]}
+          </span>
+        ) : null}
+      </header>
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading ledger..." /> : null}
@@ -184,9 +167,9 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             <Card className="ring-1 ring-primary/15">
               <CardHeader className="gap-2 p-5">
                 <CardDescription className="text-xs font-medium tracking-[0.14em] uppercase">
-                  {accountTypeLabels[account.type]}
+                  Current balance
                 </CardDescription>
-                <CardTitle className="font-display text-3xl leading-none tracking-tight">
+                <CardTitle className="font-display text-[clamp(1.75rem,7vw,2.25rem)] leading-none tracking-tight">
                   <Money
                     amount={account.balance}
                     tone={account.balance < 0 ? "negative" : "neutral"}
@@ -212,79 +195,118 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                   No transactions recorded for this account.
                 </EmptyState>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-27.5">Date</TableHead>
-                      <TableHead className="w-35">Category</TableHead>
-                      <TableHead className="w-35">Type</TableHead>
-                      <TableHead className="w-45">Payee</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="w-35 text-right">Debit</TableHead>
-                      <TableHead className="w-35 text-right">Credit</TableHead>
-                      <TableHead className="w-40 text-right">Running balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* Mobile: stacked statement list — one line per entry, no wrapping. */}
+                  <ul className="flex flex-col gap-2 md:hidden">
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
-                      const balanceTone =
-                        row.runningBalance < 0 ? "negative" : row.runningBalance > 0 ? "positive" : "neutral";
+                      const isCredit = row.credit > 0;
+                      // Fold payee/category/note into one detail line; the band
+                      // colour and amount colour already convey the direction,
+                      // so no separate title row is needed.
+                      const detail = [row.payee?.trim(), category?.name, row.note?.trim()]
+                        .filter(Boolean)
+                        .join(" · ");
 
                       return (
-                        <TableRow key={row.id} className={getRowTone(row.transaction)}>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {formatLedgerDate(row.date)}
-                          </TableCell>
-                          <TableCell className="text-sm text-foreground/82">
-                            {category?.name ?? "Uncategorized"}
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-foreground">
-                              {transactionTypeLabels[row.type]}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {row.payee?.trim() || "—"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {row.note?.trim() || "—"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <AmountIndicator
-                              tone={row.debit > 0 ? "negative" : "neutral"}
-                              sign={row.debit > 0 ? "negative" : "none"}
-                              value={row.debit > 0 ? formatCurrency(row.debit) : "—"}
-                              className="justify-end text-sm"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <AmountIndicator
-                              tone={row.credit > 0 ? "positive" : "neutral"}
-                              sign={row.credit > 0 ? "positive" : "none"}
-                              value={row.credit > 0 ? formatCurrency(row.credit) : "—"}
-                              className="justify-end text-sm"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <AmountIndicator
-                              tone={balanceTone}
-                              sign={
-                                row.runningBalance < 0
-                                  ? "negative"
-                                  : row.runningBalance > 0
-                                    ? "positive"
-                                    : "none"
-                              }
-                              value={formatCurrency(Math.abs(row.runningBalance))}
-                              className="justify-end text-sm"
-                            />
-                          </TableCell>
-                        </TableRow>
+                        <li
+                          key={row.id}
+                          className={`rounded-md border border-border/50 px-3 py-2.5 ${getRowTone(row.transaction)}`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                              <span className="font-medium text-foreground">
+                                {formatLedgerDate(row.date)}
+                              </span>
+                              {detail ? <span> · {detail}</span> : null}
+                            </p>
+                            <div className="shrink-0 text-right leading-tight">
+                              <Money
+                                amount={isCredit ? row.credit : row.debit}
+                                tone={isCredit ? "positive" : "negative"}
+                                signed
+                                className="text-sm font-semibold whitespace-nowrap"
+                              />
+                              <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
+                                <span aria-hidden>→ </span>
+                                <Money
+                                  amount={Math.abs(row.runningBalance)}
+                                  tone={row.runningBalance < 0 ? "negative" : "muted"}
+                                />
+                                <span className="sr-only"> new balance</span>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </ul>
+
+                  {/* Desktop: scrollable ledger table. Cells never wrap; Details truncates. */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Date</TableHead>
+                          <TableHead className="whitespace-nowrap">Details</TableHead>
+                          <TableHead className="whitespace-nowrap text-right">Debit</TableHead>
+                          <TableHead className="whitespace-nowrap text-right">Credit</TableHead>
+                          <TableHead className="whitespace-nowrap text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ledgerRows.map((row) => {
+                          const category = categories.find((entry) => entry.id === row.categoryId);
+                          const primary = row.payee?.trim() || transactionTypeLabels[row.type];
+                          const secondary = [
+                            row.payee?.trim() ? transactionTypeLabels[row.type] : null,
+                            category?.name,
+                            row.note?.trim(),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
+
+                          return (
+                            <TableRow key={row.id} className={getRowTone(row.transaction)}>
+                              <TableCell className="whitespace-nowrap align-top text-xs text-muted-foreground">
+                                {formatLedgerDate(row.date)}
+                              </TableCell>
+                              <TableCell className="max-w-88 align-top">
+                                <div className="truncate text-sm text-foreground">{primary}</div>
+                                {secondary ? (
+                                  <div className="truncate text-xs text-muted-foreground">
+                                    {secondary}
+                                  </div>
+                                ) : null}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right align-top">
+                                {row.debit > 0 ? (
+                                  <Money amount={row.debit} tone="negative" signed className="text-sm" />
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right align-top">
+                                {row.credit > 0 ? (
+                                  <Money amount={row.credit} tone="positive" signed className="text-sm" />
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right align-top">
+                                <Money
+                                  amount={Math.abs(row.runningBalance)}
+                                  tone={row.runningBalance < 0 ? "negative" : "neutral"}
+                                  className="text-sm font-medium"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

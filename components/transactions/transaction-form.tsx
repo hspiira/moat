@@ -70,6 +70,8 @@ type Props = {
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
+  /** When true, render just the form for use inside a sheet (no card chrome). */
+  embedded?: boolean;
 };
 
 export function TransactionForm({
@@ -84,6 +86,7 @@ export function TransactionForm({
   onFormChange,
   onSubmit,
   onCancelEdit,
+  embedded,
 }: Props) {
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
   const normalizedUgxAmount = useMemo(
@@ -94,24 +97,15 @@ export function TransactionForm({
   const showFxFields = form.currency !== "UGX";
   const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
 
-  return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader
-        tone="yellow"
-        title={editingId ? "Edit transaction" : "Add transaction"}
-        description={
-          editingId
-            ? "Update this transaction."
-            : "Record one money event against one account."
-        }
-      />
-      <CardContent className="p-5">
-        <form className="grid gap-4" onSubmit={onSubmit}>
-          <LocalSaveFeedback
-            isSubmitting={isSubmitting}
-            lastSavedAt={lastSavedAt}
-            successMessage={successMessage}
-          />
+  const content = (
+    <form className="grid gap-4" onSubmit={onSubmit}>
+          {embedded ? null : (
+            <LocalSaveFeedback
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+            />
+          )}
 
           <div className="grid gap-2">
             <SelectField
@@ -257,8 +251,27 @@ export function TransactionForm({
               </Button>
             ) : null}
           </div>
-        </form>
-      </CardContent>
+    </form>
+  );
+
+  const title = editingId ? "Edit transaction" : "Add transaction";
+  const description = editingId
+    ? "Update this transaction."
+    : "Record one money event against one account.";
+
+  if (embedded) {
+    return (
+      <div>
+        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
+        <div className="px-4 pt-4 pb-6">{content}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader tone="yellow" title={title} description={description} />
+      <CardContent className="p-5">{content}</CardContent>
     </Card>
   );
 }

@@ -57,6 +57,8 @@ type Props = {
   onFormChange: (updater: (prev: GoalFormState) => GoalFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
+  /** When true, render as a full-bleed sheet form (no card border). */
+  embedded?: boolean;
 };
 
 export function GoalForm({
@@ -71,28 +73,25 @@ export function GoalForm({
   onFormChange,
   onSubmit,
   onCancelEdit,
+  embedded,
 }: Props) {
-  const showSuggestion =
-    form.goalType === "emergency_fund" && emergencyFundSuggestion > 0;
+  const title = editingId ? "Edit goal" : "New goal";
+  const description =
+    form.goalType === "emergency_fund"
+      ? `Suggested target based on 3x monthly outflow: ${formatMoney(emergencyFundSuggestion, "UGX")}`
+      : "Set a target amount and deadline for this goal.";
 
-  return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader
-        tone="yellow"
-        title={editingId ? "Edit goal" : "New goal"}
-        description={
-          form.goalType === "emergency_fund"
-            ? `Suggested target based on 3x monthly outflow: ${formatMoney(emergencyFundSuggestion, "UGX")}`
-            : "Set a target amount and deadline for this goal."
-        }
-      />
-      <CardContent className="p-5">
-        <form className="grid gap-4" onSubmit={onSubmit}>
-          <LocalSaveFeedback
-            isSubmitting={isSubmitting}
-            lastSavedAt={lastSavedAt}
-            successMessage={successMessage}
-          />
+  const showSuggestion = form.goalType === "emergency_fund" && emergencyFundSuggestion > 0;
+
+  const content = (
+    <form className="grid gap-4" onSubmit={onSubmit}>
+          {embedded ? null : (
+            <LocalSaveFeedback
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+            />
+          )}
 
           <InputField
             id="goal-name"
@@ -195,8 +194,22 @@ export function GoalForm({
               </Button>
             ) : null}
           </div>
-        </form>
-      </CardContent>
+    </form>
+  );
+
+  if (embedded) {
+    return (
+      <div>
+        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
+        <div className="px-4 pt-4 pb-6">{content}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader tone="yellow" title={title} description={description} />
+      <CardContent className="p-5">{content}</CardContent>
     </Card>
   );
 }

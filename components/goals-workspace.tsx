@@ -1,20 +1,30 @@
 "use client";
 
+import { useState } from "react";
+import { IconPlus } from "@tabler/icons-react";
+
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
-import { formatMoney } from "@/lib/currency";
 import { MoatRing } from "@/components/moat/moat-ring";
+import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { GoalForm } from "@/components/goals/goal-form";
 import { GoalList } from "@/components/goals/goal-list";
 import { useGoalsWorkspace } from "@/components/goals/use-goals-workspace";
-import { MetricChip } from "@/components/page-shell/metric-chip";
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
   ErrorStateCard,
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
+import type { Goal } from "@/lib/types";
 
 export function GoalsWorkspace() {
   const {
@@ -37,17 +47,42 @@ export function GoalsWorkspace() {
     cancelEdit,
   } = useGoalsWorkspace();
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  function openNewGoal() {
+    cancelEdit();
+    setIsFormOpen(true);
+  }
+
+  function openEditGoal(goal: Goal) {
+    beginGoalEdit(goal);
+    setIsFormOpen(true);
+  }
+
+  function handleFormOpenChange(open: boolean) {
+    setIsFormOpen(open);
+    if (!open) {
+      cancelEdit();
+    }
+  }
+
+  const emergencyProgress =
+    emergencyFundSuggestion > 0 && emergencyFundGoal
+      ? emergencyFundGoal.currentAmount / emergencyFundSuggestion
+      : 0;
+  const emergencyPercent = Math.min(999, Math.round(emergencyProgress * 100));
+
   return (
     <div className="grid gap-5">
       <PageHeader
         title="Goals"
         description="Set targets, track progress, and build your financial moat."
         aside={
-          emergencyFundGoal ? (
-            <MetricChip
-              value={formatMoney(emergencyFundGoal.currentAmount)}
-              label="Emergency fund"
-            />
+          profile ? (
+            <Button size="lg" onClick={openNewGoal}>
+              <IconPlus />
+              New goal
+            </Button>
           ) : null
         }
       />
@@ -67,35 +102,14 @@ export function GoalsWorkspace() {
           <Card className="ring-1 ring-primary/15">
             <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
               <MoatRing
-                value={
-                  emergencyFundSuggestion > 0 && emergencyFundGoal
-                    ? emergencyFundGoal.currentAmount / emergencyFundSuggestion
-                    : 0
-                }
-                tone={
-                  emergencyFundGoal &&
-                  emergencyFundSuggestion > 0 &&
-                  emergencyFundGoal.currentAmount >= emergencyFundSuggestion
-                    ? "positive"
-                    : "moat"
-                }
+                value={emergencyProgress}
+                tone={emergencyProgress >= 1 ? "positive" : "moat"}
                 ariaLabel={
                   emergencyFundGoal && emergencyFundSuggestion > 0
-                    ? `Emergency fund: ${Math.round(
-                        (emergencyFundGoal.currentAmount / emergencyFundSuggestion) * 100,
-                      )}% of the suggested moat`
+                    ? `Emergency fund: ${emergencyPercent}% of the suggested moat`
                     : "Emergency fund: no goal yet"
                 }
-                label={
-                  emergencyFundGoal && emergencyFundSuggestion > 0
-                    ? `${Math.min(
-                        999,
-                        Math.round(
-                          (emergencyFundGoal.currentAmount / emergencyFundSuggestion) * 100,
-                        ),
-                      )}%`
-                    : "—"
-                }
+                label={emergencyFundGoal && emergencyFundSuggestion > 0 ? `${emergencyPercent}%` : "—"}
                 sublabel="of moat"
                 size={124}
                 thickness={10}
@@ -120,29 +134,42 @@ export function GoalsWorkspace() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-            <GoalForm
-              accounts={accounts}
-              goalTypes={defaultGoalTypes}
-              form={goalForm}
-              editingId={editingGoalId}
-              isSubmitting={isSubmitting}
-              lastSavedAt={lastSavedAt}
-              successMessage={successMessage}
-              emergencyFundSuggestion={emergencyFundSuggestion}
-              onFormChange={setGoalForm}
-              onSubmit={(event) => void handleGoalSubmit(event)}
-              onCancelEdit={cancelEdit}
-            />
+          <GoalList
+            accounts={accounts}
+            goals={goals}
+            isSubmitting={isSubmitting}
+            onEdit={openEditGoal}
+            onDelete={(goalId) => void handleDeleteGoal(goalId)}
+            onAdd={openNewGoal}
+          />
 
-            <GoalList
-              accounts={accounts}
-              goals={goals}
-              isSubmitting={isSubmitting}
-              onEdit={beginGoalEdit}
-              onDelete={(goalId) => void handleDeleteGoal(goalId)}
-            />
-          </div>
+          <Sheet open={isFormOpen} onOpenChange={handleFormOpenChange}>
+            <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+              <SheetHeader className="sr-only">
+                <SheetTitle>{editingGoalId ? "Edit goal" : "New goal"}</SheetTitle>
+                <SheetDescription>Set a savings target and deadline.</SheetDescription>
+              </SheetHeader>
+              <GoalForm
+                embedded
+                accounts={accounts}
+                goalTypes={defaultGoalTypes}
+                form={goalForm}
+                editingId={editingGoalId}
+                isSubmitting={isSubmitting}
+                lastSavedAt={lastSavedAt}
+                successMessage={successMessage}
+                emergencyFundSuggestion={emergencyFundSuggestion}
+                onFormChange={setGoalForm}
+                onSubmit={async (event) => {
+                  const ok = await handleGoalSubmit(event);
+                  if (ok) {
+                    setIsFormOpen(false);
+                  }
+                }}
+                onCancelEdit={() => handleFormOpenChange(false)}
+              />
+            </SheetContent>
+          </Sheet>
         </>
       ) : null}
     </div>

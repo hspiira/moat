@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   IconBuildingBank,
   IconBusinessplan,
@@ -207,17 +208,17 @@ export function ThemeToggle({
   );
 }
 
-export function QuickActionLinks() {
+export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="grid gap-2">
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/capture">Capture transactions</Link>
+        <Link href="/transactions/capture" onClick={onNavigate}>Capture transactions</Link>
       </Button>
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/import">Import statements</Link>
+        <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
       </Button>
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/review">Review month close</Link>
+        <Link href="/transactions/review" onClick={onNavigate}>Review month close</Link>
       </Button>
     </div>
   );
@@ -246,12 +247,14 @@ function DrawerNavRow({
   description,
   icon: IconComponent,
   active,
+  onNavigate,
 }: {
   href: string;
   label: string;
   description: string;
   icon: Icon;
   active?: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <Button
@@ -259,7 +262,11 @@ function DrawerNavRow({
       variant={active ? "secondary" : "ghost"}
       className="h-auto justify-start px-0 py-0 whitespace-normal shadow-none"
     >
-      <Link href={href} className="grid w-full gap-1 border-b border-border/15 py-3 text-left">
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className="grid w-full gap-1 border-b border-border/15 py-3 text-left"
+      >
         <span className="flex items-start gap-3">
           <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
           <span className="text-left">
@@ -273,8 +280,9 @@ function DrawerNavRow({
 }
 
 export function MobileCaptureSheet() {
+  const [open, setOpen] = useState(false);
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="secondary"
@@ -311,7 +319,11 @@ export function MobileCaptureSheet() {
                 variant="ghost"
                 className="h-auto justify-start px-0 py-0 whitespace-normal shadow-none"
               >
-                <Link href={action.href} className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left">
+                <Link
+                  href={action.href}
+                  onClick={() => setOpen(false)}
+                  className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left"
+                >
                   <span className="flex items-center gap-3 text-sm font-medium text-foreground">
                     <IconComponent className="h-4 w-4" />
                     {action.label}
@@ -336,8 +348,10 @@ export function MobileUtilitySheet({
   onToggleTheme: () => void;
   trigger: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="bottom"
@@ -351,7 +365,7 @@ export function MobileUtilitySheet({
         </SheetHeader>
         <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-6 pb-2">
           <DrawerSection title="Quick actions">
-            <QuickActionLinks />
+            <QuickActionLinks onNavigate={close} />
           </DrawerSection>
 
           <DrawerSection title="More places">
@@ -369,6 +383,7 @@ export function MobileUtilitySheet({
                     description={item.description}
                     icon={IconComponent}
                     active={isActiveRoute(pathname, item.href)}
+                    onNavigate={close}
                   />
                 );
               })}
@@ -386,6 +401,7 @@ export function MobileUtilitySheet({
               description="PIN lock, backup, data export, privacy"
               icon={IconSettings}
               active={isActiveRoute(pathname, "/settings")}
+              onNavigate={close}
             />
           </DrawerSection>
         </div>
