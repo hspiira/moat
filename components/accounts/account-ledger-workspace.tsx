@@ -201,8 +201,10 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
-                      const primary = row.payee?.trim() || transactionTypeLabels[row.type];
-                      const meta = [formatLedgerDate(row.date), category?.name, row.note?.trim()]
+                      // Fold payee/category/note into one detail line; the band
+                      // colour and amount colour already convey the direction,
+                      // so no separate title row is needed.
+                      const detail = [row.payee?.trim(), category?.name, row.note?.trim()]
                         .filter(Boolean)
                         .join(" · ");
 
@@ -211,14 +213,14 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                           key={row.id}
                           className={`rounded-md border border-border/50 px-3 py-2.5 ${getRowTone(row.transaction)}`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium text-foreground">
-                                {primary}
-                              </div>
-                              <div className="truncate text-xs text-muted-foreground">{meta}</div>
-                            </div>
-                            <div className="shrink-0 text-right">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                              <span className="font-medium text-foreground">
+                                {formatLedgerDate(row.date)}
+                              </span>
+                              {detail ? <span> · {detail}</span> : null}
+                            </p>
+                            <div className="shrink-0 text-right leading-tight">
                               <Money
                                 amount={isCredit ? row.credit : row.debit}
                                 tone={isCredit ? "positive" : "negative"}
@@ -226,11 +228,12 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                                 className="text-sm font-semibold whitespace-nowrap"
                               />
                               <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
-                                Bal{" "}
+                                <span aria-hidden>→ </span>
                                 <Money
                                   amount={Math.abs(row.runningBalance)}
                                   tone={row.runningBalance < 0 ? "negative" : "muted"}
                                 />
+                                <span className="sr-only"> new balance</span>
                               </div>
                             </div>
                           </div>
