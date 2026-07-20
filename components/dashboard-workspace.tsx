@@ -71,19 +71,23 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
   const activeAccounts = accounts.filter((account) => !account.isArchived);
   const totalBalance = activeAccounts.reduce((sum, account) => sum + account.balance, 0);
+  // Use the first name only so the heading and filter always share one row.
+  const firstName = profile.displayName.trim().split(/\s+/)[0] || profile.displayName;
 
   return (
     <div className="grid gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-            {periodWindow.title}
-          </p>
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
-            {profile.displayName}&apos;s money
+      <header className="space-y-1">
+        <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+          {periodWindow.title}
+        </p>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 truncate font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
+            {firstName}&apos;s money
           </h1>
+          <div className="shrink-0">
+            <DashboardPeriodFilter period={period} onChange={setPeriod} />
+          </div>
         </div>
-        <DashboardPeriodFilter period={period} onChange={setPeriod} />
       </header>
 
       {error ? <ErrorStateCard message={error} /> : null}
