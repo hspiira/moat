@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-shell/page-header";
-import { MetricChip } from "@/components/page-shell/metric-chip";
 import {
   ErrorStateCard,
   LoadingStateCard,
@@ -47,23 +46,7 @@ export function TransactionsWorkspaceFrame({
 }: Props) {
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title={title}
-        description={description}
-        aside={
-          transactionCount > 0 ? (
-            <MetricChip
-              value={
-                <span className="text-2xl font-semibold tracking-tight">
-                  {transactionCount}
-                </span>
-              }
-              label="Recorded"
-              className="moat-panel-yellow border-border/20"
-            />
-          ) : null
-        }
-      />
+      <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading transactions..." /> : null}
@@ -78,6 +61,7 @@ export function TransactionsWorkspaceFrame({
       {!isLoading && profile ? (
         <div className="grid gap-5">
           <TransactionsSummaryStrip
+            recordedCount={transactionCount}
             transactionCount={periodTransactionCount}
             reviewCount={reviewCount}
             duplicateCount={duplicateCount}
