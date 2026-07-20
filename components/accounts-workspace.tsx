@@ -164,7 +164,7 @@ export function AccountsWorkspace() {
                     : "Name it once and track it clearly."}
                 </SheetDescription>
               </SheetHeader>
-              <div className="px-4 pb-6">
+              <div className="pt-2">
                 <AccountForm
                   embedded
                   accountTypes={defaultAccountTypes}
