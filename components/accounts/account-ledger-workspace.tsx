@@ -1,16 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { MetricChip } from "@/components/page-shell/metric-chip";
-import { PageHeader } from "@/components/page-shell/page-header";
 import {
   ErrorStateCard,
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 import {
@@ -142,20 +138,16 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title={account?.name ?? "Account"}
-        description="Trace the current balance from opening balance and recorded movements."
-        aside={
-          <div className="flex flex-wrap items-start gap-2 sm:items-center">
-            {account ? (
-              <MetricChip value={accountTypeLabels[account.type]} label="Account ledger" />
-            ) : null}
-            <Button asChild size="sm" variant="outline">
-              <Link href="/accounts">Back to accounts</Link>
-            </Button>
-          </div>
-        }
-      />
+      <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
+          {account?.name ?? "Account"}
+        </h1>
+        {account ? (
+          <span className="text-xs text-muted-foreground">
+            · {accountTypeLabels[account.type]}
+          </span>
+        ) : null}
+      </header>
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading ledger..." /> : null}
@@ -175,7 +167,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             <Card className="ring-1 ring-primary/15">
               <CardHeader className="gap-2 p-5">
                 <CardDescription className="text-xs font-medium tracking-[0.14em] uppercase">
-                  {accountTypeLabels[account.type]}
+                  Current balance
                 </CardDescription>
                 <CardTitle className="font-display text-[clamp(1.75rem,7vw,2.25rem)] leading-none tracking-tight">
                   <Money
@@ -205,7 +197,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
               ) : (
                 <>
                   {/* Mobile: stacked statement list — one line per entry, no wrapping. */}
-                  <ul className="grid gap-2 md:hidden">
+                  <ul className="flex flex-col gap-2 md:hidden">
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
@@ -220,7 +212,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                           className={`rounded-md border border-border/50 px-3 py-2.5 ${getRowTone(row.transaction)}`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="truncate text-sm font-medium text-foreground">
                                 {primary}
                               </div>
