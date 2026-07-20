@@ -66,9 +66,35 @@ type Props = {
   onFormChange: (updater: (prev: AccountFormState) => AccountFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
+  /** When true, render just the form (no Card chrome) for use inside a sheet. */
+  embedded?: boolean;
 };
 
-export function AccountForm({
+export function AccountForm(props: Props) {
+  const { embedded } = props;
+  const body = <AccountFormBody {...props} />;
+
+  if (embedded) {
+    return body;
+  }
+
+  return (
+    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+      <AccentCardHeader
+        tone="yellow"
+        title={props.editingId ? "Edit account" : "Add account"}
+        description={
+          props.editingId
+            ? "Update the details for this account."
+            : "Name it once and track it clearly."
+        }
+      />
+      <CardContent className="p-5">{body}</CardContent>
+    </Card>
+  );
+}
+
+function AccountFormBody({
   accountTypes,
   form,
   editingId,
@@ -80,18 +106,7 @@ export function AccountForm({
   onCancelEdit,
 }: Props) {
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader
-        tone="yellow"
-        title={editingId ? "Edit account" : "Add account"}
-        description={
-          editingId
-            ? "Update the details for this account."
-            : "Name it once and track it clearly."
-        }
-      />
-      <CardContent className="p-5">
-        <form className="grid gap-4" onSubmit={onSubmit}>
+    <form className="grid gap-4" onSubmit={onSubmit}>
           <LocalSaveFeedback
             isSubmitting={isSubmitting}
             lastSavedAt={lastSavedAt}
@@ -255,8 +270,6 @@ export function AccountForm({
               </Button>
             ) : null}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+    </form>
   );
 }
