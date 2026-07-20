@@ -85,9 +85,11 @@ export function useGoalsWorkspace() {
   const emergencyFundGoal =
     goalsWithProgress.find((goal) => goal.goalType === "emergency_fund") ?? null;
 
-  async function handleGoalSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleGoalSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<boolean> {
     event.preventDefault();
-    if (!profile) return;
+    if (!profile) return false;
 
     setIsSubmitting(true);
     setError(null);
@@ -118,8 +120,10 @@ export function useGoalsWorkspace() {
       setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
+      return true;
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save goal.");
+      return false;
     } finally {
       setIsSubmitting(false);
     }

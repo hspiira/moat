@@ -1,5 +1,7 @@
 "use client";
 
+import { IconPencil, IconTrash } from "@tabler/icons-react";
+
 import { getGoalContributionPlan } from "@/lib/domain/goals";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -23,9 +25,10 @@ type Props = {
   isSubmitting: boolean;
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
+  onAdd?: () => void;
 };
 
-export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Props) {
+export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAdd }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -35,7 +38,12 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
       <CardContent className="grid gap-3">
         {goals.length === 0 ? (
           <EmptyState>
-            No goals yet. Create your first goal to start building.
+            <p>No goals yet. Create your first goal to start building.</p>
+            {onAdd ? (
+              <Button size="sm" className="mt-3" onClick={onAdd}>
+                New goal
+              </Button>
+            ) : null}
           </EmptyState>
         ) : (
           goals.map((goal) => {
@@ -50,57 +58,58 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
                 key={goal.id}
                 className="rounded-md border border-border/60 bg-card px-4 py-4"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-3">
                   <MoatRing
                     value={progressRatio}
                     tone={progressRatio >= 1 ? "positive" : "moat"}
                     ariaLabel={`${goal.name}: ${progressPercent}% of target`}
                     label={`${progressPercent}%`}
-                    size={64}
-                    thickness={6}
-                    className="mt-0.5 shrink-0 [&_div]:text-sm"
+                    size={56}
+                    thickness={5}
+                    className="shrink-0 [&_div]:text-xs"
                   />
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {goal.name}
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {goalTypeLabels[goal.goalType]}
-                          {linkedAccount ? ` · ${linkedAccount.name}` : ""}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => onEdit(goal)}>
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive"
-                          disabled={isSubmitting}
-                          onClick={() => onDelete(goal.id)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="mt-1.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-                      <Money amount={goal.currentAmount} tone="positive" />
-                      <span>
-                        of <Money amount={goal.targetAmount} tone="muted" />
-                      </span>
+                    <div className="truncate text-sm font-medium text-foreground">{goal.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {goalTypeLabels[goal.goalType]}
+                      {linkedAccount ? ` · ${linkedAccount.name}` : ""}
                     </div>
                   </div>
+
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Edit ${goal.name}`}
+                      onClick={() => onEdit(goal)}
+                    >
+                      <IconPencil />
+                    </Button>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Delete ${goal.name}`}
+                      className="text-muted-foreground hover:text-destructive"
+                      disabled={isSubmitting}
+                      onClick={() => onDelete(goal.id)}
+                    >
+                      <IconTrash />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                  <Money amount={goal.currentAmount} tone="positive" className="font-medium" />
+                  <span className="whitespace-nowrap">
+                    of <Money amount={goal.targetAmount} tone="muted" />
+                  </span>
                 </div>
 
                 <Separator className="my-3" />
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Monthly target</div>
                     <Money
                       amount={plan.monthlyContribution}
@@ -108,9 +117,9 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Pr
                       className="font-medium"
                     />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Deadline</div>
-                    <div className="font-medium">{goal.targetDate}</div>
+                    <div className="font-medium tabular-nums">{goal.targetDate}</div>
                   </div>
                 </div>
 
