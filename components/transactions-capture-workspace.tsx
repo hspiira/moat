@@ -49,11 +49,24 @@ function methodFromCaptureParam(param: string | null): CaptureMethod | null {
 export function TransactionsCaptureWorkspace() {
   const workspace = useTransactionsWorkspace();
   const searchParams = useSearchParams();
+  const captureParam = searchParams.get("capture");
   // Open the matching method straight away when arriving from a quick-capture
   // link (the "+" sheet or a share target), so those routes land on the form.
   const [method, setMethod] = useState<CaptureMethod | null>(() =>
-    methodFromCaptureParam(searchParams.get("capture")),
+    methodFromCaptureParam(captureParam),
   );
+  // Re-open on a fresh quick-capture navigation even while already on this
+  // route (the param changes), without forcing it open again after a manual
+  // close (the param has not changed). Uses the render-time "adjust state on
+  // prop change" pattern with state, not a ref.
+  const [seenCaptureParam, setSeenCaptureParam] = useState(captureParam);
+  if (captureParam !== seenCaptureParam) {
+    setSeenCaptureParam(captureParam);
+    const nextMethod = methodFromCaptureParam(captureParam);
+    if (nextMethod) {
+      setMethod(nextMethod);
+    }
+  }
 
   return (
     <TransactionsWorkspaceFrame
@@ -102,7 +115,7 @@ export function TransactionsCaptureWorkspace() {
         open={method !== null}
         onOpenChange={(open) => setMethod(open ? (method ?? "manual") : null)}
       >
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-4 sm:max-w-lg">
+        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
           <SheetHeader className="sr-only">
             <SheetTitle>Capture a transaction</SheetTitle>
             <SheetDescription>
@@ -111,12 +124,12 @@ export function TransactionsCaptureWorkspace() {
           </SheetHeader>
 
           {/* Segmented switcher — swaps the method in place, no navigation.
-              Active segment is a raised light chip so it never reads as the
+              Active segment is a solid teal chip so it never reads as the
               focus ring on the other segment. */}
           <div
             role="tablist"
             aria-label="Capture method"
-            className="mt-6 mb-4 grid grid-cols-2 gap-1 rounded-md bg-muted/60 p-1"
+            className="mx-4 mt-6 mb-4 grid grid-cols-2 gap-1 rounded-md bg-muted/60 p-1"
           >
             {methodCards.map((card) => (
               <button

@@ -261,26 +261,21 @@ export function TextCapturePanel({
     </div>
   );
 
-  const header = (
-    <AccentCardHeader
-      tone="sage"
-      title="Text capture"
-      description="Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox."
-    />
-  );
+  const description =
+    "Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox.";
 
   if (embedded) {
     return (
-      <div className="overflow-hidden rounded-lg border border-border/30">
-        {header}
-        <div className="p-4">{content}</div>
+      <div>
+        <AccentCardHeader tone="sage" title="Text capture" description={description} className="rounded-none" />
+        <div className="px-4 pt-4 pb-6">{content}</div>
       </div>
     );
   }
 
   return (
     <Card className={`gap-0 border-border/20 pt-0 shadow-none ${active ? "ring-1 ring-primary/30" : ""}`}>
-      {header}
+      <AccentCardHeader tone="sage" title="Text capture" description={description} />
       <CardContent className="grid gap-4 p-5">{content}</CardContent>
     </Card>
   );

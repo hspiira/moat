@@ -254,28 +254,23 @@ export function TransactionForm({
     </form>
   );
 
-  const header = (
-    <AccentCardHeader
-      tone="yellow"
-      title={editingId ? "Edit transaction" : "Add transaction"}
-      description={
-        editingId ? "Update this transaction." : "Record one money event against one account."
-      }
-    />
-  );
+  const title = editingId ? "Edit transaction" : "Add transaction";
+  const description = editingId
+    ? "Update this transaction."
+    : "Record one money event against one account.";
 
   if (embedded) {
     return (
-      <div className="overflow-hidden rounded-lg border border-border/30">
-        {header}
-        <div className="p-4">{content}</div>
+      <div>
+        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
+        <div className="px-4 pt-4 pb-6">{content}</div>
       </div>
     );
   }
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      {header}
+      <AccentCardHeader tone="yellow" title={title} description={description} />
       <CardContent className="p-5">{content}</CardContent>
     </Card>
   );

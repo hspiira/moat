@@ -150,7 +150,7 @@ export function AccountsWorkspace() {
           <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
           <Sheet open={isFormOpen} onOpenChange={handleFormOpenChange}>
-            <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-4 sm:max-w-md">
+            <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
               {/* The form's own colour band is the visible heading; keep an
                   accessible title for screen readers. */}
               <SheetHeader className="sr-only">
