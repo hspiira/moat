@@ -21,6 +21,8 @@ type Props = {
   active: boolean;
   initialInput?: string;
   onSaveCaptured: (candidates: ParsedCaptureCandidate[]) => Promise<void>;
+  /** When true, render just the content for use inside a sheet (no card chrome). */
+  embedded?: boolean;
 };
 
 export function TextCapturePanel({
@@ -31,6 +33,7 @@ export function TextCapturePanel({
   active,
   initialInput,
   onSaveCaptured,
+  embedded,
 }: Props) {
   const {
     input,
@@ -59,14 +62,8 @@ export function TextCapturePanel({
     setInput("");
   }
 
-  return (
-    <Card className={`gap-0 border-border/20 pt-0 shadow-none ${active ? "ring-1 ring-primary/30" : ""}`}>
-      <AccentCardHeader
-        tone="sage"
-        title="Text capture"
-        description="Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox."
-      />
-      <CardContent className="grid gap-4 p-5">
+  const content = (
+    <div className="grid gap-4">
         <div className="grid gap-3 md:grid-cols-[0.8fr_1fr_0.8fr]">
           <SelectField
             id="capture-source"
@@ -261,7 +258,30 @@ export function TextCapturePanel({
             </div>
           </div>
         )}
-      </CardContent>
+    </div>
+  );
+
+  const header = (
+    <AccentCardHeader
+      tone="sage"
+      title="Text capture"
+      description="Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox."
+    />
+  );
+
+  if (embedded) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-border/30">
+        {header}
+        <div className="p-4">{content}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className={`gap-0 border-border/20 pt-0 shadow-none ${active ? "ring-1 ring-primary/30" : ""}`}>
+      {header}
+      <CardContent className="grid gap-4 p-5">{content}</CardContent>
     </Card>
   );
 }

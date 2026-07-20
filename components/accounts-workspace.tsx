@@ -150,39 +150,30 @@ export function AccountsWorkspace() {
           <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
           <Sheet open={isFormOpen} onOpenChange={handleFormOpenChange}>
-            <SheetContent
-              side="right"
-              className="w-full gap-0 overflow-y-auto sm:max-w-md"
-            >
-              <SheetHeader>
-                <SheetTitle className="font-display">
-                  {editingAccountId ? "Edit account" : "Add account"}
-                </SheetTitle>
-                <SheetDescription>
-                  {editingAccountId
-                    ? "Update the details for this account."
-                    : "Name it once and track it clearly."}
-                </SheetDescription>
+            <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-4 sm:max-w-md">
+              {/* The form's own colour band is the visible heading; keep an
+                  accessible title for screen readers. */}
+              <SheetHeader className="sr-only">
+                <SheetTitle>{editingAccountId ? "Edit account" : "Add account"}</SheetTitle>
+                <SheetDescription>Add or update an account you hold money in.</SheetDescription>
               </SheetHeader>
-              <div className="pt-2">
-                <AccountForm
-                  embedded
-                  accountTypes={defaultAccountTypes}
-                  form={accountForm}
-                  editingId={editingAccountId}
-                  isSubmitting={isSubmitting}
-                  lastSavedAt={lastSavedAt}
-                  successMessage={successMessage}
-                  onFormChange={setAccountForm}
-                  onSubmit={async (e) => {
-                    const ok = await handleAccountSubmit(e);
-                    if (ok) {
-                      setIsFormOpen(false);
-                    }
-                  }}
-                  onCancelEdit={() => handleFormOpenChange(false)}
-                />
-              </div>
+              <AccountForm
+                embedded
+                accountTypes={defaultAccountTypes}
+                form={accountForm}
+                editingId={editingAccountId}
+                isSubmitting={isSubmitting}
+                lastSavedAt={lastSavedAt}
+                successMessage={successMessage}
+                onFormChange={setAccountForm}
+                onSubmit={async (e) => {
+                  const ok = await handleAccountSubmit(e);
+                  if (ok) {
+                    setIsFormOpen(false);
+                  }
+                }}
+                onCancelEdit={() => handleFormOpenChange(false)}
+              />
             </SheetContent>
           </Sheet>
         </>

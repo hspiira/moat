@@ -72,22 +72,30 @@ type Props = {
 export function AccountForm(props: Props) {
   const { embedded } = props;
   const body = <AccountFormBody {...props} />;
+  const header = (
+    <AccentCardHeader
+      tone="yellow"
+      title={props.editingId ? "Edit account" : "Add account"}
+      description={
+        props.editingId
+          ? "Update the details for this account."
+          : "Name it once and track it clearly."
+      }
+    />
+  );
 
   if (embedded) {
-    return body;
+    return (
+      <div className="overflow-hidden rounded-lg border border-border/30">
+        {header}
+        <div className="p-4">{body}</div>
+      </div>
+    );
   }
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader
-        tone="yellow"
-        title={props.editingId ? "Edit account" : "Add account"}
-        description={
-          props.editingId
-            ? "Update the details for this account."
-            : "Name it once and track it clearly."
-        }
-      />
+      {header}
       <CardContent className="p-5">{body}</CardContent>
     </Card>
   );
