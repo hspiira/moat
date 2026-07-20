@@ -161,7 +161,7 @@ export function AccountsWorkspace() {
                 <SheetDescription>
                   {editingAccountId
                     ? "Update the details for this account."
-                    : "Name it once and track it clearly. Changes stay on this device."}
+                    : "Name it once and track it clearly."}
                 </SheetDescription>
               </SheetHeader>
               <div className="px-4 pb-6">

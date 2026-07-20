@@ -10,7 +10,6 @@ import { AccentCardHeader } from "@/components/accent-card-header";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
-import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountTypeOptions,
   debtInterestModelLabels,
@@ -99,20 +98,12 @@ function AccountFormBody({
   form,
   editingId,
   isSubmitting,
-  lastSavedAt,
-  successMessage,
   onFormChange,
   onSubmit,
   onCancelEdit,
 }: Props) {
   return (
     <form className="grid gap-4" onSubmit={onSubmit}>
-          <LocalSaveFeedback
-            isSubmitting={isSubmitting}
-            lastSavedAt={lastSavedAt}
-            successMessage={successMessage}
-          />
-
           <InputField
             id="account-name"
             label="Account name"
