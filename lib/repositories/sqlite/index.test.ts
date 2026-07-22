@@ -29,14 +29,6 @@ class InMemorySqliteClient {
     return [...this.getStore(store).values()].filter((record) => record.userId === userId) as T[];
   }
 
-  async listByField<T>(
-    store: StoreName,
-    field: string,
-    value: string | number | boolean,
-  ): Promise<T[]> {
-    return [...this.getStore(store).values()].filter((record) => record[field] === value) as T[];
-  }
-
   async listByFieldPrefix<T>(
     store: StoreName,
     field: string,

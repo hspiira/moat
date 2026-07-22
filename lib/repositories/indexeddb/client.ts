@@ -134,27 +134,13 @@ function runMigrations(database: IDBDatabase, transaction: IDBTransaction, oldVe
     ensureStore(database, "monthCloses");
   }
 
-  if (oldVersion < 5) {
-    for (const storeName of Object.values(storeNames)) {
-      ensureStore(database, storeName);
-    }
-  }
-
   if (oldVersion < 6) {
     ensureStore(database, "syncProfiles");
     ensureStore(database, "syncOutbox");
   }
 
-  if (oldVersion < 7) {
-    for (const storeName of Object.values(storeNames)) {
-      ensureStore(database, storeName);
-    }
-  }
-
-  if (oldVersion < 8) {
-    for (const storeName of Object.values(storeNames)) {
-      ensureStore(database, storeName);
-    }
+  for (const storeName of Object.values(storeNames)) {
+    ensureStore(database, storeName);
   }
 
   addAllKnownIndexes(transaction);

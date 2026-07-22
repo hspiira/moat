@@ -75,22 +75,10 @@ export type InstitutionType =
   | "exchange"
   | "other";
 
-export type ProductHighlight = {
-  label: string;
-  value: string;
-};
-
 export type NavItem = {
   href: string;
   label: string;
   description: string;
-};
-
-export type AppSection = {
-  id: string;
-  title: string;
-  summary: string;
-  bullets: string[];
 };
 
 export type ModulePreview = {

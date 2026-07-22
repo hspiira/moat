@@ -1,13 +1,9 @@
-import { buildStableHash } from "@/lib/hash";
 import type {
   CaptureConfidenceField,
-  CaptureEnvelope,
-  CaptureEnvelopeSource,
   CaptureReviewSnapshot,
   CaptureReviewItem,
   CorrectionLog,
   Transaction,
-  TransactionSource,
 } from "@/lib/types";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { buildCaptureFieldWarnings } from "@/lib/capture/confidence";
@@ -40,30 +36,6 @@ export function validateCaptureReviewItem(item: Pick<
   }
 
   return issues;
-}
-
-export function createCaptureEnvelope(params: {
-  userId: string;
-  rawContent: string;
-  source: CaptureEnvelopeSource;
-  sourceTitle?: string;
-  sourceApp?: string;
-  capturedAt?: string;
-}): CaptureEnvelope {
-  const timestamp = params.capturedAt ?? new Date().toISOString();
-
-  return {
-    id: `capture-envelope:${crypto.randomUUID()}`,
-    userId: params.userId,
-    source: params.source,
-    rawContent: params.rawContent,
-    contentHash: buildStableHash([params.source, params.rawContent], "envelope"),
-    sourceTitle: params.sourceTitle,
-    sourceApp: params.sourceApp,
-    capturedAt: timestamp,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
 }
 
 export function createCaptureReviewItem(params: {
@@ -190,13 +162,4 @@ export function createCorrectionLog(params: {
     approvedSnapshot: params.approvedSnapshot,
     createdAt: params.createdAt ?? new Date().toISOString(),
   };
-}
-
-export function inferEnvelopeSourceFromTransactionSource(
-  source: TransactionSource,
-  hasSharedInput: boolean,
-): CaptureEnvelopeSource {
-  if (source === "notification") return "notification";
-  if (hasSharedInput) return "shared_text";
-  return "pasted_text";
 }

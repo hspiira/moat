@@ -11,11 +11,6 @@ export type SqliteClient = {
   getById<T>(store: StoreName, id: string): Promise<T | null>;
   listAll<T>(store: StoreName): Promise<T[]>;
   listByUser<T>(store: StoreName, userId: string): Promise<T[]>;
-  listByField<T>(
-    store: StoreName,
-    field: string,
-    value: string | number | boolean,
-  ): Promise<T[]>;
   listByFieldPrefix<T>(
     store: StoreName,
     field: string,
@@ -53,9 +48,6 @@ export function createSqliteClient(bridge: NativeStorageBridge = getNativeStorag
     },
     async listByUser(store, userId) {
       return run({ action: "listByUser", store, userId });
-    },
-    async listByField(store, field, value) {
-      return run({ action: "listByField", store, field, value });
     },
     async listByFieldPrefix(store, field, prefix, userId) {
       return run({ action: "listByFieldPrefix", store, field, prefix, userId });

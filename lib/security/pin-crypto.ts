@@ -97,15 +97,6 @@ export async function verifyPin(payload: EncryptedPayload, pin: string): Promise
 }
 
 /**
- * Derive a session key from a PIN + salt.
- * Used to gate the session — the caller holds the CryptoKey in memory
- * and discards it on lock/logout.
- */
-export async function deriveSessionKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
-  return deriveKey(pin, salt);
-}
-
-/**
  * Re-derive the legacy PBKDF2 key as raw bytes so it can be adopted as the
  * DEK during migration to the Argon2id key hierarchy. The bytes are identical
  * to the old non-extractable session key, so existing records stay readable
