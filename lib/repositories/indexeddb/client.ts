@@ -1,28 +1,17 @@
+import { storeNames, type StoreName } from "@/lib/repositories/store-names";
+
+// Re-exported so existing IndexedDB-side import sites keep working; the
+// canonical definition lives in the backend-neutral store-names module.
+export { storeNames };
+export type { StoreName };
+
 const DATABASE_NAME = "moat-db";
 const DATABASE_VERSION = 8;
 
-export const storeNames = {
-  meta: "meta",
-  userProfiles: "userProfiles",
-  accounts: "accounts",
-  transactions: "transactions",
-  captureEnvelopes: "captureEnvelopes",
-  captureReviewItems: "captureReviewItems",
-  correctionLogs: "correctionLogs",
-  transactionRules: "transactionRules",
-  recurringObligations: "recurringObligations",
-  monthCloses: "monthCloses",
-  categories: "categories",
-  goals: "goals",
-  budgets: "budgets",
-  investmentProfiles: "investmentProfiles",
-  imports: "imports",
-  resources: "resources",
-  syncProfiles: "syncProfiles",
-  syncOutbox: "syncOutbox",
-} as const;
-
-export type StoreName = (typeof storeNames)[keyof typeof storeNames];
+// Single source of truth for the additive schema migrations. Both the
+// upgrade path (runMigrations) and the reporting helper below derive from it,
+// so a new version is added in exactly one place.
+const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8] as const;
 
 type MetaRecord = {
   id: "schema";
@@ -120,23 +109,30 @@ function addAllKnownIndexes(transaction: IDBTransaction) {
   });
 }
 
-function runMigrations(database: IDBDatabase, transaction: IDBTransaction, oldVersion: number) {
-  if (oldVersion < 1) {
-    createBaseStores(database);
-  }
-
-  if (oldVersion < 4) {
+// Per-version schema steps, keyed by the versions in MIGRATION_VERSIONS.
+// Versions without a dedicated step still benefit from the catch-all store /
+// index reconciliation that runs after every upgrade.
+const migrationSteps: Partial<Record<number, (database: IDBDatabase) => void>> = {
+  1: (database) => createBaseStores(database),
+  4: (database) => {
     ensureStore(database, "captureEnvelopes");
     ensureStore(database, "captureReviewItems");
     ensureStore(database, "correctionLogs");
     ensureStore(database, "transactionRules");
     ensureStore(database, "recurringObligations");
     ensureStore(database, "monthCloses");
-  }
-
-  if (oldVersion < 6) {
+  },
+  6: (database) => {
     ensureStore(database, "syncProfiles");
     ensureStore(database, "syncOutbox");
+  },
+};
+
+function runMigrations(database: IDBDatabase, transaction: IDBTransaction, oldVersion: number) {
+  for (const version of MIGRATION_VERSIONS) {
+    if (oldVersion < version) {
+      migrationSteps[version]?.(database);
+    }
   }
 
   for (const storeName of Object.values(storeNames)) {
@@ -200,9 +196,29 @@ export function getIndexedDbStoreIndexes(storeName: StoreName): string[] {
   return (storeIndexes[storeName] ?? []).map((index) => index.name);
 }
 
+/**
+ * Resolve the index whose key path matches `keyPath` exactly, so the adapter
+ * can translate a semantic query (by user, by user+field) into the concrete
+ * index name without hard-coding the schema a second time.
+ */
+export function getIndexedDbIndexName(storeName: StoreName, keyPath: string[]): string {
+  const match = (storeIndexes[storeName] ?? []).find((index) => {
+    const indexPath = Array.isArray(index.keyPath) ? index.keyPath : [index.keyPath];
+    return (
+      indexPath.length === keyPath.length &&
+      indexPath.every((segment, position) => segment === keyPath[position])
+    );
+  });
+
+  if (!match) {
+    throw new Error(`No IndexedDB index for ${storeName} on [${keyPath.join(", ")}].`);
+  }
+
+  return match.name;
+}
+
 export function getIndexedDbMigrationVersions(oldVersion: number): number[] {
-  const versions = [1, 4, 5, 6, 7, 8];
-  return versions.filter((version) => oldVersion < version);
+  return MIGRATION_VERSIONS.filter((version) => oldVersion < version);
 }
 
 export {

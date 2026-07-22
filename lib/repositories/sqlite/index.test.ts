@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { StoreName } from "@/lib/repositories/indexeddb/client";
+import type { StoreName } from "@/lib/repositories/store-names";
 import { createSqliteRepositories } from "@/lib/repositories/sqlite";
 
 type SqliteRecord = Record<string, unknown> & { id: string };

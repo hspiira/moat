@@ -1,4 +1,4 @@
-import type { StoreName } from "@/lib/repositories/indexeddb/client";
+import type { StoreName } from "@/lib/repositories/store-names";
 import {
   executeNativeStorageCommand,
   getNativeStorageBridge,

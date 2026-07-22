@@ -1,7 +1,7 @@
 import { hasNativeStorageBridge } from "@/lib/native/storage-bridge";
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
 import { createSqliteRepositories } from "@/lib/repositories/sqlite";
-import type { Repository, RepositoryBundle } from "@/lib/repositories/types";
+import type { RepositoryBundle } from "@/lib/repositories/types";
 
 export type RepositoryBackend = "indexeddb" | "sqlite";
 
@@ -45,120 +45,57 @@ function getBundlePromise() {
   return bundlePromise;
 }
 
-function createCrudRepositoryProxy<T extends { id: string }>(
-  resolve: () => Promise<Repository<T>>,
-): Repository<T> {
-  return {
-    async getById(id: string) {
-      const repository = await resolve();
-      return repository.getById(id);
-    },
-    async listByUser(userId: string) {
-      const repository = await resolve();
-      return repository.listByUser(userId);
-    },
-    async upsert(entity: T) {
-      const repository = await resolve();
-      return repository.upsert(entity);
-    },
-    async remove(id: string) {
-      const repository = await resolve();
-      return repository.remove(id);
-    },
-  };
+/**
+ * Build a lazy stand-in for a repository whose real implementation isn't
+ * resolved until the first call. Each named method resolves the backing
+ * repository, then forwards its arguments and return value unchanged.
+ */
+function lazyDelegate<T extends object>(resolve: () => Promise<T>, methods: Array<keyof T>): T {
+  const proxy = {} as Record<keyof T, unknown>;
+  for (const method of methods) {
+    proxy[method] = async (...args: unknown[]) => {
+      const target = (await resolve()) as Record<keyof T, (...args: unknown[]) => unknown>;
+      return target[method](...args);
+    };
+  }
+  return proxy as T;
+}
+
+const crudMethods = ["getById", "listByUser", "upsert", "remove"] as const;
+
+function lazyRepository<K extends keyof RepositoryBundle>(
+  key: K,
+  extraMethods: Array<keyof RepositoryBundle[K]> = [],
+): RepositoryBundle[K] {
+  const methods = [...crudMethods, ...extraMethods] as unknown as Array<keyof RepositoryBundle[K]>;
+  return lazyDelegate<RepositoryBundle[K]>(async () => (await getBundlePromise())[key], methods);
 }
 
 function createBundleProxy(): RepositoryBundle {
   return {
-    userProfile: {
-      async get() {
-        const bundle = await getBundlePromise();
-        return bundle.userProfile.get();
-      },
-      async save(profile) {
-        const bundle = await getBundlePromise();
-        return bundle.userProfile.save(profile);
-      },
-    },
-    accounts: createCrudRepositoryProxy(async () => (await getBundlePromise()).accounts),
-    transactions: {
-      ...createCrudRepositoryProxy(async () => (await getBundlePromise()).transactions),
-      async listByMonth(userId, month) {
-        const bundle = await getBundlePromise();
-        return bundle.transactions.listByMonth(userId, month);
-      },
-    },
-    captureEnvelopes: createCrudRepositoryProxy(async () => (await getBundlePromise()).captureEnvelopes),
-    captureReviewItems: createCrudRepositoryProxy(
-      async () => (await getBundlePromise()).captureReviewItems,
+    userProfile: lazyDelegate(async () => (await getBundlePromise()).userProfile, ["get", "save"]),
+    accounts: lazyRepository("accounts"),
+    transactions: lazyRepository("transactions", ["listByMonth"]),
+    captureEnvelopes: lazyRepository("captureEnvelopes"),
+    captureReviewItems: lazyRepository("captureReviewItems"),
+    correctionLogs: lazyRepository("correctionLogs"),
+    transactionRules: lazyRepository("transactionRules"),
+    recurringObligations: lazyRepository("recurringObligations"),
+    monthCloses: lazyRepository("monthCloses", ["getByPeriod"]),
+    categories: lazyRepository("categories", ["listDefaults"]),
+    goals: lazyRepository("goals"),
+    budgets: lazyRepository("budgets", ["listByMonth"]),
+    investmentProfiles: lazyDelegate(
+      async () => (await getBundlePromise()).investmentProfiles,
+      ["getByUser", "save"],
     ),
-    correctionLogs: createCrudRepositoryProxy(async () => (await getBundlePromise()).correctionLogs),
-    transactionRules: createCrudRepositoryProxy(
-      async () => (await getBundlePromise()).transactionRules,
+    imports: lazyRepository("imports"),
+    resources: lazyDelegate(async () => (await getBundlePromise()).resources, ["list", "replaceAll"]),
+    syncProfiles: lazyDelegate(
+      async () => (await getBundlePromise()).syncProfiles,
+      ["getByUser", "save"],
     ),
-    recurringObligations: createCrudRepositoryProxy(
-      async () => (await getBundlePromise()).recurringObligations,
-    ),
-    monthCloses: {
-      ...createCrudRepositoryProxy(async () => (await getBundlePromise()).monthCloses),
-      async getByPeriod(userId, period) {
-        const bundle = await getBundlePromise();
-        return bundle.monthCloses.getByPeriod(userId, period);
-      },
-    },
-    categories: {
-      ...createCrudRepositoryProxy(async () => (await getBundlePromise()).categories),
-      async listDefaults(userId) {
-        const bundle = await getBundlePromise();
-        return bundle.categories.listDefaults(userId);
-      },
-    },
-    goals: createCrudRepositoryProxy(async () => (await getBundlePromise()).goals),
-    budgets: {
-      ...createCrudRepositoryProxy(async () => (await getBundlePromise()).budgets),
-      async listByMonth(userId, month) {
-        const bundle = await getBundlePromise();
-        return bundle.budgets.listByMonth(userId, month);
-      },
-    },
-    investmentProfiles: {
-      async getByUser(userId) {
-        const bundle = await getBundlePromise();
-        return bundle.investmentProfiles.getByUser(userId);
-      },
-      async save(profile) {
-        const bundle = await getBundlePromise();
-        return bundle.investmentProfiles.save(profile);
-      },
-    },
-    imports: createCrudRepositoryProxy(async () => (await getBundlePromise()).imports),
-    resources: {
-      async list() {
-        const bundle = await getBundlePromise();
-        return bundle.resources.list();
-      },
-      async replaceAll(resources) {
-        const bundle = await getBundlePromise();
-        return bundle.resources.replaceAll(resources);
-      },
-    },
-    syncProfiles: {
-      async getByUser(userId) {
-        const bundle = await getBundlePromise();
-        return bundle.syncProfiles.getByUser(userId);
-      },
-      async save(profile) {
-        const bundle = await getBundlePromise();
-        return bundle.syncProfiles.save(profile);
-      },
-    },
-    syncOutbox: {
-      ...createCrudRepositoryProxy(async () => (await getBundlePromise()).syncOutbox),
-      async listPendingByUser(userId) {
-        const bundle = await getBundlePromise();
-        return bundle.syncOutbox.listPendingByUser(userId);
-      },
-    },
+    syncOutbox: lazyRepository("syncOutbox", ["listPendingByUser"]),
   };
 }
 

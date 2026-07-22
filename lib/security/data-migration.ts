@@ -11,7 +11,7 @@
 import {
   snapshotAllRecords,
   writeAllRecords,
-} from "@/lib/repositories/indexeddb/repository";
+} from "@/lib/repositories/indexeddb/rekey";
 import { setActiveRecordCryptoKey } from "@/lib/security/record-crypto";
 
 /**
