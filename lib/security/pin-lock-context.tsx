@@ -9,8 +9,8 @@ import {
   useState,
 } from "react";
 
+import { base64ToBytes } from "@/lib/security/codec";
 import {
-  base64ToBytes,
   createPasskeyKeyMaterial,
   createPinKeyMaterial,
   generateDek,
@@ -69,6 +69,14 @@ type StoredKeyMaterial = {
   version: 2;
   pin: PinKeyMaterial;
   passkey?: PasskeyKeyMaterial;
+  /**
+   * Number of digits in the PIN, so the lock screen can auto-submit the moment
+   * the last digit is entered (phone-lockscreen behaviour). Backfilled on the
+   * next unlock for material saved before this field existed. Not sensitive:
+   * the DEK is protected by Argon2id cost + throttling, which knowing the
+   * length does not weaken in any practical way.
+   */
+  pinLength?: number;
 };
 
 /** Legacy (v1) PBKDF2 sentinel, read only to migrate off it. */
@@ -91,6 +99,8 @@ type PinLockContextValue = {
   unlock: (pin: string) => Promise<boolean>;
   /** Milliseconds until the next unlock attempt is allowed. 0 when not throttled. */
   getUnlockLockoutMs: () => number;
+  /** Digits in the saved PIN, so the lock screen can auto-submit. Null if unknown. */
+  getPinLength: () => number | null;
   /** Lock the session immediately. */
   lock: () => void;
   /** Remove the PIN and decrypt data back to plaintext. Requires the current PIN. */
@@ -225,6 +235,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
           version: 2,
           pin: await createPinKeyMaterial(pin, activeDek),
           passkey: readKeyMaterial()?.passkey,
+          pinLength: pin.length,
         });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
         setLockState({ status: "unlocked" });
@@ -237,7 +248,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       const dek = await generateDek();
       try {
         await encryptAllRecordsWithDek(dek); // activates the DEK on success
-        writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek) });
+        writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek), pinLength: pin.length });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
         // Records are written v2 (blinded) from the start, so mark it done.
         localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
@@ -259,6 +270,13 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     return getRemainingLockoutMs(readAttemptState(localStorage), Date.now());
   }, []);
 
+  const getPinLength = useCallback((): number | null => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return readKeyMaterial()?.pinLength ?? null;
+  }, []);
+
   const unlock = useCallback(
     async (pin: string): Promise<boolean> => {
       const material = readKeyMaterial();
@@ -277,6 +295,10 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       if (material) {
         try {
           dek = await unwrapDekWithPin(pin, material.pin);
+          // Backfill the PIN length for material saved before auto-submit existed.
+          if (material.pinLength == null) {
+            writeStoredMaterial({ ...material, pinLength: pin.length });
+          }
         } catch {
           dek = null;
         }
@@ -285,7 +307,11 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         if (valid) {
           // Migrate off PBKDF2: adopt the old key as the DEK and re-wrap with Argon2id.
           dek = await adoptLegacyKeyAsDek(pin, legacy);
-          writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek) });
+          writeStoredMaterial({
+            version: 2,
+            pin: await createPinKeyMaterial(pin, dek),
+            pinLength: pin.length,
+          });
           localStorage.removeItem(LEGACY_PIN_HASH_KEY);
         }
       }
@@ -399,7 +425,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   const removePasskey = useCallback((): void => {
     const material = readKeyMaterial();
     if (!material) return;
-    writeStoredMaterial({ version: material.version, pin: material.pin });
+    writeStoredMaterial({ version: material.version, pin: material.pin, pinLength: material.pinLength });
     setHasPasskey(false);
   }, []);
 
@@ -412,6 +438,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         setPin,
         unlock,
         getUnlockLockoutMs,
+        getPinLength,
         lock,
         removePin,
         hasPinLock,
