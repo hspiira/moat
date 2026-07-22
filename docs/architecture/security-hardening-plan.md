@@ -29,6 +29,15 @@ Goal: make local financial data as secure as a browser realistically allows, wit
 
 Protects against: lost/stolen device, another person on an unlocked-then-idle device, and raw at-rest disk/DB access. **Does not** protect against a compromised app origin (XSS) or a malicious build — while unlocked, the DEK is in memory and reachable by any script running on the origin. Mitigations: strict CSP, no third-party scripts, short auto-lock, dependency hygiene.
 
+## Progress
+
+- ✅ **Phase 0** — threat model doc shipped (`threat-model.md`).
+- ✅ **Phase 1** — `key-hierarchy` (Argon2id + DEK/KEK) shipped with 6 unit tests.
+- ✅ **Phase 1b** — wired into the PIN lock with whole-database safe re-keying and legacy PBKDF2 migration; verified end-to-end in a browser (plaintext → encrypted → lock → unlock → plaintext, no data loss).
+- ⏳ **Phase 2** — blind indexes (in progress).
+- ⏳ **Phase 3** — passkey / WebAuthn-PRF unlock.
+- ⏳ **Phase 4** — OPFS + SQLite-WASM engine.
+
 ## Phases
 
 - **Phase 0 — Threat model doc.** Write down guarantees and the XSS boundary. *(No code risk.)*
