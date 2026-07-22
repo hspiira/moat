@@ -59,35 +59,6 @@ export default function RootLayout({
       className={cn(geist.variable, geistMono.variable, display.variable)}
       suppressHydrationWarning
     >
-      <head>
-        {process.env.NODE_ENV !== "production" ? (
-          // Dev-only, inline so it runs even when a stale service worker has
-          // poisoned the chunk graph (React never mounts in that state). A
-          // production-run SW on this origin caches /_next/static/ cache-first
-          // and breaks dev after code changes; this evicts it and reloads once.
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(){
-  if (!("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.getRegistrations().then(function(rs){
-    var had = rs.length > 0;
-    return Promise.all(rs.map(function(r){ return r.unregister(); })).then(function(){
-      if (!("caches" in window)) return had;
-      return caches.keys().then(function(keys){
-        return Promise.all(keys.filter(function(k){ return k.indexOf("moat-") === 0; }).map(function(k){ return caches.delete(k); }));
-      }).then(function(){ return had; });
-    });
-  }).then(function(had){
-    if (had && !sessionStorage.getItem("moat:sw-purged")) {
-      sessionStorage.setItem("moat:sw-purged", "1");
-      location.reload();
-    }
-  }).catch(function(){});
-})();`,
-            }}
-          />
-        ) : null}
-      </head>
       <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"

@@ -52,7 +52,11 @@ type LegacyPinRecord = {
   payload: EncryptedPayload;
 };
 
-type PinLockState = { status: "no_pin" } | { status: "locked" } | { status: "unlocked" };
+type PinLockState =
+  | { status: "initializing" }
+  | { status: "no_pin" }
+  | { status: "locked" }
+  | { status: "unlocked" };
 
 type PinLockContextValue = {
   lockState: PinLockState;
@@ -129,19 +133,21 @@ export function usePinLock(): PinLockContextValue {
 }
 
 export function PinLockProvider({ children }: { children: React.ReactNode }) {
-  const [lockState, setLockState] = useState<PinLockState>(() => {
-    if (typeof window === "undefined") {
-      return { status: "no_pin" };
-    }
+  // Start "initializing" so the server and the first client render match; the
+  // real state (which depends on client-only localStorage) is resolved on mount.
+  const [lockState, setLockState] = useState<PinLockState>({ status: "initializing" });
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
     const hasMaterial =
       localStorage.getItem(KEY_MATERIAL_KEY) || localStorage.getItem(LEGACY_PIN_HASH_KEY);
-    return hasMaterial ? { status: "locked" } : { status: "no_pin" };
-  });
-  const [hasPasskey, setHasPasskey] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean(readKeyMaterial()?.passkey);
-  });
-  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Hydration-safe: resolve client-only lock state once after mount so the
+    // server and first client render stay identical.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLockState(hasMaterial ? { status: "locked" } : { status: "no_pin" });
+    setHasPasskey(Boolean(readKeyMaterial()?.passkey));
+  }, []);
 
   const resetInactivityTimer = useCallback((): void => {
     if (inactivityTimer.current) {
@@ -367,7 +373,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     setHasPasskey(false);
   }, []);
 
-  const hasPinLock = lockState.status !== "no_pin";
+  const hasPinLock = lockState.status === "locked" || lockState.status === "unlocked";
 
   return (
     <PinLockContext.Provider
