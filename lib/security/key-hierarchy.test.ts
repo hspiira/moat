@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_ARGON2_PARAMS,
+  createPasskeyKeyMaterial,
   createPinKeyMaterial,
   generateDek,
   importDekBytes,
   randomBytes,
   unwrapDekWithPin,
+  unwrapDekWithPrf,
   verifyPinAgainstMaterial,
   wrapDekWithKek,
 } from "@/lib/security/key-hierarchy";
@@ -85,6 +87,35 @@ describe("key hierarchy", () => {
     // Same PIN + same DEK still produce different salts and ciphertext.
     expect(a.salt).not.toBe(b.salt);
     expect(a.wrappedDek.ciphertext).not.toBe(b.wrappedDek.ciphertext);
+  });
+});
+
+describe("passkey (PRF) wrapping", () => {
+  it("unwraps the same DEK from the PRF output", async () => {
+    const dek = await generateDek();
+    const prfOutput = randomBytes(32);
+    const salt = randomBytes(32);
+    const material = await createPasskeyKeyMaterial(dek, "cred-1", salt, prfOutput);
+
+    const unwrapped = await unwrapDekWithPrf(material, prfOutput);
+    expect(await exportRaw(unwrapped)).toBe(await exportRaw(dek));
+  });
+
+  it("fails to unwrap with a different PRF output", async () => {
+    const dek = await generateDek();
+    const material = await createPasskeyKeyMaterial(dek, "cred-1", randomBytes(32), randomBytes(32));
+    await expect(unwrapDekWithPrf(material, randomBytes(32))).rejects.toBeTruthy();
+  });
+
+  it("wraps the SAME DEK that a PIN wraps, so either method unlocks it", async () => {
+    const dek = await generateDek();
+    const prfOutput = randomBytes(32);
+    const pinMaterial = await createPinKeyMaterial("246810", dek, FAST_PARAMS);
+    const passkeyMaterial = await createPasskeyKeyMaterial(dek, "c", randomBytes(32), prfOutput);
+
+    const viaPin = await unwrapDekWithPin("246810", pinMaterial);
+    const viaPasskey = await unwrapDekWithPrf(passkeyMaterial, prfOutput);
+    expect(await exportRaw(viaPin)).toBe(await exportRaw(viaPasskey));
   });
 });
 

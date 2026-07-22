@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconFingerprint } from "@tabler/icons-react";
 
 import { usePinLock } from "@/lib/security/pin-lock-context";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
@@ -10,8 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function PinLockScreen() {
-  const { unlock, getUnlockLockoutMs } = usePinLock();
-  return <LockedPinScreen unlock={unlock} getUnlockLockoutMs={getUnlockLockoutMs} />;
+  const { unlock, getUnlockLockoutMs, hasPasskey, unlockWithPasskey } = usePinLock();
+  return (
+    <LockedPinScreen
+      unlock={unlock}
+      getUnlockLockoutMs={getUnlockLockoutMs}
+      hasPasskey={hasPasskey}
+      unlockWithPasskey={unlockWithPasskey}
+    />
+  );
 }
 
 function formatLockoutMessage(lockoutMs: number): string {
@@ -27,15 +35,31 @@ function formatLockoutMessage(lockoutMs: number): string {
 function LockedPinScreen({
   unlock,
   getUnlockLockoutMs,
+  hasPasskey,
+  unlockWithPasskey,
 }: {
   unlock: (pin: string) => Promise<boolean>;
   getUnlockLockoutMs: () => number;
+  hasPasskey: boolean;
+  unlockWithPasskey: () => Promise<boolean>;
 }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isBiometricChecking, setIsBiometricChecking] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(() => getUnlockLockoutMs());
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleBiometricUnlock() {
+    setIsBiometricChecking(true);
+    setError(null);
+    const ok = await unlockWithPasskey();
+    setIsBiometricChecking(false);
+    if (!ok) {
+      setError("Biometric unlock didn't work. Enter your PIN instead.");
+      inputRef.current?.focus();
+    }
+  }
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => inputRef.current?.focus(), 50);
@@ -121,6 +145,19 @@ function LockedPinScreen({
             >
               {isChecking ? "Checking..." : "Unlock"}
             </Button>
+
+            {hasPasskey && !isThrottled ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={isBiometricChecking}
+                onClick={() => void handleBiometricUnlock()}
+              >
+                <IconFingerprint />
+                {isBiometricChecking ? "Waiting…" : "Use Face ID / fingerprint"}
+              </Button>
+            ) : null}
           </form>
         </CardContent>
       </Card>

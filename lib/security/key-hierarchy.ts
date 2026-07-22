@@ -53,6 +53,13 @@ export type PinKeyMaterial = {
   wrappedDek: WrappedKey;
 };
 
+/** Wrapped-DEK material for a passkey (WebAuthn PRF) unlock method. */
+export type PasskeyKeyMaterial = {
+  credentialId: string; // base64url
+  prfSalt: string; // base64; the input to the authenticator's PRF
+  wrappedDek: WrappedKey;
+};
+
 export function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let index = 0; index < bytes.length; index += 1) {
@@ -171,4 +178,50 @@ export async function verifyPinAgainstMaterial(
   } catch {
     return false;
   }
+}
+
+// --- Passkey (WebAuthn PRF) KEK ---------------------------------------------
+
+/**
+ * Derive a KEK from a WebAuthn PRF output via HKDF. The PRF output is a
+ * high-entropy secret the authenticator returns for a given salt; HKDF binds
+ * it to a fixed context so the same secret can't be reused elsewhere.
+ */
+export async function deriveKekFromPrf(prfOutput: BufferSource): Promise<CryptoKey> {
+  const base = await crypto.subtle.importKey("raw", prfOutput, "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: new TextEncoder().encode("moat/passkey-kek/v1"),
+    },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["wrapKey", "unwrapKey"],
+  );
+}
+
+export async function createPasskeyKeyMaterial(
+  dek: CryptoKey,
+  credentialId: string,
+  prfSalt: Uint8Array,
+  prfOutput: BufferSource,
+): Promise<PasskeyKeyMaterial> {
+  const kek = await deriveKekFromPrf(prfOutput);
+  return {
+    credentialId,
+    prfSalt: bytesToBase64(prfSalt),
+    wrappedDek: await wrapDekWithKek(dek, kek),
+  };
+}
+
+/** Unwrap the DEK from passkey material given the authenticator's PRF output. */
+export async function unwrapDekWithPrf(
+  material: PasskeyKeyMaterial,
+  prfOutput: BufferSource,
+): Promise<CryptoKey> {
+  const kek = await deriveKekFromPrf(prfOutput);
+  return unwrapDekWithKek(material.wrappedDek, kek);
 }

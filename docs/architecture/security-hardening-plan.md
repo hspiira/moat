@@ -34,9 +34,15 @@ Protects against: lost/stolen device, another person on an unlocked-then-idle de
 - ✅ **Phase 0** — threat model doc shipped (`threat-model.md`).
 - ✅ **Phase 1** — `key-hierarchy` (Argon2id + DEK/KEK) shipped with 6 unit tests.
 - ✅ **Phase 1b** — wired into the PIN lock with whole-database safe re-keying and legacy PBKDF2 migration; verified end-to-end in a browser (plaintext → encrypted → lock → unlock → plaintext, no data loss).
-- ⏳ **Phase 2** — blind indexes (in progress).
-- ⏳ **Phase 3** — passkey / WebAuthn-PRF unlock.
-- ⏳ **Phase 4** — OPFS + SQLite-WASM engine.
+- ⏳ **Phase 2** — passkey / WebAuthn-PRF unlock (in progress).
+- ⏳ **Phase 3** — encrypted SQLite-on-OPFS storage engine.
+
+### Plan streamlined (2026-07-22)
+
+Standalone blind indexes were dropped. Blind-indexes-on-IndexedDB and an encrypted-SQLite-file both solve the same problem (metadata leakage), so we do it once, the better way: the **encrypted SQLite-on-OPFS** engine encrypts the whole database (no plaintext metadata at all) *and* unifies with the native SQLite path. Remaining work is therefore three axes, not four:
+1. Encryption strength — Argon2id + envelope (done).
+2. Unlock method — passkeys (additive).
+3. Storage/metadata — encrypted SQLite-on-OPFS (one comprehensive migration).
 
 ## Phases
 

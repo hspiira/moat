@@ -10,12 +10,17 @@ import {
 } from "react";
 
 import {
+  base64ToBytes,
+  createPasskeyKeyMaterial,
   createPinKeyMaterial,
   generateDek,
   importDekBytes,
   unwrapDekWithPin,
+  unwrapDekWithPrf,
+  type PasskeyKeyMaterial,
   type PinKeyMaterial,
 } from "./key-hierarchy";
+import { getPasskeyPrfOutput, registerPasskey } from "./passkey";
 import { deriveLegacyKeyBytes, verifyPin, type EncryptedPayload } from "./pin-crypto";
 import {
   INITIAL_ATTEMPT_STATE,
@@ -38,6 +43,7 @@ const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 type StoredKeyMaterial = {
   version: 2;
   pin: PinKeyMaterial;
+  passkey?: PasskeyKeyMaterial;
 };
 
 /** Legacy (v1) PBKDF2 sentinel, read only to migrate off it. */
@@ -62,6 +68,14 @@ type PinLockContextValue = {
   removePin: (currentPin: string) => Promise<boolean>;
   /** True if the app is PIN-protected (locked or unlocked). */
   hasPinLock: boolean;
+  /** True if a passkey (biometric) unlock is enrolled. */
+  hasPasskey: boolean;
+  /** Enroll a passkey that unlocks the same data. Requires the app to be unlocked. */
+  enablePasskey: () => Promise<{ ok: boolean; error?: string }>;
+  /** Unlock with the enrolled passkey. Returns false if unavailable or cancelled. */
+  unlockWithPasskey: () => Promise<boolean>;
+  /** Remove the enrolled passkey (the PIN remains). */
+  removePasskey: () => void;
 };
 
 const PinLockContext = createContext<PinLockContextValue | null>(null);
@@ -96,8 +110,7 @@ function readLegacyRecord(): LegacyPinRecord | null {
   }
 }
 
-function writeKeyMaterial(pin: PinKeyMaterial): void {
-  const material: StoredKeyMaterial = { version: 2, pin };
+function writeStoredMaterial(material: StoredKeyMaterial): void {
   localStorage.setItem(KEY_MATERIAL_KEY, JSON.stringify(material));
 }
 
@@ -123,6 +136,10 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     const hasMaterial =
       localStorage.getItem(KEY_MATERIAL_KEY) || localStorage.getItem(LEGACY_PIN_HASH_KEY);
     return hasMaterial ? { status: "locked" } : { status: "no_pin" };
+  });
+  const [hasPasskey, setHasPasskey] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(readKeyMaterial()?.passkey);
   });
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -170,9 +187,14 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
       const activeDek = getActiveRecordCryptoKey();
 
-      // Changing the PIN while unlocked: just re-wrap the existing DEK.
+      // Changing the PIN while unlocked: just re-wrap the existing DEK,
+      // preserving any enrolled passkey (it wraps the same DEK).
       if (activeDek) {
-        writeKeyMaterial(await createPinKeyMaterial(pin, activeDek));
+        writeStoredMaterial({
+          version: 2,
+          pin: await createPinKeyMaterial(pin, activeDek),
+          passkey: readKeyMaterial()?.passkey,
+        });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
         setLockState({ status: "unlocked" });
         resetInactivityTimer();
@@ -184,7 +206,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       const dek = await generateDek();
       try {
         await encryptAllRecordsWithDek(dek); // activates the DEK on success
-        writeKeyMaterial(await createPinKeyMaterial(pin, dek));
+        writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek) });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
       } catch {
         setActiveRecordCryptoKey(null);
@@ -230,7 +252,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         if (valid) {
           // Migrate off PBKDF2: adopt the old key as the DEK and re-wrap with Argon2id.
           dek = await adoptLegacyKeyAsDek(pin, legacy);
-          writeKeyMaterial(await createPinKeyMaterial(pin, dek));
+          writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek) });
           localStorage.removeItem(LEGACY_PIN_HASH_KEY);
         }
       }
@@ -283,15 +305,85 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(KEY_MATERIAL_KEY);
     localStorage.removeItem(LEGACY_PIN_HASH_KEY);
     writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
+    setHasPasskey(false);
     setLockState({ status: "no_pin" });
     return true;
+  }, []);
+
+  const enablePasskey = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    const material = readKeyMaterial();
+    const dek = getActiveRecordCryptoKey();
+    if (!material || !dek) {
+      return { ok: false, error: "Unlock Moat first, then set up biometric unlock." };
+    }
+    try {
+      const enrollment = await registerPasskey({ userId: "moat-user", userName: "Moat" });
+      const passkey = await createPasskeyKeyMaterial(
+        dek,
+        enrollment.credentialId,
+        enrollment.prfSalt,
+        enrollment.prfOutput,
+      );
+      writeStoredMaterial({ ...material, passkey });
+      setHasPasskey(true);
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Could not set up biometric unlock.",
+      };
+    }
+  }, []);
+
+  const unlockWithPasskey = useCallback(async (): Promise<boolean> => {
+    const material = readKeyMaterial();
+    if (!material?.passkey) return false;
+
+    const attemptState = readAttemptState(localStorage);
+    if (getRemainingLockoutMs(attemptState, Date.now()) > 0) {
+      return false;
+    }
+
+    try {
+      const prfOutput = await getPasskeyPrfOutput(
+        material.passkey.credentialId,
+        base64ToBytes(material.passkey.prfSalt),
+      );
+      const dek = await unwrapDekWithPrf(material.passkey, prfOutput);
+      writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
+      setActiveRecordCryptoKey(dek);
+      setLockState({ status: "unlocked" });
+      resetInactivityTimer();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [resetInactivityTimer]);
+
+  const removePasskey = useCallback((): void => {
+    const material = readKeyMaterial();
+    if (!material) return;
+    writeStoredMaterial({ version: material.version, pin: material.pin });
+    setHasPasskey(false);
   }, []);
 
   const hasPinLock = lockState.status !== "no_pin";
 
   return (
     <PinLockContext.Provider
-      value={{ lockState, setPin, unlock, getUnlockLockoutMs, lock, removePin, hasPinLock }}
+      value={{
+        lockState,
+        setPin,
+        unlock,
+        getUnlockLockoutMs,
+        lock,
+        removePin,
+        hasPinLock,
+        hasPasskey,
+        enablePasskey,
+        unlockWithPasskey,
+        removePasskey,
+      }}
     >
       {children}
     </PinLockContext.Provider>
