@@ -14,6 +14,8 @@
 
 import { argon2id } from "hash-wasm";
 
+import { base64ToBytes, bytesToBase64 } from "@/lib/security/codec";
+
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const DEK_BITS = 256;
@@ -59,23 +61,6 @@ export type PasskeyKeyMaterial = {
   prfSalt: string; // base64; the input to the authenticator's PRF
   wrappedDek: WrappedKey;
 };
-
-export function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]);
-  }
-  return btoa(binary);
-}
-
-export function base64ToBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
-}
 
 export function randomBytes(length: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(length));

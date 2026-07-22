@@ -1,5 +1,5 @@
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
-import { excludeTransfers } from "@/lib/domain/transfers";
+import { excludeTransfers, isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, Category, MonthSummary, Transaction } from "@/lib/types";
 
 function buildSummary(
@@ -22,7 +22,7 @@ function buildSummary(
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const transfers = transactions
-    .filter((transaction) => transaction.type === "transfer")
+    .filter(isTransferTransaction)
     .reduce((sum, transaction) => sum + transaction.amount, 0);
   // savings: everything not spent this period, whether or not it was
   // explicitly allocated. net: what remains after spending AND explicit

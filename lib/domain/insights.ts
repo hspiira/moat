@@ -1,3 +1,4 @@
+import { isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, MonthlyInsight, MonthSummary, Transaction } from "@/lib/types";
 
 function buildInsight(
@@ -77,7 +78,7 @@ export function getMonthlyInsights(
     );
   }
 
-  const transferCount = transactions.filter((transaction) => transaction.type === "transfer").length;
+  const transferCount = transactions.filter(isTransferTransaction).length;
   if (transferCount >= 4) {
     insights.push(
       buildInsight(

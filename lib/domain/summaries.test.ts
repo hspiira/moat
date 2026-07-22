@@ -165,4 +165,25 @@ describe("getMonthSummary", () => {
     expect(summary.savings).toBe(1_700_000);
     expect(summary.allocatedSavings).toBe(400_000);
   });
+
+  it("counts a category-tagged transfer in the transfers bucket, not spending", () => {
+    const summary = getMonthSummary(
+      [
+        ...transactions,
+        buildTransaction({
+          id: "tx:category-transfer",
+          accountId: "account:wallet",
+          type: "expense",
+          amount: 50_000,
+          occurredOn: "2026-04-06",
+          categoryId: "category:transfers",
+        }),
+      ],
+      categories,
+      "2026-04",
+    );
+
+    expect(summary.outflow).toBe(300_000);
+    expect(summary.transfers).toBe(50_000);
+  });
 });

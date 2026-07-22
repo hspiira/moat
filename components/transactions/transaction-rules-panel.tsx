@@ -244,7 +244,7 @@ export function TransactionRulesPanel({
           {rules.length === 0 ? (
             <EmptyState className="py-6">No rules yet.</EmptyState>
           ) : (
-            rules
+            [...rules]
               .sort((left, right) => left.priority - right.priority)
               .map((rule) => (
                 <div

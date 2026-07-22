@@ -1,3 +1,4 @@
+import { isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, Transaction } from "@/lib/types";
 
 export type AccountTotals = {
@@ -100,20 +101,26 @@ export function getAccountBalanceBreakdown(
     (transaction) => transaction.accountId === account.id,
   );
 
-  const inflow = accountTransactions
+  // A transaction classified as a transfer (by type or category) never also
+  // counts as income/expense/savings — mirrors excludeTransfers.
+  const spendingTransactions = accountTransactions.filter(
+    (transaction) => !isTransferTransaction(transaction),
+  );
+
+  const inflow = spendingTransactions
     .filter((transaction) => transaction.type === "income")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
-  const outflow = accountTransactions
+  const outflow = spendingTransactions
     .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
-  const savingsAllocations = accountTransactions
+  const savingsAllocations = spendingTransactions
     .filter((transaction) => transaction.type === "savings_contribution")
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const transfers = accountTransactions
-    .filter((transaction) => transaction.type === "transfer")
+    .filter(isTransferTransaction)
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
   const movement = accountTransactions.reduce(
