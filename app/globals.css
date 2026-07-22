@@ -244,28 +244,15 @@
   animation: moat-shake 0.4s ease-in-out;
 }
 
-/* Unlock reveal: the padlock rises to centre, opens, then the veil lifts. */
-@keyframes moat-unlock-veil {
-  0%, 60% { opacity: 1; }
-  100% { opacity: 0; }
+/* An accent orbiting the padlock ring — slow when idle, fast while verifying. */
+@keyframes moat-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
-@keyframes moat-unlock-rise {
-  0% { transform: translateY(-24vh) scale(0.9); }
-  55% { transform: translateY(0) scale(1.14); }
-  70% { transform: translateY(0) scale(1.02); }
-  100% { transform: translateY(0) scale(1.06); }
-}
-@keyframes moat-lock-out {
-  0%, 45% { opacity: 1; }
-  55%, 100% { opacity: 0; }
-}
-@keyframes moat-lock-in {
-  0%, 45% { opacity: 0; transform: translateY(-4px); }
-  62% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 1; }
-}
+
+/* Glow pulse the moment the lock springs open. */
 @keyframes moat-unlock-glow {
-  0%, 42% { opacity: 0; transform: scale(0.5); }
-  60% { opacity: 0.55; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.5); }
+  45% { opacity: 0.55; transform: scale(1.05); }
   100% { opacity: 0; transform: scale(1.7); }
 }

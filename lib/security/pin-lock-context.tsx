@@ -89,6 +89,9 @@ type PinLockState =
   | { status: "initializing" }
   | { status: "no_pin" }
   | { status: "locked" }
+  // Correct PIN accepted; the DEK is active and the app can mount behind the
+  // lock screen while it plays its unlock reveal. `completeUnlock` finishes it.
+  | { status: "unlocking" }
   | { status: "unlocked" };
 
 type PinLockContextValue = {
@@ -101,6 +104,8 @@ type PinLockContextValue = {
   getUnlockLockoutMs: () => number;
   /** Digits in the saved PIN, so the lock screen can auto-submit. Null if unknown. */
   getPinLength: () => number | null;
+  /** Finish the unlock reveal: transition from `unlocking` to `unlocked`. */
+  completeUnlock: () => void;
   /** Lock the session immediately. */
   lock: () => void;
   /** Remove the PIN and decrypt data back to plaintext. Requires the current PIN. */
@@ -324,12 +329,17 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(dek);
       await migrateBlindIndexesIfNeeded();
-      setLockState({ status: "unlocked" });
-      resetInactivityTimer();
+      // Hand off to the lock screen's reveal; it calls completeUnlock when done.
+      setLockState({ status: "unlocking" });
       return true;
     },
-    [resetInactivityTimer],
+    [],
   );
+
+  const completeUnlock = useCallback(() => {
+    setLockState((s) => (s.status === "unlocking" ? { status: "unlocked" } : s));
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
 
   const lock = useCallback(() => {
     setLockState((s) => (s.status === "no_pin" ? s : { status: "locked" }));
@@ -414,13 +424,12 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(dek);
       await migrateBlindIndexesIfNeeded();
-      setLockState({ status: "unlocked" });
-      resetInactivityTimer();
+      setLockState({ status: "unlocking" });
       return true;
     } catch {
       return false;
     }
-  }, [resetInactivityTimer]);
+  }, []);
 
   const removePasskey = useCallback((): void => {
     const material = readKeyMaterial();
@@ -429,7 +438,10 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     setHasPasskey(false);
   }, []);
 
-  const hasPinLock = lockState.status === "locked" || lockState.status === "unlocked";
+  const hasPinLock =
+    lockState.status === "locked" ||
+    lockState.status === "unlocking" ||
+    lockState.status === "unlocked";
 
   return (
     <PinLockContext.Provider
@@ -439,6 +451,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         unlock,
         getUnlockLockoutMs,
         getPinLength,
+        completeUnlock,
         lock,
         removePin,
         hasPinLock,
