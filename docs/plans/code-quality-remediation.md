@@ -88,7 +88,9 @@ Verify each deletion with a project-wide grep before removing (the audit already
 
 **Risk & verification:** this touches every persistence path. Do it as its own branch with no behavior changes; the existing repository/sync/property test suites must pass unchanged, and add adapter-contract tests that run the *same* test suite against both backends (the strongest guard against future drift).
 
-## Phase 4 — Decompose the god files (pattern-alignment, not redesign)
+## Phase 4 — Decompose the god files (pattern-alignment, not redesign) — ✅ COMPLETED 2026-07-23 (commit 3ee2120; 4.1/4.3/4.4/4.5)
+
+> 4.1: onboarding-workspace 1000 → 237 lines + hook + 4 step components. 4.2 (pin-lock-context) DEFERRED — the user is actively developing that file; fold in the remaining base64-codec site when doing it.
 
 | # | Target | Problem | Fix |
 | --- | --- | --- | --- |
