@@ -31,7 +31,7 @@ Two findings are latent **bugs**, not just hygiene, and should be fixed first (P
 
 Exit criteria: `pnpm typecheck && pnpm lint && pnpm test` green; new test covering 0.3.
 
-## Phase 1 — Single-source the duplicated business rules (small, independent PRs)
+## Phase 1 — Single-source the duplicated business rules (small, independent PRs) — ✅ COMPLETED 2026-07-23 (commit 2b1c739, all 12 items)
 
 Each item is a mechanical extract-and-replace; they can be done in any order.
 
