@@ -52,7 +52,9 @@ Each item is a mechanical extract-and-replace; they can be done in any order.
 
 Exit criteria: all checks green; no behavior change (these are pure refactors — property tests in `lib/domain` should pass untouched).
 
-## Phase 2 — Dead code removal (one PR, pure deletion)
+## Phase 2 — Dead code removal (one PR, pure deletion) — ✅ COMPLETED 2026-07-23 (commits 1489619 + 7e3d1c4, ~674 lines deleted)
+
+> Extension beyond the audit list: `components/module-page.tsx` and `components/milestone-list.tsx` were themselves orphaned, so they and the `ModuleDetail`/`Milestone` types were removed too. Follow-up noted for later: the Kotlin `listByField` native command is now unreachable from TS (native cleanup was out of scope).
 
 | # | Finding | Location |
 | --- | --- | --- |
