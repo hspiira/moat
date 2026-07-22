@@ -10,11 +10,13 @@ import {
 } from "react";
 
 import {
-  deriveSessionKey,
-  encryptWithPin,
-  verifyPin,
-  type EncryptedPayload,
-} from "./pin-crypto";
+  createPinKeyMaterial,
+  generateDek,
+  importDekBytes,
+  unwrapDekWithPin,
+  type PinKeyMaterial,
+} from "./key-hierarchy";
+import { deriveLegacyKeyBytes, verifyPin, type EncryptedPayload } from "./pin-crypto";
 import {
   INITIAL_ATTEMPT_STATE,
   getRemainingLockoutMs,
@@ -23,35 +25,42 @@ import {
   recordFailedAttempt,
   writeAttemptState,
 } from "./pin-policy";
-import { setActiveRecordCryptoKey } from "./record-crypto";
+import {
+  getActiveRecordCryptoKey,
+  setActiveRecordCryptoKey,
+} from "./record-crypto";
+import { decryptAllRecords, encryptAllRecordsWithDek } from "./data-migration";
 
-const PIN_HASH_KEY = "moat:pin_hash";
+const KEY_MATERIAL_KEY = "moat:key_material";
+const LEGACY_PIN_HASH_KEY = "moat:pin_hash";
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
-/** Stored in localStorage: a small encrypted sentinel used to verify the PIN. */
-type PinRecord = {
+type StoredKeyMaterial = {
+  version: 2;
+  pin: PinKeyMaterial;
+};
+
+/** Legacy (v1) PBKDF2 sentinel, read only to migrate off it. */
+type LegacyPinRecord = {
   salt: string;
   payload: EncryptedPayload;
 };
 
-type PinLockState =
-  | { status: "no_pin" }
-  | { status: "locked" }
-  | { status: "unlocked" };
+type PinLockState = { status: "no_pin" } | { status: "locked" } | { status: "unlocked" };
 
 type PinLockContextValue = {
   lockState: PinLockState;
-  /** Set a new PIN (replaces any existing one). Returns false if PIN is invalid. */
+  /** Set (or change) the PIN. Returns false if the PIN is invalid or the operation fails. */
   setPin: (pin: string) => Promise<boolean>;
-  /** Unlock with a PIN. Returns false if PIN is wrong or attempts are throttled. */
+  /** Unlock with a PIN. Returns false if wrong or throttled. */
   unlock: (pin: string) => Promise<boolean>;
   /** Milliseconds until the next unlock attempt is allowed. 0 when not throttled. */
   getUnlockLockoutMs: () => number;
   /** Lock the session immediately. */
   lock: () => void;
-  /** Remove PIN lock entirely. Requires current PIN to confirm. */
+  /** Remove the PIN and decrypt data back to plaintext. Requires the current PIN. */
   removePin: (currentPin: string) => Promise<boolean>;
-  /** True if the app is PIN-protected (regardless of locked/unlocked state). */
+  /** True if the app is PIN-protected (locked or unlocked). */
   hasPinLock: boolean;
 };
 
@@ -64,6 +73,38 @@ function base64ToUint8Array(value: string): Uint8Array {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
+}
+
+function readKeyMaterial(): StoredKeyMaterial | null {
+  const raw = localStorage.getItem(KEY_MATERIAL_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as StoredKeyMaterial;
+    return parsed.version === 2 && parsed.pin ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function readLegacyRecord(): LegacyPinRecord | null {
+  const raw = localStorage.getItem(LEGACY_PIN_HASH_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as LegacyPinRecord;
+  } catch {
+    return null;
+  }
+}
+
+function writeKeyMaterial(pin: PinKeyMaterial): void {
+  const material: StoredKeyMaterial = { version: 2, pin };
+  localStorage.setItem(KEY_MATERIAL_KEY, JSON.stringify(material));
+}
+
+/** Adopt the legacy PBKDF2 key bytes as the DEK — records stay readable, no re-encrypt. */
+async function adoptLegacyKeyAsDek(pin: string, legacy: LegacyPinRecord): Promise<CryptoKey> {
+  const bytes = await deriveLegacyKeyBytes(pin, base64ToUint8Array(legacy.payload.salt));
+  return importDekBytes(bytes);
 }
 
 export function usePinLock(): PinLockContextValue {
@@ -79,8 +120,9 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") {
       return { status: "no_pin" };
     }
-
-    return localStorage.getItem(PIN_HASH_KEY) ? { status: "locked" } : { status: "no_pin" };
+    const hasMaterial =
+      localStorage.getItem(KEY_MATERIAL_KEY) || localStorage.getItem(LEGACY_PIN_HASH_KEY);
+    return hasMaterial ? { status: "locked" } : { status: "no_pin" };
   });
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -90,10 +132,10 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     }
     inactivityTimer.current = setTimeout(() => {
       setLockState((s) => (s.status === "unlocked" ? { status: "locked" } : s));
+      setActiveRecordCryptoKey(null);
     }, INACTIVITY_TIMEOUT_MS);
   }, []);
 
-  // Track user activity to reset inactivity timer
   useEffect(() => {
     if (lockState.status !== "unlocked") {
       return;
@@ -120,62 +162,92 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     };
   }, [lockState.status, resetInactivityTimer]);
 
-  const setPin = useCallback(async (pin: string): Promise<boolean> => {
-    if (!isValidPin(pin)) {
-      return false;
-    }
+  const setPin = useCallback(
+    async (pin: string): Promise<boolean> => {
+      if (!isValidPin(pin)) {
+        return false;
+      }
 
-    // Encrypt a known sentinel with the PIN so we can verify later
-    const sentinel = { moat: true };
-    const payload = await encryptWithPin(sentinel, pin);
+      const activeDek = getActiveRecordCryptoKey();
 
-    const record: PinRecord = {
-      salt: payload.salt,
-      payload,
-    };
+      // Changing the PIN while unlocked: just re-wrap the existing DEK.
+      if (activeDek) {
+        writeKeyMaterial(await createPinKeyMaterial(pin, activeDek));
+        localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+        setLockState({ status: "unlocked" });
+        resetInactivityTimer();
+        return true;
+      }
 
-    localStorage.setItem(PIN_HASH_KEY, JSON.stringify(record));
-    setActiveRecordCryptoKey(await deriveSessionKey(pin, base64ToUint8Array(payload.salt)));
-    setLockState({ status: "unlocked" });
-    resetInactivityTimer();
-    return true;
-  }, [resetInactivityTimer]);
+      // Fresh enable: generate a DEK, encrypt any existing plaintext records,
+      // then store the wrapped material.
+      const dek = await generateDek();
+      try {
+        await encryptAllRecordsWithDek(dek); // activates the DEK on success
+        writeKeyMaterial(await createPinKeyMaterial(pin, dek));
+        localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+      } catch {
+        setActiveRecordCryptoKey(null);
+        return false;
+      }
+      setLockState({ status: "unlocked" });
+      resetInactivityTimer();
+      return true;
+    },
+    [resetInactivityTimer],
+  );
 
   const getUnlockLockoutMs = useCallback((): number => {
     if (typeof window === "undefined") {
       return 0;
     }
-
     return getRemainingLockoutMs(readAttemptState(localStorage), Date.now());
   }, []);
 
-  const unlock = useCallback(async (pin: string): Promise<boolean> => {
-    const raw = localStorage.getItem(PIN_HASH_KEY);
-    if (!raw) {
-      return false;
-    }
+  const unlock = useCallback(
+    async (pin: string): Promise<boolean> => {
+      const material = readKeyMaterial();
+      const legacy = material ? null : readLegacyRecord();
+      if (!material && !legacy) {
+        return false;
+      }
 
-    const attemptState = readAttemptState(localStorage);
-    if (getRemainingLockoutMs(attemptState, Date.now()) > 0) {
-      return false;
-    }
+      const attemptState = readAttemptState(localStorage);
+      if (getRemainingLockoutMs(attemptState, Date.now()) > 0) {
+        return false;
+      }
 
-    const record = JSON.parse(raw) as PinRecord;
-    const valid = await verifyPin(record.payload, pin);
+      let dek: CryptoKey | null = null;
 
-    if (valid) {
+      if (material) {
+        try {
+          dek = await unwrapDekWithPin(pin, material.pin);
+        } catch {
+          dek = null;
+        }
+      } else if (legacy) {
+        const valid = await verifyPin(legacy.payload, pin);
+        if (valid) {
+          // Migrate off PBKDF2: adopt the old key as the DEK and re-wrap with Argon2id.
+          dek = await adoptLegacyKeyAsDek(pin, legacy);
+          writeKeyMaterial(await createPinKeyMaterial(pin, dek));
+          localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+        }
+      }
+
+      if (!dek) {
+        writeAttemptState(localStorage, recordFailedAttempt(attemptState, Date.now()));
+        return false;
+      }
+
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
-      setActiveRecordCryptoKey(
-        await deriveSessionKey(pin, base64ToUint8Array(record.payload.salt)),
-      );
+      setActiveRecordCryptoKey(dek);
       setLockState({ status: "unlocked" });
       resetInactivityTimer();
-    } else {
-      writeAttemptState(localStorage, recordFailedAttempt(attemptState, Date.now()));
-    }
-
-    return valid;
-  }, [resetInactivityTimer]);
+      return true;
+    },
+    [resetInactivityTimer],
+  );
 
   const lock = useCallback(() => {
     setLockState((s) => (s.status === "no_pin" ? s : { status: "locked" }));
@@ -186,22 +258,33 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removePin = useCallback(async (currentPin: string): Promise<boolean> => {
-    const raw = localStorage.getItem(PIN_HASH_KEY);
-    if (!raw) {
+    const material = readKeyMaterial();
+    const legacy = material ? null : readLegacyRecord();
+
+    let dek: CryptoKey | null = null;
+    if (material) {
+      try {
+        dek = await unwrapDekWithPin(currentPin, material.pin);
+      } catch {
+        return false;
+      }
+    } else if (legacy) {
+      if (!(await verifyPin(legacy.payload, currentPin))) {
+        return false;
+      }
+      dek = await adoptLegacyKeyAsDek(currentPin, legacy);
+    } else {
       return false;
     }
 
-    const record = JSON.parse(raw) as PinRecord;
-    const valid = await verifyPin(record.payload, currentPin);
-
-    if (valid) {
-      localStorage.removeItem(PIN_HASH_KEY);
-      writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
-      setActiveRecordCryptoKey(null);
-      setLockState({ status: "no_pin" });
-    }
-
-    return valid;
+    // Decrypt everything back to plaintext, then drop all key material.
+    setActiveRecordCryptoKey(dek);
+    await decryptAllRecords();
+    localStorage.removeItem(KEY_MATERIAL_KEY);
+    localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+    writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
+    setLockState({ status: "no_pin" });
+    return true;
   }, []);
 
   const hasPinLock = lockState.status !== "no_pin";

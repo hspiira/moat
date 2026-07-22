@@ -115,3 +115,28 @@ export async function verifyPin(payload: EncryptedPayload, pin: string): Promise
 export async function deriveSessionKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
   return deriveKey(pin, salt);
 }
+
+/**
+ * Re-derive the legacy PBKDF2 key as raw bytes so it can be adopted as the
+ * DEK during migration to the Argon2id key hierarchy. The bytes are identical
+ * to the old non-extractable session key, so existing records stay readable
+ * without re-encryption.
+ */
+export async function deriveLegacyKeyBytes(pin: string, salt: Uint8Array): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: KEY_LENGTH_BITS },
+    true,
+    ["encrypt", "decrypt"],
+  );
+  const raw = await crypto.subtle.exportKey("raw", key);
+  return new Uint8Array(raw);
+}

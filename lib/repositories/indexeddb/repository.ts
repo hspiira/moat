@@ -1,5 +1,6 @@
 import {
   openFinanceDatabase,
+  storeNames,
   USER_ID_INDEX,
   USER_ID_IS_DEFAULT_INDEX,
   USER_ID_MONTH_INDEX,
@@ -135,6 +136,53 @@ async function putOne<T>(storeName: StoreName, entity: T): Promise<T> {
     request.onerror = () =>
       reject(request.error ?? new Error(`Unable to write record to ${storeName}.`));
   });
+}
+
+/**
+ * Every store that holds encryptable user data (everything except `meta`,
+ * which carries schema-version bookkeeping and must stay plaintext for
+ * migrations). Used by the re-key primitives below.
+ */
+const ENCRYPTABLE_STORE_NAMES: StoreName[] = Object.values(storeNames).filter(
+  (name): name is StoreName => name !== "meta",
+);
+
+async function readStoreRaw(storeName: StoreName): Promise<unknown[]> {
+  const database = await openFinanceDatabase();
+  return new Promise<unknown[]>((resolve, reject) => {
+    const transaction = database.transaction(storeName, "readonly");
+    const request = transaction.objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result as unknown[]);
+    request.onerror = () =>
+      reject(request.error ?? new Error(`Unable to read records from ${storeName}.`));
+  });
+}
+
+/**
+ * Read and decrypt every record in every encryptable store using the current
+ * active key. Used to re-key the whole database when enabling, disabling, or
+ * changing encryption — captured in memory so the key can be switched between
+ * snapshot and write-back without losing data.
+ */
+export async function snapshotAllRecords(): Promise<Map<StoreName, unknown[]>> {
+  const snapshot = new Map<StoreName, unknown[]>();
+  for (const storeName of ENCRYPTABLE_STORE_NAMES) {
+    const raw = await readStoreRaw(storeName);
+    snapshot.set(storeName, await decryptRecords(storeName, raw));
+  }
+  return snapshot;
+}
+
+/**
+ * Write a snapshot back, encrypting with whatever key is currently active
+ * (or storing plaintext when none is). Pair with snapshotAllRecords to re-key.
+ */
+export async function writeAllRecords(snapshot: Map<StoreName, unknown[]>): Promise<void> {
+  for (const [storeName, records] of snapshot) {
+    for (const record of records) {
+      await putOne(storeName, record as { id: string });
+    }
+  }
 }
 
 async function getOne<T>(storeName: StoreName, id: string): Promise<T | null> {

@@ -59,6 +59,11 @@ export function hasActiveRecordCryptoKey() {
   return activeRecordKey !== null;
 }
 
+/** The active Data Encryption Key, for re-wrapping when unlock methods change. */
+export function getActiveRecordCryptoKey(): CryptoKey | null {
+  return activeRecordKey;
+}
+
 export function isEncryptedRecordEnvelope(value: unknown): value is EncryptedRecordEnvelope {
   return (
     typeof value === "object" &&
