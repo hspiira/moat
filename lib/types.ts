@@ -88,40 +88,6 @@ export type ModulePreview = {
   stage: string;
 };
 
-export type ModuleDetail = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  intentTitle: string;
-  intentSummary: string;
-  intentBullets: string[];
-  primaryCta: {
-    href: string;
-    label: string;
-  };
-  secondaryCta: {
-    href: string;
-    label: string;
-  };
-  scopeGroups: {
-    title: string;
-    summary: string;
-    items: string[];
-  }[];
-  acceptanceGates: string[];
-  issueNumber: number;
-  issueHref: string;
-  issueSummary: string;
-};
-
-export type Milestone = {
-  id: string;
-  kicker: string;
-  title: string;
-  summary: string;
-  outputs: string[];
-};
-
 export type UserProfile = {
   id: string;
   displayName: string;
