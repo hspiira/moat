@@ -41,3 +41,15 @@ export async function decryptAllRecords(): Promise<void> {
   setActiveRecordCryptoKey(null);
   await writeAllRecords(snapshot); // plaintext write
 }
+
+/**
+ * Re-encrypt every record in place with the currently active DEK. Contents are
+ * unchanged, but index metadata is re-derived — used to migrate records that
+ * were written with plaintext index fields (envelope v1) to keyed blind indexes
+ * (v2). Requires the DEK to be active; the key stays active throughout, so a
+ * partial failure leaves records readable and the migration simply re-runs.
+ */
+export async function reblindAllRecords(): Promise<void> {
+  const snapshot = await snapshotAllRecords(); // active key → decrypted read
+  await writeAllRecords(snapshot); // re-encrypt → v2 blinded metadata
+}

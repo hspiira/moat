@@ -12,6 +12,8 @@ import {
 import {
   decryptRecordFromStorage,
   encryptRecordForStorage,
+  hasActiveRecordCryptoKey,
+  indexQueryKey,
 } from "@/lib/security/record-crypto";
 import { shouldSuppressSyncMutation } from "@/lib/sync/mutation-scope";
 import type {
@@ -221,7 +223,11 @@ async function removeOne(storeName: StoreName, id: string): Promise<void> {
 }
 
 async function readSyncProfileByUser(userId: string): Promise<SyncProfile | null> {
-  const profiles = await readAllByIndex<SyncProfile>("syncProfiles", USER_ID_INDEX, userId);
+  const profiles = await readAllByIndex<SyncProfile>(
+    "syncProfiles",
+    USER_ID_INDEX,
+    await indexQueryKey("syncProfiles", ["userId"], [userId]),
+  );
   return profiles[0] ?? null;
 }
 
@@ -269,7 +275,11 @@ function createUserScopedRepository<T extends { id: string; userId: string }>(
       return getOne<T>(storeName, id);
     },
     async listByUser(userId) {
-      return readAllByIndex<T>(storeName, USER_ID_INDEX, userId);
+      return readAllByIndex<T>(
+        storeName,
+        USER_ID_INDEX,
+        await indexQueryKey(storeName, ["userId"], [userId]),
+      );
     },
     async upsert(entity) {
       const saved = await putOne(storeName, entity);
@@ -325,6 +335,15 @@ export function createTransactionRepository(): TransactionRepository {
   return {
     ...repository,
     async listByMonth(userId, month) {
+      if (hasActiveRecordCryptoKey()) {
+        // Blinded occurredOn stores the month hash, so match it exactly.
+        return readAllByIndex<Transaction>(
+          "transactions",
+          USER_ID_OCCURRED_ON_INDEX,
+          await indexQueryKey("transactions", ["userId", "occurredOn"], [userId, month]),
+        );
+      }
+      // Plaintext mode: occurredOn is an ordered ISO date, so range-match the month.
       return readAllByIndex<Transaction>(
         "transactions",
         USER_ID_OCCURRED_ON_INDEX,
@@ -363,7 +382,7 @@ export function createMonthCloseRepository(): MonthCloseRepository {
       const records = await readAllByIndex<MonthClose>(
         "monthCloses",
         USER_ID_PERIOD_INDEX,
-        IDBKeyRange.only([userId, period]),
+        await indexQueryKey("monthCloses", ["userId", "period"], [userId, period]),
       );
       return records[0] ?? null;
     },
@@ -379,7 +398,7 @@ export function createCategoryRepository(): CategoryRepository {
       return readAllByIndex<Category>(
         "categories",
         USER_ID_IS_DEFAULT_INDEX,
-        IDBKeyRange.only([userId, true]),
+        await indexQueryKey("categories", ["userId", "isDefault"], [userId, true]),
       );
     },
   };
@@ -398,7 +417,7 @@ export function createBudgetTargetRepository(): BudgetTargetRepository {
       return readAllByIndex<BudgetTarget>(
         "budgets",
         USER_ID_MONTH_INDEX,
-        IDBKeyRange.only([userId, month]),
+        await indexQueryKey("budgets", ["userId", "month"], [userId, month]),
       );
     },
   };
@@ -410,7 +429,7 @@ export function createInvestmentProfileRepository(): InvestmentProfileRepository
       const records = await readAllByIndex<InvestmentProfile>(
         "investmentProfiles",
         USER_ID_INDEX,
-        userId,
+        await indexQueryKey("investmentProfiles", ["userId"], [userId]),
       );
       return records[0] ?? null;
     },
@@ -480,12 +499,12 @@ export function createSyncOutboxRepository(): SyncOutboxRepository {
         readAllByIndex<SyncOutboxItem>(
           "syncOutbox",
           USER_ID_STATUS_INDEX,
-          IDBKeyRange.only([userId, "pending"]),
+          await indexQueryKey("syncOutbox", ["userId", "status"], [userId, "pending"]),
         ),
         readAllByIndex<SyncOutboxItem>(
           "syncOutbox",
           USER_ID_STATUS_INDEX,
-          IDBKeyRange.only([userId, "failed"]),
+          await indexQueryKey("syncOutbox", ["userId", "status"], [userId, "failed"]),
         ),
       ]);
       return [...pending, ...failed];

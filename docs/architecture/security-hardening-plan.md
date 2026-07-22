@@ -32,17 +32,28 @@ Protects against: lost/stolen device, another person on an unlocked-then-idle de
 ## Progress
 
 - ✅ **Phase 0** — threat model doc shipped (`threat-model.md`).
-- ✅ **Phase 1** — `key-hierarchy` (Argon2id + DEK/KEK) shipped with 6 unit tests.
+- ✅ **Phase 1** — `key-hierarchy` (Argon2id + DEK/KEK) shipped with unit tests.
 - ✅ **Phase 1b** — wired into the PIN lock with whole-database safe re-keying and legacy PBKDF2 migration; verified end-to-end in a browser (plaintext → encrypted → lock → unlock → plaintext, no data loss).
-- ⏳ **Phase 2** — passkey / WebAuthn-PRF unlock (in progress).
-- ⏳ **Phase 3** — encrypted SQLite-on-OPFS storage engine.
+- ✅ **Phase 2** — passkey / WebAuthn-PRF unlock; verified e2e with a CDP virtual authenticator (enroll → lock → biometric unlock reads encrypted data).
+- ✅ **Phase 3** — **blind indexes** close the metadata leak (see decision below). Index fields become keyed HMACs derived from the DEK; a one-time v1→v2 re-blind runs on unlock. Verified with unit tests and a real-IndexedDB browser round-trip (blinded single + composite lookups return the right records; no plaintext `userId`/month at rest).
+- 🔀 **Phase 4 (deferred, needs sign-off)** — SQLite-on-OPFS engine unification. See "Storage engine decision".
 
 ### Plan streamlined (2026-07-22)
 
-Standalone blind indexes were dropped. Blind-indexes-on-IndexedDB and an encrypted-SQLite-file both solve the same problem (metadata leakage), so we do it once, the better way: the **encrypted SQLite-on-OPFS** engine encrypts the whole database (no plaintext metadata at all) *and* unifies with the native SQLite path. Remaining work is therefore three axes, not four:
+Blind-indexes-on-IndexedDB and an encrypted-SQLite-file both solve the same problem (metadata leakage). The three security axes:
 1. Encryption strength — Argon2id + envelope (done).
-2. Unlock method — passkeys (additive).
-3. Storage/metadata — encrypted SQLite-on-OPFS (one comprehensive migration).
+2. Unlock method — passkeys (done).
+3. Storage/metadata — no plaintext queryable metadata at rest (done via blind indexes).
+
+### Storage engine decision (2026-07-23)
+
+We close the metadata leak with **HMAC blind indexes on IndexedDB**, not a full SQLite-on-OPFS engine swap. Rationale, weighed against the #1 non-negotiable (no data loss):
+
+- The sensitive data (amounts, notes, names, counterparties) is already AES-GCM ciphertext. The *only* remaining plaintext was a small, fixed set of index fields (`userId`, `occurredOn`→month, `period`, `isDefault`, `month`, `status`). Blind indexes turn each into a keyed HMAC, so nothing sensitive is stored in the clear — the same security outcome the SQLite swap targeted.
+- Blind indexes never touch record *contents* (untouched ciphertext). A worst-case bug yields an empty read that is detectable and fully recoverable. A SQLite migration bug can **permanently destroy** data.
+- The SQLite-on-OPFS path additionally needs app-global COOP/COEP cross-origin isolation (can break image/font/embed loading), a whole-DB cipher (an unvetted community WASM binary — supply-chain tension with the threat model — or a hand-rolled page-cipher VFS, the classic silent-corruption trap), and a from-scratch SQL `RepositoryBundle`. None can be safely verified without interactive data-safety sign-off.
+
+What blind indexes do **not** hide (and SQLite-on-OPFS would): store names, record counts, and record UUIDs. These are structural/low-sensitivity. If we later want them covered — and to unify the web and native SQLite engines — Phase 4 remains available as an explicit, separately-signed-off step (COOP/COEP rollout + WASM cipher acceptance + a non-destructive IndexedDB→SQLite copy that keeps IndexedDB as the source of truth until the copy is verified).
 
 ## Phases
 
@@ -51,9 +62,9 @@ Standalone blind indexes were dropped. Blind-indexes-on-IndexedDB and an encrypt
 - **Phase 1b — Wire + migrate.** PIN lock uses the hierarchy. Migrations:
   - *Old PIN users (PBKDF2):* re-derive the old key as extractable, adopt it as the DEK, wrap it with a fresh Argon2id KEK, store v2 material, drop old sentinel. **No record re-encryption** (same key bytes).
   - *No-PIN users (plaintext):* on PIN set, generate a fresh DEK and encrypt all existing plaintext records once.
-- **Phase 2 — Encrypt-all + blind indexes.** Move indexed fields to HMAC blind indexes; encrypt everything else. Schema migration re-indexes existing records.
-- **Phase 3 — Passkey / WebAuthn-PRF.** Register a passkey with PRF, wrap the DEK with its derived KEK, add biometric unlock with PIN fallback and feature detection.
-- **Phase 4 — OPFS + SQLite-WASM (web).** Engine migration behind the existing `RepositoryBundle` interface, with an IndexedDB→SQLite export/import and IndexedDB fallback.
+- **Phase 2 — Passkey / WebAuthn-PRF.** Register a passkey with PRF, wrap the DEK with its derived KEK, add biometric unlock with PIN fallback and feature detection.
+- **Phase 3 — Blind indexes.** Index fields become keyed HMACs (`blindIndexValue`, namespaced per store+field) derived from the DEK via HKDF (`info: "moat/blind-index/v1"`). Envelope version bumps to 2; existing v1 records are re-blinded once on unlock (`reblindAllRecords`, guarded by `moat:blind_index_version`). Queries hash their arguments the same way (`indexQueryKey`); `transactions.listByMonth` switches from a plaintext range to an exact blinded-month match; plaintext-mode (no-PIN) users keep raw index values.
+- **Phase 4 (deferred) — OPFS + SQLite-WASM (web).** Engine unification behind `RepositoryBundle`, with a non-destructive IndexedDB→SQLite copy and IndexedDB fallback. Deferred pending sign-off — see "Storage engine decision".
 
 ## Non-negotiables
 

@@ -34,11 +34,36 @@ import {
   getActiveRecordCryptoKey,
   setActiveRecordCryptoKey,
 } from "./record-crypto";
-import { decryptAllRecords, encryptAllRecordsWithDek } from "./data-migration";
+import { decryptAllRecords, encryptAllRecordsWithDek, reblindAllRecords } from "./data-migration";
 
 const KEY_MATERIAL_KEY = "moat:key_material";
 const LEGACY_PIN_HASH_KEY = "moat:pin_hash";
+// Current on-disk index format. Records written before blind indexes (v1) are
+// re-encrypted to v2 on first unlock; the marker keeps it a one-time pass.
+const BLIND_INDEX_VERSION_KEY = "moat:blind_index_version";
+const BLIND_INDEX_VERSION = "2";
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Migrate plaintext-metadata records to keyed blind indexes if not already
+ * done. Idempotent and safe to retry: the DEK stays active, contents are
+ * untouched, and the marker is only set once every record is re-blinded.
+ */
+async function migrateBlindIndexesIfNeeded(): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (localStorage.getItem(BLIND_INDEX_VERSION_KEY) === BLIND_INDEX_VERSION) {
+    return;
+  }
+  try {
+    await reblindAllRecords();
+    localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
+  } catch (error) {
+    // Leave the marker unset so the next unlock retries; records stay readable.
+    console.warn("Moat: blind-index migration deferred; will retry on next unlock.", error);
+  }
+}
 
 type StoredKeyMaterial = {
   version: 2;
@@ -214,6 +239,8 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         await encryptAllRecordsWithDek(dek); // activates the DEK on success
         writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek) });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+        // Records are written v2 (blinded) from the start, so mark it done.
+        localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
       } catch {
         setActiveRecordCryptoKey(null);
         return false;
@@ -270,6 +297,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(dek);
+      await migrateBlindIndexesIfNeeded();
       setLockState({ status: "unlocked" });
       resetInactivityTimer();
       return true;
@@ -310,6 +338,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     await decryptAllRecords();
     localStorage.removeItem(KEY_MATERIAL_KEY);
     localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+    localStorage.removeItem(BLIND_INDEX_VERSION_KEY);
     writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
     setHasPasskey(false);
     setLockState({ status: "no_pin" });
@@ -358,6 +387,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       const dek = await unwrapDekWithPrf(material.passkey, prfOutput);
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(dek);
+      await migrateBlindIndexesIfNeeded();
       setLockState({ status: "unlocked" });
       resetInactivityTimer();
       return true;
