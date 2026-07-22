@@ -68,7 +68,9 @@ Exit criteria: all checks green; no behavior change (these are pure refactors �
 
 Verify each deletion with a project-wide grep before removing (the audit already did one pass; re-verify at PR time).
 
-## Phase 3 — The repository backend unification (highest-value structural fix)
+## Phase 3 — The repository backend unification (highest-value structural fix) — ✅ COMPLETED 2026-07-23 (commit 4fa6570)
+
+> Landed: neutral `store-names.ts`, `StorageAdapter` interface, single `shared.ts` implementation (outbox policy + 17 factories + fault-tolerance policy both backends now inherit), `indexeddb/rekey.ts`, single-sourced `MIGRATION_VERSIONS`, generic lazy proxies, and a 15-case cross-backend contract suite (incl. encrypted-path and local_only suppression). The two repository.ts files: 817 → 226 lines. Accepted limitation: the SQLite side of the contract suite runs against an in-memory fake, not the Kotlin bridge.
 
 **Problem (High/DRY + DIP + resilience-consistency):** the entire repository layer — outbox enqueue policy, unsynced-store list, user-scoped CRUD wrapper, and all 17 entity factories — is duplicated in lockstep between `lib/repositories/indexeddb/repository.ts` (513 lines) and `lib/repositories/sqlite/repository.ts` (304 lines). Sync semantics are security- and correctness-sensitive; nothing enforces the two copies stay identical. Additionally:
 
