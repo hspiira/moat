@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { IconAlertTriangle } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { isChunkLoadError, purgeStaleClientAndReload } from "@/lib/pwa/self-heal";
 
 export default function RouteError({
   error,
@@ -16,6 +17,11 @@ export default function RouteError({
   useEffect(() => {
     // Surface the failure for debugging without leaking details to the UI.
     console.error(error);
+    // A stale cached client is the most common cause of a crashed screen —
+    // recover automatically instead of asking the user to clear anything.
+    if (isChunkLoadError(error)) {
+      void purgeStaleClientAndReload();
+    }
   }, [error]);
 
   return (

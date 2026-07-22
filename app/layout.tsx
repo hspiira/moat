@@ -6,6 +6,7 @@ import { PinLockProvider } from "@/lib/security/pin-lock-context";
 import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { AppSelfHeal } from "@/components/app-self-heal";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -96,6 +97,7 @@ export default function RootLayout({
         >
           <PinLockProvider>
             <PwaRegister />
+            <AppSelfHeal />
             <NativeCaptureBridgeRegister />
             <PinLockGate>{children}</PinLockGate>
           </PinLockProvider>

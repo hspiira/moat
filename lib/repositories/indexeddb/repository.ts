@@ -61,6 +61,27 @@ const unsyncedStoreNames = new Set<StoreName>([
   "syncOutbox",
 ]);
 
+/**
+ * Decrypt a batch of records, skipping any that cannot be read (corrupt,
+ * key mismatch, or a mid-session auto-lock) instead of failing the whole
+ * list — so one bad record can never blank an entire page.
+ */
+async function decryptRecords<T>(storeName: StoreName, records: unknown[]): Promise<T[]> {
+  const decrypted = await Promise.all(
+    records.map(async (record): Promise<T | null> => {
+      try {
+        return await decryptRecordFromStorage<T>(record);
+      } catch (error) {
+        const id = (record as { id?: unknown })?.id;
+        console.warn(`Moat: skipped an unreadable ${storeName} record (${String(id)}).`, error);
+        return null;
+      }
+    }),
+  );
+
+  return decrypted.filter((record) => record != null) as T[];
+}
+
 async function readAll<T>(storeName: StoreName): Promise<T[]> {
   const database = await openFinanceDatabase();
 
@@ -74,7 +95,7 @@ async function readAll<T>(storeName: StoreName): Promise<T[]> {
       reject(request.error ?? new Error(`Unable to read records from ${storeName}.`));
   });
 
-  return Promise.all(records.map((record) => decryptRecordFromStorage<T>(record))) as Promise<T[]>;
+  return decryptRecords<T>(storeName, records);
 }
 
 async function readAllByIndex<T>(
@@ -95,7 +116,7 @@ async function readAllByIndex<T>(
       reject(request.error ?? new Error(`Unable to read indexed records from ${storeName}.`));
   });
 
-  return Promise.all(records.map((record) => decryptRecordFromStorage<T>(record))) as Promise<T[]>;
+  return decryptRecords<T>(storeName, records);
 }
 
 async function putOne<T>(storeName: StoreName, entity: T): Promise<T> {
@@ -129,7 +150,12 @@ async function getOne<T>(storeName: StoreName, id: string): Promise<T | null> {
       reject(request.error ?? new Error(`Unable to read record ${id} from ${storeName}.`));
   });
 
-  return decryptRecordFromStorage<T>(record);
+  try {
+    return await decryptRecordFromStorage<T>(record);
+  } catch (error) {
+    console.warn(`Moat: skipped an unreadable ${storeName} record (${id}).`, error);
+    return null;
+  }
 }
 
 async function removeOne(storeName: StoreName, id: string): Promise<void> {
