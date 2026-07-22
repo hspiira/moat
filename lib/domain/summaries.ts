@@ -1,5 +1,5 @@
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
-import { excludeTransfers, isTransferTransaction } from "@/lib/domain/transfers";
+import { excludeTransfers, isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, Category, MonthSummary, Transaction } from "@/lib/types";
 
 function buildSummary(
@@ -14,7 +14,7 @@ function buildSummary(
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const outflow = spendingTransactions
-    .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
+    .filter(isSpendingTransaction)
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const allocatedSavings = spendingTransactions
@@ -38,7 +38,7 @@ function buildSummary(
   const categoryTotals = new Map<string, number>();
 
   for (const transaction of spendingTransactions) {
-    if (transaction.type !== "expense" && transaction.type !== "debt_payment") {
+    if (!isSpendingTransaction(transaction)) {
       continue;
     }
 

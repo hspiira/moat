@@ -1,4 +1,4 @@
-import { isTransferTransaction } from "@/lib/domain/transfers";
+import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, Transaction } from "@/lib/types";
 
 export type AccountTotals = {
@@ -112,7 +112,7 @@ export function getAccountBalanceBreakdown(
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const outflow = spendingTransactions
-    .filter((transaction) => transaction.type === "expense" || transaction.type === "debt_payment")
+    .filter(isSpendingTransaction)
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   const savingsAllocations = spendingTransactions

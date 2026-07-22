@@ -2,14 +2,7 @@
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 export function DashboardBalanceBridge({
   openingBalance,
@@ -63,7 +56,7 @@ export function DashboardBalanceBridge({
                     ? "negative"
                     : "none"
               }
-              value={formatCurrency(Math.abs(Number(amount)))}
+              value={formatMoney(Math.abs(Number(amount)))}
               className="text-sm font-medium"
             />
           </div>

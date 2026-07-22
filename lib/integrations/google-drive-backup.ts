@@ -1,3 +1,5 @@
+import { isBackupFilename } from "@/lib/security/encrypted-backup";
+
 const GOOGLE_GIS_SCRIPT_ID = "moat-google-gis-script";
 const GOOGLE_GIS_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
@@ -142,33 +144,7 @@ export function createGoogleDriveBackupClient(params?: {
   }
 
   async function ensureAccessToken() {
-    if (accessToken) {
-      return accessToken;
-    }
-
-    const client = await ensureTokenClient();
-
-    accessToken = await new Promise<string>((resolve, reject) => {
-      client.callback = (response) => {
-        if (response.error || !response.access_token) {
-          reject(
-            new Error(
-              response.error_description ||
-                response.error ||
-                "Google sign-in did not return an access token.",
-            ),
-          );
-          return;
-        }
-
-        signInAttempted = true;
-        resolve(response.access_token);
-      };
-
-      client.requestAccessToken({ prompt: signInAttempted ? "" : "consent" });
-    });
-
-    return accessToken;
+    return requestAccessToken(signInAttempted ? "" : "consent");
   }
 
   async function requestAccessToken(prompt: "" | "consent"): Promise<string> {
@@ -274,7 +250,7 @@ export function createGoogleDriveBackupClient(params?: {
       };
 
       return (payload.files ?? [])
-        .filter((file) => file.name.startsWith("moat-backup-") && file.name.endsWith(".enc"))
+        .filter((file) => isBackupFilename(file.name))
         .sort((left, right) => right.modifiedTime.localeCompare(left.modifiedTime))
         .map((file) => ({
           fileId: file.id,

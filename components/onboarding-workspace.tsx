@@ -35,7 +35,7 @@ import { MoatMark } from "@/components/navigation/navigation-shared";
 import { InputField } from "@/components/forms/input-field";
 import { OnboardingRecoveryPanel } from "@/components/onboarding-recovery-panel";
 import { SelectField } from "@/components/forms/select-field";
-import { optionsFromRecord } from "@/lib/select-options";
+import { accountTypeOptions, optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -798,21 +798,7 @@ export function OnboardingWorkspace() {
                   id="account-type"
                   label="Account type"
                   value={account.type}
-                  options={defaultAccountTypes.map((type) => ({
-                    value: type,
-                    label:
-                      type === "mobile_money"
-                        ? "Mobile Money"
-                        : type === "bank"
-                          ? "Bank Account"
-                          : type === "sacco"
-                            ? "SACCO"
-                            : type === "investment"
-                              ? "Investment"
-                              : type === "debt"
-                                ? "Debt / Obligation"
-                                : "Cash",
-                  }))}
+                  options={accountTypeOptions(defaultAccountTypes)}
                   onValueChange={(value) =>
                     setAccount((c) => ({ ...c, type: value as Account["type"] }))
                   }

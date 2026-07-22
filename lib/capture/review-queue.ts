@@ -1,5 +1,6 @@
 import { buildStableHash } from "@/lib/hash";
 import type {
+  CaptureConfidenceField,
   CaptureEnvelope,
   CaptureEnvelopeSource,
   CaptureReviewSnapshot,
@@ -9,6 +10,7 @@ import type {
   TransactionSource,
 } from "@/lib/types";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
+import { buildCaptureFieldWarnings } from "@/lib/capture/confidence";
 
 function resolveReviewStatus(candidate: ParsedCaptureCandidate): CaptureReviewItem["status"] {
   if (candidate.duplicate) return "duplicate";
@@ -16,19 +18,22 @@ function resolveReviewStatus(candidate: ParsedCaptureCandidate): CaptureReviewIt
   return "new";
 }
 
+const fieldWarningIssueMessages: Partial<Record<CaptureConfidenceField, string>> = {
+  amount: "Invalid amount",
+  currency: "Missing FX rate",
+};
+
 export function validateCaptureReviewItem(item: Pick<
   CaptureReviewItem,
   "originalAmount" | "currency" | "fxRateToUgx" | "duplicateTransactionId"
 >) {
-  const issues: string[] = [];
-
-  if (!Number.isFinite(item.originalAmount) || item.originalAmount <= 0) {
-    issues.push("Invalid amount");
-  }
-
-  if (item.currency !== "UGX" && (!item.fxRateToUgx || item.fxRateToUgx <= 0)) {
-    issues.push("Missing FX rate");
-  }
+  const issues = buildCaptureFieldWarnings({
+    originalAmount: item.originalAmount,
+    currency: item.currency,
+    fxRateToUgx: item.fxRateToUgx,
+  })
+    .filter((warning) => warning.level === "warning" && warning.field in fieldWarningIssueMessages)
+    .map((warning) => fieldWarningIssueMessages[warning.field] as string);
 
   if (item.duplicateTransactionId) {
     issues.push("Likely duplicate");
@@ -119,6 +124,35 @@ export function createCaptureReviewItem(params: {
   };
 }
 
+export function mapReviewItemToTransactionFields(
+  item: CaptureReviewItem,
+  userId: string,
+  timestamp: string,
+): Omit<Transaction, "id" | "captureEnvelopeId" | "captureReviewItemId"> {
+  return {
+    userId,
+    accountId: item.accountId,
+    type: item.type,
+    amount: Math.abs(item.normalizedAmount),
+    currency: item.currency,
+    originalAmount: Math.abs(item.originalAmount),
+    fxRateToUgx: item.currency === "UGX" ? undefined : item.fxRateToUgx,
+    occurredOn: item.occurredOn,
+    categoryId: item.categoryId,
+    payee: item.payee.trim() || undefined,
+    rawPayee: item.payee.trim() || undefined,
+    note: item.note.trim() || undefined,
+    reconciliationState: "reviewed",
+    source: item.source,
+    messageHash: item.messageHash,
+    parserLabel: item.parserLabel,
+    confidenceScore: item.confidenceScore,
+    reviewedAt: timestamp,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
 export function buildTransactionFromCaptureReviewItem(params: {
   item: CaptureReviewItem;
   userId: string;
@@ -128,28 +162,9 @@ export function buildTransactionFromCaptureReviewItem(params: {
 
   return {
     id: `transaction:${crypto.randomUUID()}`,
-    userId: params.userId,
-    accountId: params.item.accountId,
-    type: params.item.type,
-    amount: Math.abs(params.item.normalizedAmount),
-    currency: params.item.currency,
-    originalAmount: Math.abs(params.item.originalAmount),
-    fxRateToUgx: params.item.currency === "UGX" ? undefined : params.item.fxRateToUgx,
-    occurredOn: params.item.occurredOn,
-    categoryId: params.item.categoryId,
-    payee: params.item.payee.trim() || undefined,
-    rawPayee: params.item.payee.trim() || undefined,
-    note: params.item.note.trim() || undefined,
-    reconciliationState: "reviewed",
-    source: params.item.source,
-    messageHash: params.item.messageHash,
+    ...mapReviewItemToTransactionFields(params.item, params.userId, timestamp),
     captureEnvelopeId: params.item.envelopeId,
     captureReviewItemId: params.item.id,
-    parserLabel: params.item.parserLabel,
-    confidenceScore: params.item.confidenceScore,
-    reviewedAt: timestamp,
-    createdAt: timestamp,
-    updatedAt: timestamp,
   };
 }
 

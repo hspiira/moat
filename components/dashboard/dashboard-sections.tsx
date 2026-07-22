@@ -21,14 +21,7 @@ import type { Account, Transaction } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 type ChartMode = "rate" | "flow" | "allocation";
 
@@ -285,7 +278,7 @@ export function DashboardSavingsOverview({
 
             <p className="text-xs text-foreground/65">
               Tagged savings contributions:{" "}
-              <span className="font-medium text-foreground">{formatCurrency(allocatedSavings)}</span>
+              <span className="font-medium text-foreground">{formatMoney(allocatedSavings)}</span>
             </p>
           </div>
 
@@ -374,7 +367,7 @@ export function DashboardTopSpendingCategories({
               <AmountIndicator
                 tone="negative"
                 sign="negative"
-                value={formatCurrency(category.amount)}
+                value={formatMoney(category.amount)}
                 className="text-base font-semibold"
               />
             </div>
@@ -442,7 +435,7 @@ export function DashboardAccountBalances({
                           ? "negative"
                           : "none"
                     }
-                    value={formatCurrency(account.balance)}
+                    value={formatMoney(account.balance)}
                     className="text-sm font-medium"
                   />
                 </div>

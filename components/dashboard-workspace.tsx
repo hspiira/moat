@@ -15,6 +15,7 @@ import {
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
 import { ErrorStateCard } from "@/components/page-shell/page-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAccountTotals } from "@/lib/domain/accounts";
 import type { UserProfile } from "@/lib/types";
 
 type DashboardWorkspaceProps = {
@@ -69,8 +70,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     { href: "/goals", title: "Set goal" },
   ];
 
-  const activeAccounts = accounts.filter((account) => !account.isArchived);
-  const totalBalance = activeAccounts.reduce((sum, account) => sum + account.balance, 0);
+  const { totalBalance, activeAccounts: activeAccountCount } = getAccountTotals(accounts);
   // Use the first name only so the heading and filter always share one row.
   const firstName = profile.displayName.trim().split(/\s+/)[0] || profile.displayName;
 
@@ -98,7 +98,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
         <>
           <DashboardMoatHero
             totalBalance={totalBalance}
-            accountCount={activeAccounts.length}
+            accountCount={activeAccountCount}
             monthlyOutflow={summary.outflow}
             inflow={summary.inflow}
             outflow={summary.outflow}

@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatMoney } from "@/lib/currency";
 
 type ObligationFormState = {
   name: string;
@@ -40,14 +41,6 @@ const defaultObligationForm: ObligationFormState = {
   linkedAccountId: "",
   payee: "",
 };
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -206,8 +199,8 @@ export function RecurringObligationsPanel({
                 <div className="space-y-0.5">
                   <div className="text-sm text-foreground">{evaluation.obligation.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {formatCurrency(evaluation.expectedAmount)} expected ·{" "}
-                    {formatCurrency(evaluation.matchedAmount)} matched · {evaluation.state}
+                    {formatMoney(evaluation.expectedAmount)} expected ·{" "}
+                    {formatMoney(evaluation.matchedAmount)} matched · {evaluation.state}
                   </div>
                 </div>
                 {isSuggestedRecurringObligation(evaluation.obligation.id) ? (
