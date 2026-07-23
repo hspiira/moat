@@ -128,7 +128,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
           setCategories(storedCategories);
           setTransactions(nextTransactions);
         } catch (loadError) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load ledger.");
+          setError(loadError instanceof Error ? loadError.message : "Couldn't load this account. Please try again.");
         } finally {
           setIsLoading(false);
         }

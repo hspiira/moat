@@ -49,7 +49,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setTransactions(storedTransactions);
       setBudgets(storedBudgets);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load dashboard. Please try again.");
     } finally {
       setIsLoading(false);
     }

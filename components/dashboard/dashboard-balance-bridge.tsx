@@ -33,7 +33,7 @@ export function DashboardBalanceBridge({
           ["Inflow", inflow],
           ["Outflow", -outflow],
           ["Allocated savings", -allocatedSavings],
-          ["Movement", movement],
+          ["Net change", movement],
           ["Closing balance", closingBalance],
         ].map(([label, amount]) => (
           <div

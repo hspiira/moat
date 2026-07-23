@@ -45,7 +45,7 @@ export function AccountBalanceBreakdown({
           Opening <BreakdownAmount amount={breakdown.openingBalance} positiveNeutral />
         </span>
         <span>
-          Movement <BreakdownAmount amount={breakdown.movement} />
+          Net change <BreakdownAmount amount={breakdown.movement} />
         </span>
         {account.type !== "debt" && breakdown.openingBalance < 0 ? (
           <span className="text-destructive">Check opening balance</span>

@@ -310,7 +310,7 @@ export function useTransactionsWorkspace() {
           "",
       }));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load transactions.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load transactions. Please try again.");
     } finally {
       setIsLoading(false);
     }

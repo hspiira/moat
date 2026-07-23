@@ -209,7 +209,7 @@ export function CaptureReviewQueue(props: CaptureReviewQueueProps) {
         </div>
 
         {filteredItems.length === 0 ? (
-          <EmptyState className="py-8">No capture items in this queue.</EmptyState>
+          <EmptyState className="py-8">Nothing waiting for review.</EmptyState>
         ) : (
           <div className="grid gap-3">
             {filteredItems.map((item) => (

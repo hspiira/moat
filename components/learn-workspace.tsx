@@ -62,7 +62,7 @@ export function LearnWorkspace() {
       setResources(sortResources(nextResources));
     } catch (loadError) {
       setError(
-        loadError instanceof Error ? loadError.message : "Unable to load learning resources.",
+        loadError instanceof Error ? loadError.message : "Couldn't load learning resources. Please try again.",
       );
     } finally {
       setIsLoading(false);

@@ -88,7 +88,7 @@ export function useCaptureReviewWorkspace() {
       setTransactionRules(storedRules);
       setCaptureReviewItems(sortByUpdatedAt(storedCaptureReviewItems));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load capture inbox.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load capture inbox. Please try again.");
     } finally {
       setIsLoading(false);
     }

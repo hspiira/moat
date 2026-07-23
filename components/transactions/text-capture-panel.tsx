@@ -135,7 +135,7 @@ export function TextCapturePanel({
 
         {candidates.length === 0 ? (
           <EmptyState className="py-6">
-            Paste one or more messages, separated by blank lines, to build reviewable candidates.
+            Paste one or more money messages (separate each with a blank line) and Moat will read them.
           </EmptyState>
         ) : (
           <div className="grid gap-3">
