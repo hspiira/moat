@@ -334,7 +334,9 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         // Records are written v2 (blinded) from the start, so mark it done.
         localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
       } catch {
-        setActiveRecordCryptoKey(null);
+        // encryptAllRecordsWithDek owns key state on failure: it either rolled
+        // the data back to plaintext (key cleared) or kept the DEK active
+        // because some records are already encrypted with it. Don't force-null.
         return false;
       }
       setLockState({ status: "unlocked" });

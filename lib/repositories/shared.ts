@@ -236,14 +236,15 @@ function createCategoryRepository(adapter: StorageAdapter): CategoryRepository {
   return {
     ...repository,
     async listDefaults(userId) {
-      return hydrateMany<Category>(
+      // Filter in JS rather than via the [userId, isDefault] index: plaintext
+      // records carry a raw boolean isDefault, which is not a valid IndexedDB
+      // key component, so those records never appear in that index at all.
+      const categories = await hydrateMany<Category>(
         adapter,
         "categories",
-        await adapter.listByFields("categories", [
-          { field: "userId", value: userId },
-          { field: "isDefault", value: true },
-        ]),
+        await adapter.listByUser("categories", userId),
       );
+      return categories.filter((category) => category.isDefault);
     },
   };
 }

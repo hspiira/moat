@@ -69,7 +69,7 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
             return (
               <div
                 key={account.id}
-                className="group relative rounded-md border border-border/60 bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/25"
+                className="group relative -mx-4 rounded-none border-y border-border/60 bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/25 sm:mx-0 sm:rounded-md sm:border-x"
               >
                 {/* Header: icon + name/type on the left, balance on the right.
                     The whole card links to the ledger (::after overlay); Edit

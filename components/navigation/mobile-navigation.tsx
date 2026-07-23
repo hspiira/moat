@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { IconLock } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { usePinLock } from "@/lib/security/pin-lock-context";
 import { navItems } from "@/lib/data";
 
 import {
@@ -26,6 +28,7 @@ export function MobileNavigation({
 }) {
   const isPrimaryRoute = isPrimaryMobileRoute(pathname);
   const topBarTitle = getMobileTopBarTitle(pathname);
+  const { hasPinLock, lockState, lock } = usePinLock();
 
   function renderNavButton(href: (typeof mobilePrimaryNav)[number]) {
     const item = navItems.find((entry) => entry.href === href);
@@ -83,7 +86,20 @@ export function MobileNavigation({
             </div>
           </div>
 
-          <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
+          <div className="flex shrink-0 items-center gap-1">
+            {hasPinLock && lockState.status === "unlocked" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Lock Moat now"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                onClick={lock}
+              >
+                <IconLock className="h-4.5 w-4.5" />
+              </Button>
+            ) : null}
+            <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
+          </div>
         </div>
       </div>
 

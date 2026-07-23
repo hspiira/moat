@@ -1,4 +1,4 @@
-import { storeNames, type StoreName } from "@/lib/repositories/indexeddb/client";
+import { storeNames, type StoreName } from "@/lib/repositories/store-names";
 import { createIndexedDbAdapter } from "@/lib/repositories/indexeddb/repository";
 import { hydrateMany } from "@/lib/repositories/shared";
 
@@ -41,8 +41,8 @@ export async function snapshotAllRecords(): Promise<Map<StoreName, unknown[]>> {
 export async function writeAllRecords(snapshot: Map<StoreName, unknown[]>): Promise<void> {
   const adapter = createIndexedDbAdapter();
   for (const [storeName, records] of snapshot) {
-    for (const record of records) {
-      await adapter.upsert(storeName, record as { id: string });
-    }
+    // One replaceAll per store: the store is rewritten in a single IndexedDB
+    // transaction, so a failure can't leave it part-old-key, part-new-key.
+    await adapter.replaceAll(storeName, records as { id: string }[]);
   }
 }

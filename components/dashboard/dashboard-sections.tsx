@@ -59,6 +59,18 @@ function ChartModeTabs({
   );
 }
 
+function getSavingsToneAndSign(
+  hasIncome: boolean,
+  savingsRate: number,
+): { tone: "positive" | "negative" | "neutral"; sign: "positive" | "negative" | "none" } {
+  if (!hasIncome || savingsRate === 0) {
+    return { tone: "neutral", sign: "none" };
+  }
+  return savingsRate > 0
+    ? { tone: "positive", sign: "positive" }
+    : { tone: "negative", sign: "negative" };
+}
+
 export function DashboardSavingsOverview({
   savingsRate,
   hasIncome,
@@ -146,47 +158,71 @@ export function DashboardSavingsOverview({
   function renderFlowChart() {
     return (
       <div className="grid gap-2">
-        {/* Overlapping bars: outflow ghost behind, saved in front — full column width per period */}
-        <div className="grid h-36 grid-cols-6 items-end gap-1.5 lg:h-44 lg:gap-2">
+        {/* Diverging around zero: saved rises when the month built the moat and
+            drops when it drained it; outflow always points down (money out) as
+            muted context. Direction carries the meaning; color reinforces it. */}
+        <div className="relative grid h-36 grid-cols-6 gap-1.5 lg:h-44 lg:gap-2">
+          <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-border/40" />
           {chartSeries.map((point, index) => {
+            const isCurrent = index === chartSeries.length - 1;
+            // Half the plot is above zero, half below, so scale to 50%.
             const outflowPct = Math.max(
-              (point.outflow / maxFlow) * 100,
-              point.outflow === 0 ? 0 : 6,
+              (point.outflow / maxFlow) * 50,
+              point.outflow === 0 ? 0 : 3,
             );
             const savedPct = Math.max(
-              (Math.abs(point.saved) / maxFlow) * 100,
-              point.saved === 0 ? 0 : 6,
+              (Math.abs(point.saved) / maxFlow) * 50,
+              point.saved === 0 ? 0 : 3,
             );
-            const isCurrent = index === chartSeries.length - 1;
-            const savedColor =
-              point.saved >= 0
-                ? isCurrent
-                  ? "bg-foreground"
-                  : "bg-foreground/40"
-                : "bg-destructive";
+            const savedUp = point.saved > 0;
+            const savedColor = savedUp
+              ? isCurrent
+                ? "bg-pos"
+                : "bg-pos/50"
+              : isCurrent
+                ? "bg-neg"
+                : "bg-neg/50";
+            const summaryText = `${point.label}: saved ${formatMoney(point.saved)}, outflow ${formatMoney(point.outflow)}`;
 
             return (
-              // h-full is required: the grid uses items-end, so without an
-              // explicit height the column collapses and the bars' percentage
-              // heights resolve against zero.
-              <div key={point.key} className="relative flex h-full items-end">
-                {/* Outflow — ghost layer behind */}
+              <div key={point.key} className="relative" role="img" aria-label={summaryText} title={summaryText}>
+                {/* Saved — left half of the column, up or down by sign */}
                 <div
-                  className="absolute inset-x-0 bottom-0 bg-destructive/25"
-                  style={{ height: `${outflowPct}%` }}
+                  className={`absolute right-1/2 left-0 mr-px ${savedColor} ${savedUp ? "rounded-t-lg" : "rounded-b-lg"}`}
+                  style={
+                    savedUp
+                      ? { bottom: "50%", height: `${savedPct}%` }
+                      : { top: "50%", height: `${savedPct}%` }
+                  }
                 />
-                {/* Saved — solid layer in front */}
+                {/* Outflow — right half, always downward, muted context */}
                 <div
-                  className={`relative w-full ${savedColor}`}
-                  style={{ height: `${savedPct}%` }}
+                  className={`absolute right-0 left-1/2 ml-px rounded-b-lg ${
+                    isCurrent ? "bg-muted-foreground/40" : "bg-muted-foreground/25"
+                  }`}
+                  style={{ top: "50%", height: `${outflowPct}%` }}
                 />
               </div>
             );
           })}
         </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.7rem] text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-xs bg-pos" />
+            Added to moat
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-xs bg-neg" />
+            Drained
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-xs bg-muted-foreground/40" />
+            Outflow
+          </span>
+        </div>
         <div className={CHART_PERIOD_LABELS_CLASS}>
-          <span>Saved</span>
-          <span>Outflow</span>
+          <span>{chartSeries[0]?.label ?? chartLabel}</span>
+          <span>{chartSeries[chartSeries.length - 1]?.label ?? "Current"}</span>
         </div>
       </div>
     );
@@ -275,24 +311,7 @@ export function DashboardSavingsOverview({
             </div>
 
             <AmountIndicator
-              tone={
-                !hasIncome
-                  ? "neutral"
-                  : savingsRate > 0
-                    ? "positive"
-                    : savingsRate < 0
-                      ? "negative"
-                      : "neutral"
-              }
-              sign={
-                !hasIncome
-                  ? "none"
-                  : savingsRate > 0
-                    ? "positive"
-                    : savingsRate < 0
-                      ? "negative"
-                      : "none"
-              }
+              {...getSavingsToneAndSign(hasIncome, savingsRate)}
               value={hasIncome ? `${Math.round(savingsRate * 100)}%` : "—"}
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />
@@ -391,7 +410,7 @@ export function DashboardTopSpendingCategories({
           categories.map((category, index) => (
             <div
               key={category.categoryId}
-              className={`flex items-center justify-between gap-4 border px-4 py-3 ${
+              className={`-mx-4 flex items-center justify-between gap-4 border-y px-4 py-3 sm:mx-0 sm:border-x ${
                 index === 0
                   ? "moat-panel-mint border-border/20"
                   : index === 1
@@ -443,7 +462,7 @@ export function DashboardAccountBalances({
           accounts.map((account, index) => (
             <div
               key={account.id}
-              className={`grid gap-2 border px-4 py-3 ${
+              className={`-mx-4 grid gap-2 border-y px-4 py-3 sm:mx-0 sm:border-x ${
                 index % 2 === 0 ? "moat-panel-sage border-border/20" : "bg-muted/20 border-border/20"
               }`}
             >

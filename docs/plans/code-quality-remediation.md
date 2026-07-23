@@ -108,6 +108,16 @@ Verify each deletion with a project-wide grep before removing (the audit already
 - **Capture source adapters** — replace the four near-identical adapter files with one parameterized factory.
 - **Shared UI extractions** — `FormCardShell` (3 forms), `PinInputField` (4 blocks in `backup-panel.tsx`), `useFormSheet` (2 workspaces).
 
+## Phase 6 — Follow-ups (from final review + external review batch)
+
+Done 2026-07-23 (external review batch): onboarding profile-save reordering, atomic per-store rekey writes, `listDefaults` boolean-key fix (JS filter — the index can't hold plaintext boolean keys), savings tone/sign helper, pure `pushDigit` updater, priority-sorted insights, re-key failure rollback in `data-migration.ts`, `StoreName` imports moved to `store-names.ts`.
+
+Remaining, deliberately deferred:
+- **4.2 pin-lock-context decomposition** — extract a React-free `key-material-store.ts` (~150 lines), fold the local `base64ToUint8Array` into `codec.ts`. Do when pin-lock feature work quiets down.
+- **OAuth prompt ternary** (`google-drive-backup.ts`) — evaluated pre-await; only observable if `signOut` races the first token request. Fold into any future Drive work.
+- **U+FFFF literal** (`indexeddb/repository.ts`) — cosmetic; edit-tooling escape-mangling makes the fix riskier than the wart. Leave until that file is next touched.
+- **Kotlin `listByField`** — unreachable from TS since Phase 2; remove next time the Android shell is device-tested.
+
 ## Sequencing & effort
 
 | Phase | Effort | Risk | Depends on |

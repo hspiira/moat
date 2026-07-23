@@ -56,7 +56,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
             return (
               <div
                 key={goal.id}
-                className="rounded-md border border-border/60 bg-card px-4 py-4"
+                className="-mx-4 rounded-none border-y border-border/60 bg-card px-4 py-4 sm:mx-0 sm:rounded-md sm:border-x"
               >
                 <div className="flex items-center gap-3">
                   <MoatRing

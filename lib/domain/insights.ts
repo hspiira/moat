@@ -143,5 +143,8 @@ export function getMonthlyInsights(
     (insight): insight is Omit<MonthlyInsight, "userId"> => insight !== null,
   );
 
-  return insights.slice(0, MAX_INSIGHTS);
+  // Most important first (lowest priority number), so the cap never drops a
+  // high-priority insight in favor of a lower one that merely ran earlier.
+  // Sort is stable, so equal priorities keep rule order.
+  return insights.sort((left, right) => left.priority - right.priority).slice(0, MAX_INSIGHTS);
 }
