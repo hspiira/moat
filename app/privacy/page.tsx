@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: "How Moat collects, stores, and protects your financial data.",
 };
 
-const LAST_UPDATED = "06-04-2026";
-const CONTACT_EMAIL = "privacy@moat.local";
+const LAST_UPDATED = "6 April 2026";
+const CONTACT_URL = "https://github.com/hspiira/moat/issues";
 
 const sections = [
   {
@@ -23,9 +23,9 @@ const sections = [
       <>
         <p>
           Moat is a personal finance application designed for individuals and households in
-          Uganda. For privacy enquiries, contact{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4">
-            {CONTACT_EMAIL}
+          Uganda. For privacy enquiries, open an issue on the{" "}
+          <a href={CONTACT_URL} className="underline underline-offset-4" target="_blank" rel="noreferrer">
+            project&apos;s GitHub
           </a>
           .
         </p>
@@ -171,9 +171,9 @@ const sections = [
     content: (
       <>
         <p>
-          For privacy questions or data requests, contact{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-4">
-            {CONTACT_EMAIL}
+          For privacy questions or data requests, open an issue on the{" "}
+          <a href={CONTACT_URL} className="underline underline-offset-4" target="_blank" rel="noreferrer">
+            project&apos;s GitHub
           </a>
           .
         </p>

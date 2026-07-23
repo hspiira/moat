@@ -106,7 +106,7 @@ export function SettingsWorkspace() {
             Privacy Policy
           </Link>
           {" · "}
-          All data is stored locally on your device and never transmitted to any server.
+          Your data stays on this device unless you turn on cloud backup or sync.
         </div>
       </section>
     </div>

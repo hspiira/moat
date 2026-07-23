@@ -59,16 +59,37 @@ function ChartModeTabs({
   );
 }
 
-function getSavingsToneAndSign(
+/**
+ * Present the savings rate as a headline. A raw percentage beyond ±100% reads
+ * as absurd (spending 5× income shows "-400%"), so deep deficits switch to a
+ * plain multiple of income spent.
+ */
+function describeSavingsRate(
   hasIncome: boolean,
   savingsRate: number,
-): { tone: "positive" | "negative" | "neutral"; sign: "positive" | "negative" | "none" } {
-  if (!hasIncome || savingsRate === 0) {
-    return { tone: "neutral", sign: "none" };
+): {
+  value: string;
+  tone: "positive" | "negative" | "neutral";
+  sign: "positive" | "negative" | "none";
+  note: string | null;
+} {
+  if (!hasIncome) {
+    return { value: "—", tone: "neutral", sign: "none", note: null };
   }
-  return savingsRate > 0
-    ? { tone: "positive", sign: "positive" }
-    : { tone: "negative", sign: "negative" };
+  if (savingsRate === 0) {
+    return { value: "0%", tone: "neutral", sign: "none", note: null };
+  }
+  if (savingsRate > 0) {
+    return { value: `${Math.round(savingsRate * 100)}%`, tone: "positive", sign: "positive", note: null };
+  }
+  // Deficit. Below -100% the percentage stops being meaningful, so show how
+  // many times income was spent instead (outflow / income = 1 - rate).
+  if (savingsRate <= -1) {
+    const multiple = 1 - savingsRate;
+    const label = multiple >= 10 ? String(Math.round(multiple)) : multiple.toFixed(1).replace(/\.0$/, "");
+    return { value: `${label}×`, tone: "negative", sign: "none", note: "Spent this many times your income this period." };
+  }
+  return { value: `${Math.round(savingsRate * 100)}%`, tone: "negative", sign: "negative", note: null };
 }
 
 export function DashboardSavingsOverview({
@@ -85,6 +106,8 @@ export function DashboardSavingsOverview({
   chartSeries: DashboardChartPoint[];
 }) {
   const [chartMode, setChartMode] = useState<ChartMode>("flow");
+
+  const savings = describeSavingsRate(hasIncome, savingsRate);
 
   const maxRate = useMemo(
     () => Math.max(...chartSeries.map((point) => Math.abs(point.savingsRate)), 0.1),
@@ -311,14 +334,16 @@ export function DashboardSavingsOverview({
             </div>
 
             <AmountIndicator
-              {...getSavingsToneAndSign(hasIncome, savingsRate)}
-              value={hasIncome ? `${Math.round(savingsRate * 100)}%` : "—"}
+              tone={savings.tone}
+              sign={savings.sign}
+              value={savings.value}
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />
 
             <p className="text-xs text-foreground/65">
               {hasIncome ? (
                 <>
+                  {savings.note ? <>{savings.note} </> : null}
                   Tagged savings contributions:{" "}
                   <span className="font-medium text-foreground">
                     {formatMoney(allocatedSavings)}

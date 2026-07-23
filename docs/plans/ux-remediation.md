@@ -17,18 +17,18 @@ Work phase by phase. Mark each item ✅ with the commit hash when done. An item 
 
 ---
 
-## Phase 0 — Trust-breaking bugs (do first)
+## Phase 0 — Trust-breaking bugs (do first) — ✅ COMPLETED 2026-07-23
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 0.1 | App renders **blank forever for any user without a PIN** — `PinLockGate` lost the `no_pin` branch in the unlock-animation rewrite; `showApp` only covered `unlocked`/`unlocking` | `components/pin-lock-gate.tsx` | `showApp` includes `no_pin` | ✅ fixed (uncommitted, verify + commit with Phase 0) |
-| 0.2 | **Budget coverage math wrong**: summary "Spent"/"Remaining" compares allocation of *budgeted categories only* against **all** monthly spending → red "Remaining −1,270,000" even when every envelope is under budget | `lib/domain/budgets.ts:67-88` (`getBudgetCoverage`) | Count only spending in budgeted categories for the summary block (per-envelope rows at `:49` are already correct); add regression test | |
-| 0.3 | **“−400%” savings rate** rendered as the giant hero stat; “Saved −USh 1,400,000 · −150%” double-negative framing | `components/dashboard/*` savings-rate stat (dashboard-sections / savings overview) | Clamp/reframe extreme values (e.g. below −100% → "Spent 5× income this period"); never headline a raw percentage beyond ±100% | |
-| 0.4 | Settings claims PIN uses **PBKDF2**; it is Argon2id since the key-hierarchy migration — stale, contradicts the section header two cards above | `components/settings/pin-lock-panel.tsx:89-90` | Drop the algorithm name entirely: "Your PIN never leaves this device." | |
-| 0.5 | Privacy policy contact is a non-routable placeholder `privacy@moat.local`; "Last updated 06-04-2026" is ambiguous DD-MM vs MM-DD | `app/privacy/page.tsx:14-16` | Real address (or remove until one exists); unambiguous date ("4 June 2026") | |
-| 0.6 | Settings footer absolutist claim "never transmitted to any server" sits beside a Hosted-sync panel that contradicts it | `components/settings-workspace.tsx:109-110` | Reword to match reality ("stays on this device unless you turn on sync or cloud backup") | |
+| 0.1 | App renders **blank forever for any user without a PIN** — `PinLockGate` lost the `no_pin` branch in the unlock-animation rewrite; `showApp` only covered `unlocked`/`unlocking` | `components/pin-lock-gate.tsx` | `showApp` includes `no_pin` | ✅ commit a04f7a7 (verified fresh-profile browser) |
+| 0.2 | **Budget coverage math wrong**: summary "Spent"/"Remaining" compares allocation of *budgeted categories only* against **all** monthly spending → red "Remaining −1,270,000" even when every envelope is under budget | `lib/domain/budgets.ts:67-88` (`getBudgetCoverage`) | Count only spending in budgeted categories for the summary block (per-envelope rows at `:49` are already correct); add regression test | ✅ done + regression test "excludes spending in unbudgeted categories from coverage" |
+| 0.3 | **“−400%” savings rate** rendered as the giant hero stat; “Saved −USh 1,400,000 · −150%” double-negative framing | `components/dashboard/*` savings-rate stat (dashboard-sections / savings overview) | Clamp/reframe extreme values (e.g. below −100% → "Spent 5× income this period"); never headline a raw percentage beyond ±100% | ✅ done — `describeSavingsRate` caps at ±100%, deep deficit shows "5×" + note; verified in browser. (The "Saved" stat card's −150% is a period-over-period delta, not the rate — left for Phase 4.10 compact stat row.) |
+| 0.4 | Settings claims PIN uses **PBKDF2**; it is Argon2id since the key-hierarchy migration — stale, contradicts the section header two cards above | `components/settings/pin-lock-panel.tsx:89-90` | Drop the algorithm name entirely: "Your PIN never leaves this device." | ✅ done |
+| 0.5 | Privacy policy contact is a non-routable placeholder `privacy@moat.local`; "Last updated 06-04-2026" is ambiguous DD-MM vs MM-DD | `app/privacy/page.tsx:14-16` | Real address (or remove until one exists); unambiguous date | ✅ done — contact → real GitHub issues link (no fabricated email); date → "6 April 2026" |
+| 0.6 | Settings footer absolutist claim "never transmitted to any server" sits beside a Hosted-sync panel that contradicts it | `components/settings-workspace.tsx:109-110` | Reword to match reality ("stays on this device unless you turn on sync or cloud backup") | ✅ done |
 
-Exit criteria: regression test for 0.2; fresh-profile browser shows a working app with no PIN; screenshots of dashboard show no ±>100% headline stat.
+Exit criteria: ✅ regression test for 0.2; ✅ fresh-profile browser shows a working app with no PIN; ✅ dashboard shows no ±>100% headline stat; ✅ tsc/lint/143 tests/build green.
 
 ---
 
@@ -217,7 +217,7 @@ These were verified good; do not regress them during the phases above.
 
 | Phase | Theme | Items | Status |
 | --- | --- | --- | --- |
-| 0 | Trust-breaking bugs | 6 | ⬜ (0.1 fixed, uncommitted) |
+| 0 | Trust-breaking bugs | 6 | ✅ done 2026-07-23 |
 | 1 | Destructive safety & feedback | 7 | ⬜ |
 | 2 | Validation | 6 | ⬜ |
 | 3 | De-scope undeliverable surfaces | 6 | ⬜ |

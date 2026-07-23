@@ -89,6 +89,35 @@ describe("budget domain", () => {
     });
   });
 
+  it("excludes spending in unbudgeted categories from coverage", () => {
+    // Spending in a category with no budget must not count against the
+    // allocation, or "remaining" goes negative even when every envelope holds.
+    const withUnbudgetedSpend: Transaction[] = [
+      ...transactions,
+      {
+        id: "tx:food",
+        userId: "user:1",
+        accountId: "account:bank",
+        type: "expense",
+        amount: 900000,
+        currency: "UGX",
+        originalAmount: 900000,
+        occurredOn: "2026-04-04",
+        categoryId: "cat:food", // no budget for this category
+        reconciliationState: "posted",
+        source: "manual",
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+    ];
+
+    expect(getBudgetCoverage(budgets, withUnbudgetedSpend)).toEqual({
+      allocated: 520000,
+      spent: 300000, // only the budgeted rent spend, not the 900k food
+      remaining: 220000,
+    });
+  });
+
   it("tracks budgets against concrete income events", () => {
     expect(getIncomeFundingSummaries(budgets, transactions)).toEqual([
       {
