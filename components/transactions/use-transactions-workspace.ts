@@ -44,7 +44,7 @@ import {
   defaultTransactionForm,
   type TransactionFormState,
 } from "./transaction-form";
-import type { CaptureIntent } from "./capture-intent-panel";
+export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import { buildManualTransaction, buildTransferPair } from "./transaction-builder";
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";

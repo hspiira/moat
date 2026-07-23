@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { CaptureIntentPanel } from "./transactions/capture-intent-panel";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
 import { TransactionForm } from "./transactions/transaction-form";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
@@ -57,9 +56,7 @@ export function TransactionsCaptureWorkspace() {
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
-      <div className="grid gap-5">
-        <CaptureIntentPanel intent={workspace.captureIntent} />
-
+      <div className="grid gap-4">
         {/* Method switcher — swaps the form in place, no extra navigation. */}
         <div
           role="tablist"
@@ -87,6 +84,7 @@ export function TransactionsCaptureWorkspace() {
 
         {method === "manual" ? (
           <TransactionForm
+            bare
             accounts={workspace.accounts}
             categories={workspace.categories}
             form={workspace.transactionForm}

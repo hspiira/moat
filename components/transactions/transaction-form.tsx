@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
@@ -68,6 +68,8 @@ type Props = {
   onCancelEdit: () => void;
   /** When true, render just the form for use inside a sheet (no card chrome). */
   embedded?: boolean;
+  /** When true, render with no chrome at all — the page header carries the context. */
+  bare?: boolean;
 };
 
 export function TransactionForm({
@@ -83,6 +85,7 @@ export function TransactionForm({
   onSubmit,
   onCancelEdit,
   embedded,
+  bare,
 }: Props) {
   const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
   const normalizedUgxAmount = useMemo(
@@ -93,15 +96,59 @@ export function TransactionForm({
   const showFxFields = form.currency !== "UGX";
   const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
 
+  // Payee, note, and currency are the rare fields; they stay collapsed until
+  // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
+  // deep link or an edit populates one of them.
+  const hasDetails = Boolean(form.payee || form.note || form.currency !== "UGX");
+  const [detailsOpen, setDetailsOpen] = useState(hasDetails);
+  const [seenHasDetails, setSeenHasDetails] = useState(hasDetails);
+  if (hasDetails !== seenHasDetails) {
+    setSeenHasDetails(hasDetails);
+    if (hasDetails) setDetailsOpen(true);
+  }
+
   const content = (
     <form className="grid gap-4" onSubmit={onSubmit}>
-          {embedded ? null : (
-            <LocalSaveFeedback
-              isSubmitting={isSubmitting}
-              lastSavedAt={lastSavedAt}
-              successMessage={successMessage}
-            />
-          )}
+          <InputField
+            id="tx-amount"
+            label={`Amount (${form.currency})`}
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
+            required
+          />
+
+          {showFxFields ? (
+            <>
+              <InputField
+                id="tx-fx-rate"
+                label="Exchange rate to UGX"
+                inputMode="decimal"
+                value={form.fxRateToUgx}
+                onChange={(e) =>
+                  onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
+                }
+                placeholder="e.g. 3700"
+                required={showFxFields}
+              />
+              <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
+                {hasValidNormalizedAmount ? (
+                  <>
+                    Saved as{" "}
+                    <span className="text-foreground">
+                      {formatMoney(normalizedUgxAmount, "UGX")}
+                    </span>
+                    {" "}from {formatMoney(Number(form.amount || 0), form.currency)}.
+                  </>
+                ) : (
+                  "Enter a valid exchange rate to save this in UGX."
+                )}
+                {rememberedFxHint ? (
+                  <div className="mt-1 text-[11px] text-foreground/72">{rememberedFxHint}</div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
 
           <div className="grid gap-2">
             <SelectField
@@ -156,71 +203,6 @@ export function TransactionForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <SelectField
-              id="tx-currency"
-              label="Currency"
-              value={form.currency}
-              options={optionsFromRecord(supportedCurrencyOptionLabels)}
-              onValueChange={(value) =>
-                onFormChange((current) => ({
-                  ...current,
-                  currency: value as SupportedCurrency,
-                  fxRateToUgx: value === "UGX" ? "" : current.fxRateToUgx,
-                }))
-              }
-            />
-          </div>
-
-          <InputField
-            id="tx-payee"
-            label="Payee / source"
-            value={form.payee}
-            onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
-            placeholder="Optional"
-          />
-
-          <InputField
-            id="tx-amount"
-            label={`Amount (${form.currency})`}
-            inputMode="decimal"
-            value={form.amount}
-            onChange={(e) => onFormChange((c) => ({ ...c, amount: e.target.value }))}
-            required
-          />
-
-          {showFxFields ? (
-            <>
-              <InputField
-                id="tx-fx-rate"
-                label="FX rate to UGX"
-                inputMode="decimal"
-                value={form.fxRateToUgx}
-                onChange={(e) =>
-                  onFormChange((current) => ({ ...current, fxRateToUgx: e.target.value }))
-                }
-                placeholder="e.g. 3700"
-                required={showFxFields}
-              />
-              <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
-                {hasValidNormalizedAmount ? (
-                  <>
-                    Posts to books as{" "}
-                    <span className="text-foreground">
-                      {formatMoney(normalizedUgxAmount, "UGX")}
-                    </span>
-                    {" "}from {formatMoney(Number(form.amount || 0), form.currency)}.
-                  </>
-                ) : (
-                  "Enter a valid FX rate to post the transaction in UGX."
-                )}
-                {rememberedFxHint ? (
-                  <div className="mt-1 text-[11px] text-foreground/72">{rememberedFxHint}</div>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-
           <DatePickerField
             id="tx-date"
             label="Date"
@@ -228,21 +210,70 @@ export function TransactionForm({
             onChange={(v) => onFormChange((c) => ({ ...c, occurredOn: v }))}
           />
 
-          <TextareaField
-            id="tx-note"
-            label="Note"
-            value={form.note}
-            onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
-            placeholder="Optional"
-            className="min-h-16"
-          />
+          {detailsOpen ? (
+            <div className="grid gap-4 border-t border-border/30 pt-4">
+              <InputField
+                id="tx-payee"
+                label="Payee / source"
+                value={form.payee}
+                onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+                placeholder="Optional"
+              />
+
+              <div className="grid gap-2">
+                <SelectField
+                  id="tx-currency"
+                  label="Currency"
+                  value={form.currency}
+                  options={optionsFromRecord(supportedCurrencyOptionLabels)}
+                  onValueChange={(value) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      currency: value as SupportedCurrency,
+                      fxRateToUgx: value === "UGX" ? "" : current.fxRateToUgx,
+                    }))
+                  }
+                />
+              </div>
+
+              <TextareaField
+                id="tx-note"
+                label="Note"
+                value={form.note}
+                onChange={(e) => onFormChange((c) => ({ ...c, note: e.target.value }))}
+                placeholder="Optional"
+                className="min-h-16"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
+              className="w-fit text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              Add details — payee, note, currency
+            </button>
+          )}
+
+          {isSubmitting || successMessage ? (
+            <LocalSaveFeedback
+              isSubmitting={isSubmitting}
+              lastSavedAt={lastSavedAt}
+              successMessage={successMessage}
+            />
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} type="submit" size="sm">
+            <Button disabled={isSubmitting} type="submit" className="w-full sm:w-auto">
               {isSubmitting ? "Saving..." : editingId ? "Update" : "Add transaction"}
             </Button>
             {editingId ? (
-              <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={onCancelEdit}
+              >
                 Cancel
               </Button>
             ) : null}
@@ -256,7 +287,7 @@ export function TransactionForm({
     : "Record one money event against one account.";
 
   return (
-    <FormCardShell embedded={embedded} title={title} description={description}>
+    <FormCardShell embedded={embedded} plain={bare} title={title} description={description}>
       {content}
     </FormCardShell>
   );

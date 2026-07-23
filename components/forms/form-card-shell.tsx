@@ -17,6 +17,12 @@ type Props = {
   footer?: ReactNode;
   /** When true, render as a full-bleed panel (for use inside a sheet) instead of a bordered card. */
   embedded?: boolean;
+  /**
+   * When true, render the children with no card or header chrome at all —
+   * for forms on dedicated pages where the page header already says what
+   * the form does.
+   */
+  plain?: boolean;
 };
 
 /**
@@ -24,7 +30,16 @@ type Props = {
  * with an accent header when embedded in a sheet, or a bordered card
  * elsewhere. Both variants share the same accent header treatment.
  */
-export function FormCardShell({ title, description, children, footer, embedded }: Props) {
+export function FormCardShell({ title, description, children, footer, embedded, plain }: Props) {
+  if (plain) {
+    return (
+      <div className="grid gap-4">
+        {children}
+        {footer}
+      </div>
+    );
+  }
+
   if (embedded) {
     return (
       <div className="flex min-h-full flex-col">
