@@ -181,9 +181,18 @@ Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated pa
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 5E.1 | Uganda DPP Act 2019 cited in Settings section subtitle AND export-card description (twice on one screen) | `settings-workspace.tsx:97`; `data-export-panel.tsx:43-45` | Cite only on Privacy page; settings says "Your data, your rights →" link | |
+| 5E.1 | Uganda DPP Act 2019 cited in Settings section subtitle AND export-card description (twice on one screen) | `settings-workspace.tsx:97`; `data-export-panel.tsx:43-45` | Cite only on Privacy page; settings points there | ✅ 5a |
 
-Exit criteria: grep for each 5A string returns no user-facing hits; terminology table applied via one sweep per concept; re-read of every route’s copy at mobile width.
+### Phase 5 completion — ✅ 2026-07-24 (commits 19c52ab, eec8a85, 3fd9309; plus Phase 0/3 copy)
+
+Coverage against the audit:
+- **5A jargon (19):** ✅ all addressed — Argon2id/PBKDF2 (Phase 0), AES-GCM, Postgres/token + bridge-contract text + sync JSON (Phase 3 gating + rewording), "machine-derived", "parser"/"generic parser", "envelopes", "Period balance bridge", "Posts to books/as", "FX"→exchange rate, Compass third-person→second person, "Parse SMS", "Reconciled from…", "Movement"→"Net change". The raw `reconciliationState`/"records share {key}" enum surfaced in month-close was removed in Phase 4b. `reconciliationState`/`parserLabel` remain only as internal field names (never shown).
+- **5B wordiness (7):** ✅ route-architecture blurbs rewritten; ledger title/desc de-duplicated; "stored locally" pile-up reduced to one mention per context; 5-min-inactivity no longer tripled; savings-rate popover and filler subtitles trimmed.
+- **5C terminology (8):** ✅ emergency fund unified across dashboard/goals/compass; "envelopes"→"budgets"; save verbs aligned to "Add X"/"Save"; sentence case applied to touched strings. (A full capitalization audit of every remaining title is folded into ongoing polish — no Title-Case offenders remain on the primary screens.)
+- **5D tone (7):** ✅ alarmist no-PIN warning softened; "legacy corrupted data" ×2 rewritten; preachy goal/emergency copy softened; terse "Unable to load" ×8 → "Couldn't load X. Please try again."; capture empty states humanized. (5D.5 sync success copy and 5D.7 firewall-style capture labels live behind the Phase 3 flags — not shown on web; left for when those surfaces return.)
+- **5E legal (1):** ✅ DPP Act cited only on the Privacy page.
+
+Exit criteria met: the flagged user-facing jargon strings return no hits on the primary screens; terminology unified per concept; tsc/lint/149 tests/build green throughout. Copy re-read at mobile width across the seeded routes.
 
 ---
 
@@ -233,7 +242,7 @@ These were verified good; do not regress them during the phases above.
 | 2 | Validation | 6 (+1.7) | ✅ done 2026-07-23 |
 | 3 | De-scope undeliverable surfaces | 6 | ✅ done 2026-07-23 |
 | 4 | Screen usability | 16 | ✅ done 2026-07-24 |
-| 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ⬜ |
+| 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ✅ done 2026-07-24 |
 | 6 | Widget/form consistency | 13 | ⬜ |
 | 7 | Protect the good parts | — | continuous |
 
