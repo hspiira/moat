@@ -63,7 +63,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconShieldLock}
         title="Security"
-        description="Protect your data on shared devices. Keys are derived in-browser with Argon2id and never sent anywhere."
+        description="Protect your data on shared devices. Your PIN and keys stay on this device and are never sent anywhere."
       >
         <PinLockPanel />
         <PasskeyPanel />
@@ -98,7 +98,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconDatabaseExport}
         title="Your data"
-        description="Export or delete all data stored on this device. These rights are guaranteed under the Uganda Data Protection and Privacy Act 2019."
+        description="Export or delete everything stored on this device. See the Privacy Policy for your rights."
       >
         <DataExportPanel />
         <DeleteAccountPanel />

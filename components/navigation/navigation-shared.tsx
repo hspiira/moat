@@ -91,7 +91,7 @@ export const mobileCaptureActions = [
   {
     href: "/transactions/capture?capture=text",
     label: "Paste text",
-    description: "Parse SMS and notification text.",
+    description: "Read a transaction from an SMS or notification.",
   },
   {
     href: "/transactions/import",

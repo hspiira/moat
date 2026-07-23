@@ -191,7 +191,7 @@ export function CaptureReviewQueue(props: CaptureReviewQueueProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
             <div className="text-sm text-foreground">Capture inbox</div>
-            <div className="text-sm text-muted-foreground">Review machine-derived candidates before they become transactions.</div>
+            <div className="text-sm text-muted-foreground">Check items read from messages before they become transactions.</div>
           </div>
           <div className="flex gap-2">
             {(Object.entries(reviewFilterLabels) as Array<[ReviewFilter, string]>).map(([value, label]) => (

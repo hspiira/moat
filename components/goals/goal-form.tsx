@@ -33,7 +33,7 @@ export const defaultGoalForm: GoalFormState = {
 };
 
 export const goalTypeLabels: Record<GoalType, string> = {
-  emergency_fund: "Emergency Fund",
+  emergency_fund: "Emergency fund",
   rent_buffer: "Rent Buffer",
   school_fees: "School Fees",
   land_savings: "Land Savings",

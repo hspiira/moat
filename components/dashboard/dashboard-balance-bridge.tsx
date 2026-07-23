@@ -22,9 +22,9 @@ export function DashboardBalanceBridge({
   return (
     <Card className="moat-panel-lilac border-border/20 shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">Period balance bridge</CardTitle>
+        <CardTitle className="text-base">How your balance changed</CardTitle>
         <CardDescription className="text-foreground/65">
-          Opening plus movement equals closing for the selected period.
+          Opening balance plus this period&apos;s movement gives your closing balance.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2 text-sm">

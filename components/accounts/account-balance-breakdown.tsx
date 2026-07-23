@@ -90,8 +90,7 @@ export function AccountBalanceBreakdown({
       </div>
       {account.type !== "debt" && breakdown.openingBalance < 0 ? (
         <div className="text-xs text-destructive">
-          Negative opening balance on a non-debt account. Review whether this is intentional or
-          legacy corrupted data.
+          This account has a negative opening balance. Check that it&apos;s correct.
         </div>
       ) : null}
     </div>

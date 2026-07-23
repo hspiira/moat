@@ -129,7 +129,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
 
                 {plan.isBehindSchedule ? (
                   <p className="mt-3 text-xs font-medium text-clay">
-                    This goal is behind schedule — increase contributions to stay on track.
+                    A bit behind schedule for the deadline.
                   </p>
                 ) : (
                   <p className="mt-3 text-xs text-muted-foreground">

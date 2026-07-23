@@ -38,7 +38,7 @@ export function TransactionsLedgerWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="ledger"
       title="Transactions"
-      description="Posted movements first. Capture, import, and review each have their own route."
+      description="Everything you've recorded, newest first."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

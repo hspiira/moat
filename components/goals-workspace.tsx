@@ -109,14 +109,13 @@ export function GoalsWorkspace() {
               />
               <div className="min-w-0 space-y-1.5">
                 <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                  Suggested emergency moat
+                  Suggested emergency fund
                 </p>
                 <div className="font-display text-3xl leading-none font-semibold tracking-tight">
                   <Money amount={emergencyFundSuggestion} tone="neutral" className="font-display" />
                 </div>
                 <p className="max-w-lg text-sm leading-6 text-muted-foreground">
-                  Based on three months of current outflow. Use it as a planning floor, not a
-                  ceiling.
+                  Roughly three months of your current spending — a good starting target.
                 </p>
               </div>
               <div className="space-y-0.5 sm:text-right">

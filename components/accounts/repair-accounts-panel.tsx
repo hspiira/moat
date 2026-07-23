@@ -69,7 +69,7 @@ export function RepairAccountsPanel({
       <AccentCardHeader
         tone="lilac"
         title="Opening balance repair"
-        description="These non-debt accounts have negative opening balances. Review and apply a one-time correction if this came from older corrupted data."
+        description="These non-debt accounts have a negative opening balance. Review them and apply a one-time correction if that isn't right."
       />
       <CardContent className="grid gap-4 p-5">
         {candidates.map(({ account, breakdown }) => {

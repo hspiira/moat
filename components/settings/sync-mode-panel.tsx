@@ -21,7 +21,7 @@ const syncModeOptions: { value: SyncMode; label: string; body: string }[] = [
   {
     value: "hosted_opt_in",
     label: "Hosted sync",
-    body: "Keep using local storage offline, then queue changes for later sync to Postgres when enabled.",
+    body: "Keep working offline; your changes are queued and sent to the cloud when a connection is available.",
   },
 ];
 

@@ -81,7 +81,7 @@ export function TextCapturePanel({
           />
           <InputField
             id="capture-fx"
-            label="Fallback FX to UGX"
+            label="Exchange rate to UGX"
             inputMode="decimal"
             value={fallbackFxRate}
             onChange={(event) => setFallbackFxRate(event.target.value)}

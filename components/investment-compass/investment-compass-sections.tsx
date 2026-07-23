@@ -79,7 +79,7 @@ export function InvestmentMetricCards({
           className="justify-self-center sm:justify-self-start"
         />
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Emergency coverage</p>
+          <p className="text-xs text-muted-foreground">Emergency fund</p>
           <p className="text-xl font-semibold">
             {emergencyFundMonthsCovered.toFixed(1)} month
             {emergencyFundMonthsCovered !== 1 ? "s" : ""}

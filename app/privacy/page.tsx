@@ -83,7 +83,7 @@ const sections = [
         </p>
         <ul className="grid gap-2 text-foreground/80">
           <li>The app can require a PIN to unlock on each session</li>
-          <li>Encrypted backup files are protected with AES-GCM</li>
+          <li>Encrypted backup files are protected with strong, industry-standard encryption</li>
           <li>Derived keys are kept only for the active session and cleared on lock</li>
           <li>Future native shells are intended to use OS key storage such as Keychain or Keystore</li>
         </ul>

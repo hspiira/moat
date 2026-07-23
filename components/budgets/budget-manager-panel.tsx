@@ -124,8 +124,8 @@ export function BudgetManagerPanel({
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
       <AccentCardHeader
         tone="mint"
-        title={`Budget envelopes · ${month}`}
-        description="Allocate monthly spending, link it to income when needed, and manage overspend early."
+        title={`Budgets · ${month}`}
+        description="Set what you plan to spend per category this month, and catch overspending early."
       />
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-3 md:grid-cols-3">

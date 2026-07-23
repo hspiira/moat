@@ -81,7 +81,7 @@ export function TransactionList({
     <Card>
       <CardHeader>
         <CardTitle>Ledger</CardTitle>
-        <CardDescription>Posted movements first. Transfers appear as paired records.</CardDescription>
+        <CardDescription>Newest first. Transfers show as a matched pair.</CardDescription>
       </CardHeader>
       <CardContent className="px-0">
         {transactions.length === 0 ? (
