@@ -100,7 +100,7 @@ Verify each deletion with a project-wide grep before removing (the audit already
 | 4.4 | `lib/capture/review-queue.ts` | Five unrelated responsibilities in one module | Split into `review-item-factory.ts`, `transaction-factory.ts`, `correction-log.ts` (naturally combines with 1.5 and 2.3) |
 | 4.5 | `lib/sync/entity-sync.ts:30-138` | Every syncable entity listed in 3 separate switch/map bodies; forgetting one branch silently no-ops deletes | Single `entityDefinitions: Record<SyncableEntityType, {strategy, upsert, remove}>` map driving all three functions |
 
-## Phase 5 — Lower-priority OCP / polish (opportunistic, bundle with feature work)
+## Phase 5 — Lower-priority OCP / polish (opportunistic, bundle with feature work) — ✅ COMPLETED 2026-07-23 (commit 69758a9)
 
 - **Period config table** — collapse 4 `if (period === ...)` chains in `lib/domain/dashboard.ts` into one `PERIOD_CONFIG` lookup.
 - **Insight rules as a list** — split `getMonthlyInsights` (`lib/domain/insights.ts:13-109`) into `(ctx) => Insight | null` rule functions; name the magic thresholds.
