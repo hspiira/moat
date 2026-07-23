@@ -1,9 +1,6 @@
+import { normalizeCaptureName } from "@/lib/capture/normalizers";
 import type { CapturePipelineCandidate } from "@/lib/capture/types";
 import type { CaptureReviewItem, Transaction } from "@/lib/types";
-
-function normalize(value: string) {
-  return value.trim().toLowerCase();
-}
 
 export function detectCaptureDuplicate(params: {
   candidate: Pick<
@@ -21,9 +18,9 @@ export function detectCaptureDuplicate(params: {
           transaction.occurredOn === params.candidate.occurredOn &&
           transaction.type === params.candidate.type &&
           transaction.amount === params.candidate.normalizedAmount &&
-          normalize(transaction.payee ?? transaction.rawPayee ?? "") ===
-            normalize(params.candidate.payee) &&
-          normalize(transaction.note ?? "") === normalize(params.candidate.note)),
+          normalizeCaptureName(transaction.payee ?? transaction.rawPayee ?? "") ===
+            normalizeCaptureName(params.candidate.payee) &&
+          normalizeCaptureName(transaction.note ?? "") === normalizeCaptureName(params.candidate.note)),
     ) ?? null;
 
   if (matchingTransaction) {
@@ -38,8 +35,8 @@ export function detectCaptureDuplicate(params: {
           item.occurredOn === params.candidate.occurredOn &&
           item.type === params.candidate.type &&
           item.normalizedAmount === params.candidate.normalizedAmount &&
-          normalize(item.payee) === normalize(params.candidate.payee) &&
-          normalize(item.note) === normalize(params.candidate.note)),
+          normalizeCaptureName(item.payee) === normalizeCaptureName(params.candidate.payee) &&
+          normalizeCaptureName(item.note) === normalizeCaptureName(params.candidate.note)),
     ) ?? null;
 
   if (matchingReviewItem) {

@@ -14,6 +14,7 @@ import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
+import { PasskeyPanel } from "./settings/passkey-panel";
 import { PinLockPanel } from "./settings/pin-lock-panel";
 import { SyncModePanel } from "./settings/sync-mode-panel";
 
@@ -60,9 +61,10 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconShieldLock}
         title="Security"
-        description="Protect your data on shared devices. Keys are derived in-browser using PBKDF2 and never sent anywhere."
+        description="Protect your data on shared devices. Keys are derived in-browser with Argon2id and never sent anywhere."
       >
         <PinLockPanel />
+        <PasskeyPanel />
       </SettingsSection>
 
       <SettingsSection

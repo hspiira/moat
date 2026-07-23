@@ -7,7 +7,7 @@ import {
   createEnvelopeFromNativePayload,
   deriveTransactionSourceFromEnvelopeSource,
 } from "@/lib/capture/ingestion";
-import { createCaptureReviewItem } from "@/lib/capture/review-queue";
+import { createCaptureReviewItem, mapReviewItemToTransactionFields } from "@/lib/capture/review-queue";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import type { NativeCapturePayload } from "@/lib/native/capture-bridge";
@@ -35,27 +35,7 @@ function createRulePreview(params: {
 }) {
   const rulePreview: Transaction = {
     id: `transaction:preview:${params.reviewItem.id}`,
-    userId: params.userId,
-    accountId: params.reviewItem.accountId,
-    type: params.reviewItem.type,
-    amount: Math.abs(params.reviewItem.normalizedAmount),
-    currency: params.reviewItem.currency,
-    originalAmount: Math.abs(params.reviewItem.originalAmount),
-    fxRateToUgx:
-      params.reviewItem.currency === "UGX" ? undefined : params.reviewItem.fxRateToUgx,
-    occurredOn: params.reviewItem.occurredOn,
-    categoryId: params.reviewItem.categoryId,
-    payee: params.reviewItem.payee.trim() || undefined,
-    rawPayee: params.reviewItem.payee.trim() || undefined,
-    note: params.reviewItem.note.trim() || undefined,
-    reconciliationState: "reviewed",
-    source: params.reviewItem.source,
-    messageHash: params.reviewItem.messageHash,
-    parserLabel: params.reviewItem.parserLabel,
-    confidenceScore: params.reviewItem.confidenceScore,
-    reviewedAt: params.timestamp,
-    createdAt: params.timestamp,
-    updatedAt: params.timestamp,
+    ...mapReviewItemToTransactionFields(params.reviewItem, params.userId, params.timestamp),
   };
 
   return applyTransactionRules(rulePreview, params.rules)?.proposedTransaction ?? rulePreview;

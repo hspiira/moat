@@ -18,15 +18,7 @@ import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summarie
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
-
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 export function useDashboardWorkspace(profile: UserProfile) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -125,7 +117,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const summaryTiles: SummaryTile[] = [
     {
       label: "Inflow",
-      value: formatCurrency(summary.inflow),
+      value: formatMoney(summary.inflow),
       className: "moat-panel-yellow",
       tone: summary.inflow > 0 ? "positive" : "neutral",
       sign: summary.inflow > 0 ? "positive" : "none",
@@ -153,7 +145,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     },
     {
       label: "Outflow",
-      value: formatCurrency(summary.outflow),
+      value: formatMoney(summary.outflow),
       className: "moat-panel-lilac",
       tone: summary.outflow > 0 ? "negative" : "neutral",
       sign: summary.outflow > 0 ? "negative" : "none",
@@ -181,7 +173,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     },
     {
       label: "Saved",
-      value: formatCurrency(summary.savings),
+      value: formatMoney(summary.savings),
       className: "moat-panel-mint",
       tone: summary.savings > 0 ? "positive" : summary.savings < 0 ? "negative" : "neutral",
       sign: summary.savings > 0 ? "positive" : summary.savings < 0 ? "negative" : "none",

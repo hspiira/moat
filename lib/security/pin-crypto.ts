@@ -8,6 +8,8 @@
  * when the session lock function is called.
  */
 
+import { base64ToBytes, bytesToBase64 } from "@/lib/security/codec";
+
 const PBKDF2_ITERATIONS = 310_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
@@ -21,19 +23,6 @@ export type EncryptedPayload = {
   /** Base64-encoded ciphertext */
   ciphertext: string;
 };
-
-function bufferToBase64(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
-}
-
-function base64ToBuffer(b64: string): ArrayBuffer {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
 
 async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder();
@@ -72,9 +61,9 @@ export async function encryptWithPin<T>(value: T, pin: string): Promise<Encrypte
   const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
 
   return {
-    salt: bufferToBase64(salt.buffer),
-    iv: bufferToBase64(iv.buffer),
-    ciphertext: bufferToBase64(ciphertext),
+    salt: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
   };
 }
 
@@ -83,9 +72,9 @@ export async function encryptWithPin<T>(value: T, pin: string): Promise<Encrypte
  * Throws if the PIN is wrong (AES-GCM authentication tag mismatch).
  */
 export async function decryptWithPin<T>(payload: EncryptedPayload, pin: string): Promise<T> {
-  const salt = new Uint8Array(base64ToBuffer(payload.salt));
-  const iv = base64ToBuffer(payload.iv);
-  const ciphertext = base64ToBuffer(payload.ciphertext);
+  const salt = base64ToBytes(payload.salt);
+  const iv = base64ToBytes(payload.iv);
+  const ciphertext = base64ToBytes(payload.ciphertext);
 
   const key = await deriveKey(pin, salt);
 
@@ -108,10 +97,26 @@ export async function verifyPin(payload: EncryptedPayload, pin: string): Promise
 }
 
 /**
- * Derive a session key from a PIN + salt.
- * Used to gate the session — the caller holds the CryptoKey in memory
- * and discards it on lock/logout.
+ * Re-derive the legacy PBKDF2 key as raw bytes so it can be adopted as the
+ * DEK during migration to the Argon2id key hierarchy. The bytes are identical
+ * to the old non-extractable session key, so existing records stay readable
+ * without re-encryption.
  */
-export async function deriveSessionKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
-  return deriveKey(pin, salt);
+export async function deriveLegacyKeyBytes(pin: string, salt: Uint8Array): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: KEY_LENGTH_BITS },
+    true,
+    ["encrypt", "decrypt"],
+  );
+  const raw = await crypto.subtle.exportKey("raw", key);
+  return new Uint8Array(raw);
 }

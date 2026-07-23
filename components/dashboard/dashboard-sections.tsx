@@ -21,14 +21,7 @@ import type { Account, Transaction } from "@/lib/types";
 import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 type ChartMode = "rate" | "flow" | "allocation";
 
@@ -68,11 +61,13 @@ function ChartModeTabs({
 
 export function DashboardSavingsOverview({
   savingsRate,
+  hasIncome,
   allocatedSavings,
   chartLabel,
   chartSeries,
 }: {
   savingsRate: number;
+  hasIncome: boolean;
   allocatedSavings: number;
   chartLabel: string;
   chartSeries: DashboardChartPoint[];
@@ -171,7 +166,10 @@ export function DashboardSavingsOverview({
                 : "bg-destructive";
 
             return (
-              <div key={point.key} className="relative flex items-end">
+              // h-full is required: the grid uses items-end, so without an
+              // explicit height the column collapses and the bars' percentage
+              // heights resolve against zero.
+              <div key={point.key} className="relative flex h-full items-end">
                 {/* Outflow — ghost layer behind */}
                 <div
                   className="absolute inset-x-0 bottom-0 bg-destructive/25"
@@ -277,15 +275,45 @@ export function DashboardSavingsOverview({
             </div>
 
             <AmountIndicator
-              tone={savingsRate > 0 ? "positive" : savingsRate < 0 ? "negative" : "neutral"}
-              sign={savingsRate > 0 ? "positive" : savingsRate < 0 ? "negative" : "none"}
-              value={`${Math.round(savingsRate * 100)}%`}
+              tone={
+                !hasIncome
+                  ? "neutral"
+                  : savingsRate > 0
+                    ? "positive"
+                    : savingsRate < 0
+                      ? "negative"
+                      : "neutral"
+              }
+              sign={
+                !hasIncome
+                  ? "none"
+                  : savingsRate > 0
+                    ? "positive"
+                    : savingsRate < 0
+                      ? "negative"
+                      : "none"
+              }
+              value={hasIncome ? `${Math.round(savingsRate * 100)}%` : "—"}
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />
 
             <p className="text-xs text-foreground/65">
-              Tagged savings contributions:{" "}
-              <span className="font-medium text-foreground">{formatCurrency(allocatedSavings)}</span>
+              {hasIncome ? (
+                <>
+                  Tagged savings contributions:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatMoney(allocatedSavings)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  No income recorded this period, so the rate can&apos;t be computed. Tagged
+                  savings contributions:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatMoney(allocatedSavings)}
+                  </span>
+                </>
+              )}
             </p>
           </div>
 
@@ -310,12 +338,14 @@ export function DashboardSavingsOverview({
 export function DashboardCashFlowSection({
   summaryTiles,
   savingsRate,
+  hasIncome,
   allocatedSavings,
   chartLabel,
   chartSeries,
 }: {
   summaryTiles: SummaryTile[];
   savingsRate: number;
+  hasIncome: boolean;
   allocatedSavings: number;
   chartLabel: string;
   chartSeries: DashboardChartPoint[];
@@ -324,6 +354,7 @@ export function DashboardCashFlowSection({
     <div className="grid gap-3 xl:grid-cols-[1.35fr_1fr]">
       <DashboardSavingsOverview
         savingsRate={savingsRate}
+        hasIncome={hasIncome}
         allocatedSavings={allocatedSavings}
         chartLabel={chartLabel}
         chartSeries={chartSeries}
@@ -374,7 +405,7 @@ export function DashboardTopSpendingCategories({
               <AmountIndicator
                 tone="negative"
                 sign="negative"
-                value={formatCurrency(category.amount)}
+                value={formatMoney(category.amount)}
                 className="text-base font-semibold"
               />
             </div>
@@ -442,7 +473,7 @@ export function DashboardAccountBalances({
                           ? "negative"
                           : "none"
                     }
-                    value={formatCurrency(account.balance)}
+                    value={formatMoney(account.balance)}
                     className="text-sm font-medium"
                   />
                 </div>

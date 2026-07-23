@@ -14,7 +14,10 @@ import type {
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
+  SyncPushResult,
 } from "@/lib/sync/types";
+
+type SyncConflictStrategy = ReturnType<typeof getConflictStrategy>;
 
 type HostedRecord = SyncPullRecord & {
   lastOutboxId?: string;
@@ -87,6 +90,72 @@ function createServerRecord(params: {
   };
 }
 
+function toPullRecord(record: HostedRecord): SyncPullRecord {
+  return {
+    entityType: record.entityType,
+    entityId: record.entityId,
+    payload: record.payload,
+    deleted: record.deleted,
+    updatedAt: record.updatedAt,
+    serverVersionToken: record.serverVersionToken,
+  };
+}
+
+function resolveConflict(params: {
+  userState: HostedSyncUserState;
+  key: string;
+  strategy: SyncConflictStrategy;
+  existing: HostedRecord;
+  entityType: string;
+  entityId: string;
+  payload: string | null;
+  deleted: boolean;
+  outboxId: string;
+  deviceId?: string;
+}): SyncPushResult {
+  const { userState, key, strategy, existing, outboxId } = params;
+
+  if (strategy === "client_wins") {
+    userState.records[key] = createServerRecord({
+      entityType: params.entityType,
+      entityId: params.entityId,
+      payload: params.payload,
+      deleted: params.deleted,
+      outboxId,
+      deviceId: params.deviceId,
+    });
+    userState.appliedOutboxIds[outboxId] = new Date().toISOString();
+    const current = userState.records[key];
+    return {
+      outboxId,
+      status: "synced",
+      strategy,
+      serverVersionToken: current.serverVersionToken,
+      serverRecord: toPullRecord(current),
+    };
+  }
+
+  if (strategy === "server_wins") {
+    userState.appliedOutboxIds[outboxId] = new Date().toISOString();
+    return {
+      outboxId,
+      status: "synced",
+      strategy,
+      serverVersionToken: existing.serverVersionToken,
+      serverRecord: toPullRecord(existing),
+    };
+  }
+
+  return {
+    outboxId,
+    status: "conflict",
+    strategy,
+    error: "Manual review required before this ledger-affecting record can be synced.",
+    serverVersionToken: existing.serverVersionToken,
+    serverRecord: toPullRecord(existing),
+  };
+}
+
 export function validateSyncPullRequest(input: unknown): SyncPullRequest {
   if (!input || typeof input !== "object") {
     throw new Error("Sync pull payload must be an object.");
@@ -111,11 +180,11 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
   const state = await readState();
   const userState = getUserState(state, request.userId);
 
-  const results = request.items.map((item) => {
+  const results = request.items.map((item): SyncPushResult => {
     if (!isSyncableEntityType(item.entityType)) {
       return {
         outboxId: item.outboxId,
-        status: "failed" as const,
+        status: "failed",
         error: `Unsupported sync entity type: ${item.entityType}`,
       };
     }
@@ -123,59 +192,53 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
     const key = getEntityKey(item.entityType, item.entityId);
     const existing = userState.records[key];
 
+    // Idempotency: a previously applied outbox item replays its stored result.
     if (userState.appliedOutboxIds[item.outboxId]) {
       return {
         outboxId: item.outboxId,
-        status: "synced" as const,
+        status: "synced",
         strategy: getConflictStrategy(item.entityType),
         serverVersionToken: existing?.serverVersionToken,
-        serverRecord: existing
-          ? {
-              entityType: existing.entityType,
-              entityId: existing.entityId,
-              payload: existing.payload,
-              deleted: existing.deleted,
-              updatedAt: existing.updatedAt,
-              serverVersionToken: existing.serverVersionToken,
-            }
-          : undefined,
+        serverRecord: existing ? toPullRecord(existing) : undefined,
       };
     }
 
     const strategy = getConflictStrategy(item.entityType);
-    const payload = item.operation === "remove" ? null : item.payload;
+    const deleted = item.operation === "remove";
+    const payload = deleted ? null : item.payload;
 
+    // Payload validation: an upsert's embedded id must match the entityId.
     if (item.operation === "upsert") {
       try {
         const parsed = JSON.parse(item.payload) as { id?: string };
         if (parsed.id && parsed.id !== item.entityId) {
           return {
             outboxId: item.outboxId,
-            status: "failed" as const,
+            status: "failed",
             error: "Sync payload id does not match entityId.",
           };
         }
       } catch {
         return {
           outboxId: item.outboxId,
-          status: "failed" as const,
+          status: "failed",
           error: "Sync payload is not valid JSON.",
         };
       }
     }
 
     const sameAsServer =
-      existing &&
-      existing.deleted === (item.operation === "remove") &&
-      existing.payload === payload;
+      existing && existing.deleted === deleted && existing.payload === payload;
 
+    // Fast path: nothing on the server yet, or the incoming record already
+    // matches it — store (unless unchanged) and acknowledge without conflict.
     if (!existing || sameAsServer) {
       if (!sameAsServer) {
         userState.records[key] = createServerRecord({
           entityType: item.entityType,
           entityId: item.entityId,
           payload,
-          deleted: item.operation === "remove",
+          deleted,
           outboxId: item.outboxId,
           deviceId: request.device.id,
         });
@@ -185,82 +248,26 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
       const current = userState.records[key];
       return {
         outboxId: item.outboxId,
-        status: "synced" as const,
+        status: "synced",
         strategy,
         serverVersionToken: current?.serverVersionToken,
-        serverRecord: current
-          ? {
-              entityType: current.entityType,
-              entityId: current.entityId,
-              payload: current.payload,
-              deleted: current.deleted,
-              updatedAt: current.updatedAt,
-              serverVersionToken: current.serverVersionToken,
-            }
-          : undefined,
+        serverRecord: current ? toPullRecord(current) : undefined,
       };
     }
 
-    if (strategy === "client_wins") {
-      userState.records[key] = createServerRecord({
-        entityType: item.entityType,
-        entityId: item.entityId,
-        payload,
-        deleted: item.operation === "remove",
-        outboxId: item.outboxId,
-        deviceId: request.device.id,
-      });
-      userState.appliedOutboxIds[item.outboxId] = new Date().toISOString();
-      const current = userState.records[key];
-      return {
-        outboxId: item.outboxId,
-        status: "synced" as const,
-        strategy,
-        serverVersionToken: current.serverVersionToken,
-        serverRecord: {
-          entityType: current.entityType,
-          entityId: current.entityId,
-          payload: current.payload,
-          deleted: current.deleted,
-          updatedAt: current.updatedAt,
-          serverVersionToken: current.serverVersionToken,
-        },
-      };
-    }
-
-    if (strategy === "server_wins") {
-      userState.appliedOutboxIds[item.outboxId] = new Date().toISOString();
-      return {
-        outboxId: item.outboxId,
-        status: "synced" as const,
-        strategy,
-        serverVersionToken: existing.serverVersionToken,
-        serverRecord: {
-          entityType: existing.entityType,
-          entityId: existing.entityId,
-          payload: existing.payload,
-          deleted: existing.deleted,
-          updatedAt: existing.updatedAt,
-          serverVersionToken: existing.serverVersionToken,
-        },
-      };
-    }
-
-    return {
-      outboxId: item.outboxId,
-      status: "conflict" as const,
+    // The incoming record diverges from the server — resolve per strategy.
+    return resolveConflict({
+      userState,
+      key,
       strategy,
-      error: "Manual review required before this ledger-affecting record can be synced.",
-      serverVersionToken: existing.serverVersionToken,
-      serverRecord: {
-        entityType: existing.entityType,
-        entityId: existing.entityId,
-        payload: existing.payload,
-        deleted: existing.deleted,
-        updatedAt: existing.updatedAt,
-        serverVersionToken: existing.serverVersionToken,
-      },
-    };
+      existing,
+      entityType: item.entityType,
+      entityId: item.entityId,
+      payload,
+      deleted,
+      outboxId: item.outboxId,
+      deviceId: request.device.id,
+    });
   });
 
   await writeState(state);

@@ -27,25 +27,81 @@ type SyncableEntityType =
 
 type ConflictStrategy = "client_wins" | "server_wins" | "manual_review";
 
-const entityStrategies: Record<SyncableEntityType, ConflictStrategy> = {
-  userProfiles: "client_wins",
-  categories: "client_wins",
-  investmentProfiles: "client_wins",
-  transactionRules: "client_wins",
-  monthCloses: "server_wins",
-  accounts: "manual_review",
-  transactions: "manual_review",
-  goals: "manual_review",
-  budgets: "manual_review",
-  recurringObligations: "manual_review",
+type EntityDefinition = {
+  strategy: ConflictStrategy;
+  // Resolved values are intentionally discarded by the callers below; the
+  // repository methods return the persisted entity, hence the wide return type.
+  upsert: (repositories: RepositoryBundle, payload: Record<string, unknown>) => Promise<unknown>;
+  remove: (repositories: RepositoryBundle, entityId: string) => Promise<unknown>;
+};
+
+const noop = async () => {};
+
+// Single source of truth for every syncable entity: its conflict strategy plus
+// how a pulled record is applied (upsert) or removed. Adding a new syncable
+// entity means adding exactly one entry here.
+const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
+  userProfiles: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) => repositories.userProfile.save(payload as UserProfile),
+    remove: noop,
+  },
+  accounts: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) => repositories.accounts.upsert(payload as Account),
+    remove: (repositories, entityId) => repositories.accounts.remove(entityId),
+  },
+  transactions: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) => repositories.transactions.upsert(payload as Transaction),
+    remove: (repositories, entityId) => repositories.transactions.remove(entityId),
+  },
+  transactionRules: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) =>
+      repositories.transactionRules.upsert(payload as TransactionRule),
+    remove: (repositories, entityId) => repositories.transactionRules.remove(entityId),
+  },
+  recurringObligations: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) =>
+      repositories.recurringObligations.upsert(payload as RecurringObligation),
+    remove: (repositories, entityId) => repositories.recurringObligations.remove(entityId),
+  },
+  monthCloses: {
+    strategy: "server_wins",
+    upsert: (repositories, payload) => repositories.monthCloses.upsert(payload as MonthClose),
+    remove: (repositories, entityId) => repositories.monthCloses.remove(entityId),
+  },
+  categories: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) => repositories.categories.upsert(payload as Category),
+    remove: (repositories, entityId) => repositories.categories.remove(entityId),
+  },
+  goals: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) => repositories.goals.upsert(payload as Goal),
+    remove: (repositories, entityId) => repositories.goals.remove(entityId),
+  },
+  budgets: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) => repositories.budgets.upsert(payload as BudgetTarget),
+    remove: (repositories, entityId) => repositories.budgets.remove(entityId),
+  },
+  investmentProfiles: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) =>
+      repositories.investmentProfiles.save(payload as InvestmentProfile),
+    remove: noop,
+  },
 };
 
 export function getConflictStrategy(entityType: string): ConflictStrategy {
-  return entityStrategies[entityType as SyncableEntityType] ?? "manual_review";
+  return entityDefinitions[entityType as SyncableEntityType]?.strategy ?? "manual_review";
 }
 
 export function isSyncableEntityType(entityType: string): entityType is SyncableEntityType {
-  return entityType in entityStrategies;
+  return entityType in entityDefinitions;
 }
 
 export async function applyPulledRecord(
@@ -66,39 +122,7 @@ export async function applyPulledRecord(
   }
 
   const payload = JSON.parse(record.payload) as Record<string, unknown>;
-
-  switch (record.entityType) {
-    case "userProfiles":
-      await repositories.userProfile.save(payload as UserProfile);
-      return;
-    case "accounts":
-      await repositories.accounts.upsert(payload as Account);
-      return;
-    case "transactions":
-      await repositories.transactions.upsert(payload as Transaction);
-      return;
-    case "transactionRules":
-      await repositories.transactionRules.upsert(payload as TransactionRule);
-      return;
-    case "recurringObligations":
-      await repositories.recurringObligations.upsert(payload as RecurringObligation);
-      return;
-    case "monthCloses":
-      await repositories.monthCloses.upsert(payload as MonthClose);
-      return;
-    case "categories":
-      await repositories.categories.upsert(payload as Category);
-      return;
-    case "goals":
-      await repositories.goals.upsert(payload as Goal);
-      return;
-    case "budgets":
-      await repositories.budgets.upsert(payload as BudgetTarget);
-      return;
-    case "investmentProfiles":
-      await repositories.investmentProfiles.save(payload as InvestmentProfile);
-      return;
-  }
+  await entityDefinitions[record.entityType].upsert(repositories, payload);
 }
 
 async function removeEntity(
@@ -106,34 +130,5 @@ async function removeEntity(
   entityType: SyncableEntityType,
   entityId: string,
 ) {
-  switch (entityType) {
-    case "userProfiles":
-      return;
-    case "accounts":
-      await repositories.accounts.remove(entityId);
-      return;
-    case "transactions":
-      await repositories.transactions.remove(entityId);
-      return;
-    case "transactionRules":
-      await repositories.transactionRules.remove(entityId);
-      return;
-    case "recurringObligations":
-      await repositories.recurringObligations.remove(entityId);
-      return;
-    case "monthCloses":
-      await repositories.monthCloses.remove(entityId);
-      return;
-    case "categories":
-      await repositories.categories.remove(entityId);
-      return;
-    case "goals":
-      await repositories.goals.remove(entityId);
-      return;
-    case "budgets":
-      await repositories.budgets.remove(entityId);
-      return;
-    case "investmentProfiles":
-      return;
-  }
+  await entityDefinitions[entityType].remove(repositories, entityId);
 }

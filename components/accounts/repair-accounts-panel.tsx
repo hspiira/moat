@@ -15,16 +15,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { formatMoney } from "@/lib/currency";
 
 import { AccountBalanceBreakdown, getRepairRecommendation } from "./account-balance-breakdown";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 type Props = {
   accounts: Account[];
@@ -87,7 +80,7 @@ export function RepairAccountsPanel({
               <div className="space-y-1">
                 <div className="text-sm font-medium text-foreground">{account.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  Recommended opening balance: {formatCurrency(recommended)}
+                  Recommended opening balance: {formatMoney(recommended)}
                 </div>
               </div>
               <AccountBalanceBreakdown account={account} transactions={transactions} />

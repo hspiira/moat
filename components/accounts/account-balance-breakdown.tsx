@@ -6,14 +6,7 @@ import {
   type AccountBalanceBreakdown,
 } from "@/lib/domain/accounts";
 import type { Account, Transaction } from "@/lib/types";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 function BreakdownAmount({
   amount,
@@ -28,7 +21,7 @@ function BreakdownAmount({
         amount < 0 ? "negative" : amount > 0 && !positiveNeutral ? "positive" : "neutral"
       }
       sign={amount < 0 ? "negative" : amount > 0 ? "positive" : "none"}
-      value={formatCurrency(Math.abs(amount))}
+      value={formatMoney(Math.abs(amount))}
       className="text-[11px] font-medium"
     />
   );

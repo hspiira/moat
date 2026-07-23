@@ -124,6 +124,32 @@ describe("reconcileAccountBalances", () => {
     });
   });
 
+  it("counts a category-tagged transfer in the transfers bucket, not spending", () => {
+    const transactions: Transaction[] = [
+      buildTransaction({
+        id: "tx:food",
+        accountId: account.id,
+        type: "expense",
+        amount: 10_000,
+        occurredOn: "2026-04-06",
+        categoryId: "category:food",
+      }),
+      buildTransaction({
+        id: "tx:category-transfer",
+        accountId: account.id,
+        type: "expense",
+        amount: 5_000,
+        occurredOn: "2026-04-07",
+        categoryId: "category:transfers",
+      }),
+    ];
+
+    const breakdown = getAccountBalanceBreakdown(account, transactions);
+
+    expect(breakdown.outflow).toBe(10_000);
+    expect(breakdown.transfers).toBe(5_000);
+  });
+
   it("builds running-balance ledger rows in posting order", async () => {
     const { getLedgerRows } = await import("@/lib/domain/accounts");
 

@@ -4,14 +4,7 @@ import { AmountIndicator } from "@/components/amount-indicator";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { BudgetEnvelope } from "@/lib/domain/budgets";
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-UG", {
-    style: "currency",
-    currency: "UGX",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatMoney } from "@/lib/currency";
 
 export function DashboardBudgetCoverage({
   hasBudgets,
@@ -44,18 +37,18 @@ export function DashboardBudgetCoverage({
             <div className="grid gap-2 border border-border/20 px-4 py-3">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-foreground/72">Allocated</span>
-                <AmountIndicator tone="neutral" sign="none" value={formatCurrency(allocated)} className="text-sm font-medium" />
+                <AmountIndicator tone="neutral" sign="none" value={formatMoney(allocated)} className="text-sm font-medium" />
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-foreground/72">Spent</span>
-                <AmountIndicator tone="negative" sign="negative" value={formatCurrency(spent)} className="text-sm font-medium" />
+                <AmountIndicator tone="negative" sign="negative" value={formatMoney(spent)} className="text-sm font-medium" />
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-foreground/72">Remaining</span>
                 <AmountIndicator
                   tone={remaining > 0 ? "positive" : remaining < 0 ? "negative" : "neutral"}
                   sign={remaining > 0 ? "positive" : remaining < 0 ? "negative" : "none"}
-                  value={formatCurrency(Math.abs(remaining))}
+                  value={formatMoney(Math.abs(remaining))}
                   className="text-sm font-medium"
                 />
               </div>
@@ -82,7 +75,7 @@ export function DashboardBudgetCoverage({
                         ? "negative"
                         : "none"
                   }
-                  value={formatCurrency(Math.abs(envelope.remaining))}
+                  value={formatMoney(Math.abs(envelope.remaining))}
                   className="text-sm font-medium"
                 />
               </div>

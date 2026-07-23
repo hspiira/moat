@@ -1,3 +1,4 @@
+import { isSpendingTransaction } from "@/lib/domain/transfers";
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
 
 export type BudgetEnvelope = {
@@ -31,7 +32,7 @@ export function getBudgetEnvelopes(
   const spendingByCategory = new Map<string, number>();
 
   for (const transaction of transactions) {
-    if (transaction.type !== "expense" && transaction.type !== "debt_payment") {
+    if (!isSpendingTransaction(transaction)) {
       continue;
     }
 
@@ -72,7 +73,7 @@ export function getBudgetCoverage(
     0,
   );
   const spent = transactions.reduce((sum, transaction) => {
-    if (transaction.type !== "expense" && transaction.type !== "debt_payment") {
+    if (!isSpendingTransaction(transaction)) {
       return sum;
     }
 

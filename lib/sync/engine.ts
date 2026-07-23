@@ -13,7 +13,7 @@ function withOutboxUpdate(
   return {
     ...item,
     ...patch,
-    attempts: item.attempts + (patch.status === "syncing" ? 0 : 1),
+    attempts: item.attempts + 1,
     updatedAt: new Date().toISOString(),
   };
 }

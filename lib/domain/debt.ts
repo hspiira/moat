@@ -1,5 +1,9 @@
 import type { Account, Transaction } from "@/lib/types";
 
+const BALANCE_EPSILON = 0.01;
+const MAX_PAYOFF_MONTHS = 600;
+const DEFAULT_MIN_PAYMENT_RATE = 0.03;
+
 export type DebtSummary = {
   accountId: string;
   accountName: string;
@@ -83,7 +87,22 @@ function inferMinimumPayment(account: Account, outstandingBalance: number, avera
     return Math.max(outstandingBalance / remainingMonths + interestOnly, interestOnly);
   }
 
-  return Math.max(outstandingBalance * 0.03 + interestOnly, interestOnly);
+  return Math.max(outstandingBalance * DEFAULT_MIN_PAYMENT_RATE + interestOnly, interestOnly);
+}
+
+function compareDebtsByStrategy(strategy: DebtPayoffStrategy) {
+  return (
+    left: { interestRate: number; balance: number; name: string },
+    right: { interestRate: number; balance: number; name: string },
+  ) => {
+    if (strategy === "avalanche" && left.interestRate !== right.interestRate) {
+      return right.interestRate - left.interestRate;
+    }
+    if (strategy === "snowball" && left.balance !== right.balance) {
+      return left.balance - right.balance;
+    }
+    return left.name.localeCompare(right.name);
+  };
 }
 
 export function getDebtPayments(account: Account, transactions: Transaction[]) {
@@ -187,18 +206,16 @@ export function buildDebtPayoffPlan(
     working.reduce((sum, debt) => sum + debt.inferredMinimumPayment, 0) +
     Math.max(0, extraMonthlyPayment);
 
+  const compareDebts = compareDebtsByStrategy(strategy);
   const sortDebts = () =>
     [...working]
-      .filter((debt) => debt.remaining > 0.01)
-      .sort((left, right) => {
-        if (strategy === "avalanche" && left.interestRate !== right.interestRate) {
-          return right.interestRate - left.interestRate;
-        }
-        if (strategy === "snowball" && left.remaining !== right.remaining) {
-          return left.remaining - right.remaining;
-        }
-        return left.accountName.localeCompare(right.accountName);
-      });
+      .filter((debt) => debt.remaining > BALANCE_EPSILON)
+      .sort((left, right) =>
+        compareDebts(
+          { interestRate: left.interestRate, balance: left.remaining, name: left.accountName },
+          { interestRate: right.interestRate, balance: right.remaining, name: right.accountName },
+        ),
+      );
 
   let totalInterest = 0;
   let totalPaid = 0;
@@ -208,7 +225,7 @@ export function buildDebtPayoffPlan(
     .filter((debt) => debt.warning)
     .map((debt) => `${debt.accountName}: ${debt.warning}`);
 
-  while (working.some((debt) => debt.remaining > 0.01) && months < 600) {
+  while (working.some((debt) => debt.remaining > BALANCE_EPSILON) && months < MAX_PAYOFF_MONTHS) {
     months += 1;
     const ordered = sortDebts();
 
@@ -226,7 +243,7 @@ export function buildDebtPayoffPlan(
     let extraPool = Math.max(0, extraMonthlyPayment);
 
     for (const debt of ordered) {
-      if (debt.remaining <= 0.01) continue;
+      if (debt.remaining <= BALANCE_EPSILON) continue;
 
       const payment = Math.min(debt.remaining, debt.inferredMinimumPayment + extraPool);
       const minimumUsed = Math.min(payment, debt.inferredMinimumPayment);
@@ -234,7 +251,7 @@ export function buildDebtPayoffPlan(
       debt.remaining = Math.max(0, debt.remaining - payment);
       totalPaid += payment;
 
-      if (debt.remaining <= 0.01 && !payoffOrder.includes(debt.accountName)) {
+      if (debt.remaining <= BALANCE_EPSILON && !payoffOrder.includes(debt.accountName)) {
         payoffOrder.push(debt.accountName);
         extraPool += Math.max(0, debt.inferredMinimumPayment - minimumUsed);
       }
@@ -244,7 +261,7 @@ export function buildDebtPayoffPlan(
   return {
     strategy,
     monthlyBudget,
-    months: working.some((debt) => debt.remaining > 0.01) ? null : months,
+    months: working.some((debt) => debt.remaining > BALANCE_EPSILON) ? null : months,
     totalInterest,
     totalPaid,
     payoffOrder,
@@ -259,15 +276,13 @@ export function getDebtRepaymentActions(
   extraMonthlyPayment: number,
 ) {
   const summaries = getDebtPortfolioSummary(accounts, transactions);
-  const sorted = [...summaries].sort((left, right) => {
-    if (strategy === "avalanche" && left.interestRate !== right.interestRate) {
-      return right.interestRate - left.interestRate;
-    }
-    if (strategy === "snowball" && left.outstandingBalance !== right.outstandingBalance) {
-      return left.outstandingBalance - right.outstandingBalance;
-    }
-    return left.accountName.localeCompare(right.accountName);
-  });
+  const compareDebts = compareDebtsByStrategy(strategy);
+  const sorted = [...summaries].sort((left, right) =>
+    compareDebts(
+      { interestRate: left.interestRate, balance: left.outstandingBalance, name: left.accountName },
+      { interestRate: right.interestRate, balance: right.outstandingBalance, name: right.accountName },
+    ),
+  );
 
   return sorted.map<DebtRepaymentAction>((summary, index) => {
     const extraAllocation = index === 0 ? Math.max(0, extraMonthlyPayment) : 0;
