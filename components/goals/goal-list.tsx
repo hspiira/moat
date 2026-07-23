@@ -115,7 +115,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                   <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Monthly target</div>
                     <Money
-                      amount={plan.monthlyContribution}
+                      amount={Math.round(plan.monthlyContribution / 1000) * 1000}
                       tone={plan.isBehindSchedule ? "negative" : "neutral"}
                       className="font-medium"
                     />

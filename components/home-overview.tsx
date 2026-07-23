@@ -137,10 +137,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
                   >
                     <Link href={module.href}>
                       <span className="block">
-                        <span className="block text-[11px] uppercase tracking-[0.18em] text-foreground/65">
-                          {module.stage}
-                        </span>
-                        <span className="mt-2 block text-lg font-semibold text-foreground">
+                        <span className="block text-lg font-semibold text-foreground">
                           {module.title}
                         </span>
                         <span className="mt-2 block text-sm leading-6 text-foreground/75">

@@ -26,9 +26,9 @@ import { formatMoney } from "@/lib/currency";
 type ChartMode = "rate" | "flow" | "allocation";
 
 const CHART_MODES: { value: ChartMode; label: string }[] = [
-  { value: "rate", label: "Rate" },
-  { value: "flow", label: "Flow" },
-  { value: "allocation", label: "Alloc" },
+  { value: "rate", label: "Savings" },
+  { value: "flow", label: "Cash flow" },
+  { value: "allocation", label: "Allocation" },
 ];
 
 const CHART_PERIOD_LABELS_CLASS =
@@ -42,7 +42,7 @@ function ChartModeTabs({
   onChange: (m: ChartMode) => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {CHART_MODES.map(({ value, label }) => (
         <Button
           key={value}
