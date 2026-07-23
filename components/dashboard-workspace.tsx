@@ -111,6 +111,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
           <DashboardCashFlowSection
             summaryTiles={summaryTiles}
             savingsRate={savingsRate}
+            hasIncome={summary.inflow > 0}
             allocatedSavings={summary.allocatedSavings}
             chartLabel={chartLabel}
             chartSeries={chartSeries}

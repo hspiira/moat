@@ -91,7 +91,10 @@ export function getChangePercent(current: number, previous: number): ChangeMetri
 
   return {
     kind: "delta",
-    value: ((current - previous) / previous) * 100,
+    // Divide by |previous| so the sign always follows the direction of the
+    // change; dividing by a negative baseline would flip it (e.g. saved going
+    // from -300k to -1.1M must read as a decrease, not +279%).
+    value: ((current - previous) / Math.abs(previous)) * 100,
   };
 }
 
