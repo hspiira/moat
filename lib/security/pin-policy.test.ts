@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_ATTEMPT_STATE,
   MIN_PIN_LENGTH,
+  getAttemptsUntilLockout,
   getLockoutDurationMs,
   getRemainingLockoutMs,
   isValidPin,
@@ -43,6 +44,19 @@ describe("unlock throttling", () => {
 
   it("caps the lockout at 15 minutes", () => {
     expect(getLockoutDurationMs(50)).toBe(15 * 60 * 1000);
+  });
+
+  it("reports attempts remaining before the first lockout", () => {
+    let state = INITIAL_ATTEMPT_STATE;
+    expect(getAttemptsUntilLockout(state)).toBe(5);
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      state = recordFailedAttempt(state, 1_000 + attempt);
+    }
+    expect(getAttemptsUntilLockout(state)).toBe(1);
+
+    state = recordFailedAttempt(state, 2_000);
+    expect(getAttemptsUntilLockout(state)).toBe(0);
   });
 
   it("counts down the remaining lockout as time passes", () => {

@@ -12,6 +12,8 @@ export function PinLockScreen() {
   const {
     unlock,
     getUnlockLockoutMs,
+    getAttemptsUntilLockout,
+    getCurrentLockoutTotalMs,
     getPinLength,
     completeUnlock,
     hasPasskey,
@@ -22,6 +24,8 @@ export function PinLockScreen() {
     <LockScreen
       unlock={unlock}
       getUnlockLockoutMs={getUnlockLockoutMs}
+      getAttemptsUntilLockout={getAttemptsUntilLockout}
+      getCurrentLockoutTotalMs={getCurrentLockoutTotalMs}
       getPinLength={getPinLength}
       completeUnlock={completeUnlock}
       hasPasskey={hasPasskey}
@@ -29,6 +33,12 @@ export function PinLockScreen() {
       exiting={lockState.status === "unlocking"}
     />
   );
+}
+
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    navigator.vibrate(pattern);
+  }
 }
 
 function formatLockoutMessage(lockoutMs: number): string {
@@ -42,8 +52,11 @@ function formatLockoutMessage(lockoutMs: number): string {
 
 const MAX_PIN_LENGTH = 12;
 
-/** The live padlock: a moat ring with an orbiting accent and a lock that opens. */
-function LockMark({ spinning, open }: { spinning: boolean; open: boolean }) {
+/**
+ * The live padlock: a moat ring with an orbiting accent and a lock that opens.
+ * During a lockout the ring drains, then visibly refills as the wait expires.
+ */
+function LockMark({ spinning, open, progress = 1 }: { spinning: boolean; open: boolean; progress?: number }) {
   return (
     <div className="relative grid place-items-center">
       {open ? (
@@ -54,7 +67,12 @@ function LockMark({ spinning, open }: { spinning: boolean; open: boolean }) {
         />
       ) : null}
 
-      <MoatRing value={1} size={72} thickness={5} ariaLabel={open ? "Unlocked" : "Moat is locked"} />
+      <MoatRing
+        value={progress}
+        size={72}
+        thickness={5}
+        ariaLabel={open ? "Unlocked" : "Moat is locked"}
+      />
 
       {/* Orbiting accent — a slow ambient drift, fast while verifying. */}
       {!open ? (
@@ -63,7 +81,9 @@ function LockMark({ spinning, open }: { spinning: boolean; open: boolean }) {
           className="absolute inset-0"
           style={{ animation: `moat-orbit ${spinning ? "0.8s" : "9s"} linear infinite` }}
         >
-          <span className="absolute top-0.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-primary" />
+          {/* Dot centre sits on the ring's stroke centreline: the 72px ring with
+              5px stroke has its centreline 2.5px in, so a 6px dot starts at -0.5px. */}
+          <span className="absolute top-[-0.5px] left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-clay" />
         </div>
       ) : null}
 
@@ -93,6 +113,8 @@ function LockMark({ spinning, open }: { spinning: boolean; open: boolean }) {
 function LockScreen({
   unlock,
   getUnlockLockoutMs,
+  getAttemptsUntilLockout,
+  getCurrentLockoutTotalMs,
   getPinLength,
   completeUnlock,
   hasPasskey,
@@ -101,6 +123,8 @@ function LockScreen({
 }: {
   unlock: (pin: string) => Promise<boolean>;
   getUnlockLockoutMs: () => number;
+  getAttemptsUntilLockout: () => number;
+  getCurrentLockoutTotalMs: () => number;
   getPinLength: () => number | null;
   completeUnlock: () => void;
   hasPasskey: boolean;
@@ -114,6 +138,10 @@ function LockScreen({
   const [shaking, setShaking] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(() => getUnlockLockoutMs());
   const [pinLength] = useState(() => getPinLength());
+  // Briefly reveal the digit just typed (phone-style), then mask it.
+  const [revealedDigit, setRevealedDigit] = useState<string | null>(null);
+  const revealTimer = useRef<number | null>(null);
+  const autoPromptedBiometric = useRef(false);
 
   // Reveal animation state (driven once `exiting` flips true).
   const [markStyle, setMarkStyle] = useState<React.CSSProperties>();
@@ -172,24 +200,36 @@ function LockScreen({
 
       if (!valid) {
         const nextLockoutMs = getUnlockLockoutMs();
+        const attemptsLeft = getAttemptsUntilLockout();
         setLockoutMs(nextLockoutMs);
-        setError(nextLockoutMs > 0 ? null : "Incorrect PIN. Try again.");
+        setError(
+          nextLockoutMs > 0
+            ? null
+            : attemptsLeft > 0 && attemptsLeft <= 2
+              ? `Incorrect PIN. ${attemptsLeft} ${attemptsLeft === 1 ? "attempt" : "attempts"} left before a temporary lock.`
+              : "Incorrect PIN. Try again.",
+        );
         setPin("");
         setShaking(true);
+        vibrate([30, 60, 30]);
         window.setTimeout(() => setShaking(false), 420);
       }
       setIsChecking(false);
     },
-    [unlock, getUnlockLockoutMs],
+    [unlock, getUnlockLockoutMs, getAttemptsUntilLockout],
   );
 
   const pushDigit = useCallback(
     (digit: string) => {
       if (isChecking || isThrottled || exiting) return;
       setError(null);
+      vibrate(10);
       setPin((current) => {
         if (current.length >= targetLength) return current;
         const next = current + digit;
+        setRevealedDigit(digit);
+        if (revealTimer.current) window.clearTimeout(revealTimer.current);
+        revealTimer.current = window.setTimeout(() => setRevealedDigit(null), 300);
         if (knownLength && next.length === targetLength) {
           void attemptUnlock(next);
         }
@@ -202,7 +242,16 @@ function LockScreen({
   const deleteDigit = useCallback(() => {
     if (isChecking || exiting) return;
     setError(null);
+    setRevealedDigit(null);
     setPin((current) => current.slice(0, -1));
+  }, [isChecking, exiting]);
+
+  const clearAllDigits = useCallback(() => {
+    if (isChecking || exiting) return;
+    setError(null);
+    setRevealedDigit(null);
+    vibrate(20);
+    setPin("");
   }, [isChecking, exiting]);
 
   const handleBiometric = useCallback(async () => {
@@ -213,6 +262,19 @@ function LockScreen({
     if (!ok) setError("Biometric unlock didn't work. Enter your PIN instead.");
     setIsBiometricChecking(false);
   }, [isBiometricChecking, isThrottled, exiting, unlockWithPasskey]);
+
+  // Fire the biometric prompt as soon as the lock screen appears — once per
+  // lock, never after a cancelled/failed attempt (the keypad is the fallback).
+  // Deferred a beat so the screen paints before the OS sheet slides in.
+  useEffect(() => {
+    if (!hasPasskey || isThrottled || exiting || autoPromptedBiometric.current) return;
+    const id = window.setTimeout(() => {
+      if (autoPromptedBiometric.current) return;
+      autoPromptedBiometric.current = true;
+      void handleBiometric();
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [hasPasskey, isThrottled, exiting, handleBiometric]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -234,6 +296,9 @@ function LockScreen({
 
   const canManualSubmit = !knownLength && pin.length >= MIN_PIN_LENGTH && !disabled;
   const dotCount = knownLength ? targetLength : Math.max(pin.length, MIN_PIN_LENGTH);
+  // Ring countdown: drain during a lockout and refill as the wait expires.
+  const lockoutTotalMs = isThrottled ? getCurrentLockoutTotalMs() : 0;
+  const ringProgress = lockoutTotalMs > 0 ? 1 - lockoutMs / lockoutTotalMs : 1;
 
   return (
     <div
@@ -253,7 +318,11 @@ function LockScreen({
           className="transition-transform duration-620"
           style={{ transitionTimingFunction: "cubic-bezier(0.2,0.85,0.25,1)", ...markStyle }}
         >
-          <LockMark spinning={isChecking || (exiting && !opened)} open={opened} />
+          <LockMark
+            spinning={isChecking || (exiting && !opened)}
+            open={opened}
+            progress={ringProgress}
+          />
         </div>
 
         {/* Everything below the padlock fades away as the reveal begins. */}
@@ -273,15 +342,25 @@ function LockScreen({
             role="status"
             aria-label={`${pin.length} of ${knownLength ? targetLength : "several"} digits entered`}
           >
-            {Array.from({ length: dotCount }).map((_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "size-3 rounded-full border transition-colors",
-                  i < pin.length ? "border-primary bg-primary" : "border-input bg-transparent",
-                )}
-              />
-            ))}
+            {Array.from({ length: dotCount }).map((_, i) => {
+              const isRevealed = revealedDigit != null && i === pin.length - 1;
+              return isRevealed ? (
+                <span
+                  key={i}
+                  className="grid size-3 place-items-center font-display text-sm font-semibold tabular-nums text-primary"
+                >
+                  {revealedDigit}
+                </span>
+              ) : (
+                <span
+                  key={i}
+                  className={cn(
+                    "size-3 rounded-full border transition-colors",
+                    i < pin.length ? "border-primary bg-primary" : "border-input bg-transparent",
+                  )}
+                />
+              );
+            })}
           </div>
 
           <div className="mt-4 flex h-5 items-center justify-center text-center text-xs">
@@ -294,7 +373,9 @@ function LockScreen({
                 {error}
               </span>
             ) : isChecking ? (
-              <span className="text-muted-foreground">Verifying…</span>
+              <span className="text-muted-foreground" role="status">
+                Verifying…
+              </span>
             ) : null}
           </div>
 
@@ -327,7 +408,13 @@ function LockScreen({
             </Key>
 
             {pin.length > 0 && !exiting ? (
-              <Key onPress={deleteDigit} disabled={isChecking} variant="ghost" ariaLabel="Delete last digit">
+              <Key
+                onPress={deleteDigit}
+                onLongPress={clearAllDigits}
+                disabled={isChecking}
+                variant="ghost"
+                ariaLabel="Delete last digit (hold to clear all)"
+              >
                 <IconBackspace className="size-6" />
               </Key>
             ) : (
@@ -340,23 +427,57 @@ function LockScreen({
   );
 }
 
+const LONG_PRESS_MS = 550;
+
 function Key({
   children,
   onPress,
+  onLongPress,
   disabled,
   variant = "solid",
   ariaLabel,
 }: {
   children: React.ReactNode;
   onPress: () => void;
+  onLongPress?: () => void;
   disabled?: boolean;
   variant?: "solid" | "ghost";
   ariaLabel?: string;
 }) {
+  const longPressTimer = useRef<number | null>(null);
+  const longPressFired = useRef(false);
+
+  function startLongPress() {
+    if (!onLongPress) return;
+    longPressFired.current = false;
+    longPressTimer.current = window.setTimeout(() => {
+      longPressFired.current = true;
+      onLongPress();
+    }, LONG_PRESS_MS);
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={onPress}
+      onClick={() => {
+        // A completed long-press already acted; swallow the trailing click.
+        if (longPressFired.current) {
+          longPressFired.current = false;
+          return;
+        }
+        onPress();
+      }}
+      onPointerDown={onLongPress ? startLongPress : undefined}
+      onPointerUp={onLongPress ? cancelLongPress : undefined}
+      onPointerLeave={onLongPress ? cancelLongPress : undefined}
+      onContextMenu={onLongPress ? (e) => e.preventDefault() : undefined}
       disabled={disabled}
       aria-label={ariaLabel}
       className={cn(

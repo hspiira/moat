@@ -27,6 +27,15 @@ export const INITIAL_ATTEMPT_STATE: PinAttemptState = {
   lastFailedAt: 0,
 };
 
+/**
+ * Attempts the user can still make before a failure triggers the first
+ * lockout. 1 means the next wrong PIN locks the keypad; 0 means lockouts
+ * have already begun (every further failure re-locks).
+ */
+export function getAttemptsUntilLockout(state: PinAttemptState): number {
+  return Math.max(0, FREE_ATTEMPTS - state.failedCount);
+}
+
 /** Lockout applied after the most recent failure, given the failure count. */
 export function getLockoutDurationMs(failedCount: number): number {
   if (failedCount < FREE_ATTEMPTS) {

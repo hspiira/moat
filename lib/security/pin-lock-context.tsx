@@ -24,6 +24,8 @@ import { getPasskeyPrfOutput, registerPasskey } from "./passkey";
 import { deriveLegacyKeyBytes, verifyPin, type EncryptedPayload } from "./pin-crypto";
 import {
   INITIAL_ATTEMPT_STATE,
+  getAttemptsUntilLockout as getPolicyAttemptsUntilLockout,
+  getLockoutDurationMs,
   getRemainingLockoutMs,
   isValidPin,
   readAttemptState,
@@ -43,6 +45,12 @@ const LEGACY_PIN_HASH_KEY = "moat:pin_hash";
 const BLIND_INDEX_VERSION_KEY = "moat:blind_index_version";
 const BLIND_INDEX_VERSION = "2";
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+// How long the app may stay hidden (backgrounded, screen off, app switcher)
+// before it locks on return. Deliberately much shorter than the inactivity
+// window: leaving the app is a stronger "walked away" signal than idling in it.
+const BACKGROUND_LOCK_MS = 60 * 1000;
+// Locking in one tab locks every tab sharing the origin.
+const LOCK_CHANNEL_NAME = "moat:lock";
 
 /**
  * Migrate plaintext-metadata records to keyed blind indexes if not already
@@ -102,6 +110,13 @@ type PinLockContextValue = {
   unlock: (pin: string) => Promise<boolean>;
   /** Milliseconds until the next unlock attempt is allowed. 0 when not throttled. */
   getUnlockLockoutMs: () => number;
+  /**
+   * Attempts left before a wrong PIN triggers the first lockout. 0 once
+   * lockouts have begun (each further failure re-locks immediately).
+   */
+  getAttemptsUntilLockout: () => number;
+  /** Total duration of the lockout currently in effect, for countdown UI. 0 when none. */
+  getCurrentLockoutTotalMs: () => number;
   /** Digits in the saved PIN, so the lock screen can auto-submit. Null if unknown. */
   getPinLength: () => number | null;
   /** Finish the unlock reveal: transition from `unlocking` to `unlocked`. */
@@ -178,6 +193,38 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   const [lockState, setLockState] = useState<PinLockState>({ status: "initializing" });
   const [hasPasskey, setHasPasskey] = useState(false);
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Wall-clock timestamps: setTimeout is suspended while the device sleeps or
+  // the tab is backgrounded, so elapsed real time must be checked on return.
+  const lastActivityAt = useRef(0);
+  const hiddenAt = useRef<number | null>(null);
+  const lockChannel = useRef<BroadcastChannel | null>(null);
+
+  const applyLock = useCallback((options?: { broadcast?: boolean }) => {
+    setLockState((s) => (s.status === "no_pin" || s.status === "initializing" ? s : { status: "locked" }));
+    setActiveRecordCryptoKey(null);
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current);
+    }
+    if (options?.broadcast !== false) {
+      lockChannel.current?.postMessage({ type: "lock" });
+    }
+  }, []);
+
+  // Mirror locks across tabs sharing this origin.
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(LOCK_CHANNEL_NAME);
+    channel.onmessage = (event: MessageEvent) => {
+      if ((event.data as { type?: string } | null)?.type === "lock") {
+        applyLock({ broadcast: false });
+      }
+    };
+    lockChannel.current = channel;
+    return () => {
+      lockChannel.current = null;
+      channel.close();
+    };
+  }, [applyLock]);
 
   useEffect(() => {
     const hasMaterial =
@@ -190,14 +237,12 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetInactivityTimer = useCallback((): void => {
+    lastActivityAt.current = Date.now();
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
     }
-    inactivityTimer.current = setTimeout(() => {
-      setLockState((s) => (s.status === "unlocked" ? { status: "locked" } : s));
-      setActiveRecordCryptoKey(null);
-    }, INACTIVITY_TIMEOUT_MS);
-  }, []);
+    inactivityTimer.current = setTimeout(() => applyLock(), INACTIVITY_TIMEOUT_MS);
+  }, [applyLock]);
 
   useEffect(() => {
     if (lockState.status !== "unlocked") {
@@ -210,10 +255,38 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       resetInactivityTimer();
     }
 
+    // The timer only fires while the page is running; sleep and backgrounding
+    // suspend it. On any return to the foreground, compare wall-clock time
+    // against both the background threshold and the inactivity window.
+    function handleReturnToForeground() {
+      const now = Date.now();
+      const hiddenFor = hiddenAt.current == null ? 0 : now - hiddenAt.current;
+      hiddenAt.current = null;
+      if (
+        hiddenFor > BACKGROUND_LOCK_MS ||
+        now - lastActivityAt.current > INACTIVITY_TIMEOUT_MS
+      ) {
+        applyLock();
+        return;
+      }
+      resetInactivityTimer();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        hiddenAt.current = Date.now();
+      } else {
+        handleReturnToForeground();
+      }
+    }
+
     resetInactivityTimer();
     for (const event of events) {
       window.addEventListener(event, handleActivity, { passive: true });
     }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handleReturnToForeground);
+    window.addEventListener("focus", handleReturnToForeground);
 
     return () => {
       if (inactivityTimer.current) {
@@ -222,8 +295,11 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       for (const event of events) {
         window.removeEventListener(event, handleActivity);
       }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handleReturnToForeground);
+      window.removeEventListener("focus", handleReturnToForeground);
     };
-  }, [lockState.status, resetInactivityTimer]);
+  }, [lockState.status, resetInactivityTimer, applyLock]);
 
   const setPin = useCallback(
     async (pin: string): Promise<boolean> => {
@@ -273,6 +349,20 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       return 0;
     }
     return getRemainingLockoutMs(readAttemptState(localStorage), Date.now());
+  }, []);
+
+  const getAttemptsUntilLockout = useCallback((): number => {
+    if (typeof window === "undefined") {
+      return Number.POSITIVE_INFINITY;
+    }
+    return getPolicyAttemptsUntilLockout(readAttemptState(localStorage));
+  }, []);
+
+  const getCurrentLockoutTotalMs = useCallback((): number => {
+    if (typeof window === "undefined") {
+      return 0;
+    }
+    return getLockoutDurationMs(readAttemptState(localStorage).failedCount);
   }, []);
 
   const getPinLength = useCallback((): number | null => {
@@ -342,12 +432,8 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   }, [resetInactivityTimer]);
 
   const lock = useCallback(() => {
-    setLockState((s) => (s.status === "no_pin" ? s : { status: "locked" }));
-    setActiveRecordCryptoKey(null);
-    if (inactivityTimer.current) {
-      clearTimeout(inactivityTimer.current);
-    }
-  }, []);
+    applyLock();
+  }, [applyLock]);
 
   const removePin = useCallback(async (currentPin: string): Promise<boolean> => {
     const material = readKeyMaterial();
@@ -450,6 +536,8 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         setPin,
         unlock,
         getUnlockLockoutMs,
+        getAttemptsUntilLockout,
+        getCurrentLockoutTotalMs,
         getPinLength,
         completeUnlock,
         lock,
