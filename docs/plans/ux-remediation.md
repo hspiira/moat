@@ -50,18 +50,21 @@ Exit criteria: ✅ deleting anything asks first; ✅ every save/failure toasts a
 
 ---
 
-## Phase 2 — Validation
+## Phase 2 — Validation — ✅ COMPLETED 2026-07-23
+
+Foundations: `error` prop on `InputField`/`SelectField` (message + `aria-invalid` + red border); shared `lib/validation.ts` (`validateAmount`, `validateInteger`, `isPastDate`) with unit tests; `lib/errors.ts` reused for toasts.
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 2.1 | **Onboarding profile step never validated** — blank `displayName` and `consentGiven=false` pass (Continue is `type="button"`, `getStepError` has no `profile` branch, final submit re-checks only goal+security) | `components/onboarding/use-onboarding-workspace.ts:229-266,352-363`; `components/onboarding-workspace.tsx:219`; `components/onboarding/profile-step.tsx:57,169` | Add `profile` branch: require `displayName.trim()` + consent | |
-| 2.2 | Account opening balance accepts NaN/negative/absurd (`Number()` unguarded; onboarding checks only `isFinite`) | `components/accounts/use-accounts-workspace.ts:76-79`; `components/accounts/account-form.tsx:123-130`; `use-onboarding-workspace.ts:234-237` | Reject NaN; negative only for `debt` type; field-level message | |
-| 2.3 | Goal form: `targetAmount` can be 0/negative/NaN; `currentAmount` may exceed target; priority `min/max` are dead props on a text input; `targetDate` optional and allows the past | `components/goals/use-goals-workspace.ts:107-110`; `components/goals/goal-form.tsx:149-165` | Validate target>0, clamp priority (real number input), require non-past date | |
-| 2.4 | Manual transaction posts with empty `accountId`/`categoryId` (only transfer path checks accounts; only amount>0 guarded) | `components/transactions/transaction-builder.ts:30-35,72-77,112-129` | Require account + category before build | |
-| 2.5 | No field-level error marking anywhere — shared fields never wire `aria-invalid`; errors are generic strings far from the field | `components/forms/input-field.tsx:14-21`, `components/forms/select-field.tsx` | Add `error` prop to `InputField`/`SelectField` (message + `aria-invalid` + focus-first-invalid) | |
-| 2.6 | Recurring obligation `dueDay` unbounded (45 accepted) | `components/transactions/recurring-obligations-panel.tsx:187-189` | Clamp 1–31 with message | |
+| 2.1 | **Onboarding profile step never validated** — blank `displayName` / no consent pass | use-onboarding-workspace | `profile` branch already present + `handleNext` gates it (refactor); **hardened** `handleSubmit` to re-validate ALL steps, not just goal+security; confirmed no step-skipping in the UI | ✅ done |
+| 2.2 | Account opening balance accepts NaN/negative/absurd | use-accounts-workspace, account-form | Field-level validation: name required; balance must be a number; negative only for `debt` type; shown at the field | ✅ done |
+| 2.3 | Goal form: target 0/negative/NaN; current > target; dead priority min/max; past/optional date | use-goals-workspace, goal-form | Validates target>0, current≤target, priority 1–10, date required & non-past; removed dead min/max; verified in browser (3 field errors shown, no submit) | ✅ done |
+| 2.4 | Manual transaction posts with empty account/category | transaction-builder | Guards added (mirror the transfer path); throws → toast; unit test added | ✅ done |
+| 2.5 | No field-level error marking anywhere | input-field, select-field | `error` prop wired through both; used by account/goal/obligation/budget/rule forms | ✅ done |
+| 2.6 | Recurring obligation `dueDay` unbounded (45 accepted) | recurring-obligations-panel | `validateInteger(dueDay, 1, 31)` + expected-amount validation; field errors | ✅ done |
+| 1.7 | Numeric coercions silently → 0 (budget target, expected amount, due day, rule priority) — from Phase 1 | use-budget-planner/budget panel, obligations panel, rules panel | Validate + field error before save instead of `\|\| 0`; budget target, obligation amount/dueDay, rule priority all guarded | ✅ done (folded in) |
 
-Exit criteria: each form rejects its garbage inputs with a message *at the field*; onboarding cannot complete blank; unit tests for 2.2–2.4 validators.
+Exit criteria: ✅ each form rejects garbage with a message at the field; ✅ onboarding can't complete blank; ✅ unit tests for validators + transaction guards (149 tests); tsc/lint/build green; goal-form field errors verified in a real browser.
 
 ---
 
@@ -221,7 +224,7 @@ These were verified good; do not regress them during the phases above.
 | --- | --- | --- | --- |
 | 0 | Trust-breaking bugs | 6 | ✅ done 2026-07-23 |
 | 1 | Destructive safety & feedback | 7 | ✅ done 2026-07-23 (1.7 → Phase 2) |
-| 2 | Validation | 6 | ⬜ |
+| 2 | Validation | 6 (+1.7) | ✅ done 2026-07-23 |
 | 3 | De-scope undeliverable surfaces | 6 | ⬜ |
 | 4 | Screen usability | 16 | ⬜ |
 | 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ⬜ |

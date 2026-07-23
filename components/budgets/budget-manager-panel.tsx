@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
 import { formatMoney } from "@/lib/currency";
+import { validateAmount } from "@/lib/validation";
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
 import {
   getBudgetEnvelopes,
@@ -53,6 +56,7 @@ export function BudgetManagerPanel({
   onCancelEdit,
 }: Props) {
   const del = useConfirmDelete<{ budgetId: string }>((envelope) => onDelete(envelope.budgetId));
+  const [targetError, setTargetError] = useState<string | null>(null);
   const monthTransactions = transactions.filter((transaction) =>
     transaction.occurredOn.startsWith(month),
   );
@@ -185,6 +189,7 @@ export function BudgetManagerPanel({
                 label="Allocated (UGX)"
                 inputMode="numeric"
                 value={form.targetAmount}
+                error={targetError}
                 onChange={(event) =>
                   onFormChange((current) => ({
                     ...current,
@@ -227,7 +232,22 @@ export function BudgetManagerPanel({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" disabled={isSubmitting} onClick={onSave}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={() => {
+              const error = validateAmount(form.targetAmount, {
+                requiredMessage: "Enter an amount to allocate.",
+              });
+              if (error) {
+                setTargetError(error);
+                return;
+              }
+              setTargetError(null);
+              onSave();
+            }}
+          >
             {form.budgetId ? "Update budget" : "Save budget"}
           </Button>
           {form.budgetId ? (

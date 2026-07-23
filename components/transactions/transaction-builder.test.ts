@@ -102,6 +102,15 @@ describe("buildTransferPair", () => {
 });
 
 describe("buildManualTransaction", () => {
+  it("rejects a transaction with no account or category selected", () => {
+    expect(() =>
+      buildManualTransaction(buildInput({ form: { ...baseForm, accountId: "" } }), []),
+    ).toThrow("Choose an account");
+    expect(() =>
+      buildManualTransaction(buildInput({ form: { ...baseForm, categoryId: "" } }), []),
+    ).toThrow("Choose a category");
+  });
+
   it("builds a posted manual transaction with absolute amounts", () => {
     const transaction = buildManualTransaction(buildInput(), []);
 

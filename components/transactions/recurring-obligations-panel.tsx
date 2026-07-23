@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney } from "@/lib/currency";
+import { validateAmount, validateInteger } from "@/lib/validation";
 
 type ObligationFormState = {
   name: string;
@@ -74,6 +75,7 @@ export function RecurringObligationsPanel({
   onToggleObligation,
 }: Props) {
   const [form, setForm] = useState<ObligationFormState>(defaultObligationForm);
+  const [fieldErrors, setFieldErrors] = useState<{ expectedAmount?: string; dueDay?: string }>({});
   const linkedAccountOptions = [{ value: "__none__", label: "Any account" }, ...accountOptions(accounts)];
 
   return (
@@ -120,9 +122,10 @@ export function RecurringObligationsPanel({
           </div>
           <InputField
             id="obligation-amount"
-            label="Expected amount"
+            label="Expected amount (UGX)"
             inputMode="numeric"
             value={form.expectedAmount}
+            error={fieldErrors.expectedAmount}
             onChange={(event) =>
               setForm((current) => ({ ...current, expectedAmount: event.target.value }))
             }
@@ -142,9 +145,10 @@ export function RecurringObligationsPanel({
           </div>
           <InputField
             id="obligation-due-day"
-            label="Due day"
+            label="Due day (1–31)"
             inputMode="numeric"
             value={form.dueDay}
+            error={fieldErrors.dueDay}
             onChange={(event) =>
               setForm((current) => ({ ...current, dueDay: event.target.value }))
             }
@@ -180,13 +184,25 @@ export function RecurringObligationsPanel({
             size="sm"
             disabled={isSubmitting || !form.name.trim() || !form.categoryId}
             onClick={() => {
+              const nextErrors: { expectedAmount?: string; dueDay?: string } = {};
+              const amountError = validateAmount(form.expectedAmount, {
+                requiredMessage: "Enter the expected amount.",
+              });
+              if (amountError) nextErrors.expectedAmount = amountError;
+              const dueDayError = validateInteger(form.dueDay, 1, 31, "Enter a due day.");
+              if (dueDayError) nextErrors.dueDay = dueDayError;
+              if (Object.keys(nextErrors).length > 0) {
+                setFieldErrors(nextErrors);
+                return;
+              }
+              setFieldErrors({});
               onSaveObligation({
                 name: form.name.trim(),
                 type: form.type,
                 categoryId: form.categoryId,
-                expectedAmount: Number(form.expectedAmount) || 0,
+                expectedAmount: Number(form.expectedAmount),
                 cadence: form.cadence,
-                dueDay: Number(form.dueDay) || undefined,
+                dueDay: Number(form.dueDay),
                 dueDatePattern: undefined,
                 linkedAccountId: form.linkedAccountId || undefined,
                 payee: form.payee.trim() || undefined,

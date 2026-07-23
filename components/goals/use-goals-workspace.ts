@@ -8,6 +8,15 @@ import { withDerivedGoalProgress } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
 import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
+import { isPastDate, validateAmount, validateInteger } from "@/lib/validation";
+
+type GoalFieldErrors = {
+  name?: string;
+  targetAmount?: string;
+  currentAmount?: string;
+  targetDate?: string;
+  priority?: string;
+};
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
@@ -28,6 +37,7 @@ export function useGoalsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<GoalFieldErrors>({});
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -93,6 +103,37 @@ export function useGoalsWorkspace() {
   ): Promise<boolean> {
     event.preventDefault();
     if (!profile) return false;
+
+    const nextFieldErrors: GoalFieldErrors = {};
+    if (!goalForm.name.trim()) {
+      nextFieldErrors.name = "Give this goal a name.";
+    }
+    const targetError = validateAmount(goalForm.targetAmount, {
+      requiredMessage: "Enter a target amount.",
+    });
+    if (targetError) {
+      nextFieldErrors.targetAmount = targetError;
+    }
+    const currentError = validateAmount(goalForm.currentAmount || "0", { allowZero: true });
+    if (currentError) {
+      nextFieldErrors.currentAmount = currentError;
+    } else if (!targetError && Number(goalForm.currentAmount || 0) > Number(goalForm.targetAmount)) {
+      nextFieldErrors.currentAmount = "Saved so far can't exceed the target.";
+    }
+    if (!goalForm.targetDate) {
+      nextFieldErrors.targetDate = "Choose a target date.";
+    } else if (isPastDate(goalForm.targetDate)) {
+      nextFieldErrors.targetDate = "Pick a date in the future.";
+    }
+    const priorityError = validateInteger(goalForm.priority || "1", 1, 10, "Enter a priority.");
+    if (priorityError) {
+      nextFieldErrors.priority = priorityError;
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      return false;
+    }
+    setFieldErrors({});
 
     setIsSubmitting(true);
     setError(null);
@@ -191,6 +232,7 @@ export function useGoalsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     emergencyFundSuggestion,

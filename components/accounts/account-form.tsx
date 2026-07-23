@@ -61,6 +61,7 @@ type Props = {
   onFormChange: (updater: (prev: AccountFormState) => AccountFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
+  fieldErrors?: { name?: string; openingBalance?: string };
   /** When true, render just the form (no Card chrome) for use inside a sheet. */
   embedded?: boolean;
 };
@@ -88,16 +89,18 @@ function AccountFormBody({
   onFormChange,
   onSubmit,
   onCancelEdit,
+  fieldErrors,
 }: Props) {
   return (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+    <form className="grid gap-4" onSubmit={onSubmit} noValidate>
           <InputField
             id="account-name"
             label="Account name"
             value={form.name}
             onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
             placeholder="e.g. MTN Mobile Money"
-            required
+            error={fieldErrors?.name}
+            autoFocus
           />
 
           <div className="grid gap-2">
@@ -126,7 +129,7 @@ function AccountFormBody({
             inputMode="decimal"
             value={form.openingBalance}
             onChange={(e) => onFormChange((c) => ({ ...c, openingBalance: e.target.value }))}
-            required
+            error={fieldErrors?.openingBalance}
           />
 
           {form.type === "debt" ? (

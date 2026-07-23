@@ -10,6 +10,7 @@ import { SelectField } from "@/components/forms/select-field";
 import { accountOptions, optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export type GoalFormState = {
   name: string;
@@ -50,6 +51,13 @@ type Props = {
   lastSavedAt: string | null;
   successMessage: string | null;
   emergencyFundSuggestion: number;
+  fieldErrors?: {
+    name?: string;
+    targetAmount?: string;
+    currentAmount?: string;
+    targetDate?: string;
+    priority?: string;
+  };
   onFormChange: (updater: (prev: GoalFormState) => GoalFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
@@ -66,6 +74,7 @@ export function GoalForm({
   lastSavedAt,
   successMessage,
   emergencyFundSuggestion,
+  fieldErrors,
   onFormChange,
   onSubmit,
   onCancelEdit,
@@ -80,7 +89,7 @@ export function GoalForm({
   const showSuggestion = form.goalType === "emergency_fund" && emergencyFundSuggestion > 0;
 
   const content = (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+    <form className="grid gap-4" onSubmit={onSubmit} noValidate>
           {embedded ? null : (
             <LocalSaveFeedback
               isSubmitting={isSubmitting}
@@ -95,7 +104,8 @@ export function GoalForm({
             value={form.name}
             onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
             placeholder="e.g. Emergency savings"
-            required
+            error={fieldErrors?.name}
+            autoFocus
           />
 
           <SelectField
@@ -109,14 +119,15 @@ export function GoalForm({
           />
 
           <div className="grid gap-2">
-            <div className="text-sm text-foreground">Target amount (UGX)</div>
+            <Label htmlFor="target-amount">Target amount (UGX)</Label>
             <div className="flex gap-2">
               <Input
                 id="target-amount"
                 inputMode="decimal"
                 value={form.targetAmount}
                 onChange={(e) => onFormChange((c) => ({ ...c, targetAmount: e.target.value }))}
-                required
+                aria-invalid={fieldErrors?.targetAmount ? true : undefined}
+                className={fieldErrors?.targetAmount ? "border-destructive" : undefined}
               />
               {showSuggestion ? (
                 <Button
@@ -135,6 +146,9 @@ export function GoalForm({
                 </Button>
               ) : null}
             </div>
+            {fieldErrors?.targetAmount ? (
+              <p className="text-xs text-destructive">{fieldErrors.targetAmount}</p>
+            ) : null}
           </div>
 
           <InputField
@@ -143,25 +157,28 @@ export function GoalForm({
             inputMode="decimal"
             value={form.currentAmount}
             onChange={(e) => onFormChange((c) => ({ ...c, currentAmount: e.target.value }))}
-            required
+            error={fieldErrors?.currentAmount}
           />
 
-          <DatePickerField
-            id="target-date"
-            label="Target date"
-            value={form.targetDate}
-            onChange={(v) => onFormChange((c) => ({ ...c, targetDate: v }))}
-          />
+          <div className="grid gap-2">
+            <DatePickerField
+              id="target-date"
+              label="Target date"
+              value={form.targetDate}
+              onChange={(v) => onFormChange((c) => ({ ...c, targetDate: v }))}
+            />
+            {fieldErrors?.targetDate ? (
+              <p className="text-xs text-destructive">{fieldErrors.targetDate}</p>
+            ) : null}
+          </div>
 
           <InputField
             id="goal-priority"
             label="Priority (1 = highest)"
             inputMode="numeric"
-            min="1"
-            max="10"
             value={form.priority}
             onChange={(e) => onFormChange((c) => ({ ...c, priority: e.target.value }))}
-            required
+            error={fieldErrors?.priority}
           />
 
           {accounts.length > 0 ? (

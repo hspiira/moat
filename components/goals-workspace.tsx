@@ -36,6 +36,7 @@ export function GoalsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     emergencyFundSuggestion,
@@ -150,6 +151,7 @@ export function GoalsWorkspace() {
                 lastSavedAt={lastSavedAt}
                 successMessage={successMessage}
                 emergencyFundSuggestion={emergencyFundSuggestion}
+                fieldErrors={fieldErrors}
                 onFormChange={setGoalForm}
                 onSubmit={async (event) => {
                   const ok = await handleGoalSubmit(event);

@@ -354,9 +354,11 @@ export function useOnboardingWorkspace() {
     event.preventDefault();
     setError(null);
 
-    const finalError =
-      getStepError({ step: "goal", profile: form, account, goal, security, consentGiven }) ??
-      getStepError({ step: "security", profile: form, account, goal, security, consentGiven });
+    // Re-validate every step at the final submit, not just the last two, so a
+    // blank name or missing consent can never slip through.
+    const finalError = steps
+      .map((s) => getStepError({ step: s, profile: form, account, goal, security, consentGiven }))
+      .find(Boolean);
     if (finalError) {
       setError(finalError);
       return;

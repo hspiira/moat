@@ -38,6 +38,7 @@ export function AccountsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     setAccountForm,
@@ -156,6 +157,7 @@ export function AccountsWorkspace() {
                 isSubmitting={isSubmitting}
                 lastSavedAt={lastSavedAt}
                 successMessage={successMessage}
+                fieldErrors={fieldErrors}
                 onFormChange={setAccountForm}
                 onSubmit={async (e) => {
                   const ok = await handleAccountSubmit(e);
