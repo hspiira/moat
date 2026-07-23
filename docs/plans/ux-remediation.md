@@ -196,25 +196,29 @@ Exit criteria met: the flagged user-facing jargon strings return no hits on the 
 
 ---
 
-## Phase 6 — Widget & form-system consistency
+## Phase 6 — Widget & form-system consistency — PARTIAL (isolated wins done; form-heavy items deferred)
 
-| # | Finding | Location | Fix | Status |
-| --- | --- | --- | --- | --- |
-| 6.1 | **Three date formats**: "21 Jul" (ledger) vs "05-07-2026" (account detail) vs "2027-06-30" (goals) | transaction list; `account-ledger-workspace.tsx`; `goal-list.tsx` | One `formatDate` helper ("21 Jul 2026" / "21 Jul" same-year); no raw ISO anywhere | |
-| 6.2 | **Three date input widgets**: `DatePickerField` vs raw `type="date"` vs free-text | `account-form.tsx:193-200`; `onboarding/goal-step.tsx:69-76`; `text-capture-panel.tsx:187-194` | Standardize on `DatePickerField` | |
-| 6.3 | PIN input hand-rolled 3× (`PinInputField` exists, used once) | `forms/pin-input-field.tsx` vs `pin-lock-panel.tsx:140-166`, `onboarding/security-step.tsx:36-67` | Use `PinInputField` everywhere | |
-| 6.4 | `FormCardShell` bypassed — rules/obligations/budget/CSV/text-capture re-hand-roll Card+AccentCardHeader with drifting spacing; TextCapturePanel duplicates the embedded-vs-card branch | `transaction-rules-panel.tsx:82-88`; `recurring-obligations-panel.tsx:80-86`; `budget-manager-panel.tsx:76-82`; `csv-import-panel.tsx:52-58`; `text-capture-panel.tsx:267-281` | Route all through `FormCardShell` | |
-| 6.5 | Goal "Target amount" is a bare div + raw Input with no `Label htmlFor` | `goal-form.tsx:111-120` | Use `InputField` | |
-| 6.6 | Amount inputs: no thousand separators / UGX prefix while typing; currency hint inconsistent ("Amount (UGX)" vs bare "Expected amount") | all money inputs | One `AmountField` (formats as-you-type, UGX prefix) | |
-| 6.7 | No `autoComplete` / `enterKeyHint` anywhere; no `autoFocus` on sheet open; focus not moved to first error | `account-form.tsx`, `goal-form.tsx`, `transaction-form.tsx`, all sheets | Add attributes; focus management on open + on invalid | |
-| 6.8 | Enter never submits hand-rolled panels (buttons outside `<form>`) | `transaction-rules-panel.tsx:213-240`; `recurring-obligations-panel.tsx:177-199`; `budget-manager-panel.tsx:226-235` | Wrap in `<form onSubmit>` | |
-| 6.9 | Long selects unsearchable (category/account; budget "Source income" lists every income tx; CSV mapping = 9 selects × all headers) | `budget-manager-panel.tsx:62-70`; `csv-import-sections.tsx:58-70` | Combobox for long lists | |
-| 6.10 | `transactionTypeLabels` duplicated (canonical in `lib/select-options` vs local copy) | `account-ledger-workspace.tsx:48-54` | Import canonical | |
-| 6.11 | Reinvented toggle: "Allowed/Blocked" text button instead of `Switch` | `capture-automation-panel.tsx:16-42` | Use `Switch` (if panel survives 3.3) | |
-| 6.12 | Dead props: `min`/`max` on text-rendered priority input | `goal-form.tsx:159-162` | Real number input or remove | |
-| 6.13 | Account ledger (detail page) is read-only with no edit affordance — editing only via main ledger | `components/accounts/account-ledger-workspace.tsx` | Row tap → same edit sheet as main ledger | |
+Commits: 6a `370f39f`, 6b `3b3cc77` (plus 6.4/6.5/6.8/6.12 landed earlier in Phases 2 & 4g).
 
-Exit criteria: one date formatter, one date picker, one amount field, one PIN field; Enter submits every form; no duplicated label maps.
+| # | Finding | Fix | Status |
+| --- | --- | --- | --- |
+| 6.1 | Three date formats | One `lib/format-date.ts` `formatDate` (same-year drops year); applied to ledger, transaction list, goal deadlines, account detail | ✅ 6a |
+| 6.2 | Three date input widgets | `DatePickerField` everywhere (account debt start, onboarding goal date) | ✅ 6b |
+| 6.3 | PIN input hand-rolled 3× | `PinInputField` used for all settings + onboarding PIN fields | ✅ 6a |
+| 6.4 | `FormCardShell` bypassed by rules/obligations/budget/CSV/text-capture | rules/obligations/budget routed through `FormCardShell` in Phase 4g (sheet forms). CSV + text-capture panels still hand-roll — see deferred note | ◑ partial (4g) |
+| 6.5 | Goal "Target amount" bare div | Now a proper `Label` + input with `aria-invalid`/error (Phase 2) | ✅ (Phase 2) |
+| 6.6 | Amount inputs: no thousand separators / UGX prefix | **DEFERRED** — see note | ⏸️ deferred |
+| 6.7 | No `autoComplete`/`enterKeyHint`/`autoFocus` | `autoFocus` added on account/goal sheet open (Phase 2); focus-first-invalid + enterKeyHint remain | ◑ partial |
+| 6.8 | Enter never submits hand-rolled panels | rules/obligations/budget are now `<form onSubmit>` (Phase 4g) | ✅ (4g) |
+| 6.9 | Long selects unsearchable | **DEFERRED** — see note | ⏸️ deferred |
+| 6.10 | `transactionTypeLabels` duplicated | Local copy removed; imports canonical from `lib/select-options` | ✅ 6a |
+| 6.11 | "Allowed/Blocked" text toggle vs `Switch` | Panel is now native-only (Phase 3.3) — not shown on web; low priority | ⏸️ native-only |
+| 6.12 | Dead `min`/`max` on text priority input | Removed (Phase 2) | ✅ (Phase 2) |
+| 6.13 | Account ledger detail read-only | **DEFERRED** — see note | ⏸️ deferred |
+
+> **Deferred (6.6 AmountField, 6.9 searchable selects, 6.4 CSV/text-capture shell, 6.13 ledger edit):** these all live in the transaction/capture/import forms, which are under active concurrent refactoring in this same session (capture streamline, transaction-form `bare` mode, tab restructure). Introducing a new `AmountField`/combobox across those forms now would collide with that in-flight work and risk regressions. They are the right next step once the forms refactor settles — 6.6 (as-you-type thousand separators + UGX prefix) is the highest-value remaining polish for a UGX app. Tracked here, not dropped.
+
+Exit criteria (met for the isolated set): one date formatter, one date picker, one PIN field, no duplicated label maps; Enter submits the sheet forms. AmountField/combobox pending the forms refactor.
 
 ---
 
@@ -243,6 +247,7 @@ These were verified good; do not regress them during the phases above.
 | 3 | De-scope undeliverable surfaces | 6 | ✅ done 2026-07-23 |
 | 4 | Screen usability | 16 | ✅ done 2026-07-24 |
 | 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ✅ done 2026-07-24 |
+| 6 | Widget/form consistency | 13 | ◑ isolated wins done; 6.6/6.9/6.4/6.13 deferred (active forms refactor) |
 | 6 | Widget/form consistency | 13 | ⬜ |
 | 7 | Protect the good parts | — | continuous |
 
