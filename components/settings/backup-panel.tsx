@@ -18,6 +18,7 @@ import {
 } from "@/lib/security/encrypted-backup";
 import { downloadBlob } from "@/lib/security/data-export";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
+import { PinInputField } from "@/components/forms/pin-input-field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,7 +27,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type BackupMode = "idle" | "backup" | "restore" | "drive";
@@ -351,23 +351,14 @@ export function BackupPanel() {
 
         {mode === "backup" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleBackup(e)}>
-            <div className="grid gap-2">
-              <Label htmlFor="backup-pin" className="text-xs">
-                {`Backup PIN (minimum ${MIN_PIN_LENGTH} digits — you need this to restore)`}
-              </Label>
-              <Input
-                id="backup-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={12}
-                value={backupPin}
-                onChange={(e) => setBackupPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="Choose a PIN for this backup"
-                autoComplete="new-password"
-                className="tracking-[0.3em]"
-              />
-            </div>
+            <PinInputField
+              id="backup-pin"
+              label={`Backup PIN (minimum ${MIN_PIN_LENGTH} digits — you need this to restore)`}
+              value={backupPin}
+              onChange={setBackupPin}
+              placeholder="Choose a PIN for this backup"
+              autoComplete="new-password"
+            />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isWorking}>
@@ -392,21 +383,14 @@ export function BackupPanel() {
                 className="text-xs text-muted-foreground file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="restore-pin" className="text-xs">Backup PIN</Label>
-              <Input
-                id="restore-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={12}
-                value={restorePin}
-                onChange={(e) => setRestorePin(e.target.value.replace(/\D/g, ""))}
-                placeholder="PIN used when creating this backup"
-                autoComplete="current-password"
-                className="tracking-[0.3em]"
-              />
-            </div>
+            <PinInputField
+              id="restore-pin"
+              label="Backup PIN"
+              value={restorePin}
+              onChange={setRestorePin}
+              placeholder="PIN used when creating this backup"
+              autoComplete="current-password"
+            />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isWorking}>
@@ -457,23 +441,14 @@ export function BackupPanel() {
 
                 <div className="grid gap-3 border border-border/30 p-4">
                   <div className="text-sm font-medium text-foreground">Upload encrypted backup</div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="drive-backup-pin" className="text-xs">
-                      Backup PIN
-                    </Label>
-                    <Input
-                      id="drive-backup-pin"
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={12}
-                      value={driveBackupPin}
-                      onChange={(e) => setDriveBackupPin(e.target.value.replace(/\D/g, ""))}
-                      placeholder="PIN used to encrypt this backup"
-                      autoComplete="new-password"
-                      className="tracking-[0.3em]"
-                    />
-                  </div>
+                  <PinInputField
+                    id="drive-backup-pin"
+                    label="Backup PIN"
+                    value={driveBackupPin}
+                    onChange={setDriveBackupPin}
+                    placeholder="PIN used to encrypt this backup"
+                    autoComplete="new-password"
+                  />
                   <div className="flex gap-2">
                     <Button type="button" size="sm" onClick={() => void handleDriveUpload()} disabled={isWorking}>
                       {isWorking ? "Uploading..." : "Upload encrypted backup"}
@@ -483,23 +458,14 @@ export function BackupPanel() {
 
                 <div className="grid gap-3 border border-border/30 p-4">
                   <div className="text-sm font-medium text-foreground">Restore from Google Drive</div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="drive-restore-pin" className="text-xs">
-                      Backup PIN
-                    </Label>
-                    <Input
-                      id="drive-restore-pin"
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={12}
-                      value={driveRestorePin}
-                      onChange={(e) => setDriveRestorePin(e.target.value.replace(/\D/g, ""))}
-                      placeholder="PIN used when creating the selected backup"
-                      autoComplete="current-password"
-                      className="tracking-[0.3em]"
-                    />
-                  </div>
+                  <PinInputField
+                    id="drive-restore-pin"
+                    label="Backup PIN"
+                    value={driveRestorePin}
+                    onChange={setDriveRestorePin}
+                    placeholder="PIN used when creating the selected backup"
+                    autoComplete="current-password"
+                  />
 
                   {driveFiles.length === 0 ? (
                     <p className="text-xs text-muted-foreground">

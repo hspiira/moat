@@ -1,10 +1,21 @@
 import { getDebtRepaymentActions, type DebtPayoffStrategy } from "@/lib/domain/debt";
 import type { Account, RecurringObligation, Transaction } from "@/lib/types";
 
+/** A recurring obligation the app derives on the fly rather than one persisted by the user. */
+export type SuggestedRecurringObligation = Omit<
+  RecurringObligation,
+  "createdAt" | "updatedAt" | "userId"
+>;
+
+type MatchableObligation = RecurringObligation | SuggestedRecurringObligation;
+
+/** Suggested obligations assume payments land near month-end since no explicit due date exists. */
+const ASSUMED_MONTH_END_DUE_DAY = 28;
+
 export type RecurringMatchState = "paid" | "partial" | "missing";
 
 export type RecurringEvaluation = {
-  obligation: RecurringObligation;
+  obligation: MatchableObligation;
   matchedTransactions: Transaction[];
   matchedAmount: number;
   expectedAmount: number;
@@ -27,7 +38,7 @@ function isTransactionInPeriod(transaction: Transaction, period: string) {
   return transaction.occurredOn.startsWith(period);
 }
 
-function matchesPayee(obligation: RecurringObligation, transaction: Transaction) {
+function matchesPayee(obligation: MatchableObligation, transaction: Transaction) {
   if (!obligation.payee) {
     return true;
   }
@@ -43,29 +54,8 @@ function matchesAmount(expectedAmount: number, actualAmount: number) {
   return Math.abs(expectedAmount - actualAmount) <= tolerance;
 }
 
-function matchesObligation(
-  obligation: RecurringObligation,
-  transaction: Transaction,
-) {
-  if (obligation.type === "sacco_contribution") {
-    const isSaccoCredit =
-      transaction.type === "transfer" &&
-      transaction.amount > 0 &&
-      (!obligation.linkedAccountId || transaction.accountId === obligation.linkedAccountId);
-
-    if (isSaccoCredit) {
-      return (
-        matchesPayee(obligation, transaction) &&
-        matchesAmount(obligation.expectedAmount, Math.abs(transaction.amount))
-      );
-    }
-    if (transaction.type === "transfer") {
-      return false;
-    }
-  } else if (transaction.type === "transfer") {
-    return false;
-  }
-
+/** Common eligibility checks shared by every obligation matcher. */
+function matchesCommonFields(obligation: MatchableObligation, transaction: Transaction) {
   if (obligation.linkedAccountId && transaction.accountId !== obligation.linkedAccountId) {
     return false;
   }
@@ -79,6 +69,47 @@ function matchesObligation(
   }
 
   return matchesAmount(obligation.expectedAmount, Math.abs(transaction.amount));
+}
+
+type ObligationMatcher = (obligation: MatchableObligation, transaction: Transaction) => boolean;
+
+/** Applies to every obligation type without a dedicated matcher below. */
+const defaultMatcher: ObligationMatcher = (obligation, transaction) => {
+  if (transaction.type === "transfer") {
+    return false;
+  }
+
+  return matchesCommonFields(obligation, transaction);
+};
+
+/** SACCO contributions post as inbound transfer legs, so they need their own credit check. */
+const saccoContributionMatcher: ObligationMatcher = (obligation, transaction) => {
+  const isSaccoCredit =
+    transaction.type === "transfer" &&
+    transaction.amount > 0 &&
+    (!obligation.linkedAccountId || transaction.accountId === obligation.linkedAccountId);
+
+  if (isSaccoCredit) {
+    return (
+      matchesPayee(obligation, transaction) &&
+      matchesAmount(obligation.expectedAmount, Math.abs(transaction.amount))
+    );
+  }
+  if (transaction.type === "transfer") {
+    return false;
+  }
+
+  return matchesCommonFields(obligation, transaction);
+};
+
+/** Per-obligation-type matchers. Adding a new obligation type is a single entry here. */
+const OBLIGATION_MATCHERS: Partial<Record<RecurringObligation["type"], ObligationMatcher>> = {
+  sacco_contribution: saccoContributionMatcher,
+};
+
+function matchesObligation(obligation: MatchableObligation, transaction: Transaction) {
+  const matcher = OBLIGATION_MATCHERS[obligation.type] ?? defaultMatcher;
+  return matcher(obligation, transaction);
 }
 
 function getLatestMatchingTransaction(
@@ -110,31 +141,28 @@ export function buildSuggestedRecurringObligations(
   transactions: Transaction[],
   strategy: DebtPayoffStrategy,
   extraMonthlyPayment: number,
-): RecurringObligation[] {
+): SuggestedRecurringObligation[] {
   const debtObligations = getDebtRepaymentActions(
     accounts,
     transactions,
     strategy,
     extraMonthlyPayment,
-  ).map<RecurringObligation>((action) => ({
+  ).map<SuggestedRecurringObligation>((action) => ({
     id: `suggested:debt:${action.accountId}`,
-    userId: "system",
     name: `${action.accountName} repayment`,
     type: "loan_repayment",
     categoryId: "",
     expectedAmount: Math.round(action.recommendedPayment),
     cadence: "monthly",
-    dueDay: 28,
+    dueDay: ASSUMED_MONTH_END_DUE_DAY,
     linkedAccountId: action.accountId,
     payee: action.accountName,
     status: "active",
-    createdAt: "",
-    updatedAt: "",
   }));
 
   const saccoObligations = accounts
     .filter((account) => account.type === "sacco" && !account.isArchived)
-    .map<RecurringObligation | null>((account) => {
+    .map<SuggestedRecurringObligation | null>((account) => {
       const latestContribution = getLatestMatchingTransaction(account, transactions, [
         "savings_contribution",
         "transfer",
@@ -146,27 +174,24 @@ export function buildSuggestedRecurringObligations(
 
       return {
         id: `suggested:sacco:${account.id}`,
-        userId: "system",
         name: `${account.name} contribution`,
         type: "sacco_contribution",
         categoryId: latestContribution.categoryId,
         expectedAmount: Math.abs(latestContribution.amount),
         cadence: "monthly",
-        dueDay: 28,
+        dueDay: ASSUMED_MONTH_END_DUE_DAY,
         linkedAccountId: account.id,
         payee: latestContribution.payee ?? latestContribution.rawPayee ?? account.name,
         status: "active",
-        createdAt: "",
-        updatedAt: "",
       };
     })
-    .filter((obligation): obligation is RecurringObligation => obligation !== null);
+    .filter((obligation): obligation is SuggestedRecurringObligation => obligation !== null);
 
   return [...debtObligations, ...saccoObligations];
 }
 
 export function evaluateRecurringObligations(
-  obligations: RecurringObligation[],
+  obligations: MatchableObligation[],
   transactions: Transaction[],
   period: string,
 ): RecurringEvaluation[] {

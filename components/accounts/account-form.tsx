@@ -6,7 +6,7 @@ import type {
   DebtLenderType,
   DebtRepaymentFrequency,
 } from "@/lib/types";
-import { AccentCardHeader } from "@/components/accent-card-header";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -18,10 +18,6 @@ import {
   optionsFromRecord,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 
 export { accountTypeLabels } from "@/lib/select-options";
 
@@ -77,20 +73,10 @@ export function AccountForm(props: Props) {
     ? "Update the details for this account."
     : "Name it once and track it clearly.";
 
-  if (embedded) {
-    return (
-      <div>
-        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
-        <div className="px-4 pt-4 pb-6">{body}</div>
-      </div>
-    );
-  }
-
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader tone="yellow" title={title} description={description} />
-      <CardContent className="p-5">{body}</CardContent>
-    </Card>
+    <FormCardShell embedded={embedded} title={title} description={description}>
+      {body}
+    </FormCardShell>
   );
 }
 

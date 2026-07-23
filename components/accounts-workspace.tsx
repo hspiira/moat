@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { getAccountTotals } from "@/lib/domain/accounts";
+import { useFormSheet } from "@/components/hooks/use-form-sheet";
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
   ErrorStateCard,
@@ -52,23 +52,14 @@ export function AccountsWorkspace() {
     (type) => accountTotals.accountsByType[type] > 0,
   ).length;
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const formSheet = useFormSheet(cancelEdit);
 
   function openAddAccount() {
-    cancelEdit();
-    setIsFormOpen(true);
+    formSheet.openForCreate();
   }
 
   function openEditAccount(account: Parameters<typeof beginAccountEdit>[0]) {
-    beginAccountEdit(account);
-    setIsFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setIsFormOpen(open);
-    if (!open) {
-      cancelEdit();
-    }
+    formSheet.openForEdit(() => beginAccountEdit(account));
   }
 
   return (
@@ -149,7 +140,7 @@ export function AccountsWorkspace() {
 
           <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
-          <Sheet open={isFormOpen} onOpenChange={handleFormOpenChange}>
+          <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
             <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
               {/* The form's own colour band is the visible heading; keep an
                   accessible title for screen readers. */}
@@ -169,10 +160,10 @@ export function AccountsWorkspace() {
                 onSubmit={async (e) => {
                   const ok = await handleAccountSubmit(e);
                   if (ok) {
-                    setIsFormOpen(false);
+                    formSheet.close();
                   }
                 }}
-                onCancelEdit={() => handleFormOpenChange(false)}
+                onCancelEdit={formSheet.close}
               />
             </SheetContent>
           </Sheet>

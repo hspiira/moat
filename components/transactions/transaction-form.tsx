@@ -4,8 +4,8 @@ import { useMemo } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
-import { AccentCardHeader } from "@/components/accent-card-header";
 import { DatePickerField } from "@/components/forms/date-picker-field";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -18,10 +18,6 @@ import {
   transactionTypeLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 
 export { transactionTypeLabels } from "@/lib/select-options";
 
@@ -259,19 +255,9 @@ export function TransactionForm({
     ? "Update this transaction."
     : "Record one money event against one account.";
 
-  if (embedded) {
-    return (
-      <div>
-        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
-        <div className="px-4 pt-4 pb-6">{content}</div>
-      </div>
-    );
-  }
-
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader tone="yellow" title={title} description={description} />
-      <CardContent className="p-5">{content}</CardContent>
-    </Card>
+    <FormCardShell embedded={embedded} title={title} description={description}>
+      {content}
+    </FormCardShell>
   );
 }

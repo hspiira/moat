@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
+import { useFormSheet } from "@/components/hooks/use-form-sheet";
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
@@ -47,23 +47,14 @@ export function GoalsWorkspace() {
     cancelEdit,
   } = useGoalsWorkspace();
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const formSheet = useFormSheet(cancelEdit);
 
   function openNewGoal() {
-    cancelEdit();
-    setIsFormOpen(true);
+    formSheet.openForCreate();
   }
 
   function openEditGoal(goal: Goal) {
-    beginGoalEdit(goal);
-    setIsFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setIsFormOpen(open);
-    if (!open) {
-      cancelEdit();
-    }
+    formSheet.openForEdit(() => beginGoalEdit(goal));
   }
 
   const emergencyProgress =
@@ -143,7 +134,7 @@ export function GoalsWorkspace() {
             onAdd={openNewGoal}
           />
 
-          <Sheet open={isFormOpen} onOpenChange={handleFormOpenChange}>
+          <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
             <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
               <SheetHeader className="sr-only">
                 <SheetTitle>{editingGoalId ? "Edit goal" : "New goal"}</SheetTitle>
@@ -163,10 +154,10 @@ export function GoalsWorkspace() {
                 onSubmit={async (event) => {
                   const ok = await handleGoalSubmit(event);
                   if (ok) {
-                    setIsFormOpen(false);
+                    formSheet.close();
                   }
                 }}
-                onCancelEdit={() => handleFormOpenChange(false)}
+                onCancelEdit={formSheet.close}
               />
             </SheetContent>
           </Sheet>

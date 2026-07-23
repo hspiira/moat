@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { isSuggestedRecurringObligation } from "@/lib/domain/recurring";
 import type { Account, Category, RecurringObligation } from "@/lib/types";
-import type { RecurringEvaluation } from "@/lib/domain/recurring";
+import type { RecurringEvaluation, SuggestedRecurringObligation } from "@/lib/domain/recurring";
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
@@ -30,6 +30,18 @@ type ObligationFormState = {
   linkedAccountId: string;
   payee: string;
 };
+
+/**
+ * Narrows an evaluation's obligation to the persisted shape so it can be
+ * passed to `onToggleObligation`. Suggested obligations (identified by their
+ * `suggested:` id prefix) are never persistable and are rendered read-only
+ * instead — see the `evaluations.map` below.
+ */
+function isPersistedObligation(
+  obligation: RecurringObligation | SuggestedRecurringObligation,
+): obligation is RecurringObligation {
+  return !isSuggestedRecurringObligation(obligation.id);
+}
 
 const defaultObligationForm: ObligationFormState = {
   name: "",
@@ -191,32 +203,36 @@ export function RecurringObligationsPanel({
           {evaluations.length === 0 ? (
             <EmptyState className="py-6">No recurring obligations yet.</EmptyState>
           ) : (
-            evaluations.map((evaluation) => (
-              <div
-                key={evaluation.obligation.id}
-                className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3"
-              >
-                <div className="space-y-0.5">
-                  <div className="text-sm text-foreground">{evaluation.obligation.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatMoney(evaluation.expectedAmount)} expected ·{" "}
-                    {formatMoney(evaluation.matchedAmount)} matched · {evaluation.state}
+            evaluations.map((evaluation) => {
+              const { obligation } = evaluation;
+
+              return (
+                <div
+                  key={obligation.id}
+                  className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3"
+                >
+                  <div className="space-y-0.5">
+                    <div className="text-sm text-foreground">{obligation.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatMoney(evaluation.expectedAmount)} expected ·{" "}
+                      {formatMoney(evaluation.matchedAmount)} matched · {evaluation.state}
+                    </div>
                   </div>
+                  {isPersistedObligation(obligation) ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onToggleObligation(obligation)}
+                    >
+                      {obligation.status === "active" ? "Pause" : "Resume"}
+                    </Button>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Suggested</div>
+                  )}
                 </div>
-                {isSuggestedRecurringObligation(evaluation.obligation.id) ? (
-                  <div className="text-xs text-muted-foreground">Suggested</div>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onToggleObligation(evaluation.obligation)}
-                  >
-                    {evaluation.obligation.status === "active" ? "Pause" : "Resume"}
-                  </Button>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </CardContent>

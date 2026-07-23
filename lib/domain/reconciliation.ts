@@ -1,3 +1,4 @@
+import type { SuggestedRecurringObligation } from "@/lib/domain/recurring";
 import type {
   Category,
   MonthClose,
@@ -67,7 +68,10 @@ export function getMissingCategoryTransactions(
 export function evaluateMonthClose(
   periodTransactions: Transaction[],
   categories: Category[],
-  obligations: Array<{ obligation: RecurringObligation; status: "due" | "paid" | "partial" | "missing" }>,
+  obligations: Array<{
+    obligation: RecurringObligation | SuggestedRecurringObligation;
+    status: "due" | "paid" | "partial" | "missing";
+  }>,
 ): MonthCloseEvaluation {
   const unresolvedTransactions = getUnresolvedTransactions(periodTransactions);
   const duplicateGroups = getDuplicateGroups(periodTransactions);

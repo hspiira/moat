@@ -28,22 +28,61 @@ export type DashboardChartPoint = {
   savingsRate: number;
 };
 
-export function getPeriodOverviewLabel(period: PeriodFilter, now: Date) {
-  if (period === "week") return "This week";
-  if (period === "year") return now.getFullYear().toString();
-  if (period === "all") return "All lifetime";
+type PeriodConfig = {
+  chartLabel: string;
+  overviewLabel: (now: Date) => string;
+  title: string;
+  caption: string;
+  comparisonLabel: string | null;
+  formatChartPoint: (date: Date) => string;
+};
 
-  return new Intl.DateTimeFormat("en-UG", {
-    month: "long",
-    year: "numeric",
-  }).format(now);
+const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
+  week: {
+    chartLabel: "Week",
+    overviewLabel: () => "This week",
+    title: "This week's cash flow",
+    caption: "Transactions dated in the current calendar week.",
+    comparisonLabel: "last week",
+    formatChartPoint: (date) =>
+      new Intl.DateTimeFormat("en-UG", { day: "numeric", month: "short" }).format(date),
+  },
+  month: {
+    chartLabel: "Month",
+    overviewLabel: (now) =>
+      new Intl.DateTimeFormat("en-UG", { month: "long", year: "numeric" }).format(now),
+    title: "This month's cash flow",
+    caption: "Transactions dated in the current calendar month.",
+    comparisonLabel: "last month",
+    formatChartPoint: (date) =>
+      new Intl.DateTimeFormat("en-UG", { month: "short" }).format(date),
+  },
+  year: {
+    chartLabel: "Year",
+    overviewLabel: (now) => now.getFullYear().toString(),
+    title: "This year's cash flow",
+    caption: "Transactions dated in the current calendar year.",
+    comparisonLabel: "last year",
+    formatChartPoint: (date) => String(date.getFullYear()),
+  },
+  all: {
+    chartLabel: "Lifetime",
+    overviewLabel: () => "All lifetime",
+    title: "Lifetime cash flow",
+    caption: "All recorded transactions since setup.",
+    comparisonLabel: "before this year",
+    // Chart series never renders in "all" mode (buildDashboardChartSeries
+    // maps it to "year" first), so this formatter is unreachable in practice.
+    formatChartPoint: (date) => String(date.getFullYear()),
+  },
+};
+
+export function getPeriodOverviewLabel(period: PeriodFilter, now: Date) {
+  return PERIOD_CONFIG[period].overviewLabel(now);
 }
 
 export function getPeriodChartLabel(period: PeriodFilter) {
-  if (period === "week") return "Week";
-  if (period === "year") return "Year";
-  if (period === "all") return "Lifetime";
-  return "Month";
+  return PERIOD_CONFIG[period].chartLabel;
 }
 
 export function getChangePercent(current: number, previous: number): ChangeMetric {
@@ -103,6 +142,8 @@ export function buildPeriodWindow(
   period: PeriodFilter,
   now: Date,
 ): PeriodWindow {
+  const config = PERIOD_CONFIG[period];
+
   if (period === "all") {
     const yearStart = startOfYear(now);
 
@@ -110,47 +151,26 @@ export function buildPeriodWindow(
       current: transactions,
       previous: filterTransactionsByRange(transactions, new Date(0), yearStart),
       currentStart: null,
-      title: "Lifetime cash flow",
-      caption: "All recorded transactions since setup.",
-      comparisonLabel: "before this year",
-      overviewLabel: "All lifetime",
+      title: config.title,
+      caption: config.caption,
+      comparisonLabel: config.comparisonLabel,
+      overviewLabel: config.overviewLabel(now),
     };
   }
 
   const currentStart =
     period === "week" ? startOfWeek(now) : period === "month" ? startOfMonth(now) : startOfYear(now);
-  const currentEnd =
-    period === "week"
-      ? shiftDate(currentStart, "week", 1)
-      : period === "month"
-        ? shiftDate(currentStart, "month", 1)
-        : shiftDate(currentStart, "year", 1);
-  const previousStart =
-    period === "week"
-      ? shiftDate(currentStart, "week", -1)
-      : period === "month"
-        ? shiftDate(currentStart, "month", -1)
-        : shiftDate(currentStart, "year", -1);
+  const currentEnd = shiftDate(currentStart, period, 1);
+  const previousStart = shiftDate(currentStart, period, -1);
 
   return {
     current: filterTransactionsByRange(transactions, currentStart, currentEnd),
     previous: filterTransactionsByRange(transactions, previousStart, currentStart),
     currentStart,
-    title:
-      period === "week"
-        ? "This week's cash flow"
-        : period === "month"
-          ? "This month's cash flow"
-          : "This year's cash flow",
-    caption:
-      period === "week"
-        ? "Transactions dated in the current calendar week."
-        : period === "month"
-          ? "Transactions dated in the current calendar month."
-          : "Transactions dated in the current calendar year.",
-    comparisonLabel:
-      period === "week" ? "last week" : period === "month" ? "last month" : "last year",
-    overviewLabel: getPeriodOverviewLabel(period, now),
+    title: config.title,
+    caption: config.caption,
+    comparisonLabel: config.comparisonLabel,
+    overviewLabel: config.overviewLabel(now),
   };
 }
 
@@ -172,13 +192,7 @@ export function getAggregateBalanceAtDate(
 }
 
 function formatChartLabel(date: Date, period: PeriodFilter) {
-  if (period === "week") {
-    return new Intl.DateTimeFormat("en-UG", { day: "numeric", month: "short" }).format(date);
-  }
-  if (period === "month") {
-    return new Intl.DateTimeFormat("en-UG", { month: "short" }).format(date);
-  }
-  return String(date.getFullYear());
+  return PERIOD_CONFIG[period].formatChartPoint(date);
 }
 
 export function buildDashboardChartSeries(

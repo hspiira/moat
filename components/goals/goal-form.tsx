@@ -2,17 +2,13 @@
 
 import type { Account, GoalType } from "@/lib/types";
 import { formatMoney } from "@/lib/currency";
-import { AccentCardHeader } from "@/components/accent-card-header";
 import { DatePickerField } from "@/components/forms/date-picker-field";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { SelectField } from "@/components/forms/select-field";
 import { accountOptions, optionsFromRecord } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 export type GoalFormState = {
@@ -197,19 +193,9 @@ export function GoalForm({
     </form>
   );
 
-  if (embedded) {
-    return (
-      <div>
-        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
-        <div className="px-4 pt-4 pb-6">{content}</div>
-      </div>
-    );
-  }
-
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
-      <AccentCardHeader tone="yellow" title={title} description={description} />
-      <CardContent className="p-5">{content}</CardContent>
-    </Card>
+    <FormCardShell embedded={embedded} title={title} description={description}>
+      {content}
+    </FormCardShell>
   );
 }

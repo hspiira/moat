@@ -462,7 +462,6 @@ export function useOnboardingWorkspace() {
     setConsentGiven,
     step,
     stepIndex,
-    stepError,
     mode,
     setMode,
     isSubmitting,
