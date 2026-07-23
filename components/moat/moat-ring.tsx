@@ -61,7 +61,7 @@ export function MoatRing({
           r={radius}
           fill="none"
           strokeWidth={thickness}
-          className="stroke-[color:var(--moat-ring-track)]"
+          className="stroke-moat-ring-track"
         />
         <circle
           cx={size / 2}

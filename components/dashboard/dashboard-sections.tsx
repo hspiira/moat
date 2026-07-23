@@ -22,6 +22,7 @@ import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 type ChartMode = "rate" | "flow" | "allocation";
 
@@ -42,19 +43,31 @@ function ChartModeTabs({
   onChange: (m: ChartMode) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {CHART_MODES.map(({ value, label }) => (
-        <Button
-          key={value}
-          type="button"
-          size="xs"
-          variant={mode === value ? "default" : "outline"}
-          className="px-2"
-          onClick={() => onChange(value)}
-        >
-          {label}
-        </Button>
-      ))}
+    <div
+      role="tablist"
+      aria-label="Chart view"
+      className="flex w-full items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 lg:w-auto"
+    >
+      {CHART_MODES.map(({ value, label }) => {
+        const active = mode === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(value)}
+            className={cn(
+              "flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none",
+              active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -299,9 +312,9 @@ export function DashboardSavingsOverview({
 
           {/* Stat column */}
           <div className="space-y-4">
-            {/* Label row: "Savings rate" left, tabs right (mobile only) */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+            {/* Label + info, then the view switcher on its own row (mobile). */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span>Savings rate</span>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -327,7 +340,8 @@ export function DashboardSavingsOverview({
                   </PopoverContent>
                 </Popover>
               </div>
-              {/* Tabs — visible on mobile, hidden on lg (shown in chart column instead) */}
+              {/* View switcher — full-width segmented control on mobile, moved
+                  into the chart column on lg. */}
               <div className="lg:hidden">
                 <ChartModeTabs mode={chartMode} onChange={setChartMode} />
               </div>
@@ -432,28 +446,31 @@ export function DashboardTopSpendingCategories({
             </Link>
           </EmptyState>
         ) : (
-          categories.map((category, index) => (
-            <div
-              key={category.categoryId}
-              className={`-mx-4 flex items-center justify-between gap-4 border-y px-4 py-3 sm:mx-0 sm:border-x ${
-                index === 0
-                  ? "moat-panel-mint border-border/20"
-                  : index === 1
-                    ? "moat-panel-yellow border-border/20"
-                    : index === 2
-                      ? "moat-panel-sage border-border/20"
-                      : "bg-muted/25 border-border/20"
-              }`}
-            >
-              <span className="text-sm font-medium text-foreground">{category.categoryName}</span>
-              <AmountIndicator
-                tone="negative"
-                sign="negative"
-                value={formatMoney(category.amount)}
-                className="text-base font-semibold"
-              />
-            </div>
-          ))
+          (() => {
+            const maxAmount = Math.max(...categories.map((c) => c.amount), 1);
+            return categories.map((category) => (
+              <div key={category.categoryId} className="grid gap-1.5 py-1">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {category.categoryName}
+                  </span>
+                  <AmountIndicator
+                    tone="negative"
+                    sign="negative"
+                    value={formatMoney(category.amount)}
+                    className="shrink-0 text-sm font-semibold tabular-nums"
+                  />
+                </div>
+                {/* Proportional bar — share of the largest category this period. */}
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-neg/45"
+                    style={{ width: `${Math.max(6, (category.amount / maxAmount) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ));
+          })()
         )}
       </CardContent>
     </Card>

@@ -11,6 +11,7 @@ import {
   getAggregateBalanceAtDate,
   getChangePercent,
   getPeriodChartLabel,
+  type ChangeMetric,
   type PeriodFilter,
 } from "@/lib/domain/dashboard";
 import { getMonthlyInsights } from "@/lib/domain/insights";
@@ -110,9 +111,19 @@ export function useDashboardWorkspace(profile: UserProfile) {
     [accounts],
   );
 
-  const inflowChange = getChangePercent(summary.inflow, previousSummary.inflow);
-  const outflowChange = getChangePercent(summary.outflow, previousSummary.outflow);
-  const savingsChange = getChangePercent(summary.savings, previousSummary.savings);
+  // Only show period-over-period deltas when the prior window actually had
+  // activity. Otherwise every tile reads "New", which is noise, not a signal.
+  const hasComparablePrevious = previousTransactions.length > 0;
+  const noChange: ChangeMetric = { kind: "none", value: null };
+  const inflowChange = hasComparablePrevious
+    ? getChangePercent(summary.inflow, previousSummary.inflow)
+    : noChange;
+  const outflowChange = hasComparablePrevious
+    ? getChangePercent(summary.outflow, previousSummary.outflow)
+    : noChange;
+  const savingsChange = hasComparablePrevious
+    ? getChangePercent(summary.savings, previousSummary.savings)
+    : noChange;
 
   const summaryTiles: SummaryTile[] = [
     {

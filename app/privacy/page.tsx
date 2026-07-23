@@ -285,7 +285,7 @@ export default function PrivacyPage() {
                     variant="ghost"
                     className="h-auto justify-start px-2 py-2 text-left text-sm whitespace-normal"
                   >
-                    <a href={`#${section.id}`} className="block w-full break-words leading-5">
+                    <a href={`#${section.id}`} className="block w-full wrap-break-word leading-5">
                       {section.title}
                     </a>
                   </Button>
