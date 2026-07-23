@@ -5,6 +5,8 @@ import { startTransition, useEffect, useState } from "react";
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 import type { Account, AccountType, Transaction } from "@/lib/types";
 
 import { defaultAccountForm, type AccountFormState } from "./account-form";
@@ -18,6 +20,7 @@ function toInstitutionType(type: AccountType): Account["institutionType"] {
 }
 
 export function useAccountsWorkspace() {
+  const { show } = useToast();
   const [profile, setProfile] = useState<{ id: string } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -118,12 +121,15 @@ export function useAccountsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
+      show(wasEditing ? "Account updated." : "Account added.", "success");
       setAccountForm(defaultAccountForm);
       setEditingAccountId(null);
       await loadWorkspace();
       return true;
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save account.");
+      const message = errorMessage(submitError, "Couldn't save the account.");
+      setError(message);
+      show(message, "error");
       return false;
     } finally {
       setIsSubmitting(false);

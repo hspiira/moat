@@ -6,6 +6,8 @@
 import { useCallback, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 import type { BudgetTarget, Category, UserProfile } from "@/lib/types";
 
 export type BudgetFormState = {
@@ -34,6 +36,7 @@ export function useBudgetPlanner(params: {
   setIsSubmitting: (value: boolean) => void;
 }) {
   const { profile, categories, closePeriod, onMutated, setIsSubmitting } = params;
+  const { show } = useToast();
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [budgetForm, setBudgetForm] = useState<BudgetFormState>({
     budgetId: null,
@@ -64,10 +67,13 @@ export function useBudgetPlanner(params: {
       });
       setBudgetForm(emptyBudgetForm(categories));
       await onMutated();
+      show("Budget saved.", "success");
+    } catch (error) {
+      show(errorMessage(error, "Could not save the budget."), "error");
     } finally {
       setIsSubmitting(false);
     }
-  }, [budgetForm, budgets, categories, closePeriod, onMutated, profile, setIsSubmitting]);
+  }, [budgetForm, budgets, categories, closePeriod, onMutated, profile, setIsSubmitting, show]);
 
   const editBudget = useCallback(
     (budgetId: string) => {
@@ -94,11 +100,14 @@ export function useBudgetPlanner(params: {
           current.budgetId === budgetId ? emptyBudgetForm(categories) : current,
         );
         await onMutated();
+        show("Budget deleted.", "success");
+      } catch (error) {
+        show(errorMessage(error, "Could not delete the budget."), "error");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [categories, onMutated, setIsSubmitting],
+    [categories, onMutated, setIsSubmitting, show],
   );
 
   const cancelBudgetEdit = useCallback(() => {

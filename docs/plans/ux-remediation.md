@@ -32,19 +32,21 @@ Exit criteria: ✅ regression test for 0.2; ✅ fresh-profile browser shows a wo
 
 ---
 
-## Phase 1 — Destructive-action safety & feedback
+## Phase 1 — Destructive-action safety & feedback — ✅ COMPLETED 2026-07-23 (6/7; 1.7 → Phase 2)
+
+New shared foundations: `components/ui/confirm-dialog.tsx` (Radix Dialog), `components/ui/toast.tsx` (dependency-free `ToastProvider`/`useToast`, mounted top of layout, z-200 above sheets), `components/hooks/use-confirm-delete.tsx`, `lib/errors.ts` (`errorMessage`).
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 1.1 | **Zero confirmation on any delete** — one tap permanently deletes a transaction / goal / budget | `components/transactions/transaction-list.tsx:145-152` → `use-transactions-workspace.ts:492`; `components/goals/goal-list.tsx:89-96` → `use-goals-workspace.ts:148`; `components/budgets/budget-manager-panel.tsx:281-289` → `use-budget-planner.ts:88` | AlertDialog confirm on all three (model: delete-account panel’s pattern) | |
-| 1.2 | Workspace `error` renders at frame level **behind the open sheet** — a validation failure keeps the sheet open showing nothing | `components/transactions-ledger-workspace.tsx:100-125`, `components/transactions-capture-workspace.tsx:78-84` | Render error inside the embedded form/sheet | |
-| 1.3 | `LocalSaveFeedback` suppressed exactly when `embedded` (i.e. inside sheets) — in-sheet saves are silent | `components/transactions/transaction-form.tsx:98-104`, `components/goals/goal-form.tsx:84-90` | Keep a compact save indicator in embedded mode | |
-| 1.4 | No toast system at all; only global surface is `PwaStatus` (top of page, usually behind a sheet, only shows in some states) | `components/pwa-status.tsx:96-111` | Add one lightweight toast/sonner surface for save/delete/error feedback app-wide | |
-| 1.5 | **Swallowed errors** — `try/finally` with no catch: budget save/delete, month close, capture-automation settings write | `components/transactions/use-budget-planner.ts:47-72,88-100`; `use-transactions-workspace.ts:567-582` (`closeMonth`); `components/settings/capture-automation-panel.tsx:52-56` | Add catch → surface error to user | |
-| 1.6 | Capture "manual" sheet stays open and silently resets after save (deliberate rapid-entry, but reads as "nothing happened") | `components/transactions-capture-workspace.tsx:114-167` | Inline "Saved ✓" line/toast on each save | |
-| 1.7 | Numeric coercions silently turn garbage into 0 (budget target, expected amount, due day, rule priority) — user never sees a rejection | `use-budget-planner.ts:60-61`; `recurring-obligations-panel.tsx:187-189`; `transaction-rules-panel.tsx:223` | Validate + field error instead of `|| 0` fallback | |
+| 1.1 | **Zero confirmation on any delete** — one tap permanently deletes a transaction / goal / budget | transaction-list / goal-list / budget-manager-panel | `useConfirmDelete` + `ConfirmDialog` on all three; verified in browser (dialog → confirm → row removed) | ✅ done |
+| 1.2 | Workspace `error` renders at frame level **behind the open sheet** | transactions/goals workspaces | Failures now also toast (z-200, floats above sheets) in addition to inline `error` | ✅ done (via toast) |
+| 1.3 | `LocalSaveFeedback` suppressed when `embedded` (inside sheets) — in-sheet saves silent | transaction/goal/account/budget save handlers | Success toast on every save/update (visible over sheets); verified | ✅ done (via toast) |
+| 1.4 | No toast system at all | app-wide | `ToastProvider` + `useToast` added and mounted; verified "Transaction deleted." toast | ✅ done |
+| 1.5 | **Swallowed errors** — `try/finally` with no catch: budget save/delete, month close, capture-automation | use-budget-planner, use-transactions-workspace `closeMonth`, capture-automation-panel | catch → error toast added to all; capture-automation also rolls back optimistic state | ✅ done |
+| 1.6 | Capture "manual" sheet silently resets after save | capture flow (transaction save) | Manual saves now toast "Transaction saved." (shared handler) | ✅ done (via toast) |
+| 1.7 | Numeric coercions silently turn garbage into 0 (budget target, expected amount, due day, rule priority) | use-budget-planner, recurring-obligations-panel, transaction-rules-panel | → moved to **Phase 2** (validation) where field-level marking lands | ⏭️ Phase 2 (2.6 + budget/rule validation) |
 
-Exit criteria: deleting anything asks first; every save/failure produces visible feedback with sheets open; grep shows no bare `try/finally` around repository writes in components.
+Exit criteria: ✅ deleting anything asks first; ✅ every save/failure toasts above open sheets; ✅ the three bare `try/finally` swallows now catch. (1.7 numeric validation folded into Phase 2.) tsc/lint/143 tests/build green.
 
 ---
 
@@ -218,7 +220,7 @@ These were verified good; do not regress them during the phases above.
 | Phase | Theme | Items | Status |
 | --- | --- | --- | --- |
 | 0 | Trust-breaking bugs | 6 | ✅ done 2026-07-23 |
-| 1 | Destructive safety & feedback | 7 | ⬜ |
+| 1 | Destructive safety & feedback | 7 | ✅ done 2026-07-23 (1.7 → Phase 2) |
 | 2 | Validation | 6 | ⬜ |
 | 3 | De-scope undeliverable surfaces | 6 | ⬜ |
 | 4 | Screen usability | 16 | ⬜ |

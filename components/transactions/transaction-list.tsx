@@ -21,6 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
 
 type Props = {
@@ -72,6 +74,7 @@ export function TransactionList({
   onEdit,
   onDelete,
 }: Props) {
+  const del = useConfirmDelete(onDelete);
   return (
     <Card>
       <CardHeader>
@@ -148,7 +151,7 @@ export function TransactionList({
                         aria-label={`Delete ${title}`}
                         className="text-muted-foreground hover:text-destructive"
                         disabled={isSubmitting}
-                        onClick={() => onDelete(transaction)}
+                        onClick={() => del.request(transaction, title)}
                       >
                         <IconTrash />
                       </Button>
@@ -160,6 +163,18 @@ export function TransactionList({
           </ul>
         )}
       </CardContent>
+      <ConfirmDialog
+        {...del.dialogProps}
+        title="Delete this transaction?"
+        description={
+          <>
+            <span className="font-medium text-foreground">{del.label}</span>{" "}
+            will be permanently removed. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </Card>
   );
 }

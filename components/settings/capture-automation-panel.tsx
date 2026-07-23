@@ -10,6 +10,8 @@ import {
   type CaptureAutomationSettings,
 } from "@/lib/native/capture-settings";
 import { syncNativeCaptureSettings } from "@/lib/native/capture-bridge";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -42,6 +44,7 @@ function NotificationSourceRow({
 }
 
 export function CaptureAutomationPanel() {
+  const { show } = useToast();
   const [settings, setSettings] = useState<CaptureAutomationSettings>(() => {
     if (typeof window === "undefined") {
       return defaultCaptureAutomationSettings;
@@ -50,9 +53,16 @@ export function CaptureAutomationPanel() {
   });
 
   function updateSettings(next: CaptureAutomationSettings) {
+    const previous = settings;
     setSettings(next);
-    saveCaptureAutomationSettings(next);
-    syncNativeCaptureSettings(JSON.stringify(next));
+    try {
+      saveCaptureAutomationSettings(next);
+      syncNativeCaptureSettings(JSON.stringify(next));
+    } catch (error) {
+      // Roll back the optimistic change so the UI matches what was actually saved.
+      setSettings(previous);
+      show(errorMessage(error, "Couldn't update capture settings."), "error");
+    }
   }
 
   return (

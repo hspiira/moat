@@ -6,6 +6,8 @@ import { defaultGoalForm, type GoalFormState } from "@/components/goals/goal-for
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { withDerivedGoalProgress } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
@@ -16,6 +18,7 @@ function sortGoals(goals: Goal[]) {
 }
 
 export function useGoalsWorkspace() {
+  const { show } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -117,12 +120,15 @@ export function useGoalsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "goals", savedAt: timestamp, message });
+      show(wasEditing ? "Goal updated." : "Goal saved.", "success");
       setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
       return true;
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save goal.");
+      const message = errorMessage(submitError, "Couldn't save the goal.");
+      setError(message);
+      show(message, "error");
       return false;
     } finally {
       setIsSubmitting(false);
@@ -156,13 +162,16 @@ export function useGoalsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "goals", savedAt: timestamp, message });
+      show("Goal deleted.", "success");
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
         setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       }
       await loadWorkspace();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete goal.");
+      const message = errorMessage(deleteError, "Couldn't delete the goal.");
+      setError(message);
+      show(message, "error");
     } finally {
       setIsSubmitting(false);
     }

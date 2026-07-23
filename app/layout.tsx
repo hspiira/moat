@@ -7,6 +7,7 @@ import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import { AppSelfHeal } from "@/components/app-self-heal";
+import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -66,12 +67,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PinLockProvider>
-            <PwaRegister />
-            <AppSelfHeal />
-            <NativeCaptureBridgeRegister />
-            <PinLockGate>{children}</PinLockGate>
-          </PinLockProvider>
+          <ToastProvider>
+            <PinLockProvider>
+              <PwaRegister />
+              <AppSelfHeal />
+              <NativeCaptureBridgeRegister />
+              <PinLockGate>{children}</PinLockGate>
+            </PinLockProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

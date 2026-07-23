@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Money } from "@/components/ui/money";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +31,7 @@ type Props = {
 };
 
 export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAdd }: Props) {
+  const del = useConfirmDelete<Goal>((goal) => onDelete(goal.id));
   return (
     <Card>
       <CardHeader>
@@ -92,7 +95,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                       aria-label={`Delete ${goal.name}`}
                       className="text-muted-foreground hover:text-destructive"
                       disabled={isSubmitting}
-                      onClick={() => onDelete(goal.id)}
+                      onClick={() => del.request(goal, goal.name)}
                     >
                       <IconTrash />
                     </Button>
@@ -138,6 +141,18 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
           })
         )}
       </CardContent>
+      <ConfirmDialog
+        {...del.dialogProps}
+        title="Delete this goal?"
+        description={
+          <>
+            <span className="font-medium text-foreground">{del.label}</span>{" "}
+            and its progress will be removed. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </Card>
   );
 }
