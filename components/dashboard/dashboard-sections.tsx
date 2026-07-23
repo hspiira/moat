@@ -59,6 +59,18 @@ function ChartModeTabs({
   );
 }
 
+function getSavingsToneAndSign(
+  hasIncome: boolean,
+  savingsRate: number,
+): { tone: "positive" | "negative" | "neutral"; sign: "positive" | "negative" | "none" } {
+  if (!hasIncome || savingsRate === 0) {
+    return { tone: "neutral", sign: "none" };
+  }
+  return savingsRate > 0
+    ? { tone: "positive", sign: "positive" }
+    : { tone: "negative", sign: "negative" };
+}
+
 export function DashboardSavingsOverview({
   savingsRate,
   hasIncome,
@@ -275,24 +287,7 @@ export function DashboardSavingsOverview({
             </div>
 
             <AmountIndicator
-              tone={
-                !hasIncome
-                  ? "neutral"
-                  : savingsRate > 0
-                    ? "positive"
-                    : savingsRate < 0
-                      ? "negative"
-                      : "neutral"
-              }
-              sign={
-                !hasIncome
-                  ? "none"
-                  : savingsRate > 0
-                    ? "positive"
-                    : savingsRate < 0
-                      ? "negative"
-                      : "none"
-              }
+              {...getSavingsToneAndSign(hasIncome, savingsRate)}
               value={hasIncome ? `${Math.round(savingsRate * 100)}%` : "—"}
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />

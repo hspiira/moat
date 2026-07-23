@@ -222,21 +222,19 @@ function LockScreen({
   const pushDigit = useCallback(
     (digit: string) => {
       if (isChecking || isThrottled || exiting) return;
+      if (pin.length >= targetLength) return;
+      const next = pin + digit;
       setError(null);
       vibrate(10);
-      setPin((current) => {
-        if (current.length >= targetLength) return current;
-        const next = current + digit;
-        setRevealedDigit(digit);
-        if (revealTimer.current) window.clearTimeout(revealTimer.current);
-        revealTimer.current = window.setTimeout(() => setRevealedDigit(null), 300);
-        if (knownLength && next.length === targetLength) {
-          void attemptUnlock(next);
-        }
-        return next;
-      });
+      setPin(next);
+      setRevealedDigit(digit);
+      if (revealTimer.current) window.clearTimeout(revealTimer.current);
+      revealTimer.current = window.setTimeout(() => setRevealedDigit(null), 300);
+      if (knownLength && next.length === targetLength) {
+        void attemptUnlock(next);
+      }
     },
-    [isChecking, isThrottled, exiting, targetLength, knownLength, attemptUnlock],
+    [pin, isChecking, isThrottled, exiting, targetLength, knownLength, attemptUnlock],
   );
 
   const deleteDigit = useCallback(() => {

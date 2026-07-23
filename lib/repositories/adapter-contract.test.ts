@@ -3,7 +3,8 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createIndexedDbRepositories } from "@/lib/repositories/indexeddb";
-import { openFinanceDatabase, type StoreName } from "@/lib/repositories/indexeddb/client";
+import { openFinanceDatabase } from "@/lib/repositories/indexeddb/client";
+import type { StoreName } from "@/lib/repositories/store-names";
 import { createSqliteRepositories } from "@/lib/repositories/sqlite";
 import type { SqliteClient } from "@/lib/repositories/sqlite/client";
 import type { RepositoryBundle } from "@/lib/repositories/types";

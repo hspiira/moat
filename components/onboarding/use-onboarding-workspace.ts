@@ -395,7 +395,6 @@ export function useOnboardingWorkspace() {
       const accountId = `account:${crypto.randomUUID()}`;
       const openingBalance = normalizeOpeningBalance(account.type, Number(account.openingBalance));
 
-      await repositories.userProfile.save(profile);
       await Promise.all(bootstrapState.categories.map((c) => repositories.categories.upsert(c)));
       await repositories.investmentProfiles.save(bootstrapState.investmentProfile);
       await repositories.resources.replaceAll(bootstrapState.resources);
@@ -428,6 +427,10 @@ export function useOnboardingWorkspace() {
           updatedAt: timestamp,
         } as Goal);
       }
+
+      // Saved last: the profile's presence is what marks onboarding complete,
+      // so it must only exist once every bootstrap write above has succeeded.
+      await repositories.userProfile.save(profile);
 
       announceLocalSave({
         entity: "onboarding",
