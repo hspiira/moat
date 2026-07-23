@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/table";
 import { getLedgerRows, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { repositories } from "@/lib/repositories/instance";
+import { transactionTypeLabels } from "@/lib/select-options";
+import { formatDate } from "@/lib/format-date";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
@@ -40,18 +42,6 @@ function normalizeAccountId(value: string) {
   }
 }
 
-function formatLedgerDate(date: string) {
-  const [year, month, day] = date.split("-");
-  return [day, month, year].join("-");
-}
-
-const transactionTypeLabels: Record<Transaction["type"], string> = {
-  income: "Income",
-  expense: "Expense",
-  transfer: "Transfer",
-  savings_contribution: "Savings contribution",
-  debt_payment: "Debt payment",
-};
 
 function getRowTone(transaction: Transaction) {
   if (transaction.type === "income") {
@@ -216,7 +206,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                           <div className="flex items-center justify-between gap-3">
                             <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                               <span className="font-medium text-foreground">
-                                {formatLedgerDate(row.date)}
+                                {formatDate(row.date)}
                               </span>
                               {detail ? <span> · {detail}</span> : null}
                             </p>
@@ -269,7 +259,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                           return (
                             <TableRow key={row.id} className={getRowTone(row.transaction)}>
                               <TableCell className="whitespace-nowrap align-top text-xs text-muted-foreground">
-                                {formatLedgerDate(row.date)}
+                                {formatDate(row.date)}
                               </TableCell>
                               <TableCell className="max-w-88 align-top">
                                 <div className="truncate text-sm text-foreground">{primary}</div>

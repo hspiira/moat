@@ -3,6 +3,7 @@
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 
 import { getGoalContributionPlan } from "@/lib/domain/goals";
+import { formatDate } from "@/lib/format-date";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -123,7 +124,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Deadline</div>
-                    <div className="font-medium tabular-nums">{goal.targetDate}</div>
+                    <div className="font-medium tabular-nums">{formatDate(goal.targetDate, { alwaysYear: true })}</div>
                   </div>
                 </div>
 

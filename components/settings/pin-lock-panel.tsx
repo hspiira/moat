@@ -16,8 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PinInputField } from "@/components/forms/pin-input-field";
 
 type Mode = "idle" | "set" | "remove";
 
@@ -135,36 +134,22 @@ export function PinLockPanel() {
 
         {mode === "set" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleSetPin(e)}>
-            <div className="grid gap-2">
-              <Label htmlFor="new-pin" className="text-xs">{`New PIN (minimum ${MIN_PIN_LENGTH} digits)`}</Label>
-              <Input
-                id="new-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={12}
-                value={pin}
-                onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))}
-                placeholder="e.g. 1234"
-                autoComplete="new-password"
-                className="tracking-[0.3em]"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirm-pin" className="text-xs">Confirm PIN</Label>
-              <Input
-                id="confirm-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={12}
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="Repeat PIN"
-                autoComplete="new-password"
-                className="tracking-[0.3em]"
-              />
-            </div>
+            <PinInputField
+              id="new-pin"
+              label={`New PIN (minimum ${MIN_PIN_LENGTH} digits)`}
+              value={pin}
+              onChange={setPinValue}
+              placeholder="e.g. 1234"
+              autoComplete="new-password"
+            />
+            <PinInputField
+              id="confirm-pin"
+              label="Confirm PIN"
+              value={confirmPin}
+              onChange={setConfirmPin}
+              placeholder="Repeat PIN"
+              autoComplete="new-password"
+            />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isWorking}>
@@ -179,21 +164,14 @@ export function PinLockPanel() {
 
         {mode === "remove" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleRemovePin(e)}>
-            <div className="grid gap-2">
-              <Label htmlFor="current-pin" className="text-xs">Current PIN</Label>
-              <Input
-                id="current-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={12}
-                value={currentPin}
-                onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="Enter current PIN"
-                autoComplete="current-password"
-                className="tracking-[0.3em]"
-              />
-            </div>
+            <PinInputField
+              id="current-pin"
+              label="Current PIN"
+              value={currentPin}
+              onChange={setCurrentPin}
+              placeholder="Enter current PIN"
+              autoComplete="current-password"
+            />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" variant="destructive" disabled={isWorking}>
