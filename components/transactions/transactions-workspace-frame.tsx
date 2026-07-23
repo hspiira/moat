@@ -60,13 +60,15 @@ export function TransactionsWorkspaceFrame({
 
       {!isLoading && profile ? (
         <div className="grid gap-5">
-          <TransactionsSummaryStrip
-            recordedCount={transactionCount}
-            transactionCount={periodTransactionCount}
-            reviewCount={reviewCount}
-            duplicateCount={duplicateCount}
-            summary={periodSummary}
-          />
+          {currentRoute === "ledger" ? (
+            <TransactionsSummaryStrip
+              recordedCount={transactionCount}
+              transactionCount={periodTransactionCount}
+              reviewCount={reviewCount}
+              duplicateCount={duplicateCount}
+              summary={periodSummary}
+            />
+          ) : null}
           <TransactionsRouteLinks current={currentRoute} />
           {children}
         </div>

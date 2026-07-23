@@ -8,7 +8,7 @@ type CaptureReviewSection = "month-close" | "capture";
 
 const sectionConfig: Record<CaptureReviewSection, { href: string; label: string }> = {
   "month-close": { href: "/transactions/review", label: "Month close" },
-  capture: { href: "/transactions/review/capture", label: "Capture inbox" },
+  capture: { href: "/transactions/review/capture", label: "Captured items" },
 };
 
 export function CaptureReviewSectionLinks({

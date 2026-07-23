@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrowDownLeft, IconArrowUpRight } from "@tabler/icons-react";
+import { IconArrowDownLeft, IconArrowUpRight, IconEqual } from "@tabler/icons-react";
 
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Money } from "@/components/ui/money";
@@ -87,7 +87,11 @@ export function DashboardMoatHero({
             >
               <Money amount={outflow} tone="negative" />
             </FlowStat>
-            <FlowStat label="Net" periodLabel={periodLabel}>
+            <FlowStat
+              icon={<IconEqual className="size-3.5" />}
+              label="Net"
+              periodLabel={periodLabel}
+            >
               <Money amount={net} tone="auto" signed />
             </FlowStat>
           </dl>

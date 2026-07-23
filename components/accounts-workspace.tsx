@@ -38,6 +38,7 @@ export function AccountsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     setAccountForm,
@@ -48,9 +49,6 @@ export function AccountsWorkspace() {
   } = useAccountsWorkspace();
 
   const accountTotals = getAccountTotals(accounts);
-  const typesSetUp = defaultAccountTypes.filter(
-    (type) => accountTotals.accountsByType[type] > 0,
-  ).length;
 
   const formSheet = useFormSheet(cancelEdit);
 
@@ -110,21 +108,11 @@ export function AccountsWorkspace() {
                   />
                 </div>
               </div>
-              <dl className="flex items-end gap-8 text-sm">
+              <dl className="text-sm">
                 <div className="space-y-0.5">
                   <dt className="text-xs text-muted-foreground">Accounts</dt>
                   <dd className="text-xl font-semibold tabular-nums">
                     {accountTotals.activeAccounts}
-                  </dd>
-                </div>
-                <div className="space-y-0.5">
-                  <dt className="text-xs text-muted-foreground">Types</dt>
-                  <dd className="text-xl font-semibold tabular-nums">
-                    {typesSetUp}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {" "}
-                      / {defaultAccountTypes.length}
-                    </span>
                   </dd>
                 </div>
               </dl>
@@ -156,6 +144,7 @@ export function AccountsWorkspace() {
                 isSubmitting={isSubmitting}
                 lastSavedAt={lastSavedAt}
                 successMessage={successMessage}
+                fieldErrors={fieldErrors}
                 onFormChange={setAccountForm}
                 onSubmit={async (e) => {
                   const ok = await handleAccountSubmit(e);

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createGoogleDriveBackupClient,
+  isGoogleDriveConfigured,
   type GoogleDriveBackupFile,
 } from "@/lib/integrations/google-drive-backup";
 import {
@@ -262,7 +263,9 @@ export function BackupPanel() {
     }
   }
 
-  const shouldShowDriveReminder = drivePreferences.wasConnected && !drivePreferences.lastBackupAt;
+  const driveConfigured = isGoogleDriveConfigured();
+  const shouldShowDriveReminder =
+    driveConfigured && drivePreferences.wasConnected && !drivePreferences.lastBackupAt;
 
   async function handleDriveDisconnect() {
     await driveClient.signOut();
@@ -280,8 +283,8 @@ export function BackupPanel() {
         <CardHeader className="pb-3">
         <CardTitle className="text-base">Encrypted backup</CardTitle>
         <CardDescription>
-          Download an AES-GCM encrypted backup of all your data, protected by a PIN you choose.
-          Use this to protect against accidental data loss or to move data between devices.
+          Download an encrypted backup of all your data, locked with a PIN you choose. Use it to
+          guard against accidental data loss or to move your data to another device.
         </CardDescription>
       </CardHeader>
         <CardContent className="space-y-4">
@@ -339,13 +342,15 @@ export function BackupPanel() {
             >
               Restore from backup
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setMode("drive"); setSuccess(null); }}
-            >
-              Google Drive backup
-            </Button>
+            {driveConfigured ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setMode("drive"); setSuccess(null); }}
+              >
+                Google Drive backup
+              </Button>
+            ) : null}
           </div>
         ) : null}
 

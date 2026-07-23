@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 function formatMonthLabel(period: string) {
-  const [year, month] = period.split("-");
-  return `${month}-${year}`;
+  const date = new Date(`${period}-01T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? period
+    : date.toLocaleDateString("en-UG", { month: "long", year: "numeric" });
 }
 
 type Props = {
@@ -58,29 +60,58 @@ export function MonthClosePanel({
   onClose,
   onExport,
 }: Props) {
+  const monthLabel = formatMonthLabel(period);
+  const missingObligations = recurringEvaluations.filter((entry) => entry.state !== "paid");
+  const allClear =
+    evaluation.unresolvedTransactions.length === 0 &&
+    evaluation.duplicateGroups.length === 0 &&
+    missingObligations.length === 0;
+
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
       <AccentCardHeader
         tone="lilac"
-        title={`Month close · ${formatMonthLabel(period)}`}
-        description="Review unresolved items, duplicates, and recurring expectations before closing."
+        title={`Month close · ${monthLabel}`}
+        description="Clear any unresolved items, duplicates, and missing bills before closing the month."
       />
       <CardContent className="grid gap-4 p-5">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ["State", monthClose?.state ?? (evaluation.isReadyToClose ? "ready" : "open")],
-            ["Unresolved", String(evaluation.unresolvedTransactions.length)],
-            ["Duplicates", String(evaluation.duplicateGroups.length)],
-            ["Missing obligations", String(evaluation.recurringMissingCount)],
-          ].map(([label, value]) => (
-            <div key={label} className="border border-border/20 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                {label}
-              </div>
-              <div className="mt-2 text-xl text-foreground">{value}</div>
-            </div>
-          ))}
-        </div>
+        {monthClose?.state === "closed" ? (
+          <p className="text-sm text-pos">This month is closed.</p>
+        ) : allClear ? (
+          <p className="text-sm text-pos">
+            {`All clear for ${monthLabel} — nothing to resolve. You're ready to close the month.`}
+          </p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-3">
+            {evaluation.unresolvedTransactions.length > 0 ? (
+              <DetailList
+                title={`Unresolved (${evaluation.unresolvedTransactions.length})`}
+                items={evaluation.unresolvedTransactions}
+                renderItem={(item) => {
+                  const transaction = item as MonthCloseEvaluation["unresolvedTransactions"][number];
+                  return `${transaction.occurredOn} · ${Math.abs(transaction.amount)}`;
+                }}
+              />
+            ) : null}
+            {evaluation.duplicateGroups.length > 0 ? (
+              <DetailList
+                title={`Likely duplicates (${evaluation.duplicateGroups.length})`}
+                items={evaluation.duplicateGroups}
+                renderItem={(item) => {
+                  const group = item as DuplicateGroup;
+                  return `${group.transactions.length} records look the same`;
+                }}
+              />
+            ) : null}
+            {missingObligations.length > 0 ? (
+              <DetailList
+                title={`Missing bills (${missingObligations.length})`}
+                items={missingObligations}
+                renderItem={(item) => (item as RecurringEvaluation).obligation.name}
+              />
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={onRefresh}>
@@ -97,33 +128,6 @@ export function MonthClosePanel({
           >
             Close month
           </Button>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DetailList
-            title="Unresolved transactions"
-            items={evaluation.unresolvedTransactions}
-            renderItem={(item) => {
-              const transaction = item as MonthCloseEvaluation["unresolvedTransactions"][number];
-              return `${transaction.occurredOn} · ${transaction.reconciliationState} · ${Math.abs(transaction.amount)}`;
-            }}
-          />
-          <DetailList
-            title="Likely duplicates"
-            items={evaluation.duplicateGroups}
-            renderItem={(item) => {
-              const group = item as DuplicateGroup;
-              return `${group.transactions.length} records share ${group.key}`;
-            }}
-          />
-          <DetailList
-            title="Missing obligations"
-            items={recurringEvaluations.filter((entry) => entry.state !== "paid")}
-            renderItem={(item) => {
-              const evaluation = item as RecurringEvaluation;
-              return `${evaluation.obligation.name} · ${evaluation.state}`;
-            }}
-          />
         </div>
       </CardContent>
     </Card>

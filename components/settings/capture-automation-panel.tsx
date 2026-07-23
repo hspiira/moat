@@ -10,6 +10,8 @@ import {
   type CaptureAutomationSettings,
 } from "@/lib/native/capture-settings";
 import { syncNativeCaptureSettings } from "@/lib/native/capture-bridge";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -42,6 +44,7 @@ function NotificationSourceRow({
 }
 
 export function CaptureAutomationPanel() {
+  const { show } = useToast();
   const [settings, setSettings] = useState<CaptureAutomationSettings>(() => {
     if (typeof window === "undefined") {
       return defaultCaptureAutomationSettings;
@@ -50,20 +53,26 @@ export function CaptureAutomationPanel() {
   });
 
   function updateSettings(next: CaptureAutomationSettings) {
+    const previous = settings;
     setSettings(next);
-    saveCaptureAutomationSettings(next);
-    syncNativeCaptureSettings(JSON.stringify(next));
+    try {
+      saveCaptureAutomationSettings(next);
+      syncNativeCaptureSettings(JSON.stringify(next));
+    } catch (error) {
+      // Roll back the optimistic change so the UI matches what was actually saved.
+      setSettings(previous);
+      show(errorMessage(error, "Couldn't update capture settings."), "error");
+    }
   }
 
   return (
     <Card className="border-border/20 shadow-none">
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-1">
-          <div className="text-sm text-foreground">Capture automation</div>
+          <div className="text-sm text-foreground">Read money messages automatically</div>
           <div className="text-sm text-muted-foreground">
-            Android share-to-app intake is wired through the native host shell. Notification
-            capture stays gated by an explicit allowlist and still routes everything into review
-            before posting.
+            When on, Moat reads new money messages from the apps you allow below and sends them to
+            review — nothing posts to your ledger without your say-so.
           </div>
         </div>
 
@@ -79,7 +88,7 @@ export function CaptureAutomationPanel() {
               })
             }
           >
-            {settings.notificationCaptureEnabled ? "Notification capture enabled" : "Notification capture disabled"}
+            {settings.notificationCaptureEnabled ? "Automatic reading is on" : "Automatic reading is off"}
           </Button>
         </div>
 
@@ -106,13 +115,9 @@ export function CaptureAutomationPanel() {
           })}
         </div>
 
-        <div className="grid gap-1 text-xs text-muted-foreground">
-          <div>Native bridge contract: `window.moatNativeCapture.ingest(payload)`</div>
-          <div>
-            Android share-to-app is delivered through the host shell now. Notification listener
-            capture remains a separate device-level opt-in path.
-          </div>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          You can also share a message to Moat from another app to bring it in for review.
+        </p>
       </CardContent>
     </Card>
   );

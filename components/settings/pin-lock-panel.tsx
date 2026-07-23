@@ -86,8 +86,8 @@ export function PinLockPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">PIN lock</CardTitle>
         <CardDescription>
-          Protect the app with a PIN. Your PIN is derived using PBKDF2 and never stored in
-          plain text. The session locks automatically after 5 minutes of inactivity.
+          Protect the app with a PIN. Your PIN never leaves this device, and the app locks
+          itself after 5 minutes of inactivity.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

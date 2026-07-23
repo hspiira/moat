@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
 import { formatMoney } from "@/lib/currency";
+import { validateAmount } from "@/lib/validation";
 import type { BudgetTarget, Category, Transaction } from "@/lib/types";
 import {
   getBudgetEnvelopes,
@@ -14,6 +17,8 @@ import { categoryOptions } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { StatTile } from "@/components/ui/stat-tile";
 import { InputField } from "@/components/forms/input-field";
 
@@ -50,6 +55,8 @@ export function BudgetManagerPanel({
   onDelete,
   onCancelEdit,
 }: Props) {
+  const del = useConfirmDelete<{ budgetId: string }>((envelope) => onDelete(envelope.budgetId));
+  const [targetError, setTargetError] = useState<string | null>(null);
   const monthTransactions = transactions.filter((transaction) =>
     transaction.occurredOn.startsWith(month),
   );
@@ -182,6 +189,7 @@ export function BudgetManagerPanel({
                 label="Allocated (UGX)"
                 inputMode="numeric"
                 value={form.targetAmount}
+                error={targetError}
                 onChange={(event) =>
                   onFormChange((current) => ({
                     ...current,
@@ -224,7 +232,22 @@ export function BudgetManagerPanel({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" disabled={isSubmitting} onClick={onSave}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={() => {
+              const error = validateAmount(form.targetAmount, {
+                requiredMessage: "Enter an amount to allocate.",
+              });
+              if (error) {
+                setTargetError(error);
+                return;
+              }
+              setTargetError(null);
+              onSave();
+            }}
+          >
             {form.budgetId ? "Update budget" : "Save budget"}
           </Button>
           {form.budgetId ? (
@@ -283,7 +306,7 @@ export function BudgetManagerPanel({
                       variant="ghost"
                       className="h-7 text-xs text-destructive hover:text-destructive"
                       disabled={isSubmitting}
-                      onClick={() => onDelete(envelope.budgetId)}
+                      onClick={() => del.request(envelope, envelope.categoryName)}
                     >
                       Delete
                     </Button>
@@ -294,6 +317,19 @@ export function BudgetManagerPanel({
           )}
         </div>
       </CardContent>
+      <ConfirmDialog
+        {...del.dialogProps}
+        title="Delete this budget?"
+        description={
+          <>
+            The budget for{" "}
+            <span className="font-medium text-foreground">{del.label}</span> will be removed. Your
+            transactions stay put.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </Card>
   );
 }

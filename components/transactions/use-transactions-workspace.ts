@@ -49,6 +49,8 @@ import { buildManualTransaction, buildTransferPair } from "./transaction-builder
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
 
 export type { BudgetFormState };
 
@@ -86,6 +88,7 @@ function getResetTransactionForm(
 
 export function useTransactionsWorkspace() {
   const searchParams = useSearchParams();
+  const { show } = useToast();
   const closePeriod = new Date().toISOString().slice(0, 7);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -450,11 +453,14 @@ export function useTransactionsWorkspace() {
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
         announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
+        show(wasEditing ? "Transaction updated." : "Transaction saved.", "success");
         setEditingTransactionId(null);
         setTransactionForm(getResetTransactionForm(accounts, categories));
         await loadWorkspace();
       } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : "Unable to save transaction.");
+        const message = errorMessage(submitError, "Couldn't save the transaction.");
+        setError(message);
+        show(message, "error");
       } finally {
         setIsSubmitting(false);
       }
@@ -467,6 +473,7 @@ export function useTransactionsWorkspace() {
       persistReconciledBalances,
       profile,
       refreshMonthCloseState,
+      show,
       transactionForm,
       transactions,
     ],
@@ -515,11 +522,14 @@ export function useTransactionsWorkspace() {
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
         announceLocalSave({ entity: "transactions", savedAt: timestamp, message });
+        show("Transaction deleted.", "success");
         await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
         await loadWorkspace();
       } catch (deleteError) {
-        setError(deleteError instanceof Error ? deleteError.message : "Unable to delete transaction.");
+        const message = errorMessage(deleteError, "Couldn't delete the transaction.");
+        setError(message);
+        show(message, "error");
       } finally {
         setIsSubmitting(false);
       }
@@ -530,6 +540,7 @@ export function useTransactionsWorkspace() {
       persistReconciledBalances,
       profile,
       refreshMonthCloseState,
+      show,
       transactions,
     ],
   );
@@ -576,10 +587,13 @@ export function useTransactionsWorkspace() {
         updatedAt: timestamp,
       });
       await loadWorkspace();
+      show(`${closePeriod} closed.`, "success");
+    } catch (closeError) {
+      show(errorMessage(closeError, "Couldn't close the month."), "error");
     } finally {
       setIsSubmitting(false);
     }
-  }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile]);
+  }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile, show]);
 
   const exportMonthClose = useCallback(() => {
     const csv = buildMonthCloseCsv(transactions, categories, closePeriod);

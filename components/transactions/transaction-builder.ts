@@ -115,6 +115,14 @@ export function buildManualTransaction(
 ): Transaction {
   const { form, userId } = input;
   const { originalAmount, normalizedAmount } = validateTransactionAmounts(form);
+
+  if (!form.accountId) {
+    throw new Error("Choose an account for this transaction.");
+  }
+  if (!form.categoryId) {
+    throw new Error("Choose a category for this transaction.");
+  }
+
   const transactionId = input.editingTransactionId ?? `transaction:${crypto.randomUUID()}`;
 
   const baseTransaction: Transaction = {

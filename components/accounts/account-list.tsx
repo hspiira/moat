@@ -101,10 +101,10 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
                     className="shrink-0 text-right text-base font-semibold"
                   />
                   <Button
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
                     aria-label={`Edit ${account.name}`}
-                    className="relative z-10 shrink-0 text-muted-foreground hover:text-foreground"
+                    className="relative z-10 size-9 shrink-0 text-muted-foreground hover:text-foreground"
                     onClick={() => onEdit(account)}
                   >
                     <IconPencil />

@@ -23,6 +23,8 @@ type Props = {
   placeholder?: string;
   options: SelectFieldOption[];
   onValueChange: (value: string) => void;
+  /** Field-level validation message. When set, the trigger is marked invalid. */
+  error?: string | null;
 };
 
 export function SelectField({
@@ -32,12 +34,18 @@ export function SelectField({
   placeholder,
   options,
   onValueChange,
+  error,
 }: Props) {
+  const errorId = id ? `${id}-error` : undefined;
   return (
     <div className="grid gap-2">
       {label ? <Label htmlFor={id}>{label}</Label> : null}
       <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger id={id}>
+        <SelectTrigger
+          id={id}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -48,6 +56,11 @@ export function SelectField({
           ))}
         </SelectContent>
       </Select>
+      {error ? (
+        <p id={errorId} className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

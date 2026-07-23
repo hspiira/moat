@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InputField } from "@/components/forms/input-field";
+import { validateInteger } from "@/lib/validation";
 
 type RuleFormState = {
   name: string;
@@ -63,6 +64,7 @@ export function TransactionRulesPanel({
   onToggleRule,
 }: Props) {
   const [form, setForm] = useState<RuleFormState>(defaultRuleForm);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
   const sourceOptions = [
     { value: "any", label: "Any source" },
     ...optionsFromRecord(transactionSourceLabels),
@@ -98,9 +100,10 @@ export function TransactionRulesPanel({
           />
           <InputField
             id="rule-priority"
-            label="Priority"
+            label="Priority (1–999, lower runs first)"
             inputMode="numeric"
             value={form.priority}
+            error={priorityError}
             onChange={(event) =>
               setForm((current) => ({ ...current, priority: event.target.value }))
             }
@@ -216,10 +219,16 @@ export function TransactionRulesPanel({
             size="sm"
             disabled={isSubmitting || !form.name.trim()}
             onClick={() => {
+              const error = validateInteger(form.priority || "100", 1, 999, "Enter a priority.");
+              if (error) {
+                setPriorityError(error);
+                return;
+              }
+              setPriorityError(null);
               onSaveRule({
                 name: form.name.trim(),
                 enabled: true,
-                priority: Number(form.priority) || 100,
+                priority: Number(form.priority),
                 source: form.source === "any" ? undefined : form.source,
                 payeePattern: form.payeePattern.trim() || undefined,
                 keywordPattern: form.keywordPattern.trim() || undefined,

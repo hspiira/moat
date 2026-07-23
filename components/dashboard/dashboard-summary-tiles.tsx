@@ -1,7 +1,7 @@
 "use client";
 
 import { AmountIndicator } from "@/components/amount-indicator";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import type { ChangeMetric } from "@/lib/domain/dashboard";
 
 export type SummaryTile = {
@@ -15,49 +15,52 @@ export type SummaryTile = {
   className: string;
 };
 
+/**
+ * Compact full-width rows (label · value · vs-last-period). Full width so
+ * large UGX sums never truncate — three separate cards wasted vertical space,
+ * and squeezing them into columns clipped seven-figure values.
+ */
 export function DashboardSummaryTiles({ items }: { items: SummaryTile[] }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-      {items.map((item) => (
-        <Card key={item.label} className={`${item.className} border-border/20 shadow-none`}>
-          <CardHeader className="gap-2 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <CardDescription className="text-foreground/65">{item.label}</CardDescription>
-              <AmountIndicator
-                tone={item.changeTone}
-                direction={item.changeDirection}
-                showIcon={item.change.kind !== "none"}
-                sign={
-                  item.change.kind === "new"
-                    ? "positive"
-                    : item.change.kind === "delta" && (item.change.value ?? 0) > 0
+    <Card className="border-border/20 py-1 shadow-none">
+      <CardContent className="divide-y divide-border/50 px-0">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="text-sm text-muted-foreground">{item.label}</span>
+            <div className="flex items-baseline gap-2">
+              {item.change.kind !== "none" ? (
+                <AmountIndicator
+                  tone={item.changeTone}
+                  direction={item.changeDirection}
+                  showIcon
+                  sign={
+                    item.change.kind === "new"
                       ? "positive"
-                      : item.change.kind === "delta" && (item.change.value ?? 0) < 0
-                        ? "negative"
-                        : "none"
-                }
-                value={
-                  item.change.kind === "none"
-                    ? "—"
-                    : item.change.kind === "new"
+                      : item.change.kind === "delta" && (item.change.value ?? 0) > 0
+                        ? "positive"
+                        : item.change.kind === "delta" && (item.change.value ?? 0) < 0
+                          ? "negative"
+                          : "none"
+                  }
+                  value={
+                    item.change.kind === "new"
                       ? "New"
                       : `${Math.abs(item.change.value ?? 0).toFixed(0)}%`
-                }
-                className="text-xs font-medium"
-                iconClassName="h-3.5 w-3.5"
-              />
-            </div>
-            <CardTitle className="text-2xl tracking-tight">
+                  }
+                  className="text-[0.7rem] font-medium"
+                  iconClassName="h-3 w-3"
+                />
+              ) : null}
               <AmountIndicator
                 tone={item.tone}
                 sign={item.sign}
                 value={item.value}
-                className="text-2xl font-semibold tracking-tight"
+                className="text-base font-semibold tracking-tight tabular-nums"
               />
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      ))}
-    </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }

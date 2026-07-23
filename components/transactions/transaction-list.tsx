@@ -4,6 +4,7 @@ import {
   IconArrowDownLeft,
   IconArrowsExchange,
   IconArrowUpRight,
+  IconDotsVertical,
   IconPencil,
   IconPigMoney,
   IconReceipt2,
@@ -21,6 +22,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
 
 type Props = {
@@ -72,6 +76,7 @@ export function TransactionList({
   onEdit,
   onDelete,
 }: Props) {
+  const del = useConfirmDelete(onDelete);
   return (
     <Card>
       <CardHeader>
@@ -110,12 +115,7 @@ export function TransactionList({
                   </span>
 
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">{title}</span>
-                      <span className="shrink-0 text-[0.65rem] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-                        {transactionTypeLabels[transaction.type]}
-                      </span>
-                    </div>
+                    <div className="truncate text-sm font-medium text-foreground">{title}</div>
                     <div className="truncate text-xs text-muted-foreground">
                       {formatDate(transaction.occurredOn)} · {account?.name ?? "—"}
                       {category && !isTransfer ? ` · ${category.name}` : ""}
@@ -123,43 +123,67 @@ export function TransactionList({
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <Money
-                      amount={transaction.amount}
-                      currency="UGX"
-                      tone={presentation.tone}
-                      signed={presentation.signed}
-                      className="text-sm font-semibold sm:text-base"
-                    />
-                    <div className="flex">
-                      {!isTransfer ? (
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          aria-label={`Edit ${title}`}
-                          onClick={() => onEdit(transaction)}
-                        >
-                          <IconPencil />
-                        </Button>
-                      ) : null}
+                  <Money
+                    amount={transaction.amount}
+                    currency="UGX"
+                    tone={presentation.tone}
+                    signed={presentation.signed}
+                    className="shrink-0 text-sm font-semibold sm:text-base"
+                  />
+
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
-                        size="icon-sm"
+                        size="icon"
                         variant="ghost"
-                        aria-label={`Delete ${title}`}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="size-9 shrink-0 text-muted-foreground"
+                        aria-label={`Actions for ${title}`}
                         disabled={isSubmitting}
-                        onClick={() => onDelete(transaction)}
                       >
-                        <IconTrash />
+                        <IconDotsVertical />
                       </Button>
-                    </div>
-                  </div>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-40 p-1">
+                      {!isTransfer ? (
+                        <PopoverClose asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
+                            onClick={() => onEdit(transaction)}
+                          >
+                            <IconPencil className="size-4" /> Edit
+                          </button>
+                        </PopoverClose>
+                      ) : null}
+                      <PopoverClose asChild>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
+                          onClick={() => del.request(transaction, title)}
+                        >
+                          <IconTrash className="size-4" /> Delete
+                        </button>
+                      </PopoverClose>
+                    </PopoverContent>
+                  </Popover>
                 </li>
               );
             })}
           </ul>
         )}
       </CardContent>
+      <ConfirmDialog
+        {...del.dialogProps}
+        title="Delete this transaction?"
+        description={
+          <>
+            <span className="font-medium text-foreground">{del.label}</span>{" "}
+            will be permanently removed. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </Card>
   );
 }

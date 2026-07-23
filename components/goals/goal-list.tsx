@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Money } from "@/components/ui/money";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +31,7 @@ type Props = {
 };
 
 export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAdd }: Props) {
+  const del = useConfirmDelete<Goal>((goal) => onDelete(goal.id));
   return (
     <Card>
       <CardHeader>
@@ -77,22 +80,23 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button
-                      size="icon-sm"
+                      size="icon"
                       variant="ghost"
+                      className="size-9"
                       aria-label={`Edit ${goal.name}`}
                       onClick={() => onEdit(goal)}
                     >
                       <IconPencil />
                     </Button>
                     <Button
-                      size="icon-sm"
+                      size="icon"
                       variant="ghost"
                       aria-label={`Delete ${goal.name}`}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="size-9 text-muted-foreground hover:text-destructive"
                       disabled={isSubmitting}
-                      onClick={() => onDelete(goal.id)}
+                      onClick={() => del.request(goal, goal.name)}
                     >
                       <IconTrash />
                     </Button>
@@ -112,7 +116,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                   <div className="min-w-0">
                     <div className="text-xs text-muted-foreground">Monthly target</div>
                     <Money
-                      amount={plan.monthlyContribution}
+                      amount={Math.round(plan.monthlyContribution / 1000) * 1000}
                       tone={plan.isBehindSchedule ? "negative" : "neutral"}
                       className="font-medium"
                     />
@@ -138,6 +142,18 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
           })
         )}
       </CardContent>
+      <ConfirmDialog
+        {...del.dialogProps}
+        title="Delete this goal?"
+        description={
+          <>
+            <span className="font-medium text-foreground">{del.label}</span>{" "}
+            and its progress will be removed. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+      />
     </Card>
   );
 }

@@ -19,7 +19,7 @@ export function PinLockGate({ children }: { children: React.ReactNode }) {
   // During `unlocking` both mount: the app renders behind while the same lock
   // screen (kept alive by its stable key) plays its reveal on top and then
   // calls completeUnlock. The stable keys stop React from remounting either.
-  const showApp = status === "unlocked" || status === "unlocking";
+  const showApp = status === "no_pin" || status === "unlocked" || status === "unlocking";
   const showLock = status === "locked" || status === "unlocking";
 
   return (

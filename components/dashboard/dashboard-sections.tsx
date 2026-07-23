@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
@@ -22,13 +22,14 @@ import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles
 import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 type ChartMode = "rate" | "flow" | "allocation";
 
 const CHART_MODES: { value: ChartMode; label: string }[] = [
-  { value: "rate", label: "Rate" },
-  { value: "flow", label: "Flow" },
-  { value: "allocation", label: "Alloc" },
+  { value: "rate", label: "Savings" },
+  { value: "flow", label: "Cash flow" },
+  { value: "allocation", label: "Allocation" },
 ];
 
 const CHART_PERIOD_LABELS_CLASS =
@@ -42,33 +43,66 @@ function ChartModeTabs({
   onChange: (m: ChartMode) => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      {CHART_MODES.map(({ value, label }) => (
-        <Button
-          key={value}
-          type="button"
-          size="xs"
-          variant={mode === value ? "default" : "outline"}
-          className="px-2"
-          onClick={() => onChange(value)}
-        >
-          {label}
-        </Button>
-      ))}
+    <div
+      role="tablist"
+      aria-label="Chart view"
+      className="flex w-full items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 lg:w-auto"
+    >
+      {CHART_MODES.map(({ value, label }) => {
+        const active = mode === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(value)}
+            className={cn(
+              "flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none",
+              active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function getSavingsToneAndSign(
+/**
+ * Present the savings rate as a headline. A raw percentage beyond ±100% reads
+ * as absurd (spending 5× income shows "-400%"), so deep deficits switch to a
+ * plain multiple of income spent.
+ */
+function describeSavingsRate(
   hasIncome: boolean,
   savingsRate: number,
-): { tone: "positive" | "negative" | "neutral"; sign: "positive" | "negative" | "none" } {
-  if (!hasIncome || savingsRate === 0) {
-    return { tone: "neutral", sign: "none" };
+): {
+  value: string;
+  tone: "positive" | "negative" | "neutral";
+  sign: "positive" | "negative" | "none";
+  note: string | null;
+} {
+  if (!hasIncome) {
+    return { value: "—", tone: "neutral", sign: "none", note: null };
   }
-  return savingsRate > 0
-    ? { tone: "positive", sign: "positive" }
-    : { tone: "negative", sign: "negative" };
+  if (savingsRate === 0) {
+    return { value: "0%", tone: "neutral", sign: "none", note: null };
+  }
+  if (savingsRate > 0) {
+    return { value: `${Math.round(savingsRate * 100)}%`, tone: "positive", sign: "positive", note: null };
+  }
+  // Deficit. Below -100% the percentage stops being meaningful, so show how
+  // many times income was spent instead (outflow / income = 1 - rate).
+  if (savingsRate <= -1) {
+    const multiple = 1 - savingsRate;
+    const label = multiple >= 10 ? String(Math.round(multiple)) : multiple.toFixed(1).replace(/\.0$/, "");
+    return { value: `${label}×`, tone: "negative", sign: "none", note: "Spent this many times your income this period." };
+  }
+  return { value: `${Math.round(savingsRate * 100)}%`, tone: "negative", sign: "negative", note: null };
 }
 
 export function DashboardSavingsOverview({
@@ -85,6 +119,8 @@ export function DashboardSavingsOverview({
   chartSeries: DashboardChartPoint[];
 }) {
   const [chartMode, setChartMode] = useState<ChartMode>("flow");
+
+  const savings = describeSavingsRate(hasIncome, savingsRate);
 
   const maxRate = useMemo(
     () => Math.max(...chartSeries.map((point) => Math.abs(point.savingsRate)), 0.1),
@@ -276,9 +312,9 @@ export function DashboardSavingsOverview({
 
           {/* Stat column */}
           <div className="space-y-4">
-            {/* Label row: "Savings rate" left, tabs right (mobile only) */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-foreground/65">
+            {/* Label + info, then the view switcher on its own row (mobile). */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span>Savings rate</span>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -304,21 +340,24 @@ export function DashboardSavingsOverview({
                   </PopoverContent>
                 </Popover>
               </div>
-              {/* Tabs — visible on mobile, hidden on lg (shown in chart column instead) */}
+              {/* View switcher — full-width segmented control on mobile, moved
+                  into the chart column on lg. */}
               <div className="lg:hidden">
                 <ChartModeTabs mode={chartMode} onChange={setChartMode} />
               </div>
             </div>
 
             <AmountIndicator
-              {...getSavingsToneAndSign(hasIncome, savingsRate)}
-              value={hasIncome ? `${Math.round(savingsRate * 100)}%` : "—"}
+              tone={savings.tone}
+              sign={savings.sign}
+              value={savings.value}
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />
 
             <p className="text-xs text-foreground/65">
               {hasIncome ? (
                 <>
+                  {savings.note ? <>{savings.note} </> : null}
                   Tagged savings contributions:{" "}
                   <span className="font-medium text-foreground">
                     {formatMoney(allocatedSavings)}
@@ -407,28 +446,31 @@ export function DashboardTopSpendingCategories({
             </Link>
           </EmptyState>
         ) : (
-          categories.map((category, index) => (
-            <div
-              key={category.categoryId}
-              className={`-mx-4 flex items-center justify-between gap-4 border-y px-4 py-3 sm:mx-0 sm:border-x ${
-                index === 0
-                  ? "moat-panel-mint border-border/20"
-                  : index === 1
-                    ? "moat-panel-yellow border-border/20"
-                    : index === 2
-                      ? "moat-panel-sage border-border/20"
-                      : "bg-muted/25 border-border/20"
-              }`}
-            >
-              <span className="text-sm font-medium text-foreground">{category.categoryName}</span>
-              <AmountIndicator
-                tone="negative"
-                sign="negative"
-                value={formatMoney(category.amount)}
-                className="text-base font-semibold"
-              />
-            </div>
-          ))
+          (() => {
+            const maxAmount = Math.max(...categories.map((c) => c.amount), 1);
+            return categories.map((category) => (
+              <div key={category.categoryId} className="grid gap-1.5 py-1">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {category.categoryName}
+                  </span>
+                  <AmountIndicator
+                    tone="negative"
+                    sign="negative"
+                    value={formatMoney(category.amount)}
+                    className="shrink-0 text-sm font-semibold tabular-nums"
+                  />
+                </div>
+                {/* Proportional bar — share of the largest category this period. */}
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-neg/45"
+                    style={{ width: `${Math.max(6, (category.amount / maxAmount) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ));
+          })()
         )}
       </CardContent>
     </Card>
@@ -467,35 +509,37 @@ export function DashboardAccountBalances({
               }`}
             >
               <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{account.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {account.type.replaceAll("_", " ")}
+                <Link
+                  href={`/accounts/${encodeURIComponent(account.id)}`}
+                  className="group flex min-w-0 flex-1 items-center gap-1"
+                  aria-label={`Open ${account.name} ledger`}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-foreground">{account.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {account.type.replaceAll("_", " ")}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                    <Link href={`/accounts/${encodeURIComponent(account.id)}`}>Ledger</Link>
-                  </Button>
-                  <AmountIndicator
-                    tone={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "neutral"
-                    }
-                    sign={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "none"
-                    }
-                    value={formatMoney(account.balance)}
-                    className="text-sm font-medium"
-                  />
-                </div>
+                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <AmountIndicator
+                  tone={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "neutral"
+                  }
+                  sign={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "none"
+                  }
+                  value={formatMoney(account.balance)}
+                  className="shrink-0 text-sm font-medium"
+                />
               </div>
               <AccountBalanceBreakdown account={account} transactions={transactions} compact />
             </div>

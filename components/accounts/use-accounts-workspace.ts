@@ -5,6 +5,9 @@ import { startTransition, useEffect, useState } from "react";
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
+import { validateAmount } from "@/lib/validation";
 import type { Account, AccountType, Transaction } from "@/lib/types";
 
 import { defaultAccountForm, type AccountFormState } from "./account-form";
@@ -18,6 +21,7 @@ function toInstitutionType(type: AccountType): Account["institutionType"] {
 }
 
 export function useAccountsWorkspace() {
+  const { show } = useToast();
   const [profile, setProfile] = useState<{ id: string } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -26,6 +30,7 @@ export function useAccountsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; openingBalance?: string }>({});
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -66,6 +71,25 @@ export function useAccountsWorkspace() {
   ): Promise<boolean> {
     event.preventDefault();
     if (!profile) return false;
+
+    // Debt accounts may carry a negative opening balance (money owed); every
+    // other type may not. Zero is always fine.
+    const nextFieldErrors: { name?: string; openingBalance?: string } = {};
+    if (!accountForm.name.trim()) {
+      nextFieldErrors.name = "Give this account a name.";
+    }
+    const balanceError = validateAmount(accountForm.openingBalance || "0", {
+      allowZero: true,
+      allowNegative: accountForm.type === "debt",
+    });
+    if (balanceError) {
+      nextFieldErrors.openingBalance = balanceError;
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      return false;
+    }
+    setFieldErrors({});
 
     setIsSubmitting(true);
     setError(null);
@@ -118,12 +142,15 @@ export function useAccountsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
+      show(wasEditing ? "Account updated." : "Account added.", "success");
       setAccountForm(defaultAccountForm);
       setEditingAccountId(null);
       await loadWorkspace();
       return true;
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save account.");
+      const message = errorMessage(submitError, "Couldn't save the account.");
+      setError(message);
+      show(message, "error");
       return false;
     } finally {
       setIsSubmitting(false);
@@ -197,6 +224,7 @@ export function useAccountsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     setAccountForm,

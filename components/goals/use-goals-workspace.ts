@@ -6,6 +6,17 @@ import { defaultGoalForm, type GoalFormState } from "@/components/goals/goal-for
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { withDerivedGoalProgress } from "@/lib/domain/goals";
 import { announceLocalSave } from "@/lib/local-save";
+import { useToast } from "@/components/ui/toast";
+import { errorMessage } from "@/lib/errors";
+import { isPastDate, validateAmount, validateInteger } from "@/lib/validation";
+
+type GoalFieldErrors = {
+  name?: string;
+  targetAmount?: string;
+  currentAmount?: string;
+  targetDate?: string;
+  priority?: string;
+};
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
@@ -16,6 +27,7 @@ function sortGoals(goals: Goal[]) {
 }
 
 export function useGoalsWorkspace() {
+  const { show } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -25,6 +37,7 @@ export function useGoalsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<GoalFieldErrors>({});
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -91,6 +104,37 @@ export function useGoalsWorkspace() {
     event.preventDefault();
     if (!profile) return false;
 
+    const nextFieldErrors: GoalFieldErrors = {};
+    if (!goalForm.name.trim()) {
+      nextFieldErrors.name = "Give this goal a name.";
+    }
+    const targetError = validateAmount(goalForm.targetAmount, {
+      requiredMessage: "Enter a target amount.",
+    });
+    if (targetError) {
+      nextFieldErrors.targetAmount = targetError;
+    }
+    const currentError = validateAmount(goalForm.currentAmount || "0", { allowZero: true });
+    if (currentError) {
+      nextFieldErrors.currentAmount = currentError;
+    } else if (!targetError && Number(goalForm.currentAmount || 0) > Number(goalForm.targetAmount)) {
+      nextFieldErrors.currentAmount = "Saved so far can't exceed the target.";
+    }
+    if (!goalForm.targetDate) {
+      nextFieldErrors.targetDate = "Choose a target date.";
+    } else if (isPastDate(goalForm.targetDate)) {
+      nextFieldErrors.targetDate = "Pick a date in the future.";
+    }
+    const priorityError = validateInteger(goalForm.priority || "1", 1, 10, "Enter a priority.");
+    if (priorityError) {
+      nextFieldErrors.priority = priorityError;
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      return false;
+    }
+    setFieldErrors({});
+
     setIsSubmitting(true);
     setError(null);
 
@@ -117,12 +161,15 @@ export function useGoalsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "goals", savedAt: timestamp, message });
+      show(wasEditing ? "Goal updated." : "Goal saved.", "success");
       setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       setEditingGoalId(null);
       await loadWorkspace();
       return true;
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save goal.");
+      const message = errorMessage(submitError, "Couldn't save the goal.");
+      setError(message);
+      show(message, "error");
       return false;
     } finally {
       setIsSubmitting(false);
@@ -156,13 +203,16 @@ export function useGoalsWorkspace() {
       setLastSavedAt(timestamp);
       setSuccessMessage(message);
       announceLocalSave({ entity: "goals", savedAt: timestamp, message });
+      show("Goal deleted.", "success");
       if (editingGoalId === goalId) {
         setEditingGoalId(null);
         setGoalForm({ ...defaultGoalForm, linkedAccountId: accounts[0]?.id ?? "" });
       }
       await loadWorkspace();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete goal.");
+      const message = errorMessage(deleteError, "Couldn't delete the goal.");
+      setError(message);
+      show(message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -182,6 +232,7 @@ export function useGoalsWorkspace() {
     isLoading,
     isSubmitting,
     error,
+    fieldErrors,
     lastSavedAt,
     successMessage,
     emergencyFundSuggestion,

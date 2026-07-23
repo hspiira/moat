@@ -10,6 +10,7 @@ import {
   type Icon,
 } from "@tabler/icons-react";
 
+import { useHasNativeBridge } from "@/components/hooks/use-native-bridge";
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
@@ -49,6 +50,7 @@ function SettingsSection({
 }
 
 export function SettingsWorkspace() {
+  const hasNativeBridge = useHasNativeBridge();
   return (
     <div className="grid gap-8">
       <div className="space-y-1">
@@ -67,18 +69,20 @@ export function SettingsWorkspace() {
         <PasskeyPanel />
       </SettingsSection>
 
-      <SettingsSection
-        icon={IconRss}
-        title="Capture automation"
-        description="Control native capture channels and allowlisted sources before machine-derived records are sent into review."
-      >
-        <CaptureAutomationPanel />
-      </SettingsSection>
+      {hasNativeBridge ? (
+        <SettingsSection
+          icon={IconRss}
+          title="Capture automation"
+          description="Let Moat pick up money messages from your phone and send them to review before they post."
+        >
+          <CaptureAutomationPanel />
+        </SettingsSection>
+      ) : null}
 
       <SettingsSection
         icon={IconCloudLock}
-        title="Storage and sync"
-        description="Moat always writes locally first. Hosted sync is optional and remains an explicit opt-in mode."
+        title="Storage"
+        description="Where your data lives and how to move it between devices."
       >
         <SyncModePanel />
       </SettingsSection>
@@ -86,7 +90,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconLockSquareRounded}
         title="Backup and restore"
-        description="Your data is stored locally only. A device reset or browser clear will delete it. Download an encrypted backup regularly or keep a recovery copy in Google Drive."
+        description="Your data lives on this device, so a device reset or browser clear erases it. Download an encrypted backup regularly and keep it somewhere safe."
       >
         <BackupPanel />
       </SettingsSection>
@@ -106,7 +110,7 @@ export function SettingsWorkspace() {
             Privacy Policy
           </Link>
           {" · "}
-          All data is stored locally on your device and never transmitted to any server.
+          Your data stays on this device unless you turn on cloud backup or sync.
         </div>
       </section>
     </div>
