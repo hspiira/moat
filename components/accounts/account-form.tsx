@@ -67,16 +67,28 @@ type Props = {
 };
 
 export function AccountForm(props: Props) {
-  const { embedded } = props;
-  const body = <AccountFormBody {...props} />;
-  const title = props.editingId ? "Edit account" : "Add account";
-  const description = props.editingId
+  const { embedded, editingId, isSubmitting, onCancelEdit } = props;
+  const title = editingId ? "Edit account" : "Add account";
+  const description = editingId
     ? "Update the details for this account."
     : "Name it once and track it clearly.";
 
+  const footer = (
+    <div className="flex gap-2">
+      <Button type="submit" form="account-form" disabled={isSubmitting} className="flex-1">
+        {isSubmitting ? "Saving…" : editingId ? "Update account" : "Add account"}
+      </Button>
+      {editingId ? (
+        <Button type="button" variant="outline" onClick={onCancelEdit}>
+          Cancel
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
-    <FormCardShell embedded={embedded} title={title} description={description}>
-      {body}
+    <FormCardShell embedded={embedded} title={title} description={description} footer={footer}>
+      <AccountFormBody {...props} />
     </FormCardShell>
   );
 }
@@ -84,15 +96,12 @@ export function AccountForm(props: Props) {
 function AccountFormBody({
   accountTypes,
   form,
-  editingId,
-  isSubmitting,
   onFormChange,
   onSubmit,
-  onCancelEdit,
   fieldErrors,
 }: Props) {
   return (
-    <form className="grid gap-4" onSubmit={onSubmit} noValidate>
+    <form id="account-form" className="grid gap-4" onSubmit={onSubmit} noValidate>
           <InputField
             id="account-name"
             label="Account name"
@@ -240,17 +249,6 @@ function AccountFormBody({
             placeholder="Optional"
             className="min-h-20"
           />
-
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} type="submit" size="sm">
-              {isSubmitting ? "Saving..." : editingId ? "Update account" : "Add account"}
-            </Button>
-            {editingId ? (
-              <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>
-                Cancel
-              </Button>
-            ) : null}
-          </div>
     </form>
   );
 }

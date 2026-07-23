@@ -107,50 +107,6 @@ export function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function isPrimaryMobileRoute(pathname: string) {
-  return mobilePrimaryNav.some((href) => isActiveRoute(pathname, href));
-}
-
-export function getMobileTopBarTitle(pathname: string) {
-  if (pathname === "/transactions/capture") {
-    return "Capture";
-  }
-
-  if (pathname === "/transactions/import") {
-    return "Import";
-  }
-
-  if (pathname === "/transactions/review") {
-    return "Review";
-  }
-
-  if (pathname === "/transactions/review/capture") {
-    return "Capture review";
-  }
-
-  if (pathname === "/transactions/tools") {
-    return "Tools";
-  }
-
-  if (pathname === "/accounts") {
-    return "Accounts";
-  }
-
-  if (pathname.startsWith("/accounts/")) {
-    return "Account ledger";
-  }
-
-  if (pathname === "/settings") {
-    return "Settings";
-  }
-
-  if (pathname === "/privacy") {
-    return "Privacy";
-  }
-
-  const matchedItem = navItems.find((item) => isActiveRoute(pathname, item.href));
-  return matchedItem?.label ?? "Moat";
-}
 
 export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));

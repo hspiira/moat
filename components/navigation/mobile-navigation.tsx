@@ -8,9 +8,7 @@ import { usePinLock } from "@/lib/security/pin-lock-context";
 import { navItems } from "@/lib/data";
 
 import {
-  getMobileTopBarTitle,
   isActiveRoute,
-  isPrimaryMobileRoute,
   MobileCaptureSheet,
   mobilePrimaryNav,
   MobileMoreButton,
@@ -26,8 +24,6 @@ export function MobileNavigation({
   pathname: string;
   onToggleTheme: () => void;
 }) {
-  const isPrimaryRoute = isPrimaryMobileRoute(pathname);
-  const topBarTitle = getMobileTopBarTitle(pathname);
   const { hasPinLock, lockState, lock } = usePinLock();
 
   function renderNavButton(href: (typeof mobilePrimaryNav)[number]) {
@@ -68,21 +64,11 @@ export function MobileNavigation({
         <div className="flex items-center justify-between gap-3 px-4 py-1.5">
           <div className="flex min-w-0 items-center gap-3">
             <MoatMark className="h-9 w-9 shrink-0" />
-            <div className="min-w-0">
-              {isPrimaryRoute ? (
-                <div className="truncate text-base font-semibold tracking-tight text-foreground">
-                  Moat
-                </div>
-              ) : (
-                <>
-                  <div className="truncate text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Moat
-                  </div>
-                  <div className="truncate text-base font-semibold tracking-tight text-foreground">
-                    {topBarTitle}
-                  </div>
-                </>
-              )}
+            {/* Brand wordmark on every route; each page's own header owns the
+                section title, so the top bar stays consistent and never
+                duplicates the heading below it. */}
+            <div className="truncate text-base font-semibold tracking-tight text-foreground">
+              Moat
             </div>
           </div>
 
