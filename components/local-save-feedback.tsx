@@ -31,7 +31,7 @@ export function LocalSaveFeedback({
       return `${successMessage} at ${formatSavedAt(lastSavedAt)}.`;
     }
 
-    return "Changes stay on this device until sync exists.";
+    return "Saved on this device.";
   }, [isSubmitting, lastSavedAt, successMessage]);
 
   return (

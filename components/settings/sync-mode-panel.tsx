@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { repositories } from "@/lib/repositories/instance";
 import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/types";
 import { runHostedSync } from "@/lib/sync/engine";
+import { isHostedSyncEnabled } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -38,6 +39,7 @@ function createDefaultSyncProfile(user: UserProfile): SyncProfile {
 }
 
 export function SyncModePanel() {
+  const hostedSyncEnabled = isHostedSyncEnabled();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [syncProfile, setSyncProfile] = useState<SyncProfile | null>(null);
   const [pendingItems, setPendingItems] = useState<SyncOutboxItem[]>([]);
@@ -152,7 +154,23 @@ export function SyncModePanel() {
     return (
       <Card className="border-border/20 shadow-none">
         <CardContent className="p-5 text-sm text-muted-foreground">
-          Finish onboarding before configuring storage and sync.
+          Finish setting up before managing storage.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Until a hosted backend ships, show a plain on-device summary rather than
+  // sync controls that can't do anything yet.
+  if (!hostedSyncEnabled) {
+    return (
+      <Card className="border-border/20 shadow-none">
+        <CardContent className="grid gap-1 p-5">
+          <div className="text-sm text-foreground">Everything stays on this device</div>
+          <div className="text-sm text-muted-foreground">
+            Your data is saved on this device only. To move it to another device, use an encrypted
+            backup below.
+          </div>
         </CardContent>
       </Card>
     );
@@ -162,10 +180,10 @@ export function SyncModePanel() {
     <Card className="border-border/20 shadow-none">
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-1">
-          <div className="text-sm text-foreground">Offline-first storage</div>
+          <div className="text-sm text-foreground">Storage and sync</div>
           <div className="text-sm text-muted-foreground">
-            Moat always writes locally first. Hosted sync is optional and only replays queued local
-            changes for users who opt in.
+            Moat always saves on this device first. Cloud sync is optional and only sends the
+            changes you make while offline.
           </div>
         </div>
 

@@ -68,18 +68,20 @@ Exit criteria: ✅ each form rejects garbage with a message at the field; ✅ on
 
 ---
 
-## Phase 3 — De-scope surfaces the product can’t deliver (web)
+## Phase 3 — De-scope surfaces the product can’t deliver (web) — ✅ COMPLETED 2026-07-23
+
+New: `lib/features.ts` (`isHostedSyncEnabled`, off by default via `NEXT_PUBLIC_ENABLE_HOSTED_SYNC`); `lib/integrations/google-drive-backup.ts` `isGoogleDriveConfigured()`; `components/hooks/use-native-bridge.ts` (hydration-safe `useHasNativeBridge`).
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 3.1 | **Hosted sync UI with no real backend** — endpoint field, bearer token, "Sync now", auto-drain against a dev-only 501 stub ("DEV-ONLY BACKEND", env-flag gated, single-process JSON store, no tenancy). Placeholder `https://sync.example.com` visible | `components/settings/sync-mode-panel.tsx` (esp. `:143-149,211,215-222`); `app/api/v1/sync/push/route.ts`, `pull/route.ts`; `lib/sync/hosted-store.ts` | Hide Hosted-sync mode behind a build/env flag until a real backend ships; keep outbox plumbing (it is sound and tested) | |
-| 3.2 | `/settings/sync-conflicts` — unreachable dead weight until 3.1 ships; renders raw `JSON.stringify` payloads, `entityType:entityId`, "Strategy/Operation" — a developer debug view | `components/sync-conflicts-workspace.tsx:141-181` | Gate with 3.1; when it returns, redesign as human diff ("Keep mine / Use server") without raw JSON | |
-| 3.3 | **Android-only "Capture automation" section rendered for web users** — notification allowlist with raw package names (`com.mtn.uganda.momo`…), Allowed/Blocked rows, and literal dev contract text "Native bridge contract: `window.moatNativeCapture.ingest(payload)`" | `components/settings-workspace.tsx:70-76`; `components/settings/capture-automation-panel.tsx:65-67,82,110-114` | Render only when `hasNativeStorageBridge()`; delete the bridge-contract line from UI everywhere | |
-| 3.4 | Google Drive "Connect" always shown; throws "not configured for this environment" when `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` unset | `components/settings/backup-panel.tsx` (`getGoogleDriveClientId` path) | Hide/disable the card when unconfigured | |
-| 3.5 | `navItems` (desktop nav) omits `/privacy` while `navIcons` includes it — Privacy reachable only from mobile drawer | `components/navigation/navigation-shared.tsx:42` vs `lib/data.ts` | Reconcile (footer link on desktop is enough; make it deliberate) | |
-| 3.6 | "Changes stay on this device until sync exists." — admits unbuilt feature in Compass profile card | `components/investment-compass/*` (Local save chip copy) | Reword: "Saved on this device." | |
+| 3.1 | **Hosted sync UI with no real backend** | sync-mode-panel | Gated behind `isHostedSyncEnabled()` (off by default). Panel now shows a plain "Everything stays on this device" card — no endpoint, token, mode toggle, "Sync now", or conflicts link. Outbox/engine plumbing untouched (dormant). Verified: no "Sync endpoint"/"bearer token"/"Hosted sync" text on web | ✅ done |
+| 3.2 | `/settings/sync-conflicts` debug view — unreachable until 3.1 | sync-conflicts-workspace | Its only entry point (the conflicts link) is inside the now-hidden hosted block, so the route is unreachable on web. Left dormant behind the 3.1 flag; human-diff redesign deferred to when hosted sync ships | ✅ done (gated dormant) |
+| 3.3 | **Android-only "Capture automation" shown to web** + dev contract text | settings-workspace, capture-automation-panel | Section renders only when `useHasNativeBridge()`; deleted the `window.moatNativeCapture.ingest` contract line and rewrote the panel copy in plain language. Verified: no capture/bridge text on web | ✅ done |
+| 3.4 | Google Drive card always shown; throws when unconfigured | backup-panel | `isGoogleDriveConfigured()` gates the Drive button + reminder; section description no longer promises Drive. Verified: no Drive button without client id | ✅ done |
+| 3.5 | `navItems` omits `/privacy` while `navIcons` includes it | navigation-shared vs lib/data | **Reviewed — deliberate, no change:** Privacy is reachable everywhere via the Settings footer link, plus the mobile drawer. Desktop intentionally keeps it out of the primary nav (it's a policy page, not a workspace). The `navIcons` entry is harmless (drawer uses it). | ✅ reviewed |
+| 3.6 | "Changes stay on this device until sync exists." | local-save-feedback | → "Saved on this device." | ✅ done |
 
-Exit criteria: web build shows no Android controls, no sync endpoint/token fields, no dev contract strings; drive card hidden without client id.
+Exit criteria: ✅ web build shows no Android controls, no sync endpoint/token fields, no dev contract strings; ✅ Drive card hidden without client id; verified in a real browser. tsc/lint/149 tests/build green.
 
 ---
 
@@ -225,7 +227,7 @@ These were verified good; do not regress them during the phases above.
 | 0 | Trust-breaking bugs | 6 | ✅ done 2026-07-23 |
 | 1 | Destructive safety & feedback | 7 | ✅ done 2026-07-23 (1.7 → Phase 2) |
 | 2 | Validation | 6 (+1.7) | ✅ done 2026-07-23 |
-| 3 | De-scope undeliverable surfaces | 6 | ⬜ |
+| 3 | De-scope undeliverable surfaces | 6 | ✅ done 2026-07-23 |
 | 4 | Screen usability | 16 | ⬜ |
 | 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ⬜ |
 | 6 | Widget/form consistency | 13 | ⬜ |
