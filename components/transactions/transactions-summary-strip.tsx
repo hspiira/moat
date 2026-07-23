@@ -36,14 +36,12 @@ export function TransactionsSummaryStrip({
         <dl className="divide-y divide-border/60">
           <SummaryRow label="Recorded" value={recordedCount} />
           <SummaryRow label="This month" value={transactionCount} />
-          <SummaryRow
-            label="Needs review"
-            value={<span className={reviewCount > 0 ? "text-clay" : ""}>{reviewCount}</span>}
-          />
-          <SummaryRow
-            label="Duplicates"
-            value={<span className={duplicateCount > 0 ? "text-clay" : ""}>{duplicateCount}</span>}
-          />
+          {reviewCount > 0 ? (
+            <SummaryRow label="Needs review" value={<span className="text-clay">{reviewCount}</span>} />
+          ) : null}
+          {duplicateCount > 0 ? (
+            <SummaryRow label="Duplicates" value={<span className="text-clay">{duplicateCount}</span>} />
+          ) : null}
           <SummaryRow label="Inflow" value={<Money amount={summary.inflow} tone="positive" />} />
           <SummaryRow label="Outflow" value={<Money amount={summary.outflow} tone="negative" />} />
         </dl>
