@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
+  IconAdjustmentsHorizontal,
   IconBuildingBank,
   IconBusinessplan,
   IconChalkboard,
@@ -256,7 +257,7 @@ export function MobileCaptureSheet() {
         <SheetHeader className="px-6">
           <SheetTitle>Capture</SheetTitle>
           <SheetDescription>
-            Start with the fastest capture path, then send machine-derived items into review before posting.
+            Pick the fastest way to add a transaction. Anything read from a message goes to review first.
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
@@ -343,6 +344,27 @@ export function MobileUtilitySheet({
                   />
                 );
               })}
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Data tools">
+            <div className="grid">
+              <DrawerNavRow
+                href="/transactions/import"
+                label="CSV import"
+                description="Bring in bank or mobile money statements"
+                icon={IconFileImport}
+                active={isActiveRoute(pathname, "/transactions/import")}
+                onNavigate={close}
+              />
+              <DrawerNavRow
+                href="/transactions/tools"
+                label="Rules & corrections"
+                description="Transaction rules, budgets, correction log"
+                icon={IconAdjustmentsHorizontal}
+                active={isActiveRoute(pathname, "/transactions/tools")}
+                onNavigate={close}
+              />
             </div>
           </DrawerSection>
 
