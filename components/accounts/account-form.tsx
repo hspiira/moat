@@ -8,6 +8,7 @@ import type {
 } from "@/lib/types";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import {
@@ -200,17 +201,12 @@ function AccountFormBody({
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <InputField
-                    id="debt-start-date"
-                    label="Start date"
-                    type="date"
-                    value={form.debtStartDate}
-                    onChange={(e) =>
-                      onFormChange((c) => ({ ...c, debtStartDate: e.target.value }))
-                    }
-                  />
-                </div>
+                <DatePickerField
+                  id="debt-start-date"
+                  label="Start date"
+                  value={form.debtStartDate}
+                  onChange={(value) => onFormChange((c) => ({ ...c, debtStartDate: value }))}
+                />
                 <div className="grid gap-2">
                   <InputField
                     id="debt-term-months"

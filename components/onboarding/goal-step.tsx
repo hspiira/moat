@@ -3,6 +3,7 @@
 import { goalTypeLabels } from "@/components/goals/goal-form";
 import { defaultGoalTypes } from "@/lib/app-state/defaults";
 import { InputField } from "@/components/forms/input-field";
+import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SelectField } from "@/components/forms/select-field";
 import { optionsFromRecord } from "@/lib/select-options";
 import type { GoalType } from "@/lib/types";
@@ -66,13 +67,11 @@ export function GoalStep({ goal, onGoalChange }: Props) {
             required
           />
 
-          <InputField
+          <DatePickerField
             id="goal-target-date"
-            type="date"
             label="Target date"
             value={goal.targetDate}
-            onChange={(e) => onGoalChange((c) => ({ ...c, targetDate: e.target.value }))}
-            required
+            onChange={(value) => onGoalChange((c) => ({ ...c, targetDate: value }))}
           />
         </>
       ) : (
