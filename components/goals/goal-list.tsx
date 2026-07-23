@@ -36,7 +36,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
     <Card>
       <CardHeader>
         <CardTitle>Your goals</CardTitle>
-        <CardDescription>Targets are calculated from amount, deadline, and progress.</CardDescription>
+        <CardDescription>Your savings goals and how each is tracking.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {goals.length === 0 ? (

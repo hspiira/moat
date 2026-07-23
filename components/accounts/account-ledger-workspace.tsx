@@ -186,7 +186,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             <CardHeader>
               <CardTitle className="text-base">Transactions affecting this account</CardTitle>
               <CardDescription>
-                Every row below contributes directly to the current balance above.
+                Every transaction here adds up to the balance above.
               </CardDescription>
             </CardHeader>
             <CardContent>

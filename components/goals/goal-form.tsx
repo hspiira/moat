@@ -199,7 +199,7 @@ export function GoalForm({
 
           <div className="flex flex-wrap gap-2">
             <Button disabled={isSubmitting} type="submit" size="sm">
-              {isSubmitting ? "Saving..." : editingId ? "Update goal" : "Create goal"}
+              {isSubmitting ? "Saving…" : editingId ? "Update goal" : "Add goal"}
             </Button>
             {editingId ? (
               <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>

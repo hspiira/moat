@@ -58,7 +58,7 @@ export function PinLockPanel() {
     setIsWorking(false);
 
     if (ok) {
-      setSuccess("PIN lock enabled. You will be prompted for your PIN after 5 minutes of inactivity.");
+      setSuccess("PIN lock is on.");
       resetForm();
     } else {
       setError("Failed to set PIN. Please try again.");

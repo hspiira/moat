@@ -115,7 +115,7 @@ export function InvestmentProfileCard({
       <AccentCardHeader
         tone="yellow"
         title="Your investment profile"
-        description="Update these settings to see how guidance changes."
+        description="Your guidance updates as you change these."
         titleClassName="text-base"
       />
       <CardContent className="p-5">
