@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
 import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
@@ -492,35 +492,37 @@ export function DashboardAccountBalances({
               }`}
             >
               <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{account.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {account.type.replaceAll("_", " ")}
+                <Link
+                  href={`/accounts/${encodeURIComponent(account.id)}`}
+                  className="group flex min-w-0 flex-1 items-center gap-1"
+                  aria-label={`Open ${account.name} ledger`}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-foreground">{account.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {account.type.replaceAll("_", " ")}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                    <Link href={`/accounts/${encodeURIComponent(account.id)}`}>Ledger</Link>
-                  </Button>
-                  <AmountIndicator
-                    tone={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "neutral"
-                    }
-                    sign={
-                      account.balance > 0
-                        ? "positive"
-                        : account.balance < 0
-                          ? "negative"
-                          : "none"
-                    }
-                    value={formatMoney(account.balance)}
-                    className="text-sm font-medium"
-                  />
-                </div>
+                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <AmountIndicator
+                  tone={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "neutral"
+                  }
+                  sign={
+                    account.balance > 0
+                      ? "positive"
+                      : account.balance < 0
+                        ? "negative"
+                        : "none"
+                  }
+                  value={formatMoney(account.balance)}
+                  className="shrink-0 text-sm font-medium"
+                />
               </div>
               <AccountBalanceBreakdown account={account} transactions={transactions} compact />
             </div>

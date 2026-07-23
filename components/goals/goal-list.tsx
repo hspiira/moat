@@ -80,20 +80,21 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     <Button
-                      size="icon-sm"
+                      size="icon"
                       variant="ghost"
+                      className="size-9"
                       aria-label={`Edit ${goal.name}`}
                       onClick={() => onEdit(goal)}
                     >
                       <IconPencil />
                     </Button>
                     <Button
-                      size="icon-sm"
+                      size="icon"
                       variant="ghost"
                       aria-label={`Delete ${goal.name}`}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="size-9 text-muted-foreground hover:text-destructive"
                       disabled={isSubmitting}
                       onClick={() => del.request(goal, goal.name)}
                     >

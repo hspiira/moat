@@ -1,8 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
 import { MonthClosePanel } from "./transactions/month-close-panel";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
 import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
@@ -27,12 +24,7 @@ export function TransactionsReviewWorkspace() {
       periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <CaptureReviewSectionLinks current="month-close" />
-          <Button asChild size="sm" variant="outline">
-            <Link href="/transactions/review/capture">Open capture inbox</Link>
-          </Button>
-        </div>
+        <CaptureReviewSectionLinks current="month-close" />
 
         <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <MonthClosePanel
