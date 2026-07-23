@@ -10,6 +10,8 @@ import {
   getBudgetFundingCapacity,
   getIncomeFundingSummaries,
 } from "@/lib/domain/budgets";
+import { IconPlus } from "@tabler/icons-react";
+
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { AmountIndicator } from "@/components/amount-indicator";
 import { SelectField } from "@/components/forms/select-field";
@@ -18,6 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormCardShell } from "@/components/forms/form-card-shell";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { StatTile } from "@/components/ui/stat-tile";
 import { InputField } from "@/components/forms/input-field";
@@ -57,6 +67,37 @@ export function BudgetManagerPanel({
 }: Props) {
   const del = useConfirmDelete<{ budgetId: string }>((envelope) => onDelete(envelope.budgetId));
   const [targetError, setTargetError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  function handleOpenChange(open: boolean) {
+    setIsOpen(open);
+    if (!open) {
+      onCancelEdit();
+      setTargetError(null);
+    }
+  }
+  function openForCreate() {
+    onCancelEdit();
+    setTargetError(null);
+    setIsOpen(true);
+  }
+  function openForEdit(budgetId: string) {
+    onEdit(budgetId);
+    setTargetError(null);
+    setIsOpen(true);
+  }
+  function handleSave() {
+    const error = validateAmount(form.targetAmount, {
+      requiredMessage: "Enter an amount to allocate.",
+    });
+    if (error) {
+      setTargetError(error);
+      return;
+    }
+    setTargetError(null);
+    onSave();
+    setIsOpen(false);
+  }
   const monthTransactions = transactions.filter((transaction) =>
     transaction.occurredOn.startsWith(month),
   );
@@ -136,12 +177,13 @@ export function BudgetManagerPanel({
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs"
-                      onClick={() =>
+                      onClick={() => {
                         onFormChange((current) => ({
                           ...current,
                           incomeTransactionId: summary.transactionId,
-                        }))
-                      }
+                        }));
+                        setIsOpen(true);
+                      }}
                     >
                       Use
                     </Button>
@@ -157,7 +199,41 @@ export function BudgetManagerPanel({
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-[1.1fr_1.1fr_0.8fr_0.8fr]">
+        <div>
+          <Button type="button" size="sm" onClick={openForCreate}>
+            <IconPlus className="size-4" /> Add budget
+          </Button>
+        </div>
+
+        <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+          <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+            <SheetHeader className="sr-only">
+              <SheetTitle>{form.budgetId ? "Edit budget" : "Add budget"}</SheetTitle>
+              <SheetDescription>Allocate monthly spending for a category.</SheetDescription>
+            </SheetHeader>
+            <FormCardShell
+              embedded
+              title={form.budgetId ? "Edit budget" : "Add budget"}
+              description="Allocate what you plan to spend on a category this month."
+              footer={
+                <Button
+                  type="submit"
+                  form="budget-form"
+                  disabled={isSubmitting || !form.categoryId}
+                  className="w-full"
+                >
+                  {form.budgetId ? "Update budget" : "Save budget"}
+                </Button>
+              }
+            >
+              <form
+                id="budget-form"
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSave();
+                }}
+              >
           <div className="grid gap-2">
             <SelectField
               label="Category"
@@ -183,20 +259,22 @@ export function BudgetManagerPanel({
             />
           </div>
           <div className="grid gap-2">
-            <div className="flex gap-2">
-              <InputField
-                id="budget-target-amount"
-                label="Allocated (UGX)"
-                inputMode="numeric"
-                value={form.targetAmount}
-                error={targetError}
-                onChange={(event) =>
-                  onFormChange((current) => ({
-                    ...current,
-                    targetAmount: event.target.value,
-                  }))
-                }
-              />
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <InputField
+                  id="budget-target-amount"
+                  label="Allocated (UGX)"
+                  inputMode="numeric"
+                  value={form.targetAmount}
+                  error={targetError}
+                  onChange={(event) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      targetAmount: event.target.value,
+                    }))
+                  }
+                />
+              </div>
               {selectedFundingSource ? (
                 <Button
                   type="button"
@@ -229,33 +307,10 @@ export function BudgetManagerPanel({
               }
             />
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSubmitting}
-            onClick={() => {
-              const error = validateAmount(form.targetAmount, {
-                requiredMessage: "Enter an amount to allocate.",
-              });
-              if (error) {
-                setTargetError(error);
-                return;
-              }
-              setTargetError(null);
-              onSave();
-            }}
-          >
-            {form.budgetId ? "Update budget" : "Save budget"}
-          </Button>
-          {form.budgetId ? (
-            <Button type="button" size="sm" variant="outline" onClick={onCancelEdit}>
-              Cancel
-            </Button>
-          ) : null}
-        </div>
+              </form>
+            </FormCardShell>
+          </SheetContent>
+        </Sheet>
 
         <div className="grid gap-2">
           {envelopes.length === 0 ? (
@@ -298,7 +353,7 @@ export function BudgetManagerPanel({
                       value={formatMoney(Math.abs(envelope.remaining), "UGX")}
                       className="text-sm font-medium"
                     />
-                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onEdit(envelope.budgetId)}>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openForEdit(envelope.budgetId)}>
                       Edit
                     </Button>
                     <Button

@@ -5,9 +5,19 @@ import { useState } from "react";
 import { isSuggestedRecurringObligation } from "@/lib/domain/recurring";
 import type { Account, Category, RecurringObligation } from "@/lib/types";
 import type { RecurringEvaluation, SuggestedRecurringObligation } from "@/lib/domain/recurring";
+import { IconPlus } from "@tabler/icons-react";
+
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   accountOptions,
   categoryOptions,
@@ -76,17 +86,88 @@ export function RecurringObligationsPanel({
 }: Props) {
   const [form, setForm] = useState<ObligationFormState>(defaultObligationForm);
   const [fieldErrors, setFieldErrors] = useState<{ expectedAmount?: string; dueDay?: string }>({});
+  const [isOpen, setIsOpen] = useState(false);
   const linkedAccountOptions = [{ value: "__none__", label: "Any account" }, ...accountOptions(accounts)];
+
+  function openForCreate() {
+    setForm(defaultObligationForm);
+    setFieldErrors({});
+    setIsOpen(true);
+  }
+
+  function handleSave() {
+    if (!form.name.trim() || !form.categoryId) return;
+    const nextErrors: { expectedAmount?: string; dueDay?: string } = {};
+    const amountError = validateAmount(form.expectedAmount, {
+      requiredMessage: "Enter the expected amount.",
+    });
+    if (amountError) nextErrors.expectedAmount = amountError;
+    const dueDayError = validateInteger(form.dueDay, 1, 31, "Enter a due day.");
+    if (dueDayError) nextErrors.dueDay = dueDayError;
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      return;
+    }
+    setFieldErrors({});
+    onSaveObligation({
+      name: form.name.trim(),
+      type: form.type,
+      categoryId: form.categoryId,
+      expectedAmount: Number(form.expectedAmount),
+      cadence: form.cadence,
+      dueDay: Number(form.dueDay),
+      dueDatePattern: undefined,
+      linkedAccountId: form.linkedAccountId || undefined,
+      payee: form.payee.trim() || undefined,
+      status: "active",
+    });
+    setForm(defaultObligationForm);
+    setIsOpen(false);
+  }
 
   return (
     <Card className="gap-0 pt-0 border-border/20 shadow-none">
       <AccentCardHeader
         tone="yellow"
-        title="Recurring obligations"
+        title="Recurring bills"
         description="Track expected salary, rent, school fees, loan repayments, and SACCO contributions."
       />
       <CardContent className="grid gap-4 p-5">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <Button type="button" size="sm" onClick={openForCreate}>
+            <IconPlus className="size-4" /> Add bill
+          </Button>
+        </div>
+
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Add recurring bill</SheetTitle>
+              <SheetDescription>Track an expected recurring payment.</SheetDescription>
+            </SheetHeader>
+            <FormCardShell
+              embedded
+              title="Add recurring bill"
+              description="Track expected salary, rent, school fees, or loan repayments."
+              footer={
+                <Button
+                  type="submit"
+                  form="obligation-form"
+                  disabled={isSubmitting || !form.name.trim() || !form.categoryId}
+                  className="w-full"
+                >
+                  Save bill
+                </Button>
+              }
+            >
+              <form
+                id="obligation-form"
+                className="grid gap-3 md:grid-cols-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSave();
+                }}
+              >
           <InputField
             id="obligation-name"
             label="Name"
@@ -176,48 +257,14 @@ export function RecurringObligationsPanel({
             }
             placeholder="Landlord"
           />
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSubmitting || !form.name.trim() || !form.categoryId}
-            onClick={() => {
-              const nextErrors: { expectedAmount?: string; dueDay?: string } = {};
-              const amountError = validateAmount(form.expectedAmount, {
-                requiredMessage: "Enter the expected amount.",
-              });
-              if (amountError) nextErrors.expectedAmount = amountError;
-              const dueDayError = validateInteger(form.dueDay, 1, 31, "Enter a due day.");
-              if (dueDayError) nextErrors.dueDay = dueDayError;
-              if (Object.keys(nextErrors).length > 0) {
-                setFieldErrors(nextErrors);
-                return;
-              }
-              setFieldErrors({});
-              onSaveObligation({
-                name: form.name.trim(),
-                type: form.type,
-                categoryId: form.categoryId,
-                expectedAmount: Number(form.expectedAmount),
-                cadence: form.cadence,
-                dueDay: Number(form.dueDay),
-                dueDatePattern: undefined,
-                linkedAccountId: form.linkedAccountId || undefined,
-                payee: form.payee.trim() || undefined,
-                status: "active",
-              });
-              setForm(defaultObligationForm);
-            }}
-          >
-            Save obligation
-          </Button>
-        </div>
+              </form>
+            </FormCardShell>
+          </SheetContent>
+        </Sheet>
 
         <div className="grid gap-2">
           {evaluations.length === 0 ? (
-            <EmptyState className="py-6">No recurring obligations yet.</EmptyState>
+            <EmptyState className="py-6">No recurring bills yet.</EmptyState>
           ) : (
             evaluations.map((evaluation) => {
               const { obligation } = evaluation;
