@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { IconMessage2, IconPencilPlus } from "@tabler/icons-react";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { CaptureIntentPanel } from "./transactions/capture-intent-panel";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
@@ -20,24 +12,9 @@ import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspac
 
 type CaptureMethod = "manual" | "message";
 
-const methodCards: {
-  id: CaptureMethod;
-  title: string;
-  description: string;
-  icon: typeof IconPencilPlus;
-}[] = [
-  {
-    id: "manual",
-    title: "Enter manually",
-    description: "Type one transaction against an account.",
-    icon: IconPencilPlus,
-  },
-  {
-    id: "message",
-    title: "From a message",
-    description: "Paste an SMS or notification, or upload a screenshot, to extract transactions.",
-    icon: IconMessage2,
-  },
+const methods: { id: CaptureMethod; label: string }[] = [
+  { id: "manual", label: "Enter manually" },
+  { id: "message", label: "From a message" },
 ];
 
 function methodFromCaptureParam(param: string | null): CaptureMethod | null {
@@ -50,15 +27,13 @@ export function TransactionsCaptureWorkspace() {
   const workspace = useTransactionsWorkspace();
   const searchParams = useSearchParams();
   const captureParam = searchParams.get("capture");
-  // Open the matching method straight away when arriving from a quick-capture
-  // link (the "+" sheet or a share target), so those routes land on the form.
-  const [method, setMethod] = useState<CaptureMethod | null>(() =>
-    methodFromCaptureParam(captureParam),
+  // Land directly on a working form (manual by default). Quick-capture links
+  // (the "+" sheet or a share target) preselect the matching method.
+  const [method, setMethod] = useState<CaptureMethod>(
+    () => methodFromCaptureParam(captureParam) ?? "manual",
   );
-  // Re-open on a fresh quick-capture navigation even while already on this
-  // route (the param changes), without forcing it open again after a manual
-  // close (the param has not changed). Uses the render-time "adjust state on
-  // prop change" pattern with state, not a ref.
+  // Re-sync when a fresh quick-capture navigation changes the param while we
+  // are already on this route (render-time "adjust state on prop change").
   const [seenCaptureParam, setSeenCaptureParam] = useState(captureParam);
   if (captureParam !== seenCaptureParam) {
     setSeenCaptureParam(captureParam);
@@ -72,7 +47,7 @@ export function TransactionsCaptureWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="capture"
       title="Capture"
-      description="Manual entry and pasted text intake stay here so the main ledger stays clean."
+      description="Add a transaction by hand, or pull one out of an SMS or notification."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
@@ -85,100 +60,57 @@ export function TransactionsCaptureWorkspace() {
       <div className="grid gap-5">
         <CaptureIntentPanel intent={workspace.captureIntent} />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {methodCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => setMethod(card.id)}
-                className="flex items-start gap-3 rounded-md border border-border/60 bg-card px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
-              >
-                <span
-                  aria-hidden
-                  className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
-                >
-                  <Icon className="size-4.5" />
-                </span>
-                <span className="grid gap-1">
-                  <span className="text-sm font-medium text-foreground">{card.title}</span>
-                  <span className="text-sm leading-6 text-muted-foreground">{card.description}</span>
-                </span>
-              </button>
-            );
-          })}
+        {/* Method switcher — swaps the form in place, no extra navigation. */}
+        <div
+          role="tablist"
+          aria-label="Capture method"
+          className="grid grid-cols-2 gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5"
+        >
+          {methods.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={method === entry.id}
+              onClick={() => setMethod(entry.id)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                method === entry.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {entry.label}
+            </button>
+          ))}
         </div>
+
+        {method === "manual" ? (
+          <TransactionForm
+            accounts={workspace.accounts}
+            categories={workspace.categories}
+            form={workspace.transactionForm}
+            editingId={workspace.editingTransactionId}
+            isSubmitting={workspace.isSubmitting}
+            lastSavedAt={workspace.lastSavedAt}
+            successMessage={workspace.successMessage}
+            rememberedFxHint={workspace.rememberedFxHint}
+            onFormChange={workspace.setTransactionForm}
+            onSubmit={(event) => void workspace.handleTransactionSubmit(event)}
+            onCancelEdit={workspace.cancelEdit}
+          />
+        ) : (
+          <TextCapturePanel
+            active
+            accounts={workspace.accounts}
+            categories={workspace.categories}
+            existingTransactions={workspace.transactions}
+            isSubmitting={workspace.isSubmitting}
+            initialInput={workspace.sharedCaptureInput}
+            onSaveCaptured={workspace.saveCapturedTransactions}
+          />
+        )}
       </div>
-
-      <Sheet
-        open={method !== null}
-        onOpenChange={(open) => setMethod(open ? (method ?? "manual") : null)}
-      >
-        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Capture a transaction</SheetTitle>
-            <SheetDescription>
-              Enter a transaction manually or extract it from a message.
-            </SheetDescription>
-          </SheetHeader>
-
-          {/* Segmented switcher — swaps the method in place, no navigation.
-              Active segment is a solid teal chip so it never reads as the
-              focus ring on the other segment. */}
-          <div
-            role="tablist"
-            aria-label="Capture method"
-            className="mx-4 mt-6 mb-4 grid grid-cols-2 gap-1 rounded-md bg-muted/60 p-1"
-          >
-            {methodCards.map((card) => (
-              <button
-                key={card.id}
-                type="button"
-                role="tab"
-                aria-selected={method === card.id}
-                onClick={() => setMethod(card.id)}
-                className={cn(
-                  "rounded-sm px-3 py-1.5 text-sm font-medium transition-colors",
-                  method === card.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {card.id === "manual" ? "Manual" : "From a message"}
-              </button>
-            ))}
-          </div>
-
-          {method === "manual" ? (
-            <TransactionForm
-              embedded
-              accounts={workspace.accounts}
-              categories={workspace.categories}
-              form={workspace.transactionForm}
-              editingId={workspace.editingTransactionId}
-              isSubmitting={workspace.isSubmitting}
-              lastSavedAt={workspace.lastSavedAt}
-              successMessage={workspace.successMessage}
-              rememberedFxHint={workspace.rememberedFxHint}
-              onFormChange={workspace.setTransactionForm}
-              onSubmit={(event) => void workspace.handleTransactionSubmit(event)}
-              onCancelEdit={workspace.cancelEdit}
-            />
-          ) : method === "message" ? (
-            <TextCapturePanel
-              embedded
-              active
-              accounts={workspace.accounts}
-              categories={workspace.categories}
-              existingTransactions={workspace.transactions}
-              isSubmitting={workspace.isSubmitting}
-              initialInput={workspace.sharedCaptureInput}
-              onSaveCaptured={workspace.saveCapturedTransactions}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
     </TransactionsWorkspaceFrame>
   );
 }
