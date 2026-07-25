@@ -98,7 +98,6 @@ export function TransactionsCaptureWorkspace() {
           />
         ) : (
           <TextCapturePanel
-            active
             accounts={workspace.accounts}
             categories={workspace.categories}
             existingTransactions={workspace.transactions}

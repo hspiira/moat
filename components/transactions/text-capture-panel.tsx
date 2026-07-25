@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
+
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { categoryOptions } from "@/lib/select-options";
 import type { Account, Category, TransactionSource, TransactionType } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
@@ -18,7 +19,6 @@ type Props = {
   categories: Category[];
   existingTransactions: import("@/lib/types").Transaction[];
   isSubmitting: boolean;
-  active: boolean;
   initialInput?: string;
   onSaveCaptured: (candidates: ParsedCaptureCandidate[]) => Promise<void>;
   /** When true, render just the content for use inside a sheet (no card chrome). */
@@ -30,7 +30,6 @@ export function TextCapturePanel({
   categories,
   existingTransactions,
   isSubmitting,
-  active,
   initialInput,
   onSaveCaptured,
   embedded,
@@ -56,6 +55,8 @@ export function TextCapturePanel({
     updateCandidate,
   } = useTextCapturePanel({ accounts, categories, existingTransactions, initialInput });
 
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(fallbackFxRate));
+
   async function handleSave() {
     await onSaveCaptured(candidates);
     resetReview();
@@ -64,34 +65,9 @@ export function TextCapturePanel({
 
   const content = (
     <div className="grid gap-4">
-        <div className="grid gap-3 md:grid-cols-[0.8fr_1fr_0.8fr]">
-          <SelectField
-            id="capture-source"
-            label="Source"
-            value={source}
-            options={captureSourceOptions}
-            onValueChange={(value) => setSource(value as TransactionSource)}
-          />
-          <SelectField
-            id="capture-account"
-            label="Post to account"
-            value={accountId || accounts[0]?.id || ""}
-            options={accountSelectOptions}
-            onValueChange={setAccountId}
-          />
-          <InputField
-            id="capture-fx"
-            label="Exchange rate to UGX"
-            inputMode="decimal"
-            value={fallbackFxRate}
-            onChange={(event) => setFallbackFxRate(event.target.value)}
-            hint="Used only when a parsed message is not in UGX and does not include an FX rate."
-          />
-        </div>
-
         <TextareaField
           id="capture-input"
-          label="Pasted messages"
+          label="Paste messages"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder={
@@ -99,6 +75,42 @@ export function TextCapturePanel({
           }
           className="min-h-32"
         />
+
+        <SelectField
+          id="capture-account"
+          label="Post to account"
+          value={accountId || accounts[0]?.id || ""}
+          options={accountSelectOptions}
+          onValueChange={setAccountId}
+        />
+
+        {detailsOpen ? (
+          <div className="grid gap-3 border-t border-border/30 pt-4 sm:grid-cols-2">
+            <SelectField
+              id="capture-source"
+              label="Source"
+              value={source}
+              options={captureSourceOptions}
+              onValueChange={(value) => setSource(value as TransactionSource)}
+            />
+            <InputField
+              id="capture-fx"
+              label="Exchange rate to UGX"
+              inputMode="decimal"
+              value={fallbackFxRate}
+              onChange={(event) => setFallbackFxRate(event.target.value)}
+              hint="Only used when a message isn't in UGX and states no rate."
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(true)}
+            className="w-fit text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          >
+            Add details — source, exchange rate
+          </button>
+        )}
 
         <div className="grid gap-2">
           <InputField
@@ -230,7 +242,7 @@ export function TextCapturePanel({
 
                 <TextareaField
                   id={`capture-note-${candidate.id}`}
-                  label="Raw note"
+                  label="Note"
                   value={candidate.note}
                   onChange={(event) =>
                     updateCandidate(candidate.id, (entry) => ({ ...entry, note: event.target.value }))
@@ -238,9 +250,6 @@ export function TextCapturePanel({
                   className="min-h-20"
                 />
 
-                {candidate.parserLabel ? (
-                  <div className="text-xs text-muted-foreground">Matched template: {candidate.parserLabel}</div>
-                ) : null}
                 {candidate.issues.length > 0 ? (
                   <div className="grid gap-1 text-xs text-destructive">
                     {candidate.issues.map((issue) => (
@@ -253,7 +262,7 @@ export function TextCapturePanel({
 
             <div className="flex gap-2">
               <Button type="button" size="sm" disabled={isSubmitting} onClick={() => void handleSave()}>
-                Send reviewed candidates to inbox
+                Send to review
               </Button>
             </div>
           </div>
@@ -261,22 +270,16 @@ export function TextCapturePanel({
     </div>
   );
 
-  const description =
-    "Paste raw transaction messages, review the extracted candidates, then send them to the capture inbox.";
-
   if (embedded) {
     return (
       <div>
-        <AccentCardHeader tone="sage" title="Text capture" description={description} className="rounded-none" />
+        <AccentCardHeader tone="sage" title="From a message" className="rounded-none" />
         <div className="px-4 pt-4 pb-6">{content}</div>
       </div>
     );
   }
 
-  return (
-    <Card className={`gap-0 border-border/20 pt-0 shadow-none ${active ? "ring-1 ring-primary/30" : ""}`}>
-      <AccentCardHeader tone="sage" title="Text capture" description={description} />
-      <CardContent className="grid gap-4 p-5">{content}</CardContent>
-    </Card>
-  );
+  // In the capture workspace the page title and method tabs already frame this,
+  // so render bare — matching the manual form.
+  return content;
 }
