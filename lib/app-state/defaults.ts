@@ -15,7 +15,7 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   { name: "Transport / boda", kind: "expense" },
   { name: "Airtime / data", kind: "expense" },
   { name: "Utilities", kind: "expense" },
-  { name: "Mobile money charges", kind: "expense" },
+  { name: "Fees & charges", kind: "expense" },
   { name: "Family support", kind: "expense" },
   { name: "School fees", kind: "expense" },
   { name: "Health", kind: "expense" },
@@ -44,6 +44,19 @@ export const defaultGoalTypes: GoalType[] = [
   "education",
   "house_construction",
 ];
+
+export const FEES_CATEGORY_ID = "category:fees-charges";
+
+export function buildFeesCategory(userId: string): Category {
+  return {
+    id: FEES_CATEGORY_ID,
+    userId,
+    name: "Fees & charges",
+    kind: "expense",
+    isDefault: true,
+    createdAt: DEFAULT_DATE,
+  };
+}
 
 export function buildDefaultCategories(userId: string): Category[] {
   return defaultCategorySeeds.map((seed) => ({

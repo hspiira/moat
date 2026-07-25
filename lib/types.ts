@@ -147,6 +147,8 @@ export type Transaction = {
   matchedRuleId?: string;
   reviewedAt?: string;
   transferGroupId?: string;
+  /** Set on a fee expense; points at the payment it was charged against. */
+  feeParentId?: string;
   importBatchId?: string;
   createdAt: string;
   updatedAt: string;
