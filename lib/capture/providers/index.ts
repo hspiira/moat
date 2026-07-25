@@ -3,12 +3,14 @@ import type { CaptureProviderResult } from "@/lib/capture/types";
 import { parseAbsaUgandaMessage } from "./absa-uganda";
 import { parseAirtelMoneyUgandaMessage } from "./airtel-money-uganda";
 import { parseBankAlertGeneric } from "./bank-alert-generic";
+import { parseCentenaryUgandaMessage } from "./centenary-uganda";
 import { parseMtnUgandaMessage } from "./mtn-uganda";
 
 const providerParsers = [
   parseMtnUgandaMessage,
   parseAirtelMoneyUgandaMessage,
   parseAbsaUgandaMessage,
+  parseCentenaryUgandaMessage,
   parseBankAlertGeneric,
 ] as const;
 
