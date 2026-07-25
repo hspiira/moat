@@ -28,6 +28,7 @@ export function TransactionsCaptureReviewWorkspace() {
           accounts={workspace.accounts}
           categories={workspace.categories}
           items={workspace.captureReviewItems}
+          transactions={workspace.transactions}
           isSubmitting={workspace.isSubmitting}
           onApprove={workspace.approveItem}
           onReject={workspace.rejectItem}
