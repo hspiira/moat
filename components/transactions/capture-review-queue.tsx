@@ -131,6 +131,20 @@ function ReviewItemEditor({
             }))
           }
         />
+        {draft.type === "expense" ? (
+          <InputField
+            id={`capture-review-fee-${draft.id}`}
+            label="Fee — charges & tax (UGX)"
+            inputMode="decimal"
+            value={draft.feeAmount ? String(draft.feeAmount) : ""}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                feeAmount: Number(event.target.value) || undefined,
+              }))
+            }
+          />
+        ) : null}
       </div>
 
       <TextareaField
