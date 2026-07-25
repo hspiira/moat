@@ -72,6 +72,16 @@ export function parseCaptureDate(text: string) {
     return `${ukMatch[3]}-${ukMatch[2]}-${ukMatch[1]}`;
   }
 
+  const months: Record<string, string> = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+  const named = text.match(/\b(\d{1,2})[-\s]([A-Za-z]{3,})[-\s](20\d{2})\b/);
+  if (named) {
+    const month = months[named[2].slice(0, 3).toLowerCase()];
+    if (month) return `${named[3]}-${month}-${named[1].padStart(2, "0")}`;
+  }
+
   return new Date().toISOString().slice(0, 10);
 }
 
