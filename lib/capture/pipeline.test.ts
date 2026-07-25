@@ -71,4 +71,23 @@ describe("parseCaptureEnvelope", () => {
     expect(rows[0].type).toBe("expense");
     expect(rows[0].feeAmount).toBe(1250);
   });
+
+  it("produces no candidate for a pre-authorization message", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent:
+        "Y'ello. You have requested a withdrawal of UGX 50,000 from ROGERS SSEWAGUDDE . Dial *165# and select My Approvals to authorize the transaction.The total fee is  UGX 1,750 inclusive of 0.5 percent tax.Transaction ID 10173656344",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+
+    const rows = parseCaptureEnvelope({
+      envelope,
+      source: "notification",
+      accountId: "account:bank",
+      categories,
+      existingTransactions: [] as Transaction[],
+    });
+
+    expect(rows).toHaveLength(0);
+  });
 });

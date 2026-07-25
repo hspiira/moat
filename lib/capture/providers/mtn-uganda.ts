@@ -1,7 +1,18 @@
 import type { CaptureProviderResult } from "@/lib/capture/types";
-import { normalizeCurrency, parseAmount, parseCaptureFee, toIsoDate } from "@/lib/capture/providers/shared";
+import {
+  cleanCapturePayee,
+  normalizeCurrency,
+  parseAmount,
+  parseCaptureFee,
+  toIsoDate,
+} from "@/lib/capture/providers/shared";
 
 export function parseMtnUgandaMessage(text: string): CaptureProviderResult | null {
+  // Pre-authorization requests are not completed transactions.
+  if (/you have requested|authorize the transaction/i.test(text)) {
+    return null;
+  }
+
   const incoming = text.match(
     /received\s+(UGX|USh|USD|KES|TZS|RWF|EUR|GBP)\s*([0-9,]+(?:\.[0-9]+)?)\s+from\s+(.+?)(?:\s+on\s+(\d{2}[-/]\d{2}[-/]\d{4}|\d{4}[-/]\d{2}[-/]\d{2}))?$/i,
   );
@@ -12,9 +23,27 @@ export function parseMtnUgandaMessage(text: string): CaptureProviderResult | nul
       type: "income",
       currency: normalizeCurrency(incoming[1]),
       originalAmount: parseAmount(incoming[2]),
-      payee: incoming[3]?.trim(),
+      payee: cleanCapturePayee(incoming[3] ?? ""),
       occurredOn: toIsoDate(incoming[4]),
       note: text,
+      confidenceBoost: 0.35,
+    };
+  }
+
+  const withdrawal = text.match(
+    /withdrawn\s+(UGX|USh)\s*([0-9,]+(?:\.[0-9]+)?)\s+on\s+(\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4})/i,
+  );
+  if (withdrawal) {
+    return {
+      providerId: "mtn-uganda",
+      parserLabel: "mtn-withdrawal",
+      type: "expense",
+      currency: normalizeCurrency(withdrawal[1]),
+      originalAmount: parseAmount(withdrawal[2]),
+      payee: "Cash withdrawal",
+      occurredOn: toIsoDate(withdrawal[3]),
+      note: text,
+      feeAmount: parseCaptureFee(text),
       confidenceBoost: 0.35,
     };
   }
@@ -29,7 +58,7 @@ export function parseMtnUgandaMessage(text: string): CaptureProviderResult | nul
       type: "expense",
       currency: normalizeCurrency(outgoing[1]),
       originalAmount: parseAmount(outgoing[2]),
-      payee: outgoing[3]?.trim(),
+      payee: cleanCapturePayee(outgoing[3] ?? ""),
       occurredOn: toIsoDate(outgoing[4]),
       note: text,
       feeAmount: parseCaptureFee(text),

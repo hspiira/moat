@@ -22,6 +22,10 @@ export function splitCaptureMessages(input: string) {
     .filter(Boolean);
 }
 
+export function isNonTransactionalMessage(text: string): boolean {
+  return /you have requested|authorize the transaction/i.test(text);
+}
+
 export function inferCaptureType(text: string): Exclude<TransactionType, "transfer"> {
   const normalized = normalizeCaptureName(text);
 

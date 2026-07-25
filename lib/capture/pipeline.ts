@@ -6,6 +6,7 @@ import {
   inferCaptureCurrency,
   inferCapturePayee,
   inferCaptureType,
+  isNonTransactionalMessage,
   parseCaptureAmount,
   parseCaptureDate,
   splitCaptureMessages,
@@ -25,7 +26,9 @@ function inferCategoryId(
 }
 
 export function parseCaptureEnvelope(input: CapturePipelineInput & { existingReviewItems?: CaptureReviewItem[] }) {
-  const messages = splitCaptureMessages(input.envelope.rawContent);
+  const messages = splitCaptureMessages(input.envelope.rawContent).filter(
+    (rawText) => !isNonTransactionalMessage(rawText),
+  );
 
   return messages.map<CapturePipelineCandidate>((rawText, index) => {
     const providerResult = parseWithProviderPacks(rawText);
