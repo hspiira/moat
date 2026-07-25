@@ -6,6 +6,8 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
+import { buildFeeTransaction } from "@/components/transactions/transaction-builder";
+import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
@@ -159,6 +161,7 @@ export function useCaptureReviewWorkspace() {
         originalAmount: item.originalAmount,
         currency: item.currency,
         fxRateToUgx: item.fxRateToUgx,
+        feeAmount: item.feeAmount,
         normalizedAmount:
           item.currency === "UGX" ? item.originalAmount : item.originalAmount * (item.fxRateToUgx ?? 0),
         type: item.type,
@@ -172,6 +175,13 @@ export function useCaptureReviewWorkspace() {
       };
 
       await repositories.transactions.upsert(proposed);
+      if (typeof item.feeAmount === "number" && item.feeAmount > 0) {
+        const fee = buildFeeTransaction(proposed, String(item.feeAmount), FEES_CATEGORY_ID);
+        if (fee) {
+          await repositories.categories.upsert(buildFeesCategory(profile.id));
+          await repositories.transactions.upsert(fee);
+        }
+      }
       await repositories.correctionLogs.upsert(
         createCorrectionLog({
           userId: profile.id,
