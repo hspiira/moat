@@ -177,3 +177,32 @@ describe("reconcileAccountBalances", () => {
     expect(rows[1]).toMatchObject({ credit: 0, debit: 10_000 });
   });
 });
+
+describe("reconcileAccountBalances with a linked fee", () => {
+  it("subtracts both the payment and its fee from the balance", () => {
+    const transactions: Transaction[] = [
+      buildTransaction({
+        id: "transaction:send",
+        accountId: account.id,
+        type: "expense",
+        amount: 50_000,
+        occurredOn: "2026-04-06",
+        categoryId: "category:food",
+      }),
+      buildTransaction({
+        id: "transaction:send:fee",
+        accountId: account.id,
+        type: "expense",
+        amount: 1_250,
+        occurredOn: "2026-04-06",
+        categoryId: "category:fees-charges",
+        feeParentId: "transaction:send",
+      }),
+    ];
+
+    const [reconciled] = reconcileAccountBalances([account], transactions);
+
+    // opening 100_000 - 50_000 - 1_250
+    expect(reconciled.balance).toBe(48_750);
+  });
+});

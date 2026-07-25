@@ -45,7 +45,12 @@ import {
   type TransactionFormState,
 } from "./transaction-form";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
-import { buildManualTransaction, buildTransferPair } from "./transaction-builder";
+import {
+  buildFeeTransaction,
+  buildManualTransaction,
+  buildTransferPair,
+} from "./transaction-builder";
+import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
@@ -427,15 +432,30 @@ export function useTransactionsWorkspace() {
           existingTransactions: transactions,
         };
 
+        let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
           const [source, destination] = buildTransferPair(buildInput);
+          feeParent = source;
           await Promise.all([
             repositories.transactions.upsert(source),
             repositories.transactions.upsert(destination),
           ]);
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
-          await repositories.transactions.upsert(buildManualTransaction(buildInput, rules));
+          const payment = buildManualTransaction(buildInput, rules);
+          feeParent = payment;
+          await repositories.transactions.upsert(payment);
+        }
+
+        // A fee is a separate linked expense on the same account (the transfer
+        // source, for transfers). Editing that clears the fee removes the orphan.
+        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, FEES_CATEGORY_ID);
+        const feeId = `${feeParent.id}:fee`;
+        if (fee) {
+          await repositories.categories.upsert(buildFeesCategory(profile.id));
+          await repositories.transactions.upsert(fee);
+        } else if (transactions.some((entry) => entry.id === feeId)) {
+          await repositories.transactions.remove(feeId);
         }
 
         await persistReconciledBalances(profile.id);
@@ -508,14 +528,19 @@ export function useTransactionsWorkspace() {
       setError(null);
 
       try {
+        const idsToRemove = new Set<string>([transaction.id]);
         if (transaction.transferGroupId) {
-          const linked = transactions.filter(
-            (entry) => entry.transferGroupId === transaction.transferGroupId,
-          );
-          await Promise.all(linked.map((entry) => repositories.transactions.remove(entry.id)));
-        } else {
-          await repositories.transactions.remove(transaction.id);
+          transactions
+            .filter((entry) => entry.transferGroupId === transaction.transferGroupId)
+            .forEach((entry) => idsToRemove.add(entry.id));
         }
+        // Cascade to any linked fee (of the payment or the transfer source).
+        transactions
+          .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
+          .forEach((entry) => idsToRemove.add(entry.id));
+        await Promise.all(
+          [...idsToRemove].map((id) => repositories.transactions.remove(id)),
+        );
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);
