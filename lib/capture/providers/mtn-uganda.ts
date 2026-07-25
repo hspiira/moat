@@ -1,5 +1,5 @@
 import type { CaptureProviderResult } from "@/lib/capture/types";
-import { normalizeCurrency, parseAmount, toIsoDate } from "@/lib/capture/providers/shared";
+import { normalizeCurrency, parseAmount, parseCaptureFee, toIsoDate } from "@/lib/capture/providers/shared";
 
 export function parseMtnUgandaMessage(text: string): CaptureProviderResult | null {
   const incoming = text.match(
@@ -32,6 +32,7 @@ export function parseMtnUgandaMessage(text: string): CaptureProviderResult | nul
       payee: outgoing[3]?.trim(),
       occurredOn: toIsoDate(outgoing[4]),
       note: text,
+      feeAmount: parseCaptureFee(text),
       confidenceBoost: 0.3,
     };
   }

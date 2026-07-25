@@ -16,6 +16,7 @@ export type CaptureProviderResult = {
   occurredOn?: string;
   payee?: string;
   note?: string;
+  feeAmount?: number;
   confidenceBoost: number;
 };
 
