@@ -479,22 +479,27 @@ export function useTransactionsWorkspace() {
     ],
   );
 
-  const beginTransactionEdit = useCallback((transaction: Transaction) => {
-    if (transaction.type === "transfer") return;
-    setEditingTransactionId(transaction.id);
-    setTransactionForm({
-      type: transaction.type,
-      accountId: transaction.accountId,
-      destinationAccountId: "",
-      categoryId: transaction.categoryId,
-      currency: transaction.currency,
-      payee: transaction.payee ?? transaction.rawPayee ?? "",
-      amount: String(transaction.originalAmount),
-      fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
-      occurredOn: transaction.occurredOn,
-      note: transaction.note ?? "",
-    });
-  }, []);
+  const beginTransactionEdit = useCallback(
+    (transaction: Transaction) => {
+      if (transaction.type === "transfer") return;
+      const feeChild = transactions.find((entry) => entry.id === `${transaction.id}:fee`);
+      setEditingTransactionId(transaction.id);
+      setTransactionForm({
+        type: transaction.type,
+        accountId: transaction.accountId,
+        destinationAccountId: "",
+        categoryId: transaction.categoryId,
+        currency: transaction.currency,
+        payee: transaction.payee ?? transaction.rawPayee ?? "",
+        amount: String(transaction.originalAmount),
+        fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
+        feeAmount: feeChild ? String(feeChild.originalAmount) : "",
+        occurredOn: transaction.occurredOn,
+        note: transaction.note ?? "",
+      });
+    },
+    [transactions],
+  );
 
   const handleDeleteTransaction = useCallback(
     async (transaction: Transaction) => {

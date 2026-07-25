@@ -30,6 +30,7 @@ export type TransactionFormState = {
   payee: string;
   amount: string;
   fxRateToUgx: string;
+  feeAmount: string;
   occurredOn: string;
   note: string;
 };
@@ -43,6 +44,7 @@ export const defaultTransactionForm: TransactionFormState = {
   payee: "",
   amount: "",
   fxRateToUgx: "",
+  feeAmount: "",
   occurredOn: new Date().toISOString().slice(0, 10),
   note: "",
 };
@@ -99,7 +101,10 @@ export function TransactionForm({
   // Payee, note, and currency are the rare fields; they stay collapsed until
   // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
   // deep link or an edit populates one of them.
-  const hasDetails = Boolean(form.payee || form.note || form.currency !== "UGX");
+  const hasDetails = Boolean(
+    form.payee || form.note || form.currency !== "UGX" || form.feeAmount,
+  );
+  const supportsFee = form.type === "expense" || form.type === "transfer";
   const [detailsOpen, setDetailsOpen] = useState(hasDetails);
   const [seenHasDetails, setSeenHasDetails] = useState(hasDetails);
   if (hasDetails !== seenHasDetails) {
@@ -236,6 +241,17 @@ export function TransactionForm({
                 />
               </div>
 
+              {supportsFee ? (
+                <InputField
+                  id="tx-fee"
+                  label="Fee — charges & tax (UGX)"
+                  inputMode="decimal"
+                  value={form.feeAmount}
+                  onChange={(e) => onFormChange((c) => ({ ...c, feeAmount: e.target.value }))}
+                  placeholder="Optional — e.g. 1250"
+                />
+              ) : null}
+
               <TextareaField
                 id="tx-note"
                 label="Note"
@@ -251,7 +267,9 @@ export function TransactionForm({
               onClick={() => setDetailsOpen(true)}
               className="w-fit text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
             >
-              Add details — payee, note, currency
+              {supportsFee
+                ? "Add details — fee, payee, note, currency"
+                : "Add details — payee, note, currency"}
             </button>
           )}
 

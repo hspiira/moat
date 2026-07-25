@@ -89,6 +89,7 @@ export function TransactionList({
               const account = accounts.find((a) => a.id === transaction.accountId);
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
+              const isLinkedFee = Boolean(transaction.feeParentId);
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
               const title =
@@ -139,7 +140,7 @@ export function TransactionList({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-40 p-1">
-                      {!isTransfer ? (
+                      {!isTransfer && !isLinkedFee ? (
                         <PopoverClose asChild>
                           <button
                             type="button"
