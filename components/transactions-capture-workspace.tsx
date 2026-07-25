@@ -46,7 +46,6 @@ export function TransactionsCaptureWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="capture"
       title="Capture"
-      description="Add a transaction by hand, or pull one out of an SMS or notification."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

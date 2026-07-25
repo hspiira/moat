@@ -8,14 +8,14 @@ export function PageHeader({
   aside,
 }: {
   title: string;
-  description: string;
+  description?: string;
   aside?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-1">
         <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {aside ? <div className="shrink-0 self-start">{aside}</div> : null}
     </div>

@@ -18,7 +18,7 @@ type TransactionsRoute = "ledger" | "capture" | "import" | "review" | "tools";
 type Props = {
   currentRoute: TransactionsRoute;
   title: string;
-  description: string;
+  description?: string;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
