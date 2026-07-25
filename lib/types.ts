@@ -252,6 +252,7 @@ export type CaptureReviewSnapshot = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;
@@ -273,6 +274,7 @@ export type CaptureReviewItem = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;
