@@ -20,7 +20,7 @@ export function getInvestmentGuidance({
 
   if (shouldPrioritizeEmergencyFund) {
     warnings.push("Build a stronger emergency fund before committing more money to long-term risk.");
-    rationale.push("The user does not yet have at least three months of emergency coverage.");
+    rationale.push("You don't yet have at least three months of emergency cover.");
   }
 
   if (shouldPrioritizeDebtRepayment) {
@@ -30,17 +30,17 @@ export function getInvestmentGuidance({
 
   if (profile.timeHorizonMonths < 12) {
     recommendedProducts.push("Cash savings", "Bank savings", "Licensed SACCO savings");
-    rationale.push("The goal horizon is under 12 months, so liquidity and capital stability come first.");
+    rationale.push("Your goal is under 12 months away, so keeping the money safe and reachable comes first.");
   } else if (profile.timeHorizonMonths <= 36) {
     recommendedProducts.push("Bank savings", "Treasury bills", "Short-duration conservative funds");
-    rationale.push("The goal horizon is medium term, so capital preservation matters more than aggressive growth.");
+    rationale.push("Your goal is a few years out, so protecting the money matters more than chasing high growth.");
   } else {
     recommendedProducts.push(
       "Treasury bonds",
       "Licensed unit trusts / collective investment schemes",
       "Retirement savings products",
     );
-    rationale.push("The goal horizon is long enough to consider diversified regulated long-term products.");
+    rationale.push("Your goal is far enough out to consider regulated long-term investments.");
   }
 
   if (profile.liquidityNeed === "immediate") {

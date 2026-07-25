@@ -50,7 +50,7 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
     <Card>
       <CardHeader>
         <CardTitle>Your accounts</CardTitle>
-        <CardDescription>Reconciled from opening balance and history.</CardDescription>
+        <CardDescription>Balances update as you add transactions.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {active.length === 0 ? (

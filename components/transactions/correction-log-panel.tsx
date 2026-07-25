@@ -31,7 +31,7 @@ export function CorrectionLogPanel({ profile }: { profile: UserProfile | null })
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Correction log</div>
           <div className="text-sm text-muted-foreground">
-            Approved capture edits are logged here for parser refinement, not auto-learning.
+            A record of edits you made to captured items before saving them.
           </div>
         </div>
 
@@ -42,7 +42,7 @@ export function CorrectionLogPanel({ profile }: { profile: UserProfile | null })
             {logs.map((log) => (
               <div key={log.id} className="grid gap-1 border border-border/20 px-4 py-3">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-foreground">{log.parserLabel ?? "generic parser"}</span>
+                  <span className="text-foreground">{log.parserLabel ?? "Captured item"}</span>
                   <span className="text-muted-foreground">{log.createdAt.slice(0, 10)}</span>
                 </div>
                 <div className="text-xs text-muted-foreground">

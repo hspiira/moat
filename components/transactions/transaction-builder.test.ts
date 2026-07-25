@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { Transaction, TransactionRule } from "@/lib/types";
 
+import { FEES_CATEGORY_ID } from "@/lib/app-state/defaults";
+
 import {
+  buildFeeTransaction,
   buildManualTransaction,
   buildTransferPair,
   validateTransactionAmounts,
@@ -157,5 +160,49 @@ describe("buildManualTransaction", () => {
 
     const transaction = buildManualTransaction(buildInput(), [rule]);
     expect(transaction.categoryId).toBe("category:groceries");
+  });
+});
+
+const parentPayment: Transaction = {
+  id: "transaction:abc",
+  userId: "user:default",
+  accountId: "account:momo",
+  type: "expense",
+  amount: 50_000,
+  currency: "USD",
+  originalAmount: 13,
+  fxRateToUgx: 3846,
+  occurredOn: "2026-04-10",
+  categoryId: "category:food",
+  reconciliationState: "posted",
+  source: "manual",
+  payee: "Mega Standard",
+  createdAt: "2026-04-10T12:00:00.000Z",
+  updatedAt: "2026-04-10T12:00:00.000Z",
+};
+
+describe("buildFeeTransaction", () => {
+  it("builds a UGX fee expense linked to its parent with a deterministic id", () => {
+    const fee = buildFeeTransaction(parentPayment, "1250", FEES_CATEGORY_ID);
+    expect(fee).not.toBeNull();
+    expect(fee!.id).toBe("transaction:abc:fee");
+    expect(fee!.feeParentId).toBe("transaction:abc");
+    expect(fee!.type).toBe("expense");
+    expect(fee!.categoryId).toBe(FEES_CATEGORY_ID);
+    expect(fee!.accountId).toBe("account:momo");
+    expect(fee!.currency).toBe("UGX");
+    expect(fee!.fxRateToUgx).toBeUndefined();
+    expect(fee!.amount).toBe(1250);
+    expect(fee!.originalAmount).toBe(1250);
+    expect(fee!.occurredOn).toBe("2026-04-10");
+    expect(fee!.createdAt).toBe("2026-04-10T12:00:00.000Z");
+  });
+
+  it("returns null for blank, zero, negative, or non-numeric fees", () => {
+    expect(buildFeeTransaction(parentPayment, "", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "   ", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "0", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "-5", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "abc", FEES_CATEGORY_ID)).toBeNull();
   });
 });

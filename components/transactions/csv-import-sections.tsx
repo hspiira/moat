@@ -154,7 +154,7 @@ export function CsvDefaultsCard({
 
         <InputField
           id="csv-default-fx-rate"
-          label="Default FX rate to UGX"
+          label="Default exchange rate to UGX"
           inputMode="decimal"
           value={defaultImportFxRate}
           onChange={(event) => onFxRateChange(event.target.value)}
@@ -197,7 +197,7 @@ export function CsvReviewCard({
           {[
             ["Valid rows", String(validImportCount)],
             ["Duplicates", String(duplicateCount)],
-            ["FX rows", String(foreignCurrencyCount)],
+            ["Foreign-currency rows", String(foreignCurrencyCount)],
           ].map(([label, value]) => (
             <div key={label} className="border border-border/20 bg-background/60 px-3 py-3">
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -274,7 +274,7 @@ export function CsvPreviewCard({
                     </span>
                   </>
                 ) : (
-                  <>Posts as {formatMoney(row.normalizedAmount, "UGX")}</>
+                  <>Saved as {formatMoney(row.normalizedAmount, "UGX")}</>
                 )}
               </div>
               {row.issues.length > 0 ? (

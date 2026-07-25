@@ -332,9 +332,8 @@ export function DashboardSavingsOverview({
                     <PopoverHeader>
                       <PopoverTitle>Savings rate</PopoverTitle>
                       <PopoverDescription>
-                        Based only on the selected period. This uses inflow minus outflow.
-                        Tagged savings contributions stay separate to avoid double counting.
-                        Current account balances below include opening balances and prior history.
+                        For the selected period: what&apos;s left after spending, as a share of
+                        income. Money you tagged as savings is counted separately.
                       </PopoverDescription>
                     </PopoverHeader>
                   </PopoverContent>

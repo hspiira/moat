@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatDate } from "@/lib/format-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
@@ -61,12 +62,6 @@ const presentationByType: Record<TransactionType, RowPresentation> = {
   },
 };
 
-function formatDate(iso: string) {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString("en-UG", { day: "numeric", month: "short" });
-}
 
 export function TransactionList({
   accounts,
@@ -81,7 +76,7 @@ export function TransactionList({
     <Card>
       <CardHeader>
         <CardTitle>Ledger</CardTitle>
-        <CardDescription>Posted movements first. Transfers appear as paired records.</CardDescription>
+        <CardDescription>Newest first. Transfers show as a matched pair.</CardDescription>
       </CardHeader>
       <CardContent className="px-0">
         {transactions.length === 0 ? (
@@ -94,6 +89,7 @@ export function TransactionList({
               const account = accounts.find((a) => a.id === transaction.accountId);
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
+              const isLinkedFee = Boolean(transaction.feeParentId);
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
               const title =
@@ -144,7 +140,7 @@ export function TransactionList({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-40 p-1">
-                      {!isTransfer ? (
+                      {!isTransfer && !isLinkedFee ? (
                         <PopoverClose asChild>
                           <button
                             type="button"

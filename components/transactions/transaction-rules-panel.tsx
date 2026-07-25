@@ -13,9 +13,19 @@ import {
   transactionTypeLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
+import { IconPlus } from "@tabler/icons-react";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InputField } from "@/components/forms/input-field";
+import { FormCardShell } from "@/components/forms/form-card-shell";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { validateInteger } from "@/lib/validation";
 
 type RuleFormState = {
@@ -65,6 +75,41 @@ export function TransactionRulesPanel({
 }: Props) {
   const [form, setForm] = useState<RuleFormState>(defaultRuleForm);
   const [priorityError, setPriorityError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  function openForCreate() {
+    setForm(defaultRuleForm);
+    setPriorityError(null);
+    setIsOpen(true);
+  }
+
+  function handleSave() {
+    if (!form.name.trim()) return;
+    const error = validateInteger(form.priority || "100", 1, 999, "Enter a priority.");
+    if (error) {
+      setPriorityError(error);
+      return;
+    }
+    setPriorityError(null);
+    onSaveRule({
+      name: form.name.trim(),
+      enabled: true,
+      priority: Number(form.priority),
+      source: form.source === "any" ? undefined : form.source,
+      payeePattern: form.payeePattern.trim() || undefined,
+      keywordPattern: form.keywordPattern.trim() || undefined,
+      amountPattern: form.amountPattern.trim() || undefined,
+      effectPayee: form.effectPayee.trim() || undefined,
+      effectCategoryId: form.effectCategoryId || undefined,
+      effectAccountId: form.effectAccountId || undefined,
+      effectTransactionType:
+        form.effectTransactionType === "keep" ? undefined : form.effectTransactionType,
+      autoMarkReviewed: form.autoMarkReviewed === "yes",
+    });
+    setForm(defaultRuleForm);
+    setIsOpen(false);
+  }
+
   const sourceOptions = [
     { value: "any", label: "Any source" },
     ...optionsFromRecord(transactionSourceLabels),
@@ -85,10 +130,44 @@ export function TransactionRulesPanel({
       <AccentCardHeader
         tone="sage"
         title="Transaction rules"
-        description="Normalize payees and prefill fields without auto-posting."
+        description="Tidy up payees and prefill fields automatically — rules never post on their own."
       />
       <CardContent className="grid gap-4 p-5">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <Button type="button" size="sm" onClick={openForCreate}>
+            <IconPlus className="size-4" /> Add rule
+          </Button>
+        </div>
+
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Add transaction rule</SheetTitle>
+              <SheetDescription>Tidy up payees and prefill fields automatically.</SheetDescription>
+            </SheetHeader>
+            <FormCardShell
+              embedded
+              title="Add rule"
+              description="Tidy up payees and prefill fields automatically — rules never post on their own."
+              footer={
+                <Button
+                  type="submit"
+                  form="rule-form"
+                  disabled={isSubmitting || !form.name.trim()}
+                  className="w-full"
+                >
+                  Save rule
+                </Button>
+              }
+            >
+              <form
+                id="rule-form"
+                className="grid gap-3 md:grid-cols-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSave();
+                }}
+              >
           <InputField
             id="rule-name"
             label="Name"
@@ -211,43 +290,10 @@ export function TransactionRulesPanel({
               }
             />
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSubmitting || !form.name.trim()}
-            onClick={() => {
-              const error = validateInteger(form.priority || "100", 1, 999, "Enter a priority.");
-              if (error) {
-                setPriorityError(error);
-                return;
-              }
-              setPriorityError(null);
-              onSaveRule({
-                name: form.name.trim(),
-                enabled: true,
-                priority: Number(form.priority),
-                source: form.source === "any" ? undefined : form.source,
-                payeePattern: form.payeePattern.trim() || undefined,
-                keywordPattern: form.keywordPattern.trim() || undefined,
-                amountPattern: form.amountPattern.trim() || undefined,
-                effectPayee: form.effectPayee.trim() || undefined,
-                effectCategoryId: form.effectCategoryId || undefined,
-                effectAccountId: form.effectAccountId || undefined,
-                effectTransactionType:
-                  form.effectTransactionType === "keep"
-                    ? undefined
-                    : form.effectTransactionType,
-                autoMarkReviewed: form.autoMarkReviewed === "yes",
-              });
-              setForm(defaultRuleForm);
-            }}
-          >
-            Save rule
-          </Button>
-        </div>
+              </form>
+            </FormCardShell>
+          </SheetContent>
+        </Sheet>
 
         <div className="grid gap-2">
           {rules.length === 0 ? (

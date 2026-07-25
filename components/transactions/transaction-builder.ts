@@ -138,3 +138,41 @@ export function buildManualTransaction(
 
   return applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
 }
+
+/**
+ * Builds the linked fee expense for a payment. The fee is always a UGX expense
+ * in the fees category, sharing the parent's account and date, with a
+ * deterministic id so edits upsert in place and deletes are derivable.
+ * Returns null when no positive fee was entered.
+ */
+export function buildFeeTransaction(
+  parent: Transaction,
+  feeAmountRaw: string,
+  feesCategoryId: string,
+): Transaction | null {
+  const value = Number(feeAmountRaw.trim());
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  return {
+    id: `${parent.id}:fee`,
+    userId: parent.userId,
+    accountId: parent.accountId,
+    type: "expense",
+    amount: value,
+    currency: "UGX",
+    originalAmount: value,
+    fxRateToUgx: undefined,
+    occurredOn: parent.occurredOn,
+    categoryId: feesCategoryId,
+    reconciliationState: "posted",
+    source: parent.source,
+    payee: parent.payee,
+    note: "Fee / charges",
+    feeParentId: parent.id,
+    reviewedAt: parent.updatedAt,
+    createdAt: parent.createdAt,
+    updatedAt: parent.updatedAt,
+  };
+}

@@ -44,8 +44,13 @@ import {
   defaultTransactionForm,
   type TransactionFormState,
 } from "./transaction-form";
-import type { CaptureIntent } from "./capture-intent-panel";
-import { buildManualTransaction, buildTransferPair } from "./transaction-builder";
+export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
+import {
+  buildFeeTransaction,
+  buildManualTransaction,
+  buildTransferPair,
+} from "./transaction-builder";
+import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
@@ -310,7 +315,7 @@ export function useTransactionsWorkspace() {
           "",
       }));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load transactions.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load transactions. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -427,15 +432,30 @@ export function useTransactionsWorkspace() {
           existingTransactions: transactions,
         };
 
+        let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
           const [source, destination] = buildTransferPair(buildInput);
+          feeParent = source;
           await Promise.all([
             repositories.transactions.upsert(source),
             repositories.transactions.upsert(destination),
           ]);
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
-          await repositories.transactions.upsert(buildManualTransaction(buildInput, rules));
+          const payment = buildManualTransaction(buildInput, rules);
+          feeParent = payment;
+          await repositories.transactions.upsert(payment);
+        }
+
+        // A fee is a separate linked expense on the same account (the transfer
+        // source, for transfers). Editing that clears the fee removes the orphan.
+        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, FEES_CATEGORY_ID);
+        const feeId = `${feeParent.id}:fee`;
+        if (fee) {
+          await repositories.categories.upsert(buildFeesCategory(profile.id));
+          await repositories.transactions.upsert(fee);
+        } else if (transactions.some((entry) => entry.id === feeId)) {
+          await repositories.transactions.remove(feeId);
         }
 
         await persistReconciledBalances(profile.id);
@@ -479,22 +499,27 @@ export function useTransactionsWorkspace() {
     ],
   );
 
-  const beginTransactionEdit = useCallback((transaction: Transaction) => {
-    if (transaction.type === "transfer") return;
-    setEditingTransactionId(transaction.id);
-    setTransactionForm({
-      type: transaction.type,
-      accountId: transaction.accountId,
-      destinationAccountId: "",
-      categoryId: transaction.categoryId,
-      currency: transaction.currency,
-      payee: transaction.payee ?? transaction.rawPayee ?? "",
-      amount: String(transaction.originalAmount),
-      fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
-      occurredOn: transaction.occurredOn,
-      note: transaction.note ?? "",
-    });
-  }, []);
+  const beginTransactionEdit = useCallback(
+    (transaction: Transaction) => {
+      if (transaction.type === "transfer") return;
+      const feeChild = transactions.find((entry) => entry.id === `${transaction.id}:fee`);
+      setEditingTransactionId(transaction.id);
+      setTransactionForm({
+        type: transaction.type,
+        accountId: transaction.accountId,
+        destinationAccountId: "",
+        categoryId: transaction.categoryId,
+        currency: transaction.currency,
+        payee: transaction.payee ?? transaction.rawPayee ?? "",
+        amount: String(transaction.originalAmount),
+        fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
+        feeAmount: feeChild ? String(feeChild.originalAmount) : "",
+        occurredOn: transaction.occurredOn,
+        note: transaction.note ?? "",
+      });
+    },
+    [transactions],
+  );
 
   const handleDeleteTransaction = useCallback(
     async (transaction: Transaction) => {
@@ -503,14 +528,19 @@ export function useTransactionsWorkspace() {
       setError(null);
 
       try {
+        const idsToRemove = new Set<string>([transaction.id]);
         if (transaction.transferGroupId) {
-          const linked = transactions.filter(
-            (entry) => entry.transferGroupId === transaction.transferGroupId,
-          );
-          await Promise.all(linked.map((entry) => repositories.transactions.remove(entry.id)));
-        } else {
-          await repositories.transactions.remove(transaction.id);
+          transactions
+            .filter((entry) => entry.transferGroupId === transaction.transferGroupId)
+            .forEach((entry) => idsToRemove.add(entry.id));
         }
+        // Cascade to any linked fee (of the payment or the transfer source).
+        transactions
+          .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
+          .forEach((entry) => idsToRemove.add(entry.id));
+        await Promise.all(
+          [...idsToRemove].map((id) => repositories.transactions.remove(id)),
+        );
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);

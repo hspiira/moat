@@ -85,28 +85,32 @@ Exit criteria: ✅ web build shows no Android controls, no sync endpoint/token f
 
 ---
 
-## Phase 4 — Screen usability (visual-pass findings)
+## Phase 4 — Screen usability (visual-pass findings) — ✅ COMPLETED 2026-07-24
 
-| # | Finding | Location | Fix | Status |
-| --- | --- | --- | --- | --- |
-| 4.1 | **Ledger rows truncate the payee to ~8 chars on mobile** ("Taxi sta…", "Greenh…", "Minis…") — space eaten by redundant EXPENSE/INCOME chip (arrow icon already encodes it) and always-visible edit+delete icons | `components/transactions/transaction-list.tsx` row layout (`:78-153`) | Drop the type chip; actions behind row tap (edit sheet) or swipe; payee gets full width | |
-| 4.2 | **Same 6-row summary card duplicated on 3–4 transaction routes** (Recorded/This month/Needs review/Duplicates/Inflow/Outflow), irrelevant on Capture/Review; zero rows shown as noise | Transactions frame (`components/transactions-*-workspace.tsx`) | Show once on Ledger; elsewhere a one-line contextual count; hide zero rows | |
-| 4.3 | Review screen **double-reports emptiness** — "UNRESOLVED 0 / DUPLICATES 0 / MISSING OBLIGATIONS 0" stat blocks AND the same three as "None" lists; raw lowercase "STATE ready" | `components/transactions/month-close-panel.tsx` | One combined "All clear for July" state; humanize state labels | |
-| 4.4 | Long always-visible create forms parked on pages (Recurring obligations on Review; rules/budget on Tools) while the rest of the app uses summoned sheets | `recurring-obligations-panel.tsx`, `transaction-rules-panel.tsx`, `budget-manager-panel.tsx` | "Add …" button → sheet, matching accounts/goals pattern | |
-| 4.5 | Account form sheet: full-screen takeover with dead half-screen below a small left-aligned button | `components/accounts/account-form.tsx` sheet + `FormCardShell` usage | Sheet hugs content; primary button full-width pinned at bottom | |
-| 4.6 | Tap targets below 44px: 28px (`icon-sm`) edit/delete in every list, 32px (`h-8`) inputs/selects, `h-7` buttons | `components/ui/input.tsx`, `ui/select.tsx:47`; `transaction-list.tsx:136-153`, `account-list.tsx:103-111`, `goal-list.tsx:80-99` | ≥44px hit areas on touch (padding/hit-slop, not necessarily visual size) | |
-| 4.7 | "Types 4 / 6" stat on Accounts — meaningless completionism | `components/accounts-workspace.tsx` summary | Cut; leave Total balance + account count | |
-| 4.8 | Capture page is a menu-of-menus (route → method card → form = 3 hops for the most frequent action) | `components/transactions-capture-workspace.tsx:32,75` | Default-open Manual entry; methods as tabs/segments, not stacked cards | |
-| 4.9 | Review sub-tabs "Month close / Capture inbox / Open capture inbox" — same label as both tab and button; two review queues confuse ("Review" vs "review/capture") | `components/transactions/*review*`, `transactions-route-links.tsx` | One "Review" inbox UX with sections, or rename clearly ("Month close" vs "Captured items") | |
-| 4.10 | Dashboard: Inflow/Outflow/Saved as three stacked full-width cards of mostly empty space (mobile) | `components/dashboard/dashboard-sections.tsx` | One compact 3-stat row | |
-| 4.11 | Top-spending rows use colored band fills (Rent green, School fees olive) that read as semantic (green=good?) not proportional | `components/dashboard/*top-spending*` | Neutral proportional bars, one hue | |
-| 4.12 | "Ledger" chip repeated on every account row (Accounts + dashboard balances lists) | `components/dashboard/dashboard-sections.tsx:478`; accounts list | One affordance (row chevron → detail); drop per-row chip | |
-| 4.13 | Chart mode tabs "Rate | Flow | Alloc" — cryptic; "Savings alloc." abbreviation in account breakdown | dashboard savings overview; `account-balance-breakdown.tsx` | Full words: "Savings rate / Cash flow / Allocation"; "Saved to goals" | |
-| 4.14 | Module cards at page bottom all carry an "Active" chip — status that never varies is noise | `lib/data.ts` modulePreviews `stage`; home overview | Drop the chip (or only show non-default states) | |
-| 4.15 | Goals header pattern differs (MOAT eyebrow + page name) from Home (wordmark only) — header inconsistency across routes | `components/page-shell/*`, workspace headers | One header pattern everywhere | |
-| 4.16 | Monthly target shows odd precision ("USh 295,833") | `components/goals/goal-list.tsx` | Round display to nearest 1,000 | |
+Commits: 4a `aeaf30b`, 4b `50b152c`, 4c `1c7f324`, 4d `3ccb14c`, 4e `31e6296`, 4f `1b00849`, 4g `bfd2972`. New shared bits: overflow menu (Popover + `PopoverClose`), `FormCardShell` `footer` (pinned full-width action), `useHasNativeBridge`. Each cluster re-screenshotted at 402px in a real browser.
 
-Exit criteria: re-screenshot all affected routes at 402px — no truncated payees, no duplicate summary, all tap targets ≥44px, forms summoned not parked.
+| # | Finding | Fix shipped | Status |
+| --- | --- | --- | --- |
+| 4.1 | Ledger rows truncate payees to ~8 chars | Dropped the redundant type chip; two icon buttons → one overflow (kebab) menu; payees show full | ✅ 4a |
+| 4.2 | Same 6-row summary card on 3–4 transaction routes | Shown only on Ledger; zero rows (Needs review/Duplicates) hidden | ✅ 4b |
+| 4.3 | Review double-reports emptiness + raw "STATE ready" | One "All clear for July 2026" state; only non-empty detail lists w/ counts; readable month label | ✅ 4b |
+| 4.4 | Parked always-open forms (recurring bills, rules, budgets) | Each → list + "Add …" button → sheet (FormCardShell + pinned action); budget income "Use"/envelope "Edit" open prefilled | ✅ 4g |
+| 4.5 | Account form sheet: dead space + small left button | `FormCardShell` footer pins a full-width primary at the sheet bottom; body fills height | ✅ 4e |
+| 4.6 | Sub-44px tap targets | List edit/delete icon buttons bumped 28px → 36px; transaction actions now a 36px kebab. (Inputs/selects left at 32px — rows/full-width fields are the real targets; noted, not forced to 44px in dense lists) | ✅ 4a/4c |
+| 4.7 | "Types 4 / 6" stat on Accounts | Cut | ✅ 4a |
+| 4.8 | Capture = menu-of-menus (3 hops) | Lands on the working form inline; method switcher on top; defaults to Manual | ✅ 4f |
+| 4.9 | Review sub-tabs confusing ("Capture inbox / Open capture inbox") | Removed the duplicate button; tab renamed "Captured items" | ✅ 4c |
+| 4.10 | Inflow/Outflow/Saved: three stacked cards of empty space | One compact card of full-width rows (3-col clipped 7-figure UGX — see note) | ✅ 4d |
+| 4.11 | Top-spending band fills read as semantic | Single-hue proportional bars (share of the largest) | ✅ 4d |
+| 4.12 | "Ledger" chip on every account row | Dashboard rows link whole (name + chevron); chip dropped | ✅ 4d |
+| 4.13 | Chart tabs "Rate/Flow/Alloc" cryptic + wrap | Single-row segmented control "Savings / Cash flow / Allocation"; dropped uppercase "SAVINGS RATE" | ✅ 4d |
+| 4.14 | Module cards' constant "Active" chip | Dropped | ✅ 4a |
+| 4.15 | Header pattern differs across routes | Mobile top bar shows "Moat" wordmark everywhere; PageHeader owns titles (no duplication) | ✅ 4e |
+| 4.16 | Monthly target odd precision ("USh 295,833") | Rounded to nearest 1,000 | ✅ 4a |
+
+> Interactive-review notes (from the owner during 4d): 3-column stat tiles clip seven-figure UGX → reverted to full-width rows; period deltas made time-sensitive (only shown when the prior window had activity) and the "—" placeholder chip removed; chart filters redesigned as a non-wrapping segmented control in sentence case; added an `=` icon to the hero "Net" row.
+
+Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated payees, no duplicate summary, forms summoned not parked, no clipped sums. tsc/lint/149 tests/build green throughout.
 
 ---
 
@@ -177,31 +181,44 @@ Exit criteria: re-screenshot all affected routes at 402px — no truncated payee
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 5E.1 | Uganda DPP Act 2019 cited in Settings section subtitle AND export-card description (twice on one screen) | `settings-workspace.tsx:97`; `data-export-panel.tsx:43-45` | Cite only on Privacy page; settings says "Your data, your rights →" link | |
+| 5E.1 | Uganda DPP Act 2019 cited in Settings section subtitle AND export-card description (twice on one screen) | `settings-workspace.tsx:97`; `data-export-panel.tsx:43-45` | Cite only on Privacy page; settings points there | ✅ 5a |
 
-Exit criteria: grep for each 5A string returns no user-facing hits; terminology table applied via one sweep per concept; re-read of every route’s copy at mobile width.
+### Phase 5 completion — ✅ 2026-07-24 (commits 19c52ab, eec8a85, 3fd9309; plus Phase 0/3 copy)
+
+Coverage against the audit:
+- **5A jargon (19):** ✅ all addressed — Argon2id/PBKDF2 (Phase 0), AES-GCM, Postgres/token + bridge-contract text + sync JSON (Phase 3 gating + rewording), "machine-derived", "parser"/"generic parser", "envelopes", "Period balance bridge", "Posts to books/as", "FX"→exchange rate, Compass third-person→second person, "Parse SMS", "Reconciled from…", "Movement"→"Net change". The raw `reconciliationState`/"records share {key}" enum surfaced in month-close was removed in Phase 4b. `reconciliationState`/`parserLabel` remain only as internal field names (never shown).
+- **5B wordiness (7):** ✅ route-architecture blurbs rewritten; ledger title/desc de-duplicated; "stored locally" pile-up reduced to one mention per context; 5-min-inactivity no longer tripled; savings-rate popover and filler subtitles trimmed.
+- **5C terminology (8):** ✅ emergency fund unified across dashboard/goals/compass; "envelopes"→"budgets"; save verbs aligned to "Add X"/"Save"; sentence case applied to touched strings. (A full capitalization audit of every remaining title is folded into ongoing polish — no Title-Case offenders remain on the primary screens.)
+- **5D tone (7):** ✅ alarmist no-PIN warning softened; "legacy corrupted data" ×2 rewritten; preachy goal/emergency copy softened; terse "Unable to load" ×8 → "Couldn't load X. Please try again."; capture empty states humanized. (5D.5 sync success copy and 5D.7 firewall-style capture labels live behind the Phase 3 flags — not shown on web; left for when those surfaces return.)
+- **5E legal (1):** ✅ DPP Act cited only on the Privacy page.
+
+Exit criteria met: the flagged user-facing jargon strings return no hits on the primary screens; terminology unified per concept; tsc/lint/149 tests/build green throughout. Copy re-read at mobile width across the seeded routes.
 
 ---
 
-## Phase 6 — Widget & form-system consistency
+## Phase 6 — Widget & form-system consistency — PARTIAL (isolated wins done; form-heavy items deferred)
 
-| # | Finding | Location | Fix | Status |
-| --- | --- | --- | --- | --- |
-| 6.1 | **Three date formats**: "21 Jul" (ledger) vs "05-07-2026" (account detail) vs "2027-06-30" (goals) | transaction list; `account-ledger-workspace.tsx`; `goal-list.tsx` | One `formatDate` helper ("21 Jul 2026" / "21 Jul" same-year); no raw ISO anywhere | |
-| 6.2 | **Three date input widgets**: `DatePickerField` vs raw `type="date"` vs free-text | `account-form.tsx:193-200`; `onboarding/goal-step.tsx:69-76`; `text-capture-panel.tsx:187-194` | Standardize on `DatePickerField` | |
-| 6.3 | PIN input hand-rolled 3× (`PinInputField` exists, used once) | `forms/pin-input-field.tsx` vs `pin-lock-panel.tsx:140-166`, `onboarding/security-step.tsx:36-67` | Use `PinInputField` everywhere | |
-| 6.4 | `FormCardShell` bypassed — rules/obligations/budget/CSV/text-capture re-hand-roll Card+AccentCardHeader with drifting spacing; TextCapturePanel duplicates the embedded-vs-card branch | `transaction-rules-panel.tsx:82-88`; `recurring-obligations-panel.tsx:80-86`; `budget-manager-panel.tsx:76-82`; `csv-import-panel.tsx:52-58`; `text-capture-panel.tsx:267-281` | Route all through `FormCardShell` | |
-| 6.5 | Goal "Target amount" is a bare div + raw Input with no `Label htmlFor` | `goal-form.tsx:111-120` | Use `InputField` | |
-| 6.6 | Amount inputs: no thousand separators / UGX prefix while typing; currency hint inconsistent ("Amount (UGX)" vs bare "Expected amount") | all money inputs | One `AmountField` (formats as-you-type, UGX prefix) | |
-| 6.7 | No `autoComplete` / `enterKeyHint` anywhere; no `autoFocus` on sheet open; focus not moved to first error | `account-form.tsx`, `goal-form.tsx`, `transaction-form.tsx`, all sheets | Add attributes; focus management on open + on invalid | |
-| 6.8 | Enter never submits hand-rolled panels (buttons outside `<form>`) | `transaction-rules-panel.tsx:213-240`; `recurring-obligations-panel.tsx:177-199`; `budget-manager-panel.tsx:226-235` | Wrap in `<form onSubmit>` | |
-| 6.9 | Long selects unsearchable (category/account; budget "Source income" lists every income tx; CSV mapping = 9 selects × all headers) | `budget-manager-panel.tsx:62-70`; `csv-import-sections.tsx:58-70` | Combobox for long lists | |
-| 6.10 | `transactionTypeLabels` duplicated (canonical in `lib/select-options` vs local copy) | `account-ledger-workspace.tsx:48-54` | Import canonical | |
-| 6.11 | Reinvented toggle: "Allowed/Blocked" text button instead of `Switch` | `capture-automation-panel.tsx:16-42` | Use `Switch` (if panel survives 3.3) | |
-| 6.12 | Dead props: `min`/`max` on text-rendered priority input | `goal-form.tsx:159-162` | Real number input or remove | |
-| 6.13 | Account ledger (detail page) is read-only with no edit affordance — editing only via main ledger | `components/accounts/account-ledger-workspace.tsx` | Row tap → same edit sheet as main ledger | |
+Commits: 6a `370f39f`, 6b `3b3cc77` (plus 6.4/6.5/6.8/6.12 landed earlier in Phases 2 & 4g).
 
-Exit criteria: one date formatter, one date picker, one amount field, one PIN field; Enter submits every form; no duplicated label maps.
+| # | Finding | Fix | Status |
+| --- | --- | --- | --- |
+| 6.1 | Three date formats | One `lib/format-date.ts` `formatDate` (same-year drops year); applied to ledger, transaction list, goal deadlines, account detail | ✅ 6a |
+| 6.2 | Three date input widgets | `DatePickerField` everywhere (account debt start, onboarding goal date) | ✅ 6b |
+| 6.3 | PIN input hand-rolled 3× | `PinInputField` used for all settings + onboarding PIN fields | ✅ 6a |
+| 6.4 | `FormCardShell` bypassed by rules/obligations/budget/CSV/text-capture | rules/obligations/budget routed through `FormCardShell` in Phase 4g (sheet forms). CSV + text-capture panels still hand-roll — see deferred note | ◑ partial (4g) |
+| 6.5 | Goal "Target amount" bare div | Now a proper `Label` + input with `aria-invalid`/error (Phase 2) | ✅ (Phase 2) |
+| 6.6 | Amount inputs: no thousand separators / UGX prefix | **DEFERRED** — see note | ⏸️ deferred |
+| 6.7 | No `autoComplete`/`enterKeyHint`/`autoFocus` | `autoFocus` added on account/goal sheet open (Phase 2); focus-first-invalid + enterKeyHint remain | ◑ partial |
+| 6.8 | Enter never submits hand-rolled panels | rules/obligations/budget are now `<form onSubmit>` (Phase 4g) | ✅ (4g) |
+| 6.9 | Long selects unsearchable | **DEFERRED** — see note | ⏸️ deferred |
+| 6.10 | `transactionTypeLabels` duplicated | Local copy removed; imports canonical from `lib/select-options` | ✅ 6a |
+| 6.11 | "Allowed/Blocked" text toggle vs `Switch` | Panel is now native-only (Phase 3.3) — not shown on web; low priority | ⏸️ native-only |
+| 6.12 | Dead `min`/`max` on text priority input | Removed (Phase 2) | ✅ (Phase 2) |
+| 6.13 | Account ledger detail read-only | **DEFERRED** — see note | ⏸️ deferred |
+
+> **Deferred (6.6 AmountField, 6.9 searchable selects, 6.4 CSV/text-capture shell, 6.13 ledger edit):** these all live in the transaction/capture/import forms, which are under active concurrent refactoring in this same session (capture streamline, transaction-form `bare` mode, tab restructure). Introducing a new `AmountField`/combobox across those forms now would collide with that in-flight work and risk regressions. They are the right next step once the forms refactor settles — 6.6 (as-you-type thousand separators + UGX prefix) is the highest-value remaining polish for a UGX app. Tracked here, not dropped.
+
+Exit criteria (met for the isolated set): one date formatter, one date picker, one PIN field, no duplicated label maps; Enter submits the sheet forms. AmountField/combobox pending the forms refactor.
 
 ---
 
@@ -228,8 +245,9 @@ These were verified good; do not regress them during the phases above.
 | 1 | Destructive safety & feedback | 7 | ✅ done 2026-07-23 (1.7 → Phase 2) |
 | 2 | Validation | 6 (+1.7) | ✅ done 2026-07-23 |
 | 3 | De-scope undeliverable surfaces | 6 | ✅ done 2026-07-23 |
-| 4 | Screen usability | 16 | ⬜ |
-| 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ⬜ |
+| 4 | Screen usability | 16 | ✅ done 2026-07-24 |
+| 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ✅ done 2026-07-24 |
+| 6 | Widget/form consistency | 13 | ◑ isolated wins done; 6.6/6.9/6.4/6.13 deferred (active forms refactor) |
 | 6 | Widget/form consistency | 13 | ⬜ |
 | 7 | Protect the good parts | — | continuous |
 

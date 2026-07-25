@@ -18,6 +18,7 @@ export function mapReviewItemToTransactionFields(
     payee: item.payee.trim() || undefined,
     rawPayee: item.payee.trim() || undefined,
     note: item.note.trim() || undefined,
+    statedBalance: item.statedBalance,
     reconciliationState: "reviewed",
     source: item.source,
     messageHash: item.messageHash,

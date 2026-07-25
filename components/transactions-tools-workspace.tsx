@@ -14,7 +14,7 @@ export function TransactionsToolsWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="tools"
       title="Tools"
-      description="Rules and budget administration sit here instead of competing with daily transaction review."
+      description="Set up budgets and auto-fill rules for your transactions."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

@@ -1,6 +1,6 @@
 "use client";
 
-import { InputField } from "@/components/forms/input-field";
+import { PinInputField } from "@/components/forms/pin-input-field";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
 
 import type { SecuritySetupState } from "./use-onboarding-workspace";
@@ -33,37 +33,21 @@ export function SecurityStep({ security, onSecurityChange }: Props) {
 
       {security.enabled ? (
         <>
-          <InputField
+          <PinInputField
             id="security-pin"
-            type="password"
             label={`Choose a PIN (minimum ${MIN_PIN_LENGTH} digits)`}
-            inputMode="numeric"
             value={security.pin}
-            onChange={(e) =>
-              onSecurityChange((c) => ({
-                ...c,
-                pin: e.target.value.replace(/\D/g, ""),
-              }))
-            }
+            onChange={(value) => onSecurityChange((c) => ({ ...c, pin: value }))}
             placeholder="e.g. 6 or more digits"
             autoComplete="new-password"
-            required
           />
 
-          <InputField
+          <PinInputField
             id="security-pin-confirm"
-            type="password"
             label="Confirm PIN"
-            inputMode="numeric"
             value={security.confirmPin}
-            onChange={(e) =>
-              onSecurityChange((c) => ({
-                ...c,
-                confirmPin: e.target.value.replace(/\D/g, ""),
-              }))
-            }
+            onChange={(value) => onSecurityChange((c) => ({ ...c, confirmPin: value }))}
             autoComplete="new-password"
-            required
           />
 
           <p className="text-xs text-muted-foreground">
@@ -72,10 +56,9 @@ export function SecurityStep({ security, onSecurityChange }: Props) {
           </p>
         </>
       ) : (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          Without a PIN your financial records are stored unencrypted on this
-          device. Anyone with access to it can read them. You can enable a PIN
-          later from Settings.
+        <div className="rounded-md border border-border/40 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          Without a PIN, anyone who picks up this device can open Moat and see your
+          finances. You can turn a PIN on anytime from Settings.
         </div>
       )}
     </>

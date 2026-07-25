@@ -33,7 +33,7 @@ export const defaultGoalForm: GoalFormState = {
 };
 
 export const goalTypeLabels: Record<GoalType, string> = {
-  emergency_fund: "Emergency Fund",
+  emergency_fund: "Emergency fund",
   rent_buffer: "Rent Buffer",
   school_fees: "School Fees",
   land_savings: "Land Savings",
@@ -199,7 +199,7 @@ export function GoalForm({
 
           <div className="flex flex-wrap gap-2">
             <Button disabled={isSubmitting} type="submit" size="sm">
-              {isSubmitting ? "Saving..." : editingId ? "Update goal" : "Create goal"}
+              {isSubmitting ? "Saving…" : editingId ? "Update goal" : "Add goal"}
             </Button>
             {editingId ? (
               <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>

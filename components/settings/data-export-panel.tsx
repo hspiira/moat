@@ -39,9 +39,8 @@ export function DataExportPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Export your data</CardTitle>
         <CardDescription>
-          Download all your accounts, transactions, goals, and categories as a JSON file. This
-          satisfies your right to data portability under the Uganda Data Protection and Privacy
-          Act 2019.
+          Download all your accounts, transactions, goals, and categories as a single file you can
+          keep or move to another device.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

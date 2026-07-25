@@ -6,8 +6,9 @@ import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { accountOptions, categoryOptions } from "@/lib/select-options";
-import type { Account, CaptureReviewItem, Category, TransactionType } from "@/lib/types";
+import type { Account, CaptureReviewItem, Category, Transaction, TransactionType } from "@/lib/types";
 import { formatMoney } from "@/lib/currency";
+import { pendingReviewGap } from "@/lib/domain/balance-gap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,6 +17,7 @@ type CaptureReviewQueueProps = {
   accounts: Account[];
   categories: Category[];
   items: CaptureReviewItem[];
+  transactions: Transaction[];
   isSubmitting: boolean;
   onApprove: (item: CaptureReviewItem) => Promise<void>;
   onReject: (item: CaptureReviewItem) => Promise<void>;
@@ -51,6 +53,7 @@ function ReviewItemEditor({
   item,
   accounts,
   categories,
+  transactions,
   isSubmitting,
   onApprove,
   onReject,
@@ -62,6 +65,8 @@ function ReviewItemEditor({
   useEffect(() => {
     setDraft(item);
   }, [item]);
+
+  const balanceGap = useMemo(() => pendingReviewGap(draft, transactions), [draft, transactions]);
 
   const amountLabel = useMemo(
     () =>
@@ -131,6 +136,20 @@ function ReviewItemEditor({
             }))
           }
         />
+        {draft.type === "expense" ? (
+          <InputField
+            id={`capture-review-fee-${draft.id}`}
+            label="Fee — charges & tax (UGX)"
+            inputMode="decimal"
+            value={draft.feeAmount ? String(draft.feeAmount) : ""}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                feeAmount: Number(event.target.value) || undefined,
+              }))
+            }
+          />
+        ) : null}
       </div>
 
       <TextareaField
@@ -156,6 +175,29 @@ function ReviewItemEditor({
               {warning.field}: {warning.message}
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {balanceGap && balanceGap.gap < 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border border-neg/40 bg-neg/10 px-3 py-2 text-xs">
+          <span className="text-foreground">
+            Bank balance is {formatMoney(Math.abs(balanceGap.gap), "UGX")} lower than recorded —
+            likely an unrecorded fee.
+          </span>
+          <button
+            type="button"
+            className="rounded-md border border-border/40 px-2 py-1 font-medium hover:bg-muted"
+            onClick={() =>
+              setDraft((current) => ({ ...current, feeAmount: Math.abs(balanceGap.gap) }))
+            }
+          >
+            Add as fee
+          </button>
+        </div>
+      ) : balanceGap && balanceGap.gap > 0 ? (
+        <div className="border border-border/30 px-3 py-2 text-xs text-muted-foreground">
+          Bank balance is {formatMoney(balanceGap.gap, "UGX")} higher than recorded — an uncaptured
+          credit?
         </div>
       ) : null}
 
@@ -191,7 +233,7 @@ export function CaptureReviewQueue(props: CaptureReviewQueueProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
             <div className="text-sm text-foreground">Capture inbox</div>
-            <div className="text-sm text-muted-foreground">Review machine-derived candidates before they become transactions.</div>
+            <div className="text-sm text-muted-foreground">Check items read from messages before they become transactions.</div>
           </div>
           <div className="flex gap-2">
             {(Object.entries(reviewFilterLabels) as Array<[ReviewFilter, string]>).map(([value, label]) => (
@@ -209,7 +251,7 @@ export function CaptureReviewQueue(props: CaptureReviewQueueProps) {
         </div>
 
         {filteredItems.length === 0 ? (
-          <EmptyState className="py-8">No capture items in this queue.</EmptyState>
+          <EmptyState className="py-8">Nothing waiting for review.</EmptyState>
         ) : (
           <div className="grid gap-3">
             {filteredItems.map((item) => (

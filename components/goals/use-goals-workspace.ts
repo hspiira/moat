@@ -73,7 +73,7 @@ export function useGoalsWorkspace() {
         linkedAccountId: current.linkedAccountId || reconciledAccounts[0]?.id || "",
       }));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load goals.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load goals. Please try again.");
     } finally {
       setIsLoading(false);
     }

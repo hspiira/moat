@@ -147,6 +147,10 @@ export type Transaction = {
   matchedRuleId?: string;
   reviewedAt?: string;
   transferGroupId?: string;
+  /** Set on a fee expense; points at the payment it was charged against. */
+  feeParentId?: string;
+  /** The account balance the source message stated, used for gap reconciliation. */
+  statedBalance?: number;
   importBatchId?: string;
   createdAt: string;
   updatedAt: string;
@@ -250,6 +254,8 @@ export type CaptureReviewSnapshot = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
+  statedBalance?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;
@@ -271,6 +277,8 @@ export type CaptureReviewItem = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
+  statedBalance?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;

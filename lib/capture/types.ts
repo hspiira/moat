@@ -16,6 +16,7 @@ export type CaptureProviderResult = {
   occurredOn?: string;
   payee?: string;
   note?: string;
+  feeAmount?: number;
   confidenceBoost: number;
 };
 
@@ -26,6 +27,8 @@ export type CapturePipelineCandidate = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
+  statedBalance?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;

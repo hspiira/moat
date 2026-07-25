@@ -22,6 +22,17 @@ export function splitCaptureMessages(input: string) {
     .filter(Boolean);
 }
 
+export function parseStatedBalance(text: string): number | undefined {
+  const match = text.match(
+    /\b(?:new\s+balance|balance|bal)\b\s*:?\s*(?:UGX|USh)?\s*([0-9,]+(?:\.\d+)?)/i,
+  );
+  return match ? Number(match[1].replace(/,/g, "")) : undefined;
+}
+
+export function isNonTransactionalMessage(text: string): boolean {
+  return /you have requested|authorize the transaction/i.test(text);
+}
+
 export function inferCaptureType(text: string): Exclude<TransactionType, "transfer"> {
   const normalized = normalizeCaptureName(text);
 
@@ -70,6 +81,16 @@ export function parseCaptureDate(text: string) {
   const ukMatch = text.match(/\b(\d{2})[-/](\d{2})[-/](20\d{2})\b/);
   if (ukMatch) {
     return `${ukMatch[3]}-${ukMatch[2]}-${ukMatch[1]}`;
+  }
+
+  const months: Record<string, string> = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+  const named = text.match(/\b(\d{1,2})[-\s]([A-Za-z]{3,})[-\s](20\d{2})\b/);
+  if (named) {
+    const month = months[named[2].slice(0, 3).toLowerCase()];
+    if (month) return `${named[3]}-${month}-${named[1].padStart(2, "0")}`;
   }
 
   return new Date().toISOString().slice(0, 10);

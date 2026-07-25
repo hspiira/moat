@@ -88,3 +88,17 @@ describe("capture review queue", () => {
     expect(log.approvedSnapshot.payee).toBe("Approved sender");
   });
 });
+
+describe("createCaptureReviewItem fee", () => {
+  it("copies the candidate fee onto the item and its snapshot", () => {
+    const item = createCaptureReviewItem({
+      userId: "u1",
+      envelopeId: "envelope:1",
+      candidate: { ...baseCandidate, type: "expense", feeAmount: 1250 },
+      capturedAt: "2026-04-10T00:00:00.000Z",
+    });
+
+    expect(item.feeAmount).toBe(1250);
+    expect(item.originalSnapshot.feeAmount).toBe(1250);
+  });
+});

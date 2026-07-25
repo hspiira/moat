@@ -6,8 +6,10 @@ import {
   inferCaptureCurrency,
   inferCapturePayee,
   inferCaptureType,
+  isNonTransactionalMessage,
   parseCaptureAmount,
   parseCaptureDate,
+  parseStatedBalance,
   splitCaptureMessages,
 } from "@/lib/capture/normalizers";
 import { parseWithProviderPacks } from "@/lib/capture/providers";
@@ -25,7 +27,9 @@ function inferCategoryId(
 }
 
 export function parseCaptureEnvelope(input: CapturePipelineInput & { existingReviewItems?: CaptureReviewItem[] }) {
-  const messages = splitCaptureMessages(input.envelope.rawContent);
+  const messages = splitCaptureMessages(input.envelope.rawContent).filter(
+    (rawText) => !isNonTransactionalMessage(rawText),
+  );
 
   return messages.map<CapturePipelineCandidate>((rawText, index) => {
     const providerResult = parseWithProviderPacks(rawText);
@@ -77,6 +81,8 @@ export function parseCaptureEnvelope(input: CapturePipelineInput & { existingRev
       originalAmount,
       currency,
       fxRateToUgx,
+      feeAmount: providerResult?.feeAmount,
+      statedBalance: parseStatedBalance(rawText),
       normalizedAmount,
       type,
       categoryId,

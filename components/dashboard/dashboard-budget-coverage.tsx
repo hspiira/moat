@@ -22,15 +22,15 @@ export function DashboardBudgetCoverage({
   return (
     <Card className="border-border/20 shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">Budget coverage</CardTitle>
+        <CardTitle className="text-base">Budgets</CardTitle>
         <CardDescription>
-          Current month only. Envelopes track allocated, spent, and remaining.
+          This month only. Shows what you allocated, spent, and have left per category.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
         {!hasBudgets ? (
           <EmptyState className="py-6">
-            No budgets set yet. Add envelopes from Transactions.
+            No budgets set yet. Add one from Transactions → Tools.
           </EmptyState>
         ) : (
           <>

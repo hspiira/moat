@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
+  IconAdjustmentsHorizontal,
   IconBuildingBank,
   IconBusinessplan,
   IconChalkboard,
@@ -90,7 +91,7 @@ export const mobileCaptureActions = [
   {
     href: "/transactions/capture?capture=text",
     label: "Paste text",
-    description: "Parse SMS and notification text.",
+    description: "Read a transaction from an SMS or notification.",
   },
   {
     href: "/transactions/import",
@@ -107,50 +108,6 @@ export function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function isPrimaryMobileRoute(pathname: string) {
-  return mobilePrimaryNav.some((href) => isActiveRoute(pathname, href));
-}
-
-export function getMobileTopBarTitle(pathname: string) {
-  if (pathname === "/transactions/capture") {
-    return "Capture";
-  }
-
-  if (pathname === "/transactions/import") {
-    return "Import";
-  }
-
-  if (pathname === "/transactions/review") {
-    return "Review";
-  }
-
-  if (pathname === "/transactions/review/capture") {
-    return "Capture review";
-  }
-
-  if (pathname === "/transactions/tools") {
-    return "Tools";
-  }
-
-  if (pathname === "/accounts") {
-    return "Accounts";
-  }
-
-  if (pathname.startsWith("/accounts/")) {
-    return "Account ledger";
-  }
-
-  if (pathname === "/settings") {
-    return "Settings";
-  }
-
-  if (pathname === "/privacy") {
-    return "Privacy";
-  }
-
-  const matchedItem = navItems.find((item) => isActiveRoute(pathname, item.href));
-  return matchedItem?.label ?? "Moat";
-}
 
 export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
@@ -300,7 +257,7 @@ export function MobileCaptureSheet() {
         <SheetHeader className="px-6">
           <SheetTitle>Capture</SheetTitle>
           <SheetDescription>
-            Start with the fastest capture path, then send machine-derived items into review before posting.
+            Pick the fastest way to add a transaction. Anything read from a message goes to review first.
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
@@ -387,6 +344,27 @@ export function MobileUtilitySheet({
                   />
                 );
               })}
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Data tools">
+            <div className="grid">
+              <DrawerNavRow
+                href="/transactions/import"
+                label="CSV import"
+                description="Bring in bank or mobile money statements"
+                icon={IconFileImport}
+                active={isActiveRoute(pathname, "/transactions/import")}
+                onNavigate={close}
+              />
+              <DrawerNavRow
+                href="/transactions/tools"
+                label="Rules & corrections"
+                description="Transaction rules, budgets, correction log"
+                icon={IconAdjustmentsHorizontal}
+                active={isActiveRoute(pathname, "/transactions/tools")}
+                onNavigate={close}
+              />
             </div>
           </DrawerSection>
 

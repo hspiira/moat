@@ -64,7 +64,6 @@ export function AccountsWorkspace() {
     <div className="grid gap-5">
       <PageHeader
         title="Accounts"
-        description="Manage the accounts where you hold and move money."
         aside={
           profile ? (
             <Button size="lg" onClick={openAddAccount}>

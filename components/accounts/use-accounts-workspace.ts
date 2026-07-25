@@ -54,7 +54,7 @@ export function useAccountsWorkspace() {
         setTransactions([]);
       }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load accounts.");
+      setError(loadError instanceof Error ? loadError.message : "Couldn't load accounts. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -52,4 +52,54 @@ describe("parseCaptureEnvelope", () => {
     expect(rows[0]?.fieldWarnings.some((warning) => warning.field === "currency")).toBe(true);
     expect(rows[0]?.issues).toContain("FX rate is required to convert this amount to UGX.");
   });
+
+  it("carries the extracted fee onto the candidate", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent: "Sent UGX 50,000 to JOHN DOE. Fee UGX 1,000. Tax UGX 250",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+
+    const rows = parseCaptureEnvelope({
+      envelope,
+      source: "notification",
+      accountId: "account:bank",
+      categories,
+      existingTransactions: [] as Transaction[],
+    });
+
+    expect(rows[0].type).toBe("expense");
+    expect(rows[0].feeAmount).toBe(1250);
+  });
+
+  it("carries the stated balance onto the candidate", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent: "You have withdrawn UGX 50,000 on 2026-06-27 09:35:56. Fee: UGX 1,500, Tax: UGX 250. New balance: UGX 50,363.01.",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+    const rows = parseCaptureEnvelope({
+      envelope, source: "notification", accountId: "account:bank", categories, existingTransactions: [] as Transaction[],
+    });
+    expect(rows[0].statedBalance).toBe(50363.01);
+  });
+
+  it("produces no candidate for a pre-authorization message", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent:
+        "Y'ello. You have requested a withdrawal of UGX 50,000 from ROGERS SSEWAGUDDE . Dial *165# and select My Approvals to authorize the transaction.The total fee is  UGX 1,750 inclusive of 0.5 percent tax.Transaction ID 10173656344",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+
+    const rows = parseCaptureEnvelope({
+      envelope,
+      source: "notification",
+      accountId: "account:bank",
+      categories,
+      existingTransactions: [] as Transaction[],
+    });
+
+    expect(rows).toHaveLength(0);
+  });
 });
