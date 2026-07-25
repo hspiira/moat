@@ -27,6 +27,7 @@ export type CapturePipelineCandidate = {
   originalAmount: number;
   currency: SupportedCurrency;
   fxRateToUgx?: number;
+  feeAmount?: number;
   normalizedAmount: number;
   type: Exclude<TransactionType, "transfer">;
   categoryId: string;

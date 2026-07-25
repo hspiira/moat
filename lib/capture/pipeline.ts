@@ -77,6 +77,7 @@ export function parseCaptureEnvelope(input: CapturePipelineInput & { existingRev
       originalAmount,
       currency,
       fxRateToUgx,
+      feeAmount: providerResult?.feeAmount,
       normalizedAmount,
       type,
       categoryId,

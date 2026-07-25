@@ -52,4 +52,23 @@ describe("parseCaptureEnvelope", () => {
     expect(rows[0]?.fieldWarnings.some((warning) => warning.field === "currency")).toBe(true);
     expect(rows[0]?.issues).toContain("FX rate is required to convert this amount to UGX.");
   });
+
+  it("carries the extracted fee onto the candidate", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent: "Sent UGX 50,000 to JOHN DOE. Fee UGX 1,000. Tax UGX 250",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+
+    const rows = parseCaptureEnvelope({
+      envelope,
+      source: "notification",
+      accountId: "account:bank",
+      categories,
+      existingTransactions: [] as Transaction[],
+    });
+
+    expect(rows[0].type).toBe("expense");
+    expect(rows[0].feeAmount).toBe(1250);
+  });
 });
