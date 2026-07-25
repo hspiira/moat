@@ -72,6 +72,18 @@ describe("parseCaptureEnvelope", () => {
     expect(rows[0].feeAmount).toBe(1250);
   });
 
+  it("carries the stated balance onto the candidate", () => {
+    const envelope = createNotificationEnvelope({
+      userId: "u1",
+      rawContent: "You have withdrawn UGX 50,000 on 2026-06-27 09:35:56. Fee: UGX 1,500, Tax: UGX 250. New balance: UGX 50,363.01.",
+      sourceApp: "com.mtn.uganda.momo",
+    });
+    const rows = parseCaptureEnvelope({
+      envelope, source: "notification", accountId: "account:bank", categories, existingTransactions: [] as Transaction[],
+    });
+    expect(rows[0].statedBalance).toBe(50363.01);
+  });
+
   it("produces no candidate for a pre-authorization message", () => {
     const envelope = createNotificationEnvelope({
       userId: "u1",

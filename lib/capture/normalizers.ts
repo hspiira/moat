@@ -22,6 +22,13 @@ export function splitCaptureMessages(input: string) {
     .filter(Boolean);
 }
 
+export function parseStatedBalance(text: string): number | undefined {
+  const match = text.match(
+    /\b(?:new\s+balance|balance|bal)\b\s*:?\s*(?:UGX|USh)?\s*([0-9,]+(?:\.\d+)?)/i,
+  );
+  return match ? Number(match[1].replace(/,/g, "")) : undefined;
+}
+
 export function isNonTransactionalMessage(text: string): boolean {
   return /you have requested|authorize the transaction/i.test(text);
 }

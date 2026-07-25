@@ -9,6 +9,7 @@ import {
   isNonTransactionalMessage,
   parseCaptureAmount,
   parseCaptureDate,
+  parseStatedBalance,
   splitCaptureMessages,
 } from "@/lib/capture/normalizers";
 import { parseWithProviderPacks } from "@/lib/capture/providers";
@@ -81,6 +82,7 @@ export function parseCaptureEnvelope(input: CapturePipelineInput & { existingRev
       currency,
       fxRateToUgx,
       feeAmount: providerResult?.feeAmount,
+      statedBalance: parseStatedBalance(rawText),
       normalizedAmount,
       type,
       categoryId,
