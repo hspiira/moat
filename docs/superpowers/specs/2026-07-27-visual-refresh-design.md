@@ -28,10 +28,11 @@ icon treatment. This document records the approved result.
 
 - **Nav**: floating solid-capsule bar (not card-colored — a genuinely separate
   dark/light object), 16px inset from the screen edges. 5 destinations stay (Home,
-  Transactions, Accounts, More, plus capture), icons only for inactive items: the
-  **active item expands into an icon+label pill** instead of a plain icon
-  highlight. The capture button breaks out of the bar as a raised circular FAB,
-  unchanged in position from the current design.
+  Transactions, Accounts, More, plus capture), icon-only throughout — no labels.
+  The **active item is a plain filled circle** (icon recolored, no expanding
+  label — reverted from an earlier icon+label pill exploration). The capture
+  button breaks out of the bar as a raised circular FAB in an off-white fill for
+  contrast, unchanged in position from the current design.
 - **Home cards**: the first card ("Cash flow") becomes a solid-primary "hero"
   block; "Emergency first" and "Rule-based guidance" become quiet outlined cards
   beneath it. One clear entry point instead of three competing ones.
@@ -51,11 +52,12 @@ icon treatment. This document records the approved result.
   needed to those files. Small buttons (`xs`/`sm`) already cap their radius via
   `min(var(--radius-md), 10-12px)`, so they won't balloon into pills at the new
   base value.
-- **Icons**: keep the existing Tabler outline icon set used everywhere in the app
-  (no new dependency, no coverage gaps) but wrap nav icons in a **gradient +
-  inset-shadow chip** for a glossy, raised feel — an approximation of the
-  reference images' 3D icons without the cost/licensing/coverage problems of
-  sourcing a real 3D icon pack.
+- **Icons**: bottom-nav icons switch from Tabler outline to **Solar Bold Duotone**
+  via `@solar-icons/react` (MIT licensed, actively maintained, React 19-compatible,
+  per-icon tree-shakeable subpath exports — same import shape as the current
+  Tabler usage). Scoped to the 5 bottom-nav icons only; everywhere else in the app
+  keeps Tabler outline. (A competing package, `solar-icon-set`, was found and
+  rejected — it's GPL-3.0, a real licensing risk for a commercial app.)
 
 ## Verified codebase facts (corrects an earlier assumption made mid-session)
 
@@ -113,9 +115,11 @@ signature element rather than a themed surface):
 
 ```
 --nav-bar: oklch(0.15 0.008 165);
---nav-bar-foreground: oklch(0.6 0.02 165);   /* inactive icon color */
---nav-bar-active: oklch(0.7 0.13 165);        /* dark-mode primary, used even in light mode */
---nav-bar-active-foreground: oklch(0.14 0.01 165);
+--nav-bar-foreground: oklch(0.6 0.02 165);      /* inactive icon color */
+--nav-bar-active: oklch(0.7 0.13 165);          /* dark-mode primary, used even in light mode */
+--nav-bar-active-foreground: oklch(0.14 0.01 165); /* icon color on the active circle */
+--nav-bar-capture: oklch(0.96 0.005 165);       /* off-white capture FAB fill */
+--nav-bar-capture-foreground: oklch(0.15 0.008 165); /* icon color on the capture FAB */
 ```
 
 Untouched: `--neg`, `--destructive`, `--clay`/`--clay-foreground` (kept as the one
@@ -141,23 +145,33 @@ Deleted: `--moat-surface-olive`, `--moat-surface-ink`, `.moat-panel-olive`,
   table above — not `var(--card)`, needs to read as a distinct floating object
   per the reference crops, confirmed in the final mockup).
 - Active item (`renderNavButton` in `mobile-navigation.tsx`): currently toggles
-  `variant="secondary"` vs `"ghost"` with icon-only content. Change so the active
-  item renders icon + label inline inside a filled pill (`bg-[var(--nav-bar-active)]
-  text-[var(--nav-bar-active-foreground)] rounded-full px-4`), while inactive
-  items stay icon-only, no label, `text-[var(--nav-bar-foreground)]`, in a plain
-  circular hit target. This means the label span currently rendered
-  unconditionally under the icon needs to become conditional on `isActive`, and
-  the layout needs to go from `flex-col` (icon over label) to `flex-row` (icon
-  beside label) for the active state only.
-- Icon depth: wrap each icon in a chip (`~34px`, `border-radius: var(--radius-md)`
-  or circular to match the pill) with a gradient background and
-  `box-shadow: inset 0 1px 1px rgba(255,255,255,.18), inset 0 -3px 5px
-  rgba(0,0,0,.25)` — inactive chips use a muted-tone gradient off `--nav-bar`,
-  the active chip uses a gradient off `--nav-bar-active`. Scoped to the bottom
-  nav only (`mobile-navigation.tsx`) — other icon usages via `navIcons` in
-  `navigation-shared.tsx` (desktop nav, the "more" sheet) keep the plain flat
-  Tabler rendering; the chip treatment is a nav-bar-specific accent, not a
-  site-wide icon system change.
+  `variant="secondary"` vs `"ghost"` with an icon-over-label `flex-col` layout.
+  Change to icon-only for every item (drop the label span entirely from the
+  bottom nav — it's already redundant with 5 recognizable icons), with the
+  active item getting `bg-[var(--nav-bar-active)]
+  text-[var(--nav-bar-active-foreground)] rounded-full` on its circular hit
+  target and inactive items `text-[var(--nav-bar-foreground)]` on a transparent
+  one.
+- Capture button: raised circular FAB, `bg-[var(--nav-bar-capture)]
+  text-[var(--nav-bar-capture-foreground)]` — off-white, distinct from the
+  emerald `--nav-bar-active` circle so the capture action doesn't compete
+  visually with whichever destination is currently active.
+- Icons: add `@solar-icons/react` as a dependency. In `mobile-navigation.tsx`,
+  replace the Tabler icon components used for the 5 bottom-nav destinations with
+  their Solar equivalents, rendered with `weight="BoldDuotone"` (a `SolarProvider`
+  wrapping the nav can set this as the default once rather than repeating the prop
+  per icon):
+  - Home → `Home2`
+  - Transactions → `TransferHorizontal`
+  - Accounts → `Buildings2`
+  - Capture → `AddCircle`
+  - More → `HamburgerMenu`
+
+  Exact `BoldDuotone` path data for all five (confirmed against the installed
+  package, not approximated) is in the published mockup from this session. Other
+  icon usages via `navIcons` in `navigation-shared.tsx` (desktop nav, the "more"
+  sheet, everywhere else in the app) keep the existing Tabler outline rendering —
+  this is a bottom-nav-specific change, not a site-wide icon library swap.
 
 ### 3. Home pre-onboarding cards (`components/home-overview.tsx`, ~lines 76-112)
 
@@ -194,7 +208,7 @@ below the three-card grid.
   used (dashboard, CSV import, accent metric cards) — not part of the feedback.
 - Desktop navigation (`desktop-navigation.tsx`) — feedback was specifically about
   the mobile floating nav; desktop can follow in a later pass if wanted.
-- Any new icon library/asset pack (Option C from the icon-treatment mockup was
-  declined).
+- Replacing Tabler with Solar Bold Duotone anywhere outside the bottom nav (was
+  explicitly considered and declined — see Icons decision above).
 - Chart/data-visualization redesign beyond the minimal `--chart-2` retune needed
   to avoid a clash.
