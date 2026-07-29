@@ -2,7 +2,6 @@
 
 import { MonthClosePanel } from "./transactions/month-close-panel";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
-import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -12,8 +11,8 @@ export function TransactionsReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       currentRoute="review"
-      title="Recurring & month close"
-      description="Resolve duplicates, recurring obligations, and month-close issues away from the main ledger."
+      title="Month close"
+      description="Resolve duplicates and month-close issues away from the main ledger."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
@@ -42,14 +41,6 @@ export function TransactionsReviewWorkspace() {
           onExport={workspace.exportMonthClose}
         />
 
-        <RecurringObligationsPanel
-          accounts={workspace.accounts}
-          categories={workspace.categories}
-          evaluations={workspace.recurringEvaluations}
-          isSubmitting={workspace.isSubmitting}
-          onSaveObligation={(obligation) => void workspace.saveObligation(obligation)}
-          onToggleObligation={(obligation) => void workspace.toggleObligation(obligation)}
-        />
         </div>
       </div>
     </TransactionsWorkspaceFrame>
