@@ -55,8 +55,32 @@ export function detectBalanceGaps(transactions: Transaction[]): BalanceGap[] {
  * checkpoint on top of the account's existing ledger. Null when the item states
  * no balance.
  */
+/**
+ * The fields the gap math actually reads. Both a CaptureReviewItem and a
+ * CapturePipelineCandidate satisfy this, so the review inbox and the paste
+ * module share one implementation — the paste module previously had no fee
+ * detection at all purely because it holds candidates, not review items.
+ */
+export type BalanceGapSubject = Pick<
+  CaptureReviewItem,
+  | "id"
+  | "accountId"
+  | "type"
+  | "normalizedAmount"
+  | "currency"
+  | "originalAmount"
+  | "occurredOn"
+  | "categoryId"
+  | "source"
+  | "statedBalance"
+> & {
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export function pendingReviewGap(
-  item: CaptureReviewItem,
+  item: BalanceGapSubject,
   ledger: Transaction[],
 ): BalanceGap | null {
   if (typeof item.statedBalance !== "number") {
@@ -65,7 +89,7 @@ export function pendingReviewGap(
 
   const synthetic: Transaction = {
     id: item.id,
-    userId: item.userId,
+    userId: item.userId ?? "",
     accountId: item.accountId,
     type: item.type,
     amount: Math.abs(item.normalizedAmount),
@@ -76,8 +100,8 @@ export function pendingReviewGap(
     reconciliationState: "reviewed",
     source: item.source,
     statedBalance: item.statedBalance,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
+    createdAt: item.createdAt ?? item.occurredOn,
+    updatedAt: item.updatedAt ?? item.occurredOn,
   };
 
   const accountLedger = ledger.filter((entry) => entry.accountId === item.accountId);
