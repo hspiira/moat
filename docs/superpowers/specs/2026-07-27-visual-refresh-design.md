@@ -73,8 +73,12 @@ icon treatment. This document records the approved result.
   component references `chart-1`, `chart-3`, `chart-4`, or `chart-5` /
   `color-chart-1/3/4/5`). Safe to delete as part of this change since the file is
   already being edited.
-- `chart-2` **is live** — feeds the conic-gradient in `.moat-pie`
-  (`home-overview.tsx`). Must be retuned to fit the new palette, not deleted.
+- ~~`chart-2` **is live** — feeds the conic-gradient in `.moat-pie`~~
+  **Superseded 2026-07-29.** The landing-page rewrite removed the `.moat-pie`
+  graphic (a "3" over a conic-gradient wedge, which read as decorative-cryptic
+  rather than informative). `.moat-pie` was its only consumer and `--chart-2`
+  was `.moat-pie`'s only consumer, so both were deleted along with
+  `--color-chart-2`. No retune needed.
 
 ## Design
 
@@ -130,12 +134,13 @@ deliberate warm counterpoint — used in `pin-lock-screen.tsx`, `goal-list.tsx`,
 mint,sage}` and their `.moat-panel-*` classes, `--sidebar-*` (desktop-only, not
 part of this pass).
 
-Retuned (not deleted): `--chart-2`, to sit in the new emerald family rather than
-the old teal hue, so `.moat-pie` doesn't clash.
-
 Deleted: `--moat-surface-olive`, `--moat-surface-ink`, `.moat-panel-olive`,
 `.moat-panel-ink`, `--chart-1`, `--chart-3`, `--chart-4`, `--chart-5` and their
 `--color-chart-{1,3,4,5}` `@theme inline` wiring — confirmed zero consumers above.
+
+Already removed 2026-07-29 as part of the landing-page rewrite: `.moat-pie`,
+`--chart-2`, `--color-chart-2`, and the `AppAsideIntro` component (its only
+caller was the old landing-page hero aside).
 
 ### 2. Bottom nav (`components/navigation/mobile-navigation.tsx`,
 `components/navigation/navigation-shared.tsx`)
@@ -216,22 +221,23 @@ to five carrying the daily load, three on demand, two removed.
   control, collapsed by default.
 - `DashboardInsightsPanel` — render only when `insights` is non-empty.
 
-**Restructure the hero (`dashboard-moat-hero.tsx`):**
+**Hero (`dashboard-moat-hero.tsx`) — no structural change.**
 
-Runway (`totalBalance / monthlyOutflow`, already computed at line 34) is
-currently a small `runwayLabel` with a `"months cover"` sublabel beside the
-balance. Promote it to co-equal billing with `totalBalance`: same type scale
-(`text-3xl`/`sm:text-4xl`, `font-display`), presented as the paired answer to
-"how much do I have / how long does it last." In/Out/Net stay as the supporting
-band beneath.
+A previous revision of this spec called for promoting runway to co-equal
+billing with the balance. On reading the rendered component that instruction
+was withdrawn: runway is already the centre label of a 148px `MoatRing` sitting
+beside the balance, tone-switched against a three-month target. It is co-equal
+today. Apply the §1 color tokens and radius; change nothing else.
 
-Where runway cannot be computed (`hasCoverSignal` false — no outflow recorded,
-or zero balance), keep the existing no-data treatment rather than showing a
-placeholder figure; the balance carries the hero alone in that state.
+**Resulting order:** period filter → hero (unchanged) → quick actions (max
+three) → savings overview → top spending categories → account balances, with
+budget coverage and insights appearing only when they have content.
 
-**Resulting order:** period filter → hero (runway + balance + in/out/net) →
-quick actions (max three) → top spending categories → account balances, with
-budget coverage, balance bridge, and insights appearing conditionally.
+The three sections being made conditional currently render *empty-state
+placeholder cards* rather than hiding — `dashboard-budget-coverage.tsx` shows a
+"no budgets" card, `DashboardInsightsPanel` shows an `EmptyState`. On a fresh
+or lightly-used account these placeholders are pure noise: they occupy prime
+vertical space to report an absence. Return `null` instead.
 
 Apply the §1 color tokens and §1 radius throughout. The `moat-panel-*` accent
 classes used by `dashboard-sections.tsx` and `dashboard-balance-bridge.tsx`

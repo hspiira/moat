@@ -45,20 +45,33 @@ This is a sound hierarchy: the three highest-frequency destinations plus the pri
 
 Desktop therefore presents Compass and Learn as peers of Transactions and Accounts. Given the depth disparity documented in §2, this over-represents them.
 
-### 1.3 Features with no navigation entry at all
+### 1.3 Deep features labelled by mechanism rather than by purpose
 
-The following are reachable only by entering a parent screen and locating a sub-panel:
+> **Correction (2026-07-29).** An earlier revision of this section claimed these
+> four features had "no navigation entry anywhere." That is wrong — all four are
+> reachable. Verified mount points and link paths are below. The real defect is
+> narrower and is a naming problem, not a missing-route problem.
 
-| Feature | Domain logic | Where it hides |
-|---|---|---|
-| Debt payoff planner | `debt.ts` — 302 lines | Inside Accounts |
-| Recurring obligations | `recurring.ts` — 227 lines | Inside Transactions |
-| Insights | `insights.ts` — 150 lines | Dashboard panel |
-| Budgets | `budgets.ts` — 145 lines | Inside Transactions |
+| Feature | Domain logic | Mounted in | Reached via |
+|---|---|---|---|
+| Debt payoff planner | `debt.ts` — 302 lines | `accounts-workspace.tsx` | Accounts (bottom nav) |
+| Recurring obligations | `recurring.ts` — 227 lines | `transactions-review-workspace.tsx` | Transactions → "Open review"; More → "Review month close" |
+| Insights | `insights.ts` — 150 lines | Dashboard panel | Home |
+| Budgets | `budgets.ts` — 145 lines | `transactions-tools-workspace.tsx` | More → "Rules & corrections" |
 
-These four represent **824 lines of domain logic** — more than the accounting summaries, goals, guidance, rules, and transfers modules combined — with no discoverable entry point. Debt payoff alone is the single largest domain module in the codebase.
+Together these are **824 lines of domain logic** — more than the summaries,
+goals, guidance, rules, and transfers modules combined.
 
-A user who has not read the source has no reliable way to learn these exist.
+The defect is that two of the four are reached through labels that describe the
+*container* rather than the capability:
+
+- **"Rules & corrections"** leads to a screen hosting transaction rules,
+  **budgets**, and the correction log. A user looking for budgeting has no
+  reason to open it; "budgets" appears only third in the row's description text.
+- **"Review month close"** leads to the screen hosting **recurring
+  obligations**. Nothing in the label suggests recurring bills live there.
+
+Debt and Insights are adequately placed and need no change.
 
 ---
 
@@ -126,13 +139,25 @@ Ten peer-weighted sections provide no ranking. The reader is given no signal abo
 
 **`DashboardContinueLinks` duplicates navigation.** It links to modules already reachable from the bottom bar, occupying the screen's final position — the second-strongest position on a scrolling page — with redundant routing.
 
-### 3.3 The strongest available signal is under-weighted
+### 3.3 The hero is already correct — no change required
 
-`DashboardMoatHero` computes `totalBalance / monthlyOutflow` and renders it as a small `runwayLabel` with a `"months cover"` sublabel beside the balance figure.
+> **Correction (2026-07-29).** An earlier revision of this section claimed runway
+> was rendered as "a small label" and should be promoted. That was drawn from a
+> symbol search rather than the rendered component, and is wrong.
 
-This is the most differentiated number in the product. Nearly every finance application displays a balance; very few answer *how long can I survive at current burn*. It converts raw data into a judgment, it is derived entirely from data already held, and it is the direct expression of both the emergency-fund-first thesis and the product's name.
+`DashboardMoatHero` computes `totalBalance / monthlyOutflow` and renders it as
+the centre label of a **148px `MoatRing`**, tone-switched against a three-month
+target, positioned to the left of the balance figure. The component's own
+docstring states its intent precisely: *"Answers 'how protected am I?' before
+'what's my balance?'"*
 
-It currently reads as a secondary annotation to the balance. It should carry equal or greater weight.
+This is the most differentiated number in the product — nearly every finance
+application displays a balance; very few answer *how long can I survive at
+current burn* — and the existing design already treats it as such. Runway and
+balance are visually co-equal, with In/Out/Net as a supporting band beneath.
+
+**No change recommended.** This is the strongest screen in the application and
+should be the reference point for the rest of the redesign, not a target of it.
 
 ---
 
@@ -142,7 +167,7 @@ It currently reads as a secondary annotation to the balance. It should carry equ
 
 | Action | Section | Rationale |
 |---|---|---|
-| **Keep, restructure** | Hero | Promote runway to co-equal with balance |
+| **Keep unchanged** | Hero | Already correct — runway ring + balance (§3.3) |
 | **Keep** | Period filter | Compact; consider sticky |
 | **Keep** | Quick actions | Limit to three |
 | **Keep** | Top spending categories | Genuine daily value |

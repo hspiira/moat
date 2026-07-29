@@ -1,157 +1,182 @@
 import Link from "next/link";
-
 import {
-  AppAsideIntro,
-  AppHeroCard,
-  AppPage,
-  AppSectionHeading,
-} from "@/components/app-page";
+  IconBuildingBank,
+  IconBusinessplan,
+  IconChalkboard,
+  IconChevronRight,
+  IconSchool,
+  IconTransfer,
+  type Icon,
+} from "@tabler/icons-react";
+
+import { AppSectionHeading } from "@/components/app-page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import type { ModulePreview } from "@/lib/types";
 
 type HomeOverviewProps = {
   modulePreviews: ModulePreview[];
 };
 
+// Local to the landing page rather than imported from the nav's icon map: the
+// nav module is "use client", and a marketing surface shouldn't be coupled to
+// navigation internals just to borrow five glyphs.
+const moduleIcons: Record<string, Icon> = {
+  "/accounts": IconBuildingBank,
+  "/transactions": IconTransfer,
+  "/goals": IconBusinessplan,
+  "/investment-compass": IconChalkboard,
+  "/learn": IconSchool,
+};
+
+const principles = [
+  {
+    eyebrow: "Track",
+    title: "Cash flow",
+    body: "See what came in, what went out, and what should change next month.",
+  },
+  {
+    eyebrow: "Save",
+    title: "Emergency first",
+    body: "Build a rent or school-fees buffer before stretching into long-term risk.",
+  },
+  {
+    eyebrow: "Decide",
+    title: "Rule-based guidance",
+    body: "Match your horizon and liquidity needs to safer product classes in Uganda.",
+  },
+] as const;
+
 export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
   return (
-    <AppPage>
-      <AppHeroCard
-        className="border-border/20"
-        title="Track clearly. Save deliberately. Invest with rules."
-        description="A personal finance tool for Uganda that keeps cash, mobile money, bank, SACCO, and long-term goals in one simple operating view."
-        actions={
-          <>
-            <Button asChild>
-              <Link href="/onboarding">Get started</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/learn">Learn Uganda finance</Link>
-            </Button>
-          </>
-        }
-        aside={
-          <AppAsideIntro
-            title="Built for how money moves locally"
-            description="One clean system for tracking, building buffers, and choosing safer next steps."
-            headerClassName="pb-2"
-            contentClassName="pb-0"
-          >
-            <div className="grid gap-5">
-              <div className="flex items-start gap-4">
-                <div className="moat-pie aspect-square w-14 shrink-0 sm:w-20 md:w-28" />
-                <div className="grid gap-4">
-                  <div className="grid gap-1">
-                    <div className="text-4xl font-semibold tracking-tight">3</div>
-                    <p className="text-sm text-muted-foreground">Track, decide, automate</p>
-                  </div>
-                  <div className="text-sm leading-6 text-muted-foreground">
-                    Emergency fund first. Investment guidance second.
-                  </div>
-                </div>
-              </div>
-              <Separator className="bg-border/50" />
-              <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
-                {[
-                  "Track spending across cash, mobile money, and bank accounts",
-                  "Build an emergency fund before taking on investment risk",
-                  "Import MTN or bank statements via CSV",
-                ].map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </AppAsideIntro>
-        }
-        asideClassName="gap-0 bg-transparent py-0 ring-0"
-      />
-
-      <section className="grid gap-4">
-        <AppSectionHeading
-          title="How the product stays simple"
-          description="One accent block, one clear list, one next action."
-        />
-        <div className="grid gap-3 xl:grid-cols-[1.3fr_1fr_1fr]">
-          <Card className="moat-panel-yellow border-border/20 shadow-none">
-            <CardContent className="grid gap-6 p-5">
-              <div className="space-y-1">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
-                  Track
-                </div>
-                <div className="text-4xl font-semibold tracking-tight">Cash flow</div>
-              </div>
-              <div className="grid gap-2 text-sm text-foreground/80">
-                <div>See what came in.</div>
-                <div>See what went out.</div>
-                <div>See what should change next month.</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="moat-panel-lilac border-border/20 shadow-none">
-            <CardContent className="grid gap-4 p-5">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
-                Save
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">Emergency first</div>
-              <p className="text-sm leading-6 text-foreground/80">
-                Build a rent or school-fees buffer before stretching into long-term risk.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="moat-panel-mint border-border/20 shadow-none">
-            <CardContent className="grid gap-4 p-5">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/70">
-                Decide
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">Rule-based guidance</div>
-              <p className="text-sm leading-6 text-foreground/80">
-                Match your horizon and liquidity needs to safer product classes in Uganda.
-              </p>
-            </CardContent>
-          </Card>
+    // No card chrome anywhere above sm: the app shell already provides the page
+    // gutter, so wrapping these sections in bg-background cards would stack a
+    // second inset on top of it without adding any visible structure.
+    <div className="grid gap-10 sm:gap-12">
+      <section className="grid gap-5 pt-1">
+        <div className="grid gap-3">
+          <h1 className="max-w-3xl font-display text-3xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
+            Track clearly. Save deliberately. Invest with rules.
+          </h1>
+          <p className="max-w-xl text-base leading-7 text-muted-foreground">
+            A personal finance tool for Ugandans that keeps cash, mobile money, bank, SACCO, and
+            long-term goals in one simple operating view.
+          </p>
         </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button asChild size="lg">
+            <Link href="/onboarding">Get started</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/learn">Learn Uganda finance</Link>
+          </Button>
+        </div>
+
+        <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
+          {[
+            "Works offline — your records stay on this device",
+            "Import MTN or bank statements via CSV",
+            "Locked behind a PIN, encrypted at rest",
+          ].map((item) => (
+            <li key={item} className="flex gap-2.5">
+              <span aria-hidden="true" className="mt-2.5 size-1 shrink-0 rounded-full bg-primary" />
+              {item}
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <section className="grid gap-4">
-        <AppSectionHeading title="Explore the product" description="Every screen has one main job." />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {modulePreviews.map((module, index) => {
-            const toneClass =
-              index % 3 === 0
-                ? "moat-panel-yellow"
-                : index % 3 === 1
-                  ? "moat-panel-sage"
-                  : "moat-panel-mint";
+      <section className="grid gap-3">
+        <AppSectionHeading
+          title="How the product stays simple"
+          description="One thing to do first, then two that follow from it."
+        />
+        <div className="grid gap-3 lg:grid-cols-3">
+          {principles.map((principle, index) => {
+            // The first principle carries the accent; the rest stay quiet so the
+            // page has a single entry point rather than three competing ones.
+            const isLead = index === 0;
 
             return (
-              <Card key={module.href} className={`${toneClass} border-border/20 shadow-none`}>
-                <CardContent className="p-0">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="h-auto w-full items-start justify-start px-4 py-5 text-left whitespace-normal"
-                  >
-                    <Link href={module.href}>
-                      <span className="block">
-                        <span className="block text-lg font-semibold text-foreground">
-                          {module.title}
-                        </span>
-                        <span className="mt-2 block text-sm leading-6 text-foreground/75">
-                          {module.summary}
-                        </span>
-                      </span>
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              <div
+                key={principle.title}
+                className={[
+                  "grid content-start gap-2 rounded-xl p-5",
+                  isLead
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border/60 bg-card text-card-foreground",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "text-[0.7rem] font-medium tracking-[0.16em] uppercase",
+                    isLead ? "text-primary-foreground/75" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  {principle.eyebrow}
+                </span>
+                <span className="font-display text-xl font-semibold tracking-tight">
+                  {principle.title}
+                </span>
+                <span
+                  className={[
+                    "text-sm leading-6",
+                    isLead ? "text-primary-foreground/85" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  {principle.body}
+                </span>
+              </div>
             );
           })}
         </div>
       </section>
-    </AppPage>
+
+      <section className="grid gap-3">
+        <AppSectionHeading
+          title="Explore the product"
+          description="Every screen has one main job."
+        />
+        {/* Rows, not tiles: five stacked colour-cycled cards read as five
+            competing blocks on a phone. A divided list scans in one pass and
+            keeps the tap targets full-width. */}
+        <ul className="grid border-y border-border/60 sm:rounded-xl sm:border">
+          {modulePreviews.map((module, index) => {
+            const IconComponent = moduleIcons[module.href];
+
+            return (
+              <li
+                key={module.href}
+                className={index > 0 ? "border-t border-border/60" : undefined}
+              >
+                <Link
+                  href={module.href}
+                  className="flex items-start gap-4 py-4 transition-colors hover:bg-muted/50 sm:px-4"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    {IconComponent ? <IconComponent className="size-5" /> : null}
+                  </span>
+                  <span className="grid min-w-0 flex-1 gap-0.5">
+                    {/* min-h matches the icon chip so the title sits on the
+                        chip's centre line regardless of how far the summary
+                        wraps. */}
+                    <span className="flex min-h-10 items-center font-medium text-foreground">
+                      {module.title}
+                    </span>
+                    <span className="text-sm leading-6 text-muted-foreground">
+                      {module.summary}
+                    </span>
+                  </span>
+                  <IconChevronRight
+                    aria-hidden="true"
+                    className="mt-3 size-4 shrink-0 text-muted-foreground"
+                  />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </div>
   );
 }

@@ -20,7 +20,6 @@
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
     --color-ring: var(--ring);
     --color-input: var(--input);
@@ -92,7 +91,6 @@
     --moat-ring-fill: oklch(0.5 0.09 188);
     /* Charts: teal, ochre, eucalyptus, clay, sand */
     --chart-1: oklch(0.5 0.09 188);
-    --chart-2: oklch(0.68 0.13 66);
     --chart-3: oklch(0.58 0.1 156);
     --chart-4: oklch(0.55 0.15 36);
     --chart-5: oklch(0.72 0.06 96);
@@ -142,7 +140,6 @@
     --moat-ring-track: oklch(0.33 0.03 186);
     --moat-ring-fill: oklch(0.66 0.1 186);
     --chart-1: oklch(0.66 0.09 186);
-    --chart-2: oklch(0.74 0.13 68);
     --chart-3: oklch(0.7 0.11 156);
     --chart-4: oklch(0.66 0.15 38);
     --chart-5: oklch(0.78 0.06 96);
@@ -187,13 +184,6 @@
     background: var(--moat-surface-ink);
   }
 
-  .moat-pie {
-    background: conic-gradient(
-      from 180deg,
-      var(--color-chart-2) 0deg 260deg,
-      color-mix(in oklch, var(--color-chart-2) 24%, white) 260deg 360deg
-    );
-  }
 }
 
 @layer base {
