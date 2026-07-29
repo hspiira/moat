@@ -121,7 +121,7 @@ export function BudgetManagerPanel({
   );
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card id="budgets" className="scroll-mt-20 gap-0 pt-0 border-border/20 shadow-none">
       <AccentCardHeader
         tone="mint"
         title={`Budgets · ${month}`}

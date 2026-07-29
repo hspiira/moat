@@ -126,7 +126,7 @@ export function RecurringObligationsPanel({
   }
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card id="recurring" className="scroll-mt-20 gap-0 pt-0 border-border/20 shadow-none">
       <AccentCardHeader
         tone="yellow"
         title="Recurring bills"

@@ -15,7 +15,10 @@ import {
   IconMoon,
   IconPlus,
   IconSchool,
+  IconCreditCard,
+  IconRepeat,
   IconSettings,
+  IconWallet,
   IconSun,
   IconTransfer,
   type Icon,
@@ -42,6 +45,32 @@ export const navIcons: Record<string, Icon> = {
   "/settings": IconSettings,
   "/privacy": IconLock,
 };
+
+/**
+ * Capabilities that live as panels inside other pages rather than as routes of
+ * their own, so nothing in the navigation ever named them. Between them they
+ * back more domain logic than goals, guidance, rules and transfers combined.
+ */
+const buriedDestinations = [
+  {
+    href: "/transactions/tools#budgets",
+    label: "Budgets",
+    description: "Set monthly spending limits per category",
+    icon: IconWallet,
+  },
+  {
+    href: "/accounts#debt",
+    label: "Debt payoff",
+    description: "Plan a payoff order and see the finish date",
+    icon: IconCreditCard,
+  },
+  {
+    href: "/transactions/review#recurring",
+    label: "Recurring bills",
+    description: "Rent, school fees, and other repeating obligations",
+    icon: IconRepeat,
+  },
+] as const;
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
@@ -346,6 +375,23 @@ export function MobileUtilitySheet({
                   />
                 );
               })}
+
+              {/* Budgets, debt payoff and recurring bills are panels inside
+                  other pages, so they never appeared in navigation at all —
+                  824 lines of domain logic with no entry point. Listing them
+                  here as peers of Goals and Compass is what actually makes
+                  them findable; the hash targets the panel on arrival. */}
+              {buriedDestinations.map((item) => (
+                <DrawerNavRow
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  description={item.description}
+                  icon={item.icon}
+                  active={false}
+                  onNavigate={close}
+                />
+              ))}
             </div>
           </DrawerSection>
 
