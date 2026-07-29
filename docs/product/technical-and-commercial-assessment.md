@@ -10,9 +10,11 @@
 
 Moat is a local-first personal finance application for the Ugandan market, built to an unusually high engineering standard. Across 27,189 lines of source it carries zero `TODO`s, zero `any` types, zero type-suppression comments, and two lint exceptions — a level of discipline in the top percentile of codebases at this stage.
 
-That quality is not the problem. **Allocation is.** The product's stated differentiator — automatically capturing transactions from mobile-money messages — represents 325 lines of the codebase and has never been validated against a physical device or a real user. Meanwhile, a multi-device sync subsystem that cannot be enabled in production accounts for 1,595 lines.
+That quality is not the problem. **Allocation is.** The product's stated differentiator — automatically capturing transactions from mobile-money messages — represents 325 lines of the codebase and has never run on a physical handset. Meanwhile, a multi-device sync subsystem that cannot be enabled in production accounts for 1,595 lines.
 
-The company has a well-built asset pointed at an unproven premise. The recommended action is not more engineering; it is a one-week validation exercise that either confirms or kills the core thesis before further investment.
+The product does have a real user: the founder has used it for approximately one month, concentrated in July 2026. That usage is meaningful evidence — but on iOS, where automated capture is impossible by platform restriction. It therefore validates the manual-entry ledger and the underlying accounting engine, and leaves the capture thesis entirely untested.
+
+The company has a well-built and demonstrably usable product pointed at an unproven differentiator. The recommended action is not more engineering; it is a one-week validation exercise that either confirms or kills the capture thesis before further investment.
 
 ---
 
@@ -130,6 +132,10 @@ Four unreferenced assets remain in `public/` (`math (1).png`, `math (1).svg`, `m
 
 A privacy-preserving personal finance application that works entirely offline, encrypts financial records at rest under a user-derived key, and models the account types that matter in Uganda — cash, mobile money, bank, and SACCO. It is engineered to a standard that would pass institutional diligence.
 
+**It also survives contact with a real user.** The founder has run it as a daily tool for roughly a month. For a category where most personal finance software is abandoned within two weeks of install, sustained self-directed use is a genuine signal — it indicates the core loop of recording and reviewing money is coherent enough to build a habit around, independent of any capture automation. This should be treated as the strongest validated asset the product currently holds.
+
+The qualification is that this usage occurred on iOS, which structurally cannot perform automated capture. A month of use therefore proves the manual product works; it says nothing about the differentiator.
+
 ## 2.2 The central strategic problem
 
 The product's defensibility rests on frictionless capture: money moves, and the transaction is recorded without the user typing anything. Assessed by platform, that capability currently stands as follows:
@@ -140,9 +146,9 @@ The product's defensibility rests on frictionless capture: money moves, and the 
 | Android | Possible | Notification-listener service written but not rolled out — no permission-grant flow, Play Store policy review outstanding, not device-verified. |
 | Web / PWA | Manual only | Paste-to-app and CSV import. |
 
-Removing what does not work today, the shipped product is a well-engineered manual-entry ledger. In that configuration it competes against every budgeting application available, against a paper notebook, and against the MTN and Airtel applications themselves — in a category where it holds no structural advantage.
+Removing what does not work today, the shipped product is a well-engineered manual-entry ledger — one that has held a real user's attention for a month, which is more than most such products achieve, but which still competes against every budgeting application available, a paper notebook, and the MTN and Airtel applications themselves, without a structural advantage.
 
-**The entire strategic thesis rests on 325 lines of code that have never met a physical device or a real user.**
+**The differentiating thesis rests on 325 lines of code that have never run on a physical handset.** The month of founder usage cannot close this gap, because it occurred on the one platform where the feature can never work.
 
 ## 2.3 A structural feedback problem
 
@@ -150,7 +156,31 @@ Approximately 82% of Uganda's mobile market runs Android (per internal research)
 
 The consequence is that the person directing product decisions permanently experiences the weakest version of the product and cannot personally use the feature the business depends on. This is a serious feedback-loop defect, independent of engineering quality, and it should be corrected by acquiring an Android test device before further product decisions are taken.
 
-## 2.4 Unresolved commercial questions
+## 2.4 User scope and usability observation
+
+**Decision recorded (2026-07-29): the product remains single-user. Additional users are admitted only on demonstrated demand.**
+
+This is the correct call, and it is the direct application of the lesson in Finding 2. Multi-user support, account provisioning, and usage analytics are all infrastructure for users who do not yet exist — the same category of speculative work that produced 1,595 lines of unusable sync code.
+
+Deferring costs nothing, because the expensive half is already done. Every entity in `lib/types.ts` already carries a `userId`, so the schema is multi-user by construction. What is single-user is only the runtime resolution: `lib/repositories/shared.ts` selects the active profile as `profiles[0]`. Supporting real multi-user later is a profile selector and a change to that one resolution — not a migration.
+
+*(Minor latent issue, not worth fixing at n=1: because the active profile is "whichever is first," a second profile arriving by any route — a bug, or restoring another person's backup — would produce arbitrary selection rather than an error. Worth hardening before a second user is ever admitted.)*
+
+### Constraint: analytics is foreclosed by a public commitment
+
+`app/privacy/page.tsx` states: *"Moat does not include analytics SDKs, ad trackers, or third-party profiling tools."* Instrumenting the app with PostHog, Mixpanel, or comparable tooling would break a published promise and undercut the trust position identified in §3.3 as a commercial asset. This should not be traded away for usage data on a handful of users.
+
+### Recommended approach by user count
+
+| Users | Method | Rationale |
+|---|---|---|
+| 1–10 | Direct observation — sit with the person while they use it | Watching five people use software surfaces the large majority of usability defects. At this scale it is faster, cheaper, and far richer than any instrumentation, and requires no code. |
+| 10–50 | Observation plus an in-app feedback action | User-composed and explicitly submitted, so it remains consistent with the privacy commitment. |
+| 50+ | Local-only usage journal with voluntary export | The app records interaction counts on-device and never transmits them; the user chooses to export and share, exactly as the existing encrypted-backup flow works. Compatible with both local-first architecture and the published privacy text. |
+
+The final row is the only pattern that scales without contradicting the product's stated principles, and it should be built when — not before — in-person observation stops being practical.
+
+## 2.5 Unresolved commercial questions
 
 `docs/tracker.md` records four founder-level decisions as outstanding: monetisation, distribution and go-to-market, analytics instrumentation, and ownership of Data Protection and Privacy Act (PDPO) registration. These do not block a local-first pilot but do block any move beyond it.
 
@@ -229,10 +259,12 @@ This should be settled deliberately rather than by accumulated engineering decis
 
 **If validation fails.** The accounting engine, encryption layer, and storage abstraction remain sound and reusable. Reposition around fast manual entry and CSV import, or redirect toward the SACCO institutional channel where the buyer values bookkeeping structure over capture automation.
 
-**Deferred until validation completes.** Monetisation model selection, iOS native shell development, and the visual refresh currently specified in `docs/superpowers/specs/2026-07-27-visual-refresh-design.md`.
+**Deferred until validation completes.** Multi-user support and usage analytics (§2.4), monetisation model selection, iOS native shell development, and the visual refresh currently specified in `docs/superpowers/specs/2026-07-27-visual-refresh-design.md`.
 
 ---
 
 ## Assessment limitations
 
 This assessment measures source code and project documentation. It does not evaluate market demand, competitive positioning against specific local products, or parser accuracy against real-world message volume — the existing corpus of 13 fixtures is insufficient to support a claim in either direction. Those questions are precisely what the recommended device validation is designed to answer.
+
+Usage evidence is founder-reported (approximately one month, concentrated in July 2026) and is not independently measurable, since the application deliberately records no telemetry. It is treated here as directional evidence of product coherence, not as a quantified retention metric.
