@@ -40,7 +40,7 @@ function expense(
     occurredOn,
     categoryId: "category:1",
     reconciliationState: "reviewed",
-    source: "pasted_text",
+    source: "sms",
     statedBalance,
     createdAt: occurredOn,
     updatedAt: occurredOn,
@@ -70,7 +70,7 @@ describe("Centenary hidden-fee recovery", () => {
       originalAmount: amount,
       occurredOn: on,
       categoryId: "category:1",
-      source: "pasted_text",
+      source: "sms",
       statedBalance: stated,
     };
 
@@ -97,7 +97,7 @@ describe("Centenary hidden-fee recovery", () => {
       originalAmount: 200000,
       occurredOn: "2026-07-27",
       categoryId: "category:1",
-      source: "pasted_text",
+      source: "sms",
       // 875,894 - 200,000 with no fee deducted.
       statedBalance: 675894,
     };
