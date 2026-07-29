@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -56,6 +56,50 @@ describe("service worker precache manifest", () => {
       serviceWorkerSource.indexOf('request.mode === "navigate"'),
     );
     expect(navigateHandler).toContain("cache.put(request");
-    expect(navigateHandler).toContain("cache.match(request)");
+    // Falls back to cache when the network fails. The lookup itself lives in
+    // cacheFallback() so navigation and RSC requests share one strategy.
+    expect(navigateHandler).toContain("cacheFallback(request)");
+  });
+
+  it("serves React Server Component payloads from cache when offline", () => {
+    // next/link navigation never issues a `navigate` request — it fetches the
+    // route's RSC payload. Without a branch for it, tapping a nav link offline
+    // bypasses the cache entirely and fails even for precached routes.
+    expect(serviceWorkerSource).toContain('url.searchParams.has("_rsc")');
+    const rscHandler = serviceWorkerSource.slice(
+      serviceWorkerSource.indexOf("isRscRequest"),
+    );
+    expect(rscHandler).toContain("cacheFallback(request)");
+  });
+
+  it("precaches every static route, not just the ones already visited", () => {
+    // Regression guard: routes used to be cached only on first online visit,
+    // so a never-opened route fell through to /offline — which reads as a
+    // broken app rather than an offline one. Adding a route without adding it
+    // here should fail loudly.
+    const appDir = join(projectRoot, "app");
+
+    function collectRoutes(dir: string, segments: string[] = []): string[] {
+      const routes: string[] = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          // Dynamic segments ([accountId]) and route groups can't be
+          // precached by a literal URL — they rely on the runtime cache.
+          if (entry.name.startsWith("[") || entry.name.startsWith("(")) continue;
+          if (entry.name === "api") continue;
+          routes.push(...collectRoutes(join(dir, entry.name), [...segments, entry.name]));
+        } else if (entry.name === "page.tsx") {
+          routes.push(`/${segments.join("/")}`.replace(/^\/$/, "/"));
+        }
+      }
+      return routes;
+    }
+
+    const staticRoutes = collectRoutes(appDir);
+    expect(staticRoutes.length).toBeGreaterThan(5);
+
+    for (const route of staticRoutes) {
+      expect(appShellUrls, `${route} is not precached by public/sw.js`).toContain(route);
+    }
   });
 });
