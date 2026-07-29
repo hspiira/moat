@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { InputField } from "@/components/forms/input-field";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { formatMoney } from "@/lib/currency";
+import { pendingReviewGap } from "@/lib/domain/balance-gap";
 import { useTextCapturePanel } from "./use-text-capture-panel";
 
 type Props = {
@@ -24,6 +25,56 @@ type Props = {
   /** When true, render just the content for use inside a sheet (no card chrome). */
   embedded?: boolean;
 };
+
+/**
+ * Some banks — Centenary in particular — charge a fee they never state in the
+ * alert, but they do state the resulting balance. The difference between that
+ * balance and what the recorded ledger predicts is the fee, so it can be
+ * recovered rather than silently lost. Offered as one tap, never applied
+ * automatically: it is inferred money, and this app does not post inferred
+ * money to a ledger without the user agreeing.
+ */
+function HiddenFeeNotice({
+  candidate,
+  existingTransactions,
+  onApply,
+}: {
+  candidate: ParsedCaptureCandidate;
+  existingTransactions: import("@/lib/types").Transaction[];
+  onApply: (fee: number) => void;
+}) {
+  const gap = useMemo(
+    () => pendingReviewGap(candidate, existingTransactions),
+    [candidate, existingTransactions],
+  );
+
+  // Only a shortfall is a fee. A positive gap is unrecorded money arriving,
+  // which is a different problem and not one to guess at.
+  const fee = gap && gap.gap < 0 ? Math.abs(gap.gap) : 0;
+  if (fee === 0) {
+    return null;
+  }
+
+  const alreadyApplied = candidate.feeAmount === fee;
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-clay/40 bg-clay/10 px-3 py-2.5">
+      <div className="text-xs leading-5 text-foreground">
+        The stated balance is {formatMoney(fee, "UGX")} lower than this transaction explains —
+        most likely a charge the message does not print.
+      </div>
+      {alreadyApplied ? (
+        <div className="text-xs font-medium text-foreground">
+          Recorded as a {formatMoney(fee, "UGX")} fee.
+        </div>
+      ) : (
+        <Button type="button" size="sm" variant="outline" onClick={() => onApply(fee)}>
+          Add {formatMoney(fee, "UGX")} as a fee
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export function TextCapturePanel({
   accounts,
@@ -165,6 +216,14 @@ export function TextCapturePanel({
                     {candidate.currency !== "UGX" ? ` · ${formatMoney(candidate.normalizedAmount, "UGX")}` : ""}
                   </div>
                 </div>
+
+                <HiddenFeeNotice
+                  candidate={candidate}
+                  existingTransactions={existingTransactions}
+                  onApply={(fee) =>
+                    updateCandidate(candidate.id, (entry) => ({ ...entry, feeAmount: fee }))
+                  }
+                />
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <SelectField
