@@ -19,6 +19,7 @@ import {
 } from "@/components/onboarding/use-onboarding-workspace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorNotice } from "@/components/page-shell/page-state";
 
 export function OnboardingWorkspace() {
   const {
@@ -180,11 +181,7 @@ export function OnboardingWorkspace() {
         </p>
       </div>
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
+      {error ? <ErrorNotice message={error} /> : null}
 
       {/* Chromeless under sm: the app shell already provides the page gutter,
           so the card's border and padding stack on top of it and cost ~17% of a

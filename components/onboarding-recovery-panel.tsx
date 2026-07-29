@@ -13,6 +13,7 @@ import {
   type GoogleDriveBackupPreferences,
 } from "@/lib/preferences/google-drive-backup";
 import { restoreEncryptedBackupPayload } from "@/lib/security/encrypted-backup";
+import { ErrorNotice } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -194,7 +195,7 @@ export function OnboardingRecoveryPanel({
         ) : null}
 
         {success ? <div className="text-xs text-muted-foreground">{success}</div> : null}
-        {error ? <div className="text-xs text-destructive">{error}</div> : null}
+        {error ? <ErrorNotice message={error} /> : null}
 
         {mode === "file" ? (
           <form className="grid gap-4" onSubmit={(event) => void handleFileRestore(event)}>

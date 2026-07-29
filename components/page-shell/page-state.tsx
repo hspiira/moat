@@ -7,13 +7,43 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+/**
+ * Inline error notice. Compact enough to sit directly above a form's fields
+ * without pushing them off screen, and it always pairs the tint with an icon —
+ * colour alone is not an accessible error signal, and `text-destructive` on a
+ * near-transparent wash reads as decorative text rather than a problem.
+ */
+export function ErrorNotice({
+  message,
+  className,
+}: {
+  message: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive",
+        className,
+      )}
+    >
+      <IconAlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      <span className="min-w-0">{message}</span>
+    </div>
+  );
+}
 
 export function ErrorStateCard({ message }: { message: string }) {
   return (
-    <Card className="border-none bg-destructive/8 ring-1 ring-destructive/25">
-      <CardContent className="flex items-start gap-3 px-5 py-4">
-        <IconAlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
-        <div className="space-y-0.5">
+    // py-0 on the Card: its default py-4 stacked with the content's own padding
+    // put 32px above and below a single line of text.
+    <Card className="border-none bg-destructive/8 py-0 ring-1 ring-destructive/25">
+      <CardContent className="flex items-start gap-3 px-4 py-3.5">
+        <IconAlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
+        <div className="min-w-0 space-y-0.5">
           <p className="text-sm font-medium text-destructive">Something went wrong</p>
           <p role="alert" className="text-sm text-destructive/90">
             {message}
