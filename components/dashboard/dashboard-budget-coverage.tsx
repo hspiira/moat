@@ -19,6 +19,13 @@ export function DashboardBudgetCoverage({
   remaining: number;
   envelopes: BudgetEnvelope[];
 }) {
+  // Budgets are opt-in. Until one exists this card has nothing to report, and a
+  // placeholder explaining that is noise on the screen the user opens daily.
+  // Discovering budgets is navigation's job, not the dashboard's.
+  if (!hasBudgets) {
+    return null;
+  }
+
   return (
     <Card className="border-border/20 shadow-none">
       <CardHeader>

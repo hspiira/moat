@@ -2,7 +2,6 @@
 
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 
-import { modulePreviews } from "@/lib/data";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import {
@@ -18,8 +17,6 @@ import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
-import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
-import { formatMoney } from "@/lib/currency";
 
 export function useDashboardWorkspace(profile: UserProfile) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -121,96 +118,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const outflowChange = hasComparablePrevious
     ? getChangePercent(summary.outflow, previousSummary.outflow)
     : noChange;
-  const savingsChange = hasComparablePrevious
-    ? getChangePercent(summary.savings, previousSummary.savings)
-    : noChange;
 
-  const summaryTiles: SummaryTile[] = [
-    {
-      label: "Inflow",
-      value: formatMoney(summary.inflow),
-      className: "moat-panel-yellow",
-      tone: summary.inflow > 0 ? "positive" : "neutral",
-      sign: summary.inflow > 0 ? "positive" : "none",
-      change: inflowChange,
-      changeTone:
-        inflowChange.kind === "none"
-          ? "neutral"
-          : inflowChange.kind === "new"
-            ? "positive"
-            : (inflowChange.value ?? 0) > 0
-              ? "positive"
-              : (inflowChange.value ?? 0) < 0
-                ? "negative"
-                : "neutral",
-      changeDirection:
-        inflowChange.kind === "none"
-          ? "flat"
-          : inflowChange.kind === "new"
-            ? "up"
-            : (inflowChange.value ?? 0) > 0
-              ? "up"
-              : (inflowChange.value ?? 0) < 0
-                ? "down"
-                : "flat",
-    },
-    {
-      label: "Outflow",
-      value: formatMoney(summary.outflow),
-      className: "moat-panel-lilac",
-      tone: summary.outflow > 0 ? "negative" : "neutral",
-      sign: summary.outflow > 0 ? "negative" : "none",
-      change: outflowChange,
-      changeTone:
-        outflowChange.kind === "none"
-          ? "neutral"
-          : outflowChange.kind === "new"
-            ? "negative"
-            : (outflowChange.value ?? 0) < 0
-              ? "positive"
-              : (outflowChange.value ?? 0) > 0
-                ? "negative"
-                : "neutral",
-      changeDirection:
-        outflowChange.kind === "none"
-          ? "flat"
-          : outflowChange.kind === "new"
-            ? "up"
-            : (outflowChange.value ?? 0) < 0
-              ? "down"
-              : (outflowChange.value ?? 0) > 0
-                ? "up"
-                : "flat",
-    },
-    {
-      label: "Saved",
-      value: formatMoney(summary.savings),
-      className: "moat-panel-mint",
-      tone: summary.savings > 0 ? "positive" : summary.savings < 0 ? "negative" : "neutral",
-      sign: summary.savings > 0 ? "positive" : summary.savings < 0 ? "negative" : "none",
-      change: savingsChange,
-      changeTone:
-        savingsChange.kind === "none"
-          ? "neutral"
-          : savingsChange.kind === "new"
-            ? "positive"
-            : (savingsChange.value ?? 0) > 0
-              ? "positive"
-              : (savingsChange.value ?? 0) < 0
-                ? "negative"
-                : "neutral",
-      changeDirection:
-        savingsChange.kind === "none"
-          ? "flat"
-          : savingsChange.kind === "new"
-            ? "up"
-            : (savingsChange.value ?? 0) > 0
-              ? "up"
-              : (savingsChange.value ?? 0) < 0
-                ? "down"
-                : "flat",
-    },
-  ];
 
   return {
     period,
@@ -226,11 +134,11 @@ export function useDashboardWorkspace(profile: UserProfile) {
     budgetCoverage,
     budgetEnvelopes,
     topAccounts,
-    summaryTiles,
+    inflowChange,
+    outflowChange,
     budgets,
     transactions,
     accounts,
     categories,
-    modulePreviews,
   };
 }

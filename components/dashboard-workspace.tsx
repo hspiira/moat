@@ -7,7 +7,6 @@ import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-f
 import {
   DashboardAccountBalances,
   DashboardCashFlowSection,
-  DashboardContinueLinks,
   DashboardInsightsPanel,
   DashboardQuickActions,
   DashboardTopSpendingCategories,
@@ -57,11 +56,11 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     budgetCoverage,
     budgetEnvelopes,
     topAccounts,
-    summaryTiles,
     budgets,
     transactions,
     accounts,
-    modulePreviews,
+    inflowChange,
+    outflowChange,
   } = useDashboardWorkspace(profile);
 
   const quickActions = [
@@ -104,12 +103,13 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             outflow={summary.outflow}
             net={summary.net}
             periodLabel={periodWindow.caption}
+            inflowChange={inflowChange}
+            outflowChange={outflowChange}
           />
 
           <DashboardQuickActions actions={quickActions} />
 
           <DashboardCashFlowSection
-            summaryTiles={summaryTiles}
             savingsRate={savingsRate}
             hasIncome={summary.inflow > 0}
             allocatedSavings={summary.allocatedSavings}
@@ -142,10 +142,6 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
               <DashboardInsightsPanel insights={insights} />
             </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <DashboardContinueLinks modules={modulePreviews} />
           </div>
         </>
       )}
