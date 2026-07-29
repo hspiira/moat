@@ -13,7 +13,7 @@ type Props = Omit<ComponentProps<typeof Textarea>, "id"> & {
 
 export function TextareaField({ id, label, hint, ...textareaProps }: Props) {
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Textarea id={id} name={textareaProps.name ?? id} {...textareaProps} />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}

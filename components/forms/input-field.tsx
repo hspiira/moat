@@ -17,7 +17,7 @@ type Props = Omit<ComponentProps<typeof Input>, "id"> & {
 export function InputField({ id, label, hint, error, className, ...inputProps }: Props) {
   const errorId = `${id}-error`;
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
