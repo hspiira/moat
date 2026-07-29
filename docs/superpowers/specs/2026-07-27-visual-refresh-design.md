@@ -1,8 +1,10 @@
 # Nav, home cards, and color system refresh — design
 
 **Date:** 2026-07-27
+**Revised:** 2026-07-29 — added §4 (daily dashboard) following the information architecture review
 **Status:** Approved (design)
 **Scope owner:** Henry Piira
+**Related:** [information-architecture-review.md](../../product/information-architecture-review.md)
 
 ## Problem
 
@@ -185,6 +187,56 @@ Replace the three `moat-panel-{yellow,lilac,mint}` cards with:
 No copy changes. No change to the `AppSectionHeading` above them or anything
 below the three-card grid.
 
+### 4. Daily dashboard (`components/dashboard-workspace.tsx`, `components/dashboard/`)
+
+> Added 2026-07-29. The original spec covered only the pre-onboarding home
+> screen (§3), which a user sees once before creating an account. The daily
+> dashboard — the only screen the sole active user sees regularly — was out of
+> scope. Restyling the former while ignoring the latter would improve a screen
+> nobody revisits. Rationale and measurements: IA review §3 and §5.
+
+`dashboard-workspace.tsx` currently composes ten peer-weighted sections. Reduce
+to five carrying the daily load, three on demand, two removed.
+
+**Remove (both are duplications, IA review §3.2):**
+
+- `DashboardSummaryTiles` — renders Inflow/Outflow, already shown as In/Out in
+  `DashboardMoatHero` two sections above. Delete the `summaryTiles` prop from
+  `DashboardCashFlowSection`, leaving it to render `DashboardSavingsOverview`
+  alone; drop the now-unused `summaryTiles` construction in
+  `use-dashboard-workspace.ts` (~line 128).
+- `DashboardContinueLinks` — links to modules already in the bottom nav, and
+  occupies the page's final position. Remove the component and its
+  `modulePreviews` prop.
+
+**Collapse behind a condition or disclosure:**
+
+- `DashboardBudgetCoverage` — render only when at least one budget exists.
+- `DashboardBalanceBridge` — advanced reconciliation; move behind a disclosure
+  control, collapsed by default.
+- `DashboardInsightsPanel` — render only when `insights` is non-empty.
+
+**Restructure the hero (`dashboard-moat-hero.tsx`):**
+
+Runway (`totalBalance / monthlyOutflow`, already computed at line 34) is
+currently a small `runwayLabel` with a `"months cover"` sublabel beside the
+balance. Promote it to co-equal billing with `totalBalance`: same type scale
+(`text-3xl`/`sm:text-4xl`, `font-display`), presented as the paired answer to
+"how much do I have / how long does it last." In/Out/Net stay as the supporting
+band beneath.
+
+Where runway cannot be computed (`hasCoverSignal` false — no outflow recorded,
+or zero balance), keep the existing no-data treatment rather than showing a
+placeholder figure; the balance carries the hero alone in that state.
+
+**Resulting order:** period filter → hero (runway + balance + in/out/net) →
+quick actions (max three) → top spending categories → account balances, with
+budget coverage, balance bridge, and insights appearing conditionally.
+
+Apply the §1 color tokens and §1 radius throughout. The `moat-panel-*` accent
+classes used by `dashboard-sections.tsx` and `dashboard-balance-bridge.tsx`
+stay untouched per the constraint above.
+
 ## Testing / validation
 
 - No domain logic changes — `pnpm test` should be unaffected; run it anyway as a
@@ -194,6 +246,9 @@ below the three-card grid.
 - Manual visual check in both light and dark mode, since this is a token-driven
   change across the whole app:
   - Home route (pre- and post-onboarding)
+  - Dashboard in each conditional state: no budgets configured, no insights
+    firing, and `hasCoverSignal` false (no outflow recorded) — the three cases
+    §4 makes conditional must each degrade cleanly rather than leaving a gap
   - Bottom nav on a route where each of the 5 destinations is active
   - At least one screen using `moat-panel-*` (e.g. `accent-metric-card`) to
     confirm the new `--foreground`/`--border` values still contrast correctly
@@ -207,7 +262,16 @@ below the three-card grid.
 - `moat-panel-{yellow,lilac,mint,sage}` accent-panel system and everywhere it's
   used (dashboard, CSV import, accent metric cards) — not part of the feedback.
 - Desktop navigation (`desktop-navigation.tsx`) — feedback was specifically about
-  the mobile floating nav; desktop can follow in a later pass if wanted.
+  the mobile floating nav; desktop can follow in a later pass if wanted. The IA
+  review separately recommends grouping its six flat entries into primary and
+  secondary tiers; that is a navigation change, not a visual one, and is tracked
+  there.
+- Navigation destinations themselves. The IA review confirms the mobile bottom
+  bar (Home, Transactions, Capture, Accounts, More) is correctly chosen and
+  needs no restructuring — this spec restyles it without changing where it goes.
+- Surfacing the four undiscoverable features (debt, recurring, budgets,
+  insights), and the Compass/Learn consolidation decision — both are IA changes
+  requiring founder sign-off, tracked in the IA review §4.2–4.3.
 - Replacing Tabler with Solar Bold Duotone anywhere outside the bottom nav (was
   explicitly considered and declined — see Icons decision above).
 - Chart/data-visualization redesign beyond the minimal `--chart-2` retune needed
