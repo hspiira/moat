@@ -35,6 +35,7 @@ type Props = {
   isSubmitting: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  onOpenDetail: (transaction: Transaction) => void;
 };
 
 type RowPresentation = {
@@ -70,6 +71,7 @@ export function TransactionList({
   isSubmitting,
   onEdit,
   onDelete,
+  onOpenDetail,
 }: Props) {
   const del = useConfirmDelete(onDelete);
   return (
@@ -101,31 +103,41 @@ export function TransactionList({
               return (
                 <li
                   key={transaction.id}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+                  className="flex items-center gap-3 pr-4 transition-colors hover:bg-muted/40"
                 >
-                  <span
-                    aria-hidden
-                    className={`grid size-9 shrink-0 place-items-center rounded-full ${presentation.iconClass}`}
+                  {/* The row body opens the read-only detail; the actions menu
+                      stays a sibling so no button is nested inside another. */}
+                  <button
+                    type="button"
+                    onClick={() => onOpenDetail(transaction)}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    aria-label={`Details for ${title}`}
                   >
-                    <Icon className="size-4.5" />
-                  </span>
+                    <span
+                      aria-hidden
+                      className={`grid size-9 shrink-0 place-items-center rounded-full ${presentation.iconClass}`}
+                    >
+                      <Icon className="size-4.5" />
+                    </span>
 
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="truncate text-sm font-medium text-foreground">{title}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {formatDate(transaction.occurredOn)} · {account?.name ?? "—"}
-                      {category && !isTransfer ? ` · ${category.name}` : ""}
-                      {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="truncate text-sm font-medium text-foreground">{title}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {formatDate(transaction.occurredOn)} · {account?.name ?? "—"}
+                        {category && !isTransfer ? ` · ${category.name}` : ""}
+                        {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
+                        {isLinkedFee ? " · Fee" : ""}
+                      </div>
                     </div>
-                  </div>
 
-                  <Money
-                    amount={transaction.amount}
-                    currency="UGX"
-                    tone={presentation.tone}
-                    signed={presentation.signed}
-                    className="shrink-0 text-sm font-semibold sm:text-base"
-                  />
+                    <Money
+                      amount={transaction.amount}
+                      currency="UGX"
+                      tone={presentation.tone}
+                      signed={presentation.signed}
+                      className="shrink-0 text-sm font-semibold sm:text-base"
+                    />
+                  </button>
 
                   <Popover>
                     <PopoverTrigger asChild>

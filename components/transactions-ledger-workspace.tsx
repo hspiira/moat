@@ -15,6 +15,7 @@ import {
 
 import { TransactionForm } from "./transactions/transaction-form";
 import { TransactionList } from "./transactions/transaction-list";
+import { TransactionDetailSheet } from "./transactions/transaction-detail-sheet";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -23,6 +24,7 @@ const LEDGER_PAGE_SIZE = 25;
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
   const [page, setPage] = useState(0);
+  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(workspace.transactions.length / LEDGER_PAGE_SIZE));
   // Clamp rather than reset so deletes on the last page don't strand the view.
@@ -33,6 +35,10 @@ export function TransactionsLedgerWorkspace() {
     pageStart + LEDGER_PAGE_SIZE,
   );
   const isEditing = Boolean(workspace.editingTransactionId);
+  // Resolved from the live list so a deleted transaction closes the sheet
+  // instead of stranding a stale copy in it.
+  const detailTransaction =
+    workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
 
   return (
     <TransactionsWorkspaceFrame
@@ -68,6 +74,7 @@ export function TransactionsLedgerWorkspace() {
           isSubmitting={workspace.isSubmitting}
           onEdit={workspace.beginTransactionEdit}
           onDelete={(transaction) => void workspace.handleDeleteTransaction(transaction)}
+          onOpenDetail={(transaction) => setDetailTransactionId(transaction.id)}
         />
 
         {totalPages > 1 ? (
@@ -95,6 +102,14 @@ export function TransactionsLedgerWorkspace() {
           </div>
         ) : null}
       </div>
+
+      <TransactionDetailSheet
+        transaction={detailTransaction}
+        transactions={workspace.transactions}
+        accounts={workspace.accounts}
+        categories={workspace.categories}
+        onOpenChange={(open) => (open ? undefined : setDetailTransactionId(null))}
+      />
 
       <Sheet open={isEditing} onOpenChange={(open) => (open ? undefined : workspace.cancelEdit())}>
         <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
