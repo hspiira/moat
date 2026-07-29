@@ -24,7 +24,6 @@ import {
 
 import { AccountForm } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
-import { DebtPayoffPlanner } from "./accounts/debt-payoff-planner";
 import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 import { useAccountsWorkspace } from "./accounts/use-accounts-workspace";
 
@@ -124,8 +123,6 @@ export function AccountsWorkspace() {
             onEdit={openEditAccount}
             onAdd={openAddAccount}
           />
-
-          <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
             <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">

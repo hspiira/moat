@@ -15,7 +15,7 @@ type Props = {
 
 export function DatePickerField({ id, label, value, hint, onChange }: Props) {
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <Label htmlFor={id}>{label}</Label>
       <DatePicker id={id} value={value} onChange={onChange} />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}

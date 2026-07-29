@@ -38,7 +38,7 @@ export function SelectField({
 }: Props) {
   const errorId = id ? `${id}-error` : undefined;
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       {label ? <Label htmlFor={id}>{label}</Label> : null}
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger

@@ -99,8 +99,8 @@ export const steps: OnboardingStep[] = ["profile", "account", "goal", "security"
 
 export const stepLabels: Record<OnboardingStep, string> = {
   profile: "Profile",
-  account: "First account",
-  goal: "First goal",
+  account: "Account",
+  goal: "Goal",
   security: "Security",
 };
 

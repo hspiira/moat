@@ -7,7 +7,6 @@ import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-f
 import {
   DashboardAccountBalances,
   DashboardCashFlowSection,
-  DashboardContinueLinks,
   DashboardInsightsPanel,
   DashboardQuickActions,
   DashboardTopSpendingCategories,
@@ -57,16 +56,20 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     budgetCoverage,
     budgetEnvelopes,
     topAccounts,
-    summaryTiles,
     budgets,
     transactions,
     accounts,
-    modulePreviews,
+    inflowChange,
+    outflowChange,
   } = useDashboardWorkspace(profile);
 
+  // Shortcuts to things that are otherwise several taps away. "Accounts" used
+  // to sit here, but it is a bottom-nav tab — a shortcut to a destination one
+  // tap away is a duplicate, not a shortcut. CSV import lives behind
+  // More → Data tools, which is where the real distance is.
   const quickActions = [
-    { href: "/transactions/capture", title: "Add transaction" },
-    { href: "/accounts", title: "Accounts" },
+    { href: "/transactions/capture", title: "Add" },
+    { href: "/transactions/import", title: "Import" },
     { href: "/goals", title: "Set goal" },
   ];
 
@@ -104,12 +107,13 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             outflow={summary.outflow}
             net={summary.net}
             periodLabel={periodWindow.caption}
+            inflowChange={inflowChange}
+            outflowChange={outflowChange}
           />
 
           <DashboardQuickActions actions={quickActions} />
 
           <DashboardCashFlowSection
-            summaryTiles={summaryTiles}
             savingsRate={savingsRate}
             hasIncome={summary.inflow > 0}
             allocatedSavings={summary.allocatedSavings}
@@ -142,10 +146,6 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
               <DashboardInsightsPanel insights={insights} />
             </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <DashboardContinueLinks modules={modulePreviews} />
           </div>
         </>
       )}

@@ -20,6 +20,7 @@ import {
 import { downloadBlob } from "@/lib/security/data-export";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
 import { PinInputField } from "@/components/forms/pin-input-field";
+import { ErrorNotice } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -364,7 +365,7 @@ export function BackupPanel() {
               placeholder="Choose a PIN for this backup"
               autoComplete="new-password"
             />
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+            {error ? <ErrorNotice message={error} /> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isWorking}>
                 {isWorking ? "Encrypting..." : "Encrypt and download"}
@@ -396,7 +397,7 @@ export function BackupPanel() {
               placeholder="PIN used when creating this backup"
               autoComplete="current-password"
             />
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+            {error ? <ErrorNotice message={error} /> : null}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isWorking}>
                 {isWorking ? "Restoring..." : "Restore backup"}
@@ -513,7 +514,7 @@ export function BackupPanel() {
               </>
             )}
 
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+            {error ? <ErrorNotice message={error} /> : null}
           </div>
         ) : null}
       </CardContent>

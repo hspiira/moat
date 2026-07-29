@@ -1,13 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type AppPageProps = {
@@ -46,10 +40,20 @@ export function AppHeroCard({
   asideClassName,
 }: AppHeroCardProps) {
   return (
-    <Card className={cn("border-border/20 bg-background shadow-none", className)}>
+    <Card
+      className={cn(
+        "border-border/20 bg-background shadow-none",
+        // This card's fill is bg-background — identical to the page behind it —
+        // so on mobile its border, ring, and padding add no structure, they just
+        // stack on the app shell's own px-4 gutter and read as dead space. Drop
+        // the chrome under sm and let the hero sit directly on the page.
+        "rounded-none border-0 py-0 ring-0 sm:rounded-xl sm:border sm:py-4 sm:ring-1",
+        className,
+      )}
+    >
       <CardContent
         className={cn(
-          "grid gap-6 p-6 lg:grid-cols-[1.4fr_0.9fr] lg:p-8",
+          "grid gap-6 p-0 sm:p-6 lg:grid-cols-[1.4fr_0.9fr] lg:p-8",
           contentClassName,
         )}
       >
@@ -87,33 +91,3 @@ export function AppSectionHeading({ title, description }: AppSectionHeadingProps
   );
 }
 
-export function AppAsideIntro({
-  badge,
-  title,
-  description,
-  children,
-  headerClassName,
-  contentClassName,
-}: {
-  badge?: string;
-  title: string;
-  description: string;
-  children: ReactNode;
-  headerClassName?: string;
-  contentClassName?: string;
-}) {
-  return (
-    <>
-      <CardHeader className={cn("space-y-3", headerClassName)}>
-        {badge ? (
-          <Badge variant="outline" className="w-fit bg-background/70">
-            {badge}
-          </Badge>
-        ) : null}
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription className="leading-6">{description}</CardDescription>
-      </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
-    </>
-  );
-}

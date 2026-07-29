@@ -19,6 +19,7 @@ import {
 } from "@/components/onboarding/use-onboarding-workspace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorNotice } from "@/components/page-shell/page-state";
 
 export function OnboardingWorkspace() {
   const {
@@ -180,14 +181,13 @@ export function OnboardingWorkspace() {
         </p>
       </div>
 
-      {error ? (
-        <Card className="border-destructive/30 bg-destructive/5 shadow-none">
-          <CardContent className="px-5 py-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      ) : null}
+      {error ? <ErrorNotice message={error} /> : null}
 
-      <Card className="border-border/40 shadow-none">
-        <CardContent className="pt-6">
+      {/* Chromeless under sm: the app shell already provides the page gutter,
+          so the card's border and padding stack on top of it and cost ~17% of a
+          375px screen without adding structure a phone user can perceive. */}
+      <Card className="rounded-none border-0 bg-transparent py-0 shadow-none ring-0 sm:rounded-xl sm:border sm:border-border/40 sm:bg-card sm:py-4 sm:ring-1">
+        <CardContent className="px-0 pt-2 sm:px-4 sm:pt-6">
           <form className="grid gap-5" onSubmit={handleSubmit}>
             {step === "profile" ? (
               <ProfileStep
@@ -209,18 +209,32 @@ export function OnboardingWorkspace() {
             ) : null}
 
             <div className="flex flex-wrap gap-2 pt-2">
+              {/* On the first step, Back returns to the start-fresh / restore
+                  choice rather than disappearing — otherwise picking "Start
+                  fresh" is a one-way door and someone who meant to restore a
+                  backup has to reload the page to get out. Safe to leave: no
+                  records are written until the final step's submit. */}
               {stepIndex > 0 ? (
-                <Button type="button" variant="outline" onClick={handleBack}>
+                <Button type="button" size="lg" variant="outline" onClick={handleBack}>
                   Back
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setMode("choose")}
+                >
+                  Back
+                </Button>
+              )}
 
               {step !== "security" ? (
-                <Button type="button" onClick={() => void handleNext()}>
+                <Button type="button" size="lg" onClick={() => void handleNext()}>
                   Continue
                 </Button>
               ) : (
-                <Button disabled={isSubmitting} type="submit">
+                <Button size="lg" disabled={isSubmitting} type="submit">
                   {isSubmitting ? "Setting up..." : "Start tracking"}
                 </Button>
               )}

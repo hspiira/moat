@@ -1,7 +1,5 @@
 "use client";
 
-import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
-
 import { CorrectionLogPanel } from "./transactions/correction-log-panel";
 import { TransactionRulesPanel } from "./transactions/transaction-rules-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
@@ -13,8 +11,8 @@ export function TransactionsToolsWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       currentRoute="tools"
-      title="Tools"
-      description="Set up budgets and auto-fill rules for your transactions."
+      title="Rules & corrections"
+      description="Auto-fill rules and the parser correction log."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
@@ -34,19 +32,6 @@ export function TransactionsToolsWorkspace() {
           onToggleRule={(rule) => void workspace.toggleRule(rule)}
         />
 
-        <BudgetManagerPanel
-          month={workspace.closePeriod}
-          categories={workspace.categories}
-          budgets={workspace.budgets}
-          transactions={workspace.transactions}
-          form={workspace.budgetForm}
-          isSubmitting={workspace.isSubmitting}
-          onFormChange={workspace.setBudgetForm}
-          onSave={() => void workspace.saveBudget()}
-          onEdit={workspace.editBudget}
-          onDelete={(budgetId) => void workspace.deleteBudget(budgetId)}
-          onCancelEdit={workspace.cancelBudgetEdit}
-        />
 
         <CorrectionLogPanel profile={workspace.profile} />
       </div>

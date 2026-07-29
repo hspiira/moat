@@ -19,7 +19,7 @@ type Props = {
  */
 export function PinInputField({ id, label, value, onChange, placeholder, autoComplete }: Props) {
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <Label htmlFor={id} className="text-xs">
         {label}
       </Label>

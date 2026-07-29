@@ -15,7 +15,10 @@ import {
   IconMoon,
   IconPlus,
   IconSchool,
+  IconCreditCard,
+  IconRepeat,
   IconSettings,
+  IconWallet,
   IconSun,
   IconTransfer,
   type Icon,
@@ -37,6 +40,9 @@ export const navIcons: Record<string, Icon> = {
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
   "/goals": IconBusinessplan,
+  "/budgets": IconWallet,
+  "/debt": IconCreditCard,
+  "/recurring": IconRepeat,
   "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
   "/settings": IconSettings,
@@ -44,7 +50,14 @@ export const navIcons: Record<string, Icon> = {
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
-export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
+export const mobileSecondaryNav = [
+  "/goals",
+  "/budgets",
+  "/debt",
+  "/recurring",
+  "/investment-compass",
+  "/learn",
+] as const;
 const mobileContextNav = [
   {
     href: "/goals",
@@ -175,7 +188,9 @@ export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
         <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
       </Button>
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/review" onClick={onNavigate}>Review month close</Link>
+        {/* Names both things the screen hosts. "Review month close" gave no
+            reason to open it if what you wanted was recurring bills. */}
+        <Link href="/transactions/review" onClick={onNavigate}>Recurring bills &amp; month close</Link>
       </Button>
     </div>
   );
@@ -359,8 +374,11 @@ export function MobileUtilitySheet({
               />
               <DrawerNavRow
                 href="/transactions/tools"
-                label="Rules & corrections"
-                description="Transaction rules, budgets, correction log"
+                // Budgets are the most-wanted thing behind this row and used to
+                // appear only third in the description, under a label naming
+                // neither. 145 lines of budget logic nobody could find.
+                label="Budgets & rules"
+                description="Spending limits, auto-categorisation, correction log"
                 icon={IconAdjustmentsHorizontal}
                 active={isActiveRoute(pathname, "/transactions/tools")}
                 onNavigate={close}

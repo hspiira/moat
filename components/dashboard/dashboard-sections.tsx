@@ -18,8 +18,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { Account, Transaction } from "@/lib/types";
-import type { SummaryTile } from "@/components/dashboard/dashboard-summary-tiles";
-import { DashboardSummaryTiles } from "@/components/dashboard/dashboard-summary-tiles";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -393,31 +391,30 @@ export function DashboardSavingsOverview({
 }
 
 export function DashboardCashFlowSection({
-  summaryTiles,
   savingsRate,
   hasIncome,
   allocatedSavings,
   chartLabel,
   chartSeries,
 }: {
-  summaryTiles: SummaryTile[];
   savingsRate: number;
   hasIncome: boolean;
   allocatedSavings: number;
   chartLabel: string;
   chartSeries: DashboardChartPoint[];
 }) {
+  // The summary tiles that used to sit beside this repeated the inflow and
+  // outflow figures already shown in the hero, and their savings tile repeated
+  // the savings overview below. Their period deltas now live on the hero's
+  // In/Out stats instead.
   return (
-    <div className="grid gap-3 xl:grid-cols-[1.35fr_1fr]">
-      <DashboardSavingsOverview
-        savingsRate={savingsRate}
-        hasIncome={hasIncome}
-        allocatedSavings={allocatedSavings}
-        chartLabel={chartLabel}
-        chartSeries={chartSeries}
-      />
-      <DashboardSummaryTiles items={summaryTiles} />
-    </div>
+    <DashboardSavingsOverview
+      savingsRate={savingsRate}
+      hasIncome={hasIncome}
+      allocatedSavings={allocatedSavings}
+      chartLabel={chartLabel}
+      chartSeries={chartSeries}
+    />
   );
 }
 
@@ -554,6 +551,13 @@ export function DashboardInsightsPanel({
 }: {
   insights: { id: string; title: string; body: string }[];
 }) {
+  // Nothing to say means say nothing. A card whose only content is "no insights
+  // yet" costs prime vertical space to report an absence, which is exactly the
+  // noise that made this dashboard hard to scan.
+  if (insights.length === 0) {
+    return null;
+  }
+
   return (
     <Card className="moat-panel-lilac border-border/20 shadow-none">
       <CardHeader>
@@ -585,54 +589,26 @@ export function DashboardInsightsPanel({
   );
 }
 
-export function DashboardContinueLinks({
-  modules,
-}: {
-  modules: { href: string; title: string; stage: string; summary: string }[];
-}) {
-  return (
-    <section className="grid gap-4">
-      <div className="space-y-0.5">
-        <h2 className="text-sm font-medium text-foreground">Continue</h2>
-        <p className="text-xs text-muted-foreground">Jump to any section.</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {modules.map((module) => (
-          <Link
-            key={module.href}
-            href={module.href}
-            className="group border-b border-border/30 px-0 py-3 transition-colors hover:border-foreground/40"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-foreground">{module.title}</span>
-              <span className="text-xs text-muted-foreground">{module.stage}</span>
-            </div>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{module.summary}</p>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function DashboardQuickActions({
   actions,
 }: {
   actions: { href: string; title: string }[];
 }) {
+  // No section heading: three labelled buttons don't need a line of prose
+  // telling the reader they are buttons. 44px tall so they match the form
+  // controls rather than being the smallest tap target on the screen.
   return (
-    <section className="grid gap-3 lg:hidden">
-      <div className="space-y-0.5">
-        <h2 className="text-sm font-medium text-foreground">Quick actions</h2>
-        <p className="text-xs text-muted-foreground">Jump straight into the next task.</p>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {actions.map((action) => (
-          <Button key={action.href} asChild variant="outline" className="h-10 justify-center px-3 text-xs">
-            <Link href={action.href}>{action.title}</Link>
-          </Button>
-        ))}
-      </div>
-    </section>
+    <div className="grid grid-cols-3 gap-2 lg:hidden">
+      {actions.map((action) => (
+        <Button
+          key={action.href}
+          asChild
+          variant="outline"
+          className="h-11 justify-center px-2 text-xs"
+        >
+          <Link href={action.href}>{action.title}</Link>
+        </Button>
+      ))}
+    </div>
   );
 }

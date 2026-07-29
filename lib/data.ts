@@ -22,6 +22,21 @@ export const navItems: NavItem[] = [
     description: "Emergency fund and savings goal tracking.",
   },
   {
+    href: "/budgets",
+    label: "Budgets",
+    description: "Monthly spending limits per category.",
+  },
+  {
+    href: "/debt",
+    label: "Debt payoff",
+    description: "Payoff order and the date each balance clears.",
+  },
+  {
+    href: "/recurring",
+    label: "Recurring bills",
+    description: "Rent, school fees, and other repeating obligations.",
+  },
+  {
     href: "/investment-compass",
     label: "Compass",
     description: "Rule-based guidance for Uganda investments.",

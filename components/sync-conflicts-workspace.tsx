@@ -10,6 +10,7 @@ import {
   resolveSyncConflictUseServer,
   type SyncConflictRecord,
 } from "@/lib/sync/conflicts";
+import { ErrorNotice } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-shell/page-header";
@@ -108,7 +109,7 @@ export function SyncConflictsWorkspace() {
       />
 
       {success ? <div className="text-sm text-muted-foreground">{success}</div> : null}
-      {error ? <div className="text-sm text-destructive">{error}</div> : null}
+      {error ? <ErrorNotice message={error} /> : null}
 
       {!userId && !isLoading ? (
         <Card className="border-border/30 shadow-none">

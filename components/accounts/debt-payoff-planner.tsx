@@ -112,7 +112,7 @@ export function DebtPayoffPlanner({
   }
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card id="debt" className="scroll-mt-20 border-border/20 shadow-none">
       <CardHeader>
         <CardTitle className="text-base">Debt payoff planner</CardTitle>
         <CardDescription>
