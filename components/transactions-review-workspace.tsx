@@ -12,7 +12,7 @@ export function TransactionsReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       currentRoute="review"
-      title="Review"
+      title="Recurring & month close"
       description="Resolve duplicates, recurring obligations, and month-close issues away from the main ledger."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

@@ -209,11 +209,25 @@ export function OnboardingWorkspace() {
             ) : null}
 
             <div className="flex flex-wrap gap-2 pt-2">
+              {/* On the first step, Back returns to the start-fresh / restore
+                  choice rather than disappearing — otherwise picking "Start
+                  fresh" is a one-way door and someone who meant to restore a
+                  backup has to reload the page to get out. Safe to leave: no
+                  records are written until the final step's submit. */}
               {stepIndex > 0 ? (
                 <Button type="button" size="lg" variant="outline" onClick={handleBack}>
                   Back
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setMode("choose")}
+                >
+                  Back
+                </Button>
+              )}
 
               {step !== "security" ? (
                 <Button type="button" size="lg" onClick={() => void handleNext()}>

@@ -13,7 +13,7 @@ export function TransactionsToolsWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       currentRoute="tools"
-      title="Tools"
+      title="Budgets & rules"
       description="Set up budgets and auto-fill rules for your transactions."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

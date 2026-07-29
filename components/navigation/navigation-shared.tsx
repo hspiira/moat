@@ -175,7 +175,9 @@ export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
         <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
       </Button>
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/review" onClick={onNavigate}>Review month close</Link>
+        {/* Names both things the screen hosts. "Review month close" gave no
+            reason to open it if what you wanted was recurring bills. */}
+        <Link href="/transactions/review" onClick={onNavigate}>Recurring bills &amp; month close</Link>
       </Button>
     </div>
   );
@@ -359,8 +361,11 @@ export function MobileUtilitySheet({
               />
               <DrawerNavRow
                 href="/transactions/tools"
-                label="Rules & corrections"
-                description="Transaction rules, budgets, correction log"
+                // Budgets are the most-wanted thing behind this row and used to
+                // appear only third in the description, under a label naming
+                // neither. 145 lines of budget logic nobody could find.
+                label="Budgets & rules"
+                description="Spending limits, auto-categorisation, correction log"
                 icon={IconAdjustmentsHorizontal}
                 active={isActiveRoute(pathname, "/transactions/tools")}
                 onNavigate={close}
