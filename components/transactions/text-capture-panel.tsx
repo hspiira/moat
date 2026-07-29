@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { AccentCardHeader } from "@/components/accent-card-header";
+import { AmountField } from "@/components/forms/amount-field";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
@@ -271,28 +272,26 @@ export function TextCapturePanel({
                       updateCandidate(candidate.id, (entry) => ({ ...entry, payee: event.target.value }))
                     }
                   />
-                  <InputField
+                  <AmountField
                     id={`capture-amount-${candidate.id}`}
                     label={`Amount (${candidate.currency})`}
-                    inputMode="decimal"
-                    value={String(candidate.originalAmount)}
-                    onChange={(event) =>
+                    value={candidate.originalAmount}
+                    onValueChange={(value) =>
                       updateCandidate(candidate.id, (entry) => ({
                         ...entry,
-                        originalAmount: Number(event.target.value) || 0,
+                        originalAmount: value ?? 0,
                       }))
                     }
                   />
                   {candidate.currency !== "UGX" ? (
-                    <InputField
+                    <AmountField
                       id={`capture-fx-rate-${candidate.id}`}
                       label="FX rate to UGX"
-                      inputMode="decimal"
-                      value={String(candidate.fxRateToUgx ?? "")}
-                      onChange={(event) =>
+                      value={candidate.fxRateToUgx}
+                      onValueChange={(value) =>
                         updateCandidate(candidate.id, (entry) => ({
                           ...entry,
-                          fxRateToUgx: Number(event.target.value) || undefined,
+                          fxRateToUgx: value ?? undefined,
                         }))
                       }
                     />

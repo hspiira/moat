@@ -47,6 +47,25 @@ describe("validateTransactionAmounts", () => {
     expect(() => validateTransactionAmounts({ ...baseForm, amount: "abc" })).toThrow();
   });
 
+  it("accepts a grouped amount, because that is how people type money", () => {
+    // Number("1,790,590") is NaN, which used to reject a valid figure with
+    // "Amount must be greater than zero".
+    expect(validateTransactionAmounts({ ...baseForm, amount: "1,790,590" })).toMatchObject({
+      originalAmount: 1_790_590,
+      normalizedAmount: 1_790_590,
+    });
+  });
+
+  it("accepts a grouped exchange rate", () => {
+    const { normalizedAmount } = validateTransactionAmounts({
+      ...baseForm,
+      currency: "USD",
+      amount: "100",
+      fxRateToUgx: "3,700",
+    });
+    expect(normalizedAmount).toBe(370_000);
+  });
+
   it("requires an FX rate for non-UGX currencies", () => {
     expect(() =>
       validateTransactionAmounts({ ...baseForm, currency: "USD", fxRateToUgx: "" }),
@@ -238,5 +257,11 @@ describe("buildFeeTransaction", () => {
     expect(buildFeeTransaction(parentPayment, "0", FEES_CATEGORY_ID)).toBeNull();
     expect(buildFeeTransaction(parentPayment, "-5", FEES_CATEGORY_ID)).toBeNull();
     expect(buildFeeTransaction(parentPayment, "abc", FEES_CATEGORY_ID)).toBeNull();
+  });
+
+  it("reads a grouped fee amount", () => {
+    expect(buildFeeTransaction(parentPayment, "2,875", FEES_CATEGORY_ID)).toMatchObject({
+      amount: 2875,
+    });
   });
 });

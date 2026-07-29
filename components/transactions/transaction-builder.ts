@@ -2,6 +2,7 @@
 // from the workspace hook so the money-critical paths are unit-testable.
 
 import { normalizeAmountToUgx } from "@/lib/currency";
+import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import type { Transaction, TransactionRule } from "@/lib/types";
 
@@ -20,11 +21,14 @@ export function validateTransactionAmounts(form: TransactionFormState): {
   originalAmount: number;
   normalizedAmount: number;
 } {
-  const originalAmount = Number(form.amount);
+  // parseAmountInput, not Number(): people type "1,790,590", and Number() reads
+  // any thousands separator as NaN, which surfaced as "Amount must be greater
+  // than zero" on a perfectly good figure.
+  const originalAmount = parseAmountInput(form.amount) ?? Number.NaN;
   const normalizedAmount = normalizeAmountToUgx(
     originalAmount,
     form.currency,
-    Number(form.fxRateToUgx || 0),
+    parseAmountInput(form.fxRateToUgx) ?? 0,
   );
 
   if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
@@ -153,7 +157,7 @@ export function buildFeeTransaction(
   feeAmountRaw: string,
   feesCategoryId: string,
 ): Transaction | null {
-  const value = Number(feeAmountRaw.trim());
+  const value = parseAmountInput(feeAmountRaw) ?? Number.NaN;
   if (!Number.isFinite(value) || value <= 0) {
     return null;
   }
