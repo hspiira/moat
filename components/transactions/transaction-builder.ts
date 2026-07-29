@@ -102,6 +102,9 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
       type: "transfer",
       amount: Math.abs(normalizedAmount),
       transferGroupId,
+      // The loan lives on the leg that lands in the receivable, not on the
+      // leg that left the wallet, so a due date only belongs here.
+      expectedRepaymentDate: form.expectedRepaymentDate || undefined,
       createdAt: preservedCreatedAt(input, destinationId),
       ...shared,
     },

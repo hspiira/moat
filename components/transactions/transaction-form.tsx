@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
+import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
@@ -13,6 +14,7 @@ import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
   categoryOptions,
+  transferDestinationOptions,
   optionsFromRecord,
   supportedCurrencyOptionLabels,
   transactionTypeLabels,
@@ -32,6 +34,8 @@ export type TransactionFormState = {
   fxRateToUgx: string;
   feeAmount: string;
   occurredOn: string;
+  /** Lending only: the date the borrower agreed to repay by. Never inferred. */
+  expectedRepaymentDate: string;
   note: string;
 };
 
@@ -46,6 +50,7 @@ export const defaultTransactionForm: TransactionFormState = {
   fxRateToUgx: "",
   feeAmount: "",
   occurredOn: new Date().toISOString().slice(0, 10),
+  expectedRepaymentDate: "",
   note: "",
 };
 
@@ -97,6 +102,15 @@ export function TransactionForm({
   );
   const showFxFields = form.currency !== "UGX";
   const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
+  // A transfer into any receivable is a loan, whether that is the shared pool
+  // (which may not exist yet) or a borrower's own account.
+  const isLendingTransfer =
+    form.type === "transfer" &&
+    (form.destinationAccountId === LENDING_POOL_ACCOUNT_ID ||
+      accounts.some(
+        (account) =>
+          account.id === form.destinationAccountId && account.type === "receivable",
+      ));
 
   // Payee, note, and currency are the rare fields; they stay collapsed until
   // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
@@ -191,10 +205,32 @@ export function TransactionForm({
                 label="To account"
                 value={form.destinationAccountId}
                 placeholder="Select destination"
-                options={accountOptions(accounts)}
+                options={transferDestinationOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
               />
             </div>
+          ) : null}
+
+          {isLendingTransfer ? (
+            <>
+              <InputField
+                id="tx-borrower"
+                label="Who borrowed it"
+                value={form.payee}
+                onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+                placeholder="e.g. Sarah"
+                hint="Loans are grouped by this name, so spell it the same way each time."
+              />
+              <DatePickerField
+                id="tx-expected-repayment"
+                label="Expected back by (optional)"
+                value={form.expectedRepaymentDate}
+                onChange={(value) =>
+                  onFormChange((c) => ({ ...c, expectedRepaymentDate: value }))
+                }
+                hint="Only what you agreed. Moat never guesses a repayment date."
+              />
+            </>
           ) : null}
 
           <div className="grid gap-2">

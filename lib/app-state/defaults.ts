@@ -20,10 +20,14 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   { name: "School fees", kind: "expense" },
   { name: "Health", kind: "expense" },
   { name: "Church / giving", kind: "expense" },
+  { name: "Tips", kind: "expense" },
   { name: "Savings", kind: "savings" },
   { name: "Investments", kind: "savings" },
   { name: "Transfers", kind: "transfer" },
   { name: "Debt repayment", kind: "expense" },
+  // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
+  // only the write-off is an expense.
+  { name: "Money written off", kind: "expense" },
 ];
 
 export const defaultAccountTypes: AccountType[] = [
@@ -33,6 +37,7 @@ export const defaultAccountTypes: AccountType[] = [
   "sacco",
   "investment",
   "debt",
+  "receivable",
 ];
 
 export const defaultGoalTypes: GoalType[] = [
@@ -46,6 +51,7 @@ export const defaultGoalTypes: GoalType[] = [
 ];
 
 export const FEES_CATEGORY_ID = "category:fees-charges";
+export const WRITE_OFF_CATEGORY_ID = "category:money-written-off";
 
 export function buildFeesCategory(userId: string): Category {
   return {

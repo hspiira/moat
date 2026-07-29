@@ -4,7 +4,8 @@ export type AccountType =
   | "bank"
   | "sacco"
   | "investment"
-  | "debt";
+  | "debt"
+  | "receivable";
 
 export type DebtInterestModel = "flat" | "reducing_balance";
 export type DebtLenderType = "bank" | "sacco" | "microfinance" | "informal";
@@ -151,6 +152,13 @@ export type Transaction = {
   feeParentId?: string;
   /** The account balance the source message stated, used for gap reconciliation. */
   statedBalance?: number;
+  /**
+   * Lending only, set on the leg that lands on a receivable. Lives on the loan
+   * rather than the account so a borrower sitting in the shared lending pool
+   * can still have a due date. Always user-stated — never inferred the way a
+   * debt minimum payment is.
+   */
+  expectedRepaymentDate?: string;
   importBatchId?: string;
   createdAt: string;
   updatedAt: string;

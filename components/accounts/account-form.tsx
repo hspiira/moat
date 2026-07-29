@@ -105,10 +105,14 @@ function AccountFormBody({
     <form id="account-form" className="grid gap-4" onSubmit={onSubmit} noValidate>
           <InputField
             id="account-name"
-            label="Account name"
+            label={
+              form.type === "receivable" ? "Who borrowed it" : "Account name"
+            }
             value={form.name}
             onChange={(e) => onFormChange((c) => ({ ...c, name: e.target.value }))}
-            placeholder="e.g. MTN Mobile Money"
+            placeholder={
+              form.type === "receivable" ? "e.g. Loan to Sarah" : "e.g. MTN Mobile Money"
+            }
             error={fieldErrors?.name}
             autoFocus
           />
@@ -135,11 +139,20 @@ function AccountFormBody({
 
           <InputField
             id="opening-balance"
-            label="Opening balance (UGX)"
+            label={
+              form.type === "receivable"
+                ? "Already owed to you (UGX)"
+                : "Opening balance (UGX)"
+            }
             inputMode="decimal"
             value={form.openingBalance}
             onChange={(e) => onFormChange((c) => ({ ...c, openingBalance: e.target.value }))}
             error={fieldErrors?.openingBalance}
+            hint={
+              form.type === "receivable"
+                ? "Only for money already owed to you before you started using Moat. New loans are recorded as transactions, not here."
+                : undefined
+            }
           />
 
           {form.type === "debt" ? (

@@ -38,6 +38,12 @@ export function normalizeOpeningBalance(
     return -Math.abs(amount);
   }
 
+  // A receivable opened with a balance is money already owed to the user
+  // before they started using the app — an asset, never negative.
+  if (type === "receivable") {
+    return Math.abs(amount);
+  }
+
   return amount;
 }
 
@@ -63,6 +69,7 @@ export function getAccountTotals(accounts: Account[]): AccountTotals {
         sacco: 0,
         investment: 0,
         debt: 0,
+        receivable: 0,
       },
     },
   );

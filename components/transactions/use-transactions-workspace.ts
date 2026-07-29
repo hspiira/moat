@@ -28,6 +28,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { ensureLendingPool } from "@/lib/domain/lending";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -434,6 +435,19 @@ export function useTransactionsWorkspace() {
 
         let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
+          // The shared lending pool is offered as a destination before it
+          // exists, so the first loan materialises it. Must land before the
+          // legs, or the destination leg would reference a missing account.
+          const newPool = ensureLendingPool(
+            accounts,
+            transactionForm.destinationAccountId,
+            profile.id,
+            timestamp,
+          );
+          if (newPool) {
+            await repositories.accounts.upsert(newPool);
+          }
+
           const [source, destination] = buildTransferPair(buildInput);
           feeParent = source;
           await Promise.all([
@@ -515,6 +529,9 @@ export function useTransactionsWorkspace() {
         fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
         feeAmount: feeChild ? String(feeChild.originalAmount) : "",
         occurredOn: transaction.occurredOn,
+        // Transfers cannot be edited in place, so a loan's due date is never
+        // repopulated here — only the receivable leg of a transfer carries one.
+        expectedRepaymentDate: "",
         note: transaction.note ?? "",
       });
     },

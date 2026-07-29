@@ -1,7 +1,7 @@
 # Lending as a receivable account — design
 
 **Date:** 2026-07-29
-**Status:** Approved, ready for implementation planning
+**Status:** Implemented, with the revisions in "Revision: pooling" below
 **Scope owner:** Henry Piira
 **Supersedes the open questions in:** [2026-07-29-lending-and-giving-design.md](2026-07-29-lending-and-giving-design.md)
 
@@ -252,3 +252,46 @@ Net worth now includes receivables that may never be collected. This is correct
 accounting, but the headline total becomes less liquid. A liquid-vs-total split
 is **not** being built now; surfacing `totalOutstanding` on the `/debt` band
 keeps the figure visible rather than buried inside one number.
+
+---
+
+## Revision: pooling
+
+The account-per-borrower model above was built and then revised. One account per
+loan proved too heavy: lending to five people created five accounts sitting
+beside real institutions in the account list.
+
+**What changed**
+
+- Loans land by default in one shared pool account,
+  `LENDING_POOL_ACCOUNT_ID` (`"account:money-lent-out"`), and the borrower is
+  carried in the transaction's `payee`. Lending to five people creates one
+  account.
+- The pool is **not** seeded at bootstrap. It is offered as a transfer
+  destination before it exists, and `ensureLendingPool` materialises it on the
+  first loan, so people who never lend never see a lending account.
+- A borrower who needs their own ledger can still have a dedicated receivable
+  account. Both shapes report through `getLendingPortfolio`, which groups on a
+  borrower key: the account for a dedicated one, the lowercased payee for a
+  pooled one.
+- `expectedRepaymentDate` **moved from `Account` to `Transaction`**, set on the
+  leg that lands in the receivable. On the account it would only have worked for
+  dedicated borrowers, and overdue tracking was half the feature's value.
+- `getReceivableSummary` and the per-account panel
+  (`components/accounts/receivable-summary.tsx`) were removed. The band on
+  `/debt` is the single home for per-borrower detail.
+
+**New invariant, property-tested**
+
+Every borrower's `outstanding` must sum to the pool account's reconciled
+balance. Otherwise the band shows per-borrower figures that do not add up to the
+account they all live in. The arbitrary generates write-offs as well as loans
+and repayments — without them the invariant holds even when the write-off maths
+is broken, which was verified by mutation.
+
+**Still open**
+
+- `/debt` was renamed "Money owed" (page title and nav label) so the page is not
+  called "Debt payoff" while showing receivables.
+- Migration is not needed for lending: no user had a receivable before this
+  shipped.

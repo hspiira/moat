@@ -8,6 +8,7 @@ import {
   IconDeviceMobile,
   IconPencil,
   IconReceipt2,
+  IconUserDollar,
   IconUsersGroup,
 } from "@tabler/icons-react";
 
@@ -34,6 +35,7 @@ const accountTypeIcons: Record<AccountType, typeof IconCash> = {
   sacco: IconUsersGroup,
   investment: IconChartLine,
   debt: IconReceipt2,
+  receivable: IconUserDollar,
 };
 
 type Props = {

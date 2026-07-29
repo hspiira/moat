@@ -65,6 +65,40 @@ describe("validateTransactionAmounts", () => {
 });
 
 describe("buildTransferPair", () => {
+  it("puts an agreed repayment date on the receiving leg only", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({
+        form: {
+          ...baseForm,
+          type: "transfer",
+          payee: "Sarah",
+          expectedRepaymentDate: "2026-09-01",
+        },
+      }),
+    );
+
+    expect(destination.expectedRepaymentDate).toBe("2026-09-01");
+    // The money-left-my-wallet leg is not the loan; only the receivable is.
+    expect(source.expectedRepaymentDate).toBeUndefined();
+  });
+
+  it("leaves the repayment date unset when none was agreed", () => {
+    const [, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer", expectedRepaymentDate: "" } }),
+    );
+
+    expect(destination.expectedRepaymentDate).toBeUndefined();
+  });
+
+  it("carries the borrower's name onto both legs so lending can group by it", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer", payee: "Sarah" } }),
+    );
+
+    expect(source.payee).toBe("Sarah");
+    expect(destination.payee).toBe("Sarah");
+  });
+
   it("produces a balanced pair sharing one transfer group", () => {
     const [source, destination] = buildTransferPair(
       buildInput({ form: { ...baseForm, type: "transfer" } }),
