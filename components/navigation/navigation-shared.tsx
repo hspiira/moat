@@ -40,40 +40,24 @@ export const navIcons: Record<string, Icon> = {
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
   "/goals": IconBusinessplan,
+  "/budgets": IconWallet,
+  "/debt": IconCreditCard,
+  "/recurring": IconRepeat,
   "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
   "/settings": IconSettings,
   "/privacy": IconLock,
 };
 
-/**
- * Features that now own their own routes. They previously existed only as
- * panels bolted onto other pages, which is what made Transactions read as a
- * catch-all and left 824 lines of domain logic with no entry point.
- */
-const featureDestinations = [
-  {
-    href: "/budgets",
-    label: "Budgets",
-    description: "Set monthly spending limits per category",
-    icon: IconWallet,
-  },
-  {
-    href: "/debt",
-    label: "Debt payoff",
-    description: "Plan a payoff order and see the finish date",
-    icon: IconCreditCard,
-  },
-  {
-    href: "/recurring",
-    label: "Recurring bills",
-    description: "Rent, school fees, and other repeating obligations",
-    icon: IconRepeat,
-  },
-] as const;
-
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
-export const mobileSecondaryNav = ["/goals", "/investment-compass", "/learn"] as const;
+export const mobileSecondaryNav = [
+  "/goals",
+  "/budgets",
+  "/debt",
+  "/recurring",
+  "/investment-compass",
+  "/learn",
+] as const;
 const mobileContextNav = [
   {
     href: "/goals",
@@ -375,23 +359,6 @@ export function MobileUtilitySheet({
                   />
                 );
               })}
-
-              {/* Budgets, debt payoff and recurring bills are panels inside
-                  other pages, so they never appeared in navigation at all —
-                  824 lines of domain logic with no entry point. Listing them
-                  here as peers of Goals and Compass is what actually makes
-                  them findable; the hash targets the panel on arrival. */}
-              {featureDestinations.map((item) => (
-                <DrawerNavRow
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  description={item.description}
-                  icon={item.icon}
-                  active={false}
-                  onNavigate={close}
-                />
-              ))}
             </div>
           </DrawerSection>
 
