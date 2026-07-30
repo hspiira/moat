@@ -22,6 +22,8 @@ export function RecurringWorkspace() {
         accounts={workspace.accounts}
         categories={workspace.categories}
         evaluations={workspace.recurringEvaluations}
+        obligations={workspace.recurringObligations}
+        today={new Date().toISOString().slice(0, 10)}
         isSubmitting={workspace.isSubmitting}
         onSaveObligation={(obligation) => void workspace.saveObligation(obligation)}
         onToggleObligation={(obligation) => void workspace.toggleObligation(obligation)}
