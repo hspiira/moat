@@ -15,6 +15,14 @@ describe("validateAmount", () => {
     expect(validateAmount("  1500  ")).toBeNull();
   });
 
+  it("accepts a grouped amount, because that is how people type money", () => {
+    // Number("50,000") is NaN, so this used to answer "Enter a valid number."
+    // on a perfectly good figure — in budgets and in recurring bills.
+    expect(validateAmount("50,000")).toBeNull();
+    expect(validateAmount("1,790,590")).toBeNull();
+    expect(validateAmount("-2,000")).toBe("This can't be negative.");
+  });
+
   it("allows zero and negatives when opted in (debt opening balance)", () => {
     expect(validateAmount("0", { allowZero: true })).toBeNull();
     expect(validateAmount("-200000", { allowZero: true, allowNegative: true })).toBeNull();

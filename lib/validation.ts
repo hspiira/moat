@@ -3,6 +3,8 @@
  * null when the value is acceptable — so callers can drive field-level errors.
  */
 
+import { parseAmountInput } from "@/lib/parse-amount";
+
 type AmountOptions = {
   /** Allow exactly zero (e.g. an opening balance). Default false. */
   allowZero?: boolean;
@@ -18,8 +20,11 @@ export function validateAmount(raw: string, options: AmountOptions = {}): string
   if (trimmed === "") {
     return options.requiredMessage ?? "Enter an amount.";
   }
-  const value = Number(trimmed);
-  if (!Number.isFinite(value)) {
+  // parseAmountInput, not Number(): people type "50,000", and Number() reads any
+  // thousands separator as NaN — which reached the user as "Enter a valid
+  // number." on a figure that was perfectly valid.
+  const value = parseAmountInput(trimmed);
+  if (value === null) {
     return "Enter a valid number.";
   }
   if (!options.allowNegative && value < 0) {
