@@ -129,7 +129,7 @@ export function CaptureReviewDetailSheet({
   return (
     <Sheet open={Boolean(item)} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
-        <SheetHeader className="gap-1 px-5 pt-5 pb-4">
+        <SheetHeader className="gap-1 px-4 pt-5 pb-3">
           <SheetTitle className="pr-8 text-base">
             {subject?.payee || category?.name || "Unlabeled capture"}
           </SheetTitle>
@@ -138,21 +138,27 @@ export function CaptureReviewDetailSheet({
 
         {item && subject ? (
           <>
-            <div className="grid gap-5 px-5 pb-5">
-              <div className="grid gap-1">
-                <Money
-                  amount={subject.normalizedAmount}
-                  currency="UGX"
-                  tone={isInflow ? "positive" : "negative"}
-                  signed
-                  className="text-2xl font-semibold"
-                />
-                <div className="text-sm text-muted-foreground">
-                  {formatDate(subject.occurredOn, { alwaysYear: true })} ·{" "}
-                  {account?.name ?? "Unknown account"}
-                  {category ? ` · ${category.name}` : ""}
+            <div className="grid gap-4 px-4 pb-4">
+              {/* Hidden while editing: the amount and the date · account ·
+                  category line restate four fields sitting directly below them,
+                  so in edit mode this block was 76px of duplication ahead of
+                  the first input. */}
+              {isEditing ? null : (
+                <div className="grid gap-1">
+                  <Money
+                    amount={subject.normalizedAmount}
+                    currency="UGX"
+                    tone={isInflow ? "positive" : "negative"}
+                    signed
+                    className="text-2xl font-semibold"
+                  />
+                  <div className="text-sm text-muted-foreground">
+                    {formatDate(subject.occurredOn, { alwaysYear: true })} ·{" "}
+                    {account?.name ?? "Unknown account"}
+                    {category ? ` · ${category.name}` : ""}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {item.issues.length > 0 ? (
                 <div className="grid gap-1 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -291,7 +297,7 @@ export function CaptureReviewDetailSheet({
 
             {isOpenItem ? (
               <div
-                className="sticky bottom-0 mt-auto grid gap-2 border-t border-border/40 bg-background px-5 py-3"
+                className="sticky bottom-0 mt-auto grid gap-2 border-t border-border/40 bg-background px-4 py-3"
                 style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
               >
                 <div className="flex gap-2">
