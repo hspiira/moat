@@ -210,6 +210,22 @@ export function TransactionForm({
             </div>
           ) : null}
 
+          {form.type === "debt_payment" ? (
+            <div className="grid gap-2">
+              <SelectField
+                id="tx-loan"
+                label="Which loan"
+                value={form.destinationAccountId}
+                placeholder="Select loan"
+                options={accountOptions(accounts.filter((a) => a.type === "debt"))}
+                onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Interest and principal are separated automatically from the loan&apos;s rate.
+              </p>
+            </div>
+          ) : null}
+
           {isLendingTransfer ? (
             <>
               <InputField

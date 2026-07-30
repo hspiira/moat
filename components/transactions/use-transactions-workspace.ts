@@ -48,6 +48,7 @@ import {
 } from "./transaction-form";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
+  buildDebtPaymentTransactions,
   buildFeeTransaction,
   buildManualTransaction,
   buildTransferPair,
@@ -452,6 +453,20 @@ export function useTransactionsWorkspace() {
             repositories.transactions.upsert(source),
             repositories.transactions.upsert(destination),
           ]);
+        } else if (transactionForm.type === "debt_payment") {
+          // Split into an interest expense and a principal transfer. The user
+          // enters one payment and taps nothing extra; the rate and balance on
+          // the loan supply the rest.
+          const loan = accounts.find(
+            (account) => account.id === transactionForm.destinationAccountId,
+          );
+          if (!loan) {
+            throw new Error("Choose which loan you are paying.");
+          }
+
+          const rows = buildDebtPaymentTransactions(buildInput, loan);
+          feeParent = rows[0];
+          await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
           // Passing the catalogue makes the type/category pair a write-time

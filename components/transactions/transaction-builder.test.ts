@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
-import { FEES_CATEGORY_ID } from "@/lib/app-state/defaults";
+import { FEES_CATEGORY_ID, LOAN_INTEREST_CATEGORY_ID } from "@/lib/app-state/defaults";
+import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
+import { isSpendingTransaction } from "@/lib/domain/transfers";
+import type { Account } from "@/lib/types";
 
 import {
+  buildDebtPaymentTransactions,
   buildFeeTransaction,
   buildManualTransaction,
   buildTransferPair,
@@ -154,6 +158,121 @@ describe("buildTransferPair", () => {
     const [secondSource] = buildTransferPair(input);
 
     expect(firstSource.transferGroupId).not.toBe(secondSource.transferGroupId);
+  });
+});
+
+describe("buildDebtPaymentTransactions", () => {
+  const loan: Account = {
+    id: "debt:sacco",
+    userId: "user:default",
+    name: "SACCO loan",
+    type: "debt",
+    openingBalance: -1_000_000,
+    balance: -1_000_000,
+    debtPrincipal: 1_000_000,
+    debtInterestRate: 12,
+    debtInterestModel: "reducing_balance",
+    debtStartDate: "2026-03-11",
+    isArchived: false,
+    createdAt: "2026-03-11T00:00:00.000Z",
+    updatedAt: "2026-03-11T00:00:00.000Z",
+  };
+
+  const paymentForm: TransactionFormState = {
+    ...baseForm,
+    type: "debt_payment",
+    accountId: "account:source",
+    destinationAccountId: loan.id,
+    categoryId: "category:debt-repayment",
+    amount: "100000",
+    occurredOn: "2026-04-10",
+  };
+
+  function build(form: TransactionFormState = paymentForm) {
+    return buildDebtPaymentTransactions(buildInput({ form }), loan);
+  }
+
+  it("takes the cash out of the paying account, all of it", () => {
+    const written = build();
+    const fromSource = written
+      .filter((entry) => entry.accountId === "account:source")
+      .reduce((total, entry) => total + getTransactionBalanceDelta(entry), 0);
+
+    expect(fromSource).toBe(-100_000);
+  });
+
+  it("reduces the loan by the principal, so the debt actually goes down", () => {
+    // The bug this replaces: a debt_payment on the debt account pushed the
+    // balance further negative, and one on the cash account left it untouched.
+    const written = build();
+    const onLoan = written
+      .filter((entry) => entry.accountId === loan.id)
+      .reduce((total, entry) => total + getTransactionBalanceDelta(entry), 0);
+
+    expect(onLoan).toBeGreaterThan(0);
+    expect(loan.balance + onLoan).toBeGreaterThan(loan.balance);
+  });
+
+  it("reduces net worth by the interest only, never by the whole payment", () => {
+    const written = build();
+    const netWorthChange = written.reduce(
+      (total, entry) => total + getTransactionBalanceDelta(entry),
+      0,
+    );
+    const interest = written.find((entry) => entry.type === "expense");
+
+    expect(netWorthChange).toBe(-Math.abs(interest!.amount));
+  });
+
+  it("counts only the interest as spending", () => {
+    const written = build();
+    const spending = written.filter(isSpendingTransaction);
+
+    expect(spending).toHaveLength(1);
+    expect(spending[0].categoryId).toBe(LOAN_INTEREST_CATEGORY_ID);
+  });
+
+  it("links the principal legs as one balanced transfer", () => {
+    const legs = build().filter((entry) => entry.type === "transfer");
+
+    expect(legs).toHaveLength(2);
+    expect(legs[0].amount + legs[1].amount).toBe(0);
+    expect(legs[0].transferGroupId).toBe(legs[1].transferGroupId);
+  });
+
+  it("writes no interest row for an interest-free loan", () => {
+    const written = buildDebtPaymentTransactions(buildInput({ form: paymentForm }), {
+      ...loan,
+      debtInterestRate: 0,
+    });
+
+    expect(written.filter((entry) => entry.type === "expense")).toHaveLength(0);
+    expect(written).toHaveLength(2);
+  });
+
+  it("accrues interest from the last payment, not the loan start, once one exists", () => {
+    const earlier = buildDebtPaymentTransactions(buildInput({ form: paymentForm }), loan);
+    const withHistory = buildDebtPaymentTransactions(
+      buildInput({ form: paymentForm, existingTransactions: earlier }),
+      loan,
+    );
+
+    const firstInterest = earlier.find((entry) => entry.type === "expense");
+    const secondInterest = withHistory.find((entry) => entry.type === "expense");
+
+    // Same payment date, but the clock restarts at the previous payment.
+    expect(secondInterest).toBeUndefined();
+    expect(firstInterest).toBeDefined();
+  });
+
+  it("refuses to pay a loan from the loan itself", () => {
+    expect(() =>
+      build({ ...paymentForm, accountId: loan.id, destinationAccountId: loan.id }),
+    ).toThrow(/different accounts/i);
+  });
+
+  it("requires a loan to pay", () => {
+    expect(() => build({ ...paymentForm, destinationAccountId: "" })).toThrow(/which loan/i);
   });
 });
 

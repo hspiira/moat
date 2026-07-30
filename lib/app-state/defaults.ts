@@ -31,6 +31,9 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   // Not an expense: a debt payment reduces a liability. Its own kind keeps it
   // out of the ordinary expense list, so it can never be filed under Food.
   { name: "Debt repayment", kind: "debt_repayment" },
+  // The interest half of a loan payment *is* an expense — it leaves and never
+  // comes back. Only the principal half is a balance-sheet move.
+  { name: "Loan interest", kind: "expense" },
   // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
   // only the write-off is an expense.
   { name: "Money written off", kind: "expense" },
@@ -58,6 +61,8 @@ export const defaultGoalTypes: GoalType[] = [
 
 export const FEES_CATEGORY_ID = "category:fees-charges";
 export const WRITE_OFF_CATEGORY_ID = "category:money-written-off";
+export const LOAN_INTEREST_CATEGORY_ID = "category:loan-interest";
+export const DEBT_REPAYMENT_CATEGORY_ID = "category:debt-repayment";
 
 export function buildFeesCategory(userId: string): Category {
   return {

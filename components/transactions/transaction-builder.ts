@@ -4,8 +4,10 @@
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
+import { splitDebtPayment } from "@/lib/domain/debt-payment";
 import { assertCategoryMatchesType } from "@/lib/domain/transaction-classification";
-import type { Category, Transaction, TransactionRule } from "@/lib/types";
+import { LOAN_INTEREST_CATEGORY_ID } from "@/lib/app-state/defaults";
+import type { Account, Category, Transaction, TransactionRule } from "@/lib/types";
 
 import type { TransactionFormState } from "./transaction-form";
 
@@ -156,6 +158,112 @@ export function buildManualTransaction(
   };
 
   return applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
+}
+
+/** Payment dates already recorded against a loan, oldest first. */
+function getLoanPaymentDates(loanId: string, transactions: Transaction[]): string[] {
+  return transactions
+    .filter(
+      (transaction) =>
+        transaction.accountId === loanId &&
+        (transaction.type === "transfer" || transaction.type === "debt_payment"),
+    )
+    .map((transaction) => transaction.occurredOn)
+    .sort();
+}
+
+/**
+ * Builds the rows for a loan payment: a balanced transfer pair for the
+ * principal, plus an interest expense when interest has accrued.
+ *
+ * This replaces the single `debt_payment` row, which could not work in either
+ * placement. On the debt account its delta pushed the balance further negative,
+ * so paying a loan made the debt grow. On the cash account the loan balance
+ * never moved and `getDebtPayments` — which filters by the debt account's id —
+ * found nothing, so "total paid" stayed at zero.
+ *
+ * The split needs nothing from the user: the rate, model, balance and start date
+ * are already on the account.
+ */
+export function buildDebtPaymentTransactions(
+  input: TransactionBuildInput,
+  loan: Account,
+): Transaction[] {
+  const { form, userId } = input;
+  const { originalAmount, normalizedAmount } = validateTransactionAmounts(form);
+
+  if (!form.accountId) {
+    throw new Error("Choose the account you are paying from.");
+  }
+  if (!form.destinationAccountId) {
+    throw new Error("Choose which loan you are paying.");
+  }
+  if (form.accountId === form.destinationAccountId) {
+    throw new Error("A loan cannot be paid from itself — choose different accounts.");
+  }
+
+  const previousPaymentOn = getLoanPaymentDates(loan.id, input.existingTransactions).at(-1) ?? null;
+  const split = splitDebtPayment({
+    account: loan,
+    paymentAmount: normalizedAmount,
+    occurredOn: form.occurredOn,
+    previousPaymentOn,
+  });
+
+  if (!split) {
+    throw new Error(`${loan.name} is not a debt account.`);
+  }
+
+  const groupId = `transfer:${crypto.randomUUID()}`;
+  const shared = sharedTransactionFields(input, originalAmount);
+  // Anything paid beyond the balance still moves into the loan, so the pair
+  // stays balanced and the account can go positive rather than money vanishing.
+  const towardsLoan = split.principal + split.overpayment;
+  const rows: Transaction[] = [];
+
+  if (towardsLoan > 0) {
+    rows.push(
+      {
+        id: `${groupId}:source`,
+        userId,
+        accountId: form.accountId,
+        type: "transfer",
+        amount: -towardsLoan,
+        transferGroupId: groupId,
+        createdAt: preservedCreatedAt(input, `${groupId}:source`),
+        ...shared,
+        originalAmount: towardsLoan,
+      },
+      {
+        id: `${groupId}:destination`,
+        userId,
+        accountId: loan.id,
+        type: "transfer",
+        amount: towardsLoan,
+        transferGroupId: groupId,
+        createdAt: preservedCreatedAt(input, `${groupId}:destination`),
+        ...shared,
+        originalAmount: towardsLoan,
+      },
+    );
+  }
+
+  if (split.interest > 0) {
+    rows.push({
+      id: `${groupId}:interest`,
+      userId,
+      accountId: form.accountId,
+      type: "expense",
+      amount: split.interest,
+      createdAt: preservedCreatedAt(input, `${groupId}:interest`),
+      ...shared,
+      originalAmount: split.interest,
+      categoryId: LOAN_INTEREST_CATEGORY_ID,
+      note: form.note.trim() || `Interest on ${loan.name}`,
+    });
+  }
+
+  return rows;
 }
 
 /**

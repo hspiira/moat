@@ -105,10 +105,20 @@ function compareDebtsByStrategy(strategy: DebtPayoffStrategy) {
   };
 }
 
+/**
+ * Payments recorded against a loan.
+ *
+ * Two shapes exist. New payments arrive as the principal leg of a transfer into
+ * the loan (a positive amount on a liability account moves it toward zero).
+ * Rows written before payments were split are still typed `debt_payment`, and
+ * are counted here so history keeps reporting rather than resetting to zero.
+ */
 export function getDebtPayments(account: Account, transactions: Transaction[]) {
   return transactions.filter(
     (transaction) =>
-      transaction.accountId === account.id && transaction.type === "debt_payment",
+      transaction.accountId === account.id &&
+      (transaction.type === "debt_payment" ||
+        (transaction.type === "transfer" && transaction.amount > 0)),
   );
 }
 
