@@ -500,8 +500,8 @@ export function DashboardAccountBalances({
           accounts.map((account, index) => (
             <div
               key={account.id}
-              className={`-mx-4 grid gap-2 border-y px-4 py-3 sm:mx-0 sm:border-x ${
-                index % 2 === 0 ? "moat-panel-sage border-border/20" : "bg-muted/20 border-border/20"
+              className={`grid gap-2 rounded-md px-4 py-3 ${
+                index % 2 === 0 ? "moat-panel-sage" : "bg-muted/20"
               }`}
             >
               <div className="flex items-center justify-between gap-4">

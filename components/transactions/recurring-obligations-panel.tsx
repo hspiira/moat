@@ -369,7 +369,7 @@ function BillSection({ title, children }: { title: string; children: React.React
       <h3 className="pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {title}
       </h3>
-      <div className="min-w-0 divide-y divide-border/60 border-y border-border/60">{children}</div>
+      <div className="min-w-0 divide-y divide-border/60">{children}</div>
     </section>
   );
 }

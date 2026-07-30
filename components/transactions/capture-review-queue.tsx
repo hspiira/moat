@@ -86,7 +86,7 @@ export function CaptureReviewQueue({
         {sectionItems.length === 0 ? (
           <EmptyState className="py-10">{emptyMessages[section]}</EmptyState>
         ) : (
-          <div className="divide-y divide-border/60 border-y border-border/60">
+          <div className="divide-y divide-border/60">
             {sectionItems.map((item) => (
               <CaptureReviewRow
                 key={item.id}

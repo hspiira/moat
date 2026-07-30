@@ -141,7 +141,7 @@ export function MonthClosePanel({
       </div>
 
       {groups.length > 0 ? (
-        <div className="min-w-0 divide-y divide-border/60 border-y border-border/60">
+        <div className="min-w-0 divide-y divide-border/60">
           {groups.map((group) => {
             const Icon = groupIcons[group.kind];
             return (

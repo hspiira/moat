@@ -140,7 +140,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
         {/* Rows, not tiles: five stacked colour-cycled cards read as five
             competing blocks on a phone. A divided list scans in one pass and
             keeps the tap targets full-width. */}
-        <ul className="grid border-y border-border/60 sm:rounded-xl sm:border">
+        <ul className="grid overflow-hidden rounded-xl border border-border/60">
           {modulePreviews.map((module, index) => {
             const IconComponent = moduleIcons[module.href];
 

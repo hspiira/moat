@@ -54,9 +54,9 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
         <CardTitle>Your accounts</CardTitle>
         <CardDescription>Balances update as you add transactions.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="px-0">
         {active.length === 0 ? (
-          <EmptyState>
+          <EmptyState className="mx-4">
             <p>No accounts yet. Add your first account to get started.</p>
             {onAdd ? (
               <Button size="sm" className="mt-3" onClick={onAdd}>
@@ -65,13 +65,14 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
             ) : null}
           </EmptyState>
         ) : (
-          active.map((account) => {
+          <div className="divide-y divide-border/60">
+          {active.map((account) => {
             const TypeIcon = accountTypeIcons[account.type];
 
             return (
               <div
                 key={account.id}
-                className="group relative -mx-4 rounded-none border-y border-border/60 bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/25 sm:mx-0 sm:rounded-md sm:border-x"
+                className="group relative px-4 py-3 transition-colors hover:bg-muted/25"
               >
                 {/* Header: icon + name/type on the left, balance on the right.
                     The whole card links to the ledger (::after overlay); Edit
@@ -127,7 +128,8 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
                 ) : null}
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </CardContent>
     </Card>

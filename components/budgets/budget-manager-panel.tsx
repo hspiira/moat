@@ -195,7 +195,7 @@ export function BudgetManagerPanel({
             No budgets for this month yet. Add one to start tracking a category.
           </EmptyState>
         ) : (
-          <div className="min-w-0 divide-y divide-border/60 border-y border-border/60">
+          <div className="min-w-0 divide-y divide-border/60">
             {envelopes.map((envelope) => (
               <EnvelopeRow
                 key={envelope.categoryId}
