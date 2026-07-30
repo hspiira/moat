@@ -45,14 +45,14 @@ function normalizeAccountId(value: string) {
 
 function getRowTone(transaction: Transaction) {
   if (transaction.type === "income") {
-    return "border-l-[3px] border-l-emerald-500/70 bg-emerald-500/[0.04]";
+    return "border-l-[3px] border-l-pos/70 bg-pos/[0.04]";
   }
 
   if (transaction.type === "transfer") {
     return "border-l-[3px] border-l-border/60 bg-muted/[0.18]";
   }
 
-  return "border-l-[3px] border-l-red-500/70 bg-red-500/[0.04]";
+  return "border-l-[3px] border-l-neg/70 bg-neg/[0.04]";
 }
 
 export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {

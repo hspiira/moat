@@ -195,7 +195,7 @@ function PrivacySummaryCard({
     <Card className="border-border/20 shadow-none">
       <CardContent className="grid gap-2 p-4">
         <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 shrink-0 text-primary dark:text-cyan-300" />
+          <Icon className="h-5 w-5 shrink-0 text-primary" />
           <div className="text-sm font-medium text-foreground">{title}</div>
         </div>
         <div className="text-sm leading-6 text-muted-foreground">{body}</div>

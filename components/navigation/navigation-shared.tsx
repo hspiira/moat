@@ -453,13 +453,13 @@ export function MobileMoreButton({
           variant={isActive ? "secondary" : "ghost"}
           className={[
             "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-            isActive ? "text-foreground dark:text-cyan-100" : "text-muted-foreground",
+            isActive ? "text-foreground" : "text-muted-foreground",
           ].join(" ")}
         >
           <span
             className={[
               "inline-flex h-6 w-10 items-center justify-center transition-colors",
-              isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
+              isActive ? "text-primary" : "bg-transparent",
             ].join(" ")}
           >
             <IconComponent className="h-4 w-4" />
