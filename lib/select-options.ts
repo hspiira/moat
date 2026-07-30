@@ -13,12 +13,19 @@ import type {
   TransactionSource,
   TransactionType,
 } from "@/lib/types";
-import type { SelectFieldOption } from "@/components/forms/select-field";
+import type {
+  SelectFieldOption,
+  SelectFieldOptionGroup,
+} from "@/components/forms/select-field";
 import { supportedCurrencyLabels } from "@/lib/currency";
 import {
   LENDING_POOL_ACCOUNT_ID,
   LENDING_POOL_ACCOUNT_NAME,
 } from "@/lib/domain/lending";
+import {
+  categoryKindLabels,
+  categoryKindOrder,
+} from "@/lib/domain/transaction-classification";
 
 export const accountTypeLabels: Record<AccountType, string> = {
   cash: "Cash",
@@ -108,6 +115,21 @@ export function optionsFromRecord<T extends string>(
 
 export function accountOptions(accounts: Account[]): SelectFieldOption[] {
   return accounts.map((account) => ({ value: account.id, label: account.name }));
+}
+
+/**
+ * Every category, grouped under its kind. Because the transaction type is
+ * derived from the category, this one picker replaces the type dropdown as
+ * well — so the headings have to carry the meaning the type used to.
+ * Empty groups are dropped rather than rendered as bare headings.
+ */
+export function categoryOptionGroups(categories: Category[]): SelectFieldOptionGroup[] {
+  return categoryKindOrder
+    .map((kind) => ({
+      label: categoryKindLabels[kind],
+      options: categoryOptions(categories.filter((category) => category.kind === kind)),
+    }))
+    .filter((group) => group.options.length > 0);
 }
 
 /**

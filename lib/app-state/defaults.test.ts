@@ -6,6 +6,7 @@ import {
   buildDefaultCategories,
   buildFeesCategory,
   defaultAccountTypes,
+  reconcileDefaultCategories,
 } from "./defaults";
 
 describe("fees category", () => {
@@ -22,6 +23,76 @@ describe("fees category", () => {
     const categories = buildDefaultCategories("user:1");
     expect(categories.some((c) => c.id === FEES_CATEGORY_ID)).toBe(true);
     expect(categories.some((c) => c.id === "category:mobile-money-charges")).toBe(false);
+  });
+});
+
+describe("reconcileDefaultCategories", () => {
+  const current = buildDefaultCategories("user:1");
+
+  it("asks for nothing when every default is already current", () => {
+    expect(reconcileDefaultCategories(current, "user:1")).toEqual([]);
+  });
+
+  it("corrects a default whose kind has changed since it was seeded", () => {
+    // The real case: "Debt repayment" was seeded as an ordinary expense, so on
+    // an existing device it still sits among Food and Airtime — and a debt
+    // payment has no valid category at all.
+    const stale = current.map((category) =>
+      category.id === "category:debt-repayment"
+        ? { ...category, kind: "expense" as const }
+        : category,
+    );
+
+    const fixes = reconcileDefaultCategories(stale, "user:1");
+
+    expect(fixes).toHaveLength(1);
+    expect(fixes[0]).toMatchObject({
+      id: "category:debt-repayment",
+      kind: "debt_repayment",
+    });
+  });
+
+  it("adds defaults that did not exist when the device was set up", () => {
+    const older = current.filter(
+      (category) => !["category:lending", "category:tips"].includes(category.id),
+    );
+
+    expect([...reconcileDefaultCategories(older, "user:1").map((c) => c.id)].sort()).toEqual([
+      "category:lending",
+      "category:tips",
+    ]);
+  });
+
+  it("keeps the original createdAt when correcting a kind", () => {
+    const stale = current.map((category) =>
+      category.id === "category:debt-repayment"
+        ? { ...category, kind: "expense" as const, createdAt: "2020-05-05T00:00:00.000Z" }
+        : category,
+    );
+
+    expect(reconcileDefaultCategories(stale, "user:1")[0].createdAt).toBe(
+      "2020-05-05T00:00:00.000Z",
+    );
+  });
+
+  it("never rewrites a category the user made themselves", () => {
+    const userOwned = [
+      ...current,
+      {
+        id: "category:my-own",
+        userId: "user:1",
+        name: "Boda to town",
+        kind: "income" as const,
+        isDefault: false,
+        createdAt: "2026-05-01T00:00:00.000Z",
+      },
+    ];
+
+    expect(reconcileDefaultCategories(userOwned, "user:1")).toEqual([]);
+  });
+
+  it("seeds everything for a device that has no categories at all", () => {
+    expect(reconcileDefaultCategories([], "user:1")).toHaveLength(current.length);
   });
 });
 

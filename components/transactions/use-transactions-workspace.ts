@@ -41,11 +41,8 @@ import {
 } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
-import {
-  categoryMatchesType,
-  defaultTransactionForm,
-  type TransactionFormState,
-} from "./transaction-form";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
   buildDebtPaymentTransactions,
@@ -53,7 +50,11 @@ import {
   buildManualTransaction,
   buildTransferPair,
 } from "./transaction-builder";
-import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
+import {
+  FEES_CATEGORY_ID,
+  buildFeesCategory,
+  reconcileDefaultCategories,
+} from "@/lib/app-state/defaults";
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
@@ -267,8 +268,21 @@ export function useTransactionsWorkspace() {
       // balances here would churn storage and the sync outbox on every view.
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
 
+      // Seeded categories do get written, because a stale kind is not cosmetic:
+      // "Debt repayment" seeded as an expense leaves a debt payment with no
+      // valid category at all. Returns nothing once a device is current, so
+      // this is a one-off write rather than churn on every load.
+      const categoryFixes = reconcileDefaultCategories(storedCategories, nextProfile.id);
+      if (categoryFixes.length > 0) {
+        await Promise.all(categoryFixes.map((category) => repositories.categories.upsert(category)));
+      }
+      const currentCategories =
+        categoryFixes.length > 0
+          ? await repositories.categories.listByUser(nextProfile.id)
+          : storedCategories;
+
       setAccounts(reconciledAccounts);
-      setCategories(storedCategories);
+      setCategories(currentCategories);
       setTransactions(sortTransactions(storedTransactions));
       setBudgets(storedBudgets);
       setCaptureReviewItems(storedCaptureReviewItems);

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 
 import type { CsvFieldKey, CsvMappings, ImportPreviewRow } from "./csv-import-utils";
-import { categoryMatchesType } from "./transaction-form";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 
 export const csvFieldLabels: [CsvFieldKey, string][] = [
   ["date", "Date column"],

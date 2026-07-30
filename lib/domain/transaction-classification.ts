@@ -31,6 +31,53 @@ export const allowedCategoryKinds: Record<TransactionType, CategoryKind[]> = {
   debt_payment: ["debt_repayment"],
 };
 
+/**
+ * The inverse of `allowedCategoryKinds`, built rather than written, so there is
+ * no second table to fall out of step. Well-defined precisely because no kind
+ * is reachable from two types — the property the tests pin down.
+ */
+const typeByCategoryKind = Object.entries(allowedCategoryKinds).reduce(
+  (map, [type, kinds]) => {
+    for (const kind of kinds) {
+      map[kind] = type as TransactionType;
+    }
+    return map;
+  },
+  {} as Record<CategoryKind, TransactionType>,
+);
+
+/**
+ * What kind of movement a category implies. This is what lets the type stop
+ * being something the user picks: choose "Debt repayment" and the type follows,
+ * so the two answers can never contradict each other.
+ */
+export function transactionTypeForCategory(category: CategoryLike): TransactionType {
+  return typeByCategoryKind[category.kind];
+}
+
+/**
+ * How each kind reads to someone who has never heard the word "kind". Used as
+ * the group headings in the category picker.
+ */
+export const categoryKindLabels: Record<CategoryKind, string> = {
+  income: "Income",
+  expense: "Spending",
+  savings: "Savings",
+  transfer: "Transfers",
+  debt_repayment: "Debt",
+  lending: "Lending",
+};
+
+/** Money in, money out, then the moves that are neither. */
+export const categoryKindOrder: CategoryKind[] = [
+  "income",
+  "expense",
+  "savings",
+  "transfer",
+  "debt_repayment",
+  "lending",
+];
+
 export function categoryMatchesType(category: CategoryLike, type: TransactionType): boolean {
   return allowedCategoryKinds[type].includes(category.kind);
 }

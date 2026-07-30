@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
-import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
@@ -14,11 +14,10 @@ import { TextareaField } from "@/components/forms/textarea-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
-  categoryOptions,
-  transferDestinationOptions,
+  categoryOptionGroups,
   optionsFromRecord,
+  transferDestinationOptions,
   supportedCurrencyOptionLabels,
-  transactionTypeLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 
@@ -56,10 +55,6 @@ export const defaultTransactionForm: TransactionFormState = {
 };
 
 // Re-exported for the modules that already import it from here. The rule
-// itself lives in lib/domain — it is money logic, and it had drifted into three
-// divergent copies while it lived in components.
-export { categoryMatchesType };
-
 type Props = {
   accounts: Account[];
   categories: Category[];
@@ -93,7 +88,6 @@ export function TransactionForm({
   embedded,
   bare,
 }: Props) {
-  const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
   const normalizedUgxAmount = useMemo(
     () =>
       normalizeAmountToUgx(Number(form.amount), form.currency, Number(form.fxRateToUgx || 0)),
@@ -168,19 +162,24 @@ export function TransactionForm({
             </>
           ) : null}
 
+          {/* Category comes first now: it decides the transaction type, and
+              therefore which of the fields below are even relevant. */}
           <div className="grid gap-2">
             <SelectField
-              id="tx-type"
-              label="Type"
-              value={form.type}
-              options={optionsFromRecord(transactionTypeLabels)}
+              id="tx-category"
+              label="Category"
+              value={form.categoryId}
+              placeholder="What was it for?"
+              groups={categoryOptionGroups(categories)}
               onValueChange={(v) => {
-                const nextType = v as TransactionType;
+                const picked = categories.find((category) => category.id === v);
                 onFormChange((c) => ({
                   ...c,
-                  type: nextType,
-                  categoryId:
-                    categories.find((cat) => categoryMatchesType(cat, nextType))?.id ?? "",
+                  categoryId: v,
+                  // The category decides the type. There is no separate type
+                  // field left to disagree with it, so the pair is coherent by
+                  // construction rather than by validation.
+                  type: picked ? transactionTypeForCategory(picked) : c.type,
                 }));
               }}
             />
@@ -189,7 +188,11 @@ export function TransactionForm({
           <div className="grid gap-2">
             <SelectField
               id="tx-account"
-              label={form.type === "transfer" ? "From account" : "Account"}
+              label={
+                form.type === "transfer" || form.type === "debt_payment"
+                  ? "From account"
+                  : "Account"
+              }
               value={form.accountId}
               placeholder="Select account"
               options={accountOptions(accounts)}
@@ -247,17 +250,6 @@ export function TransactionForm({
               />
             </>
           ) : null}
-
-          <div className="grid gap-2">
-            <SelectField
-              id="tx-category"
-              label="Category"
-              value={form.categoryId}
-              placeholder="Select category"
-              options={categoryOptions(availableCategories)}
-              onValueChange={(v) => onFormChange((c) => ({ ...c, categoryId: v }))}
-            />
-          </div>
 
           <DatePickerField
             id="tx-date"

@@ -6,6 +6,7 @@ import {
   categoryMatchesType,
   coerceCategoryForType,
   defaultCategoryForType,
+  transactionTypeForCategory,
 } from "@/lib/domain/transaction-classification";
 import type { Category, CategoryKind, TransactionType } from "@/lib/types";
 
@@ -48,6 +49,48 @@ describe("allowedCategoryKinds", () => {
         expect(owner, `${kind} is reachable from both ${owner} and ${type}`).toBeUndefined();
         seen.set(kind, type);
       }
+    }
+  });
+});
+
+describe("transactionTypeForCategory", () => {
+  it("derives the type from the category, so the user never picks both", () => {
+    const cases: [string, CategoryKind, TransactionType][] = [
+      ["salary", "income", "income"],
+      ["food", "expense", "expense"],
+      ["savings", "savings", "savings_contribution"],
+      ["transfers", "transfer", "transfer"],
+      ["debt-repayment", "debt_repayment", "debt_payment"],
+      // Lending is a transfer into a receivable, not a category of spending.
+      ["lending", "lending", "transfer"],
+    ];
+
+    for (const [id, kind, expected] of cases) {
+      expect(transactionTypeForCategory(category(`category:${id}`, kind))).toBe(expected);
+    }
+  });
+
+  it("derives a type for every kind that exists", () => {
+    const kinds: CategoryKind[] = [
+      "income",
+      "expense",
+      "savings",
+      "transfer",
+      "debt_repayment",
+      "lending",
+    ];
+
+    for (const kind of kinds) {
+      expect(transactionTypeForCategory(category("category:x", kind))).toBeDefined();
+    }
+  });
+
+  it("always derives a type the category is actually valid for", () => {
+    // The round trip that makes the picker safe: choosing any category and
+    // deriving its type can never produce the mismatch this module prevents.
+    for (const entry of catalogue) {
+      const derived = transactionTypeForCategory(entry);
+      expect(categoryMatchesType(entry, derived), `${entry.id} -> ${derived}`).toBe(true);
     }
   });
 });

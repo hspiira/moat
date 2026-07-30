@@ -86,6 +86,41 @@ export function buildDefaultCategories(userId: string): Category[] {
   }));
 }
 
+/**
+ * Brings a device's seeded categories up to date, returning only the records
+ * that need writing.
+ *
+ * Seeds change over time. "Debt repayment" shipped as an ordinary expense, so
+ * on a device set up before it got its own kind it still sits among Food and
+ * Airtime — and because a debt payment now accepts only `debt_repayment`, it
+ * would have no valid category at all. Changing `defaultCategorySeeds` fixes new
+ * devices; this fixes the ones already out there.
+ *
+ * Only `isDefault` categories are ever touched, so a category the user made
+ * themselves is never rewritten even if its id or name collides.
+ */
+export function reconcileDefaultCategories(
+  stored: Category[],
+  userId: string,
+): Category[] {
+  const byId = new Map(stored.map((category) => [category.id, category]));
+
+  return buildDefaultCategories(userId).flatMap((seed) => {
+    const existing = byId.get(seed.id);
+
+    if (!existing) {
+      return [seed];
+    }
+    if (!existing.isDefault || existing.kind === seed.kind) {
+      return [];
+    }
+
+    // Correct the kind, keep everything the device already knows — including
+    // when it was first created and any rename the user made.
+    return [{ ...existing, kind: seed.kind }];
+  });
+}
+
 export const defaultResourceLinks: ResourceLink[] = [
   {
     id: "resource:finscope-2023",
