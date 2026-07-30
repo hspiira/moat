@@ -49,23 +49,49 @@ export function TransactionsLedgerWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
+      reviewCount={workspace.reviewCount}
+      captureInboxCount={workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-5">
-        {(workspace.reviewCount > 0 || workspace.captureReviewCount > 0 || workspace.duplicateCount > 0) && (
+        {/* Two separate queues, so one sentence each rather than three counts
+            summed into a number that matched neither. Captured items lead when
+            present: that is the queue that grows on its own. */}
+        {workspace.captureReviewCount > 0 ? (
           <Card className="border-border/20 bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="text-sm text-muted-foreground">
-                {workspace.reviewCount} transaction item(s), {workspace.captureReviewCount} captured item(s), and {workspace.duplicateCount} duplicate group(s) need attention.
+                {workspace.captureReviewCount} captured{" "}
+                {workspace.captureReviewCount === 1 ? "item is" : "items are"} waiting for review.
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/transactions/review">Open review</Link>
+                <Link href="/transactions/review">Open inbox</Link>
               </Button>
             </CardContent>
           </Card>
-        )}
+        ) : null}
+
+        {workspace.reviewCount > 0 || workspace.duplicateCount > 0 ? (
+          <Card className="border-border/20 bg-muted/20 shadow-none">
+            <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
+              <div className="text-sm text-muted-foreground">
+                {[
+                  workspace.reviewCount > 0 ? `${workspace.reviewCount} unposted` : null,
+                  workspace.duplicateCount > 0
+                    ? `${workspace.duplicateCount} possibly duplicated`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" and ")}{" "}
+                in this month.
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/transactions/review/month-close">Month close</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <TransactionList
           accounts={workspace.accounts}

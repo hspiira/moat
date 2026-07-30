@@ -18,7 +18,8 @@ export function TransactionsCaptureReviewWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.openCaptureReviewItems.length}
+      reviewCount={0}
+      captureInboxCount={workspace.openCaptureReviewItems.length}
       duplicateCount={workspace.captureReviewItems.filter((item) => item.status === "duplicate").length}
       periodSummary={workspace.periodSummary}
     >

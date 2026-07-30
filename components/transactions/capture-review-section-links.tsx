@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 
 type CaptureReviewSection = "month-close" | "capture";
 
+// Captured items first, and at the bare /transactions/review path: it is the
+// queue that accumulates work, so it is what "review" should mean by default.
 const sectionConfig: Record<CaptureReviewSection, { href: string; label: string }> = {
-  "month-close": { href: "/transactions/review", label: "Month close" },
-  capture: { href: "/transactions/review/capture", label: "Captured items" },
+  capture: { href: "/transactions/review", label: "Captured items" },
+  "month-close": { href: "/transactions/review/month-close", label: "Month close" },
 };
 
 export function CaptureReviewSectionLinks({

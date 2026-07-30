@@ -8,6 +8,7 @@ import {
   diffCaptureFromOriginal,
   getSectionCounts,
   getSectionItems,
+  getSectionOf,
   isCaptureItemEditable,
   resolveDuplicateCounterpart,
 } from "./capture-review";
@@ -82,16 +83,20 @@ function transaction(
 describe("getSectionItems", () => {
   const items = [
     item({ id: "a", status: "new" }),
-    item({ id: "b", status: "needs_review" }),
-    item({ id: "c", status: "duplicate" }),
+    item({ id: "b", status: "needs_review", issues: ["Invalid amount"] }),
+    item({ id: "c", status: "duplicate", duplicateTransactionId: "transaction:1" }),
     item({ id: "d", status: "approved" }),
     item({ id: "e", status: "rejected" }),
   ];
 
-  it("gives each status its own section", () => {
-    for (const section of captureReviewSections) {
-      expect(getSectionItems(items, section).map((entry) => entry.status)).toEqual([section]);
-    }
+  it("gathers everything still awaiting a decision into one section", () => {
+    // new, needs_review and duplicate differ only in why they are open, which
+    // the row shows with a glyph — they do not each need their own tab.
+    expect(getSectionItems(items, "to_review").map((entry) => entry.id).sort()).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
   });
 
   it("keeps approved and rejected apart rather than merging them as resolved", () => {
@@ -99,7 +104,13 @@ describe("getSectionItems", () => {
     expect(getSectionItems(items, "rejected").map((entry) => entry.id)).toEqual(["e"]);
   });
 
-  it("orders resolved sections newest first", () => {
+  it("puts approvable items first so a clean batch can be cleared in a run", () => {
+    const ordered = getSectionItems(items, "to_review");
+    expect(ordered[0].id).toBe("a");
+    expect(ordered.slice(1).map((entry) => entry.id).sort()).toEqual(["b", "c"]);
+  });
+
+  it("orders settled sections newest first", () => {
     const ordered = getSectionItems(
       [
         item({ id: "older", status: "approved", resolvedAt: "2026-07-20T08:00:00.000Z" }),
@@ -110,14 +121,21 @@ describe("getSectionItems", () => {
     expect(ordered.map((entry) => entry.id)).toEqual(["newer", "older"]);
   });
 
+  it("counts by section, not by status", () => {
+    expect(getSectionCounts(items)).toEqual({ to_review: 3, approved: 1, rejected: 1 });
+  });
+
   it("counts every section, including the empty ones", () => {
-    expect(getSectionCounts(items)).toEqual({
-      new: 1,
-      needs_review: 1,
-      duplicate: 1,
-      approved: 1,
-      rejected: 1,
-    });
+    expect(getSectionCounts([])).toEqual({ to_review: 0, approved: 0, rejected: 0 });
+  });
+
+  it("maps each status to the section it belongs in", () => {
+    expect(captureReviewSections).toEqual(["to_review", "approved", "rejected"]);
+    expect(getSectionOf(item({ id: "a", status: "new" }))).toBe("to_review");
+    expect(getSectionOf(item({ id: "b", status: "needs_review" }))).toBe("to_review");
+    expect(getSectionOf(item({ id: "c", status: "duplicate" }))).toBe("to_review");
+    expect(getSectionOf(item({ id: "d", status: "approved" }))).toBe("approved");
+    expect(getSectionOf(item({ id: "e", status: "rejected" }))).toBe("rejected");
   });
 });
 

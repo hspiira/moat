@@ -28,9 +28,7 @@ type CaptureReviewQueueProps = {
 };
 
 const emptyMessages: Record<CaptureReviewSection, string> = {
-  new: "Nothing waiting for review.",
-  needs_review: "No captures need a second look.",
-  duplicate: "No duplicates flagged.",
+  to_review: "Nothing waiting for review.",
   approved: "No captures have been approved yet.",
   rejected: "No captures have been rejected.",
 };
@@ -60,7 +58,7 @@ export function CaptureReviewQueue({
   onClearDuplicate,
   onUpdateItem,
 }: CaptureReviewQueueProps) {
-  const [section, setSection] = useState<CaptureReviewSection>("new");
+  const [section, setSection] = useState<CaptureReviewSection>("to_review");
   const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   const counts = useMemo(() => getSectionCounts(items), [items]);

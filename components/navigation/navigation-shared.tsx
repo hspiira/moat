@@ -190,7 +190,9 @@ export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
         {/* Names both things the screen hosts. "Review month close" gave no
             reason to open it if what you wanted was recurring bills. */}
-        <Link href="/transactions/review" onClick={onNavigate}>Recurring bills &amp; month close</Link>
+        <Link href="/transactions/review/month-close" onClick={onNavigate}>
+          Recurring bills &amp; month close
+        </Link>
       </Button>
     </div>
   );

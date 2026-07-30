@@ -1,4 +1,8 @@
-const CACHE_NAME = "moat-v5";
+// Bumped whenever APP_SHELL_URLS changes: the install step only precaches into
+// a cache it has not seen, so an installed app would otherwise keep serving the
+// old shell and never fetch a newly added route. The activate handler below
+// drops superseded caches, so this upgrades in place with no user action.
+const CACHE_NAME = "moat-v6";
 const OFFLINE_URL = "/offline";
 
 // Every statically-rendered route is precached at install, not just on first
@@ -26,6 +30,7 @@ const APP_SHELL_URLS = [
   "/transactions/import",
   "/transactions/review",
   "/transactions/review/capture",
+  "/transactions/review/month-close",
   "/transactions/tools",
   "/manifest.webmanifest",
   "/icons/icon.svg",

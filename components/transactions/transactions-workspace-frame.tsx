@@ -24,6 +24,7 @@ type Props = {
   transactionCount: number;
   periodTransactionCount: number;
   reviewCount: number;
+  captureInboxCount: number;
   duplicateCount: number;
   periodSummary: MonthSummary;
   children: ReactNode;
@@ -39,6 +40,7 @@ export function TransactionsWorkspaceFrame({
   transactionCount,
   periodTransactionCount,
   reviewCount,
+  captureInboxCount,
   duplicateCount,
   periodSummary,
   children,
@@ -64,6 +66,7 @@ export function TransactionsWorkspaceFrame({
               recordedCount={transactionCount}
               transactionCount={periodTransactionCount}
               reviewCount={reviewCount}
+              captureInboxCount={captureInboxCount}
               duplicateCount={duplicateCount}
               summary={periodSummary}
             />

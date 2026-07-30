@@ -9,39 +9,55 @@
 
 import type { CaptureReviewItem, CaptureReviewStatus, SupportedCurrency, Transaction } from "@/lib/types";
 
-export type CaptureReviewSection = CaptureReviewStatus;
+/**
+ * Sections are not statuses. "new", "needs_review" and "duplicate" all mean the
+ * same thing to the person reviewing — open, waiting on a decision — and differ
+ * only in why, which the row already shows with a status glyph. Three tabs fit a
+ * phone without scrolling; five did not.
+ */
+export type CaptureReviewSection = "to_review" | "approved" | "rejected";
 
 export const captureReviewSections = [
-  "new",
-  "needs_review",
-  "duplicate",
+  "to_review",
   "approved",
   "rejected",
 ] as const satisfies readonly CaptureReviewSection[];
 
 export const captureReviewSectionLabels: Record<CaptureReviewSection, string> = {
-  new: "New",
-  needs_review: "Needs review",
-  duplicate: "Duplicates",
+  to_review: "To review",
   approved: "Approved",
   rejected: "Rejected",
 };
 
-const resolvedSections: CaptureReviewSection[] = ["approved", "rejected"];
+const sectionStatuses: Record<CaptureReviewSection, CaptureReviewStatus[]> = {
+  to_review: ["new", "needs_review", "duplicate"],
+  approved: ["approved"],
+  rejected: ["rejected"],
+};
+
+export function getSectionOf(item: CaptureReviewItem): CaptureReviewSection {
+  if (item.status === "approved") return "approved";
+  if (item.status === "rejected") return "rejected";
+  return "to_review";
+}
 
 function resolvedAtOf(item: CaptureReviewItem) {
   return item.resolvedAt ?? item.reviewedAt ?? item.updatedAt;
 }
 
 export function getSectionItems(items: CaptureReviewItem[], section: CaptureReviewSection) {
-  const matching = items.filter((item) => item.status === section);
+  const matching = items.filter((item) => sectionStatuses[section].includes(item.status));
 
-  if (!resolvedSections.includes(section)) {
-    // Open items keep the caller's ordering, which is already newest-edit-first.
-    return matching;
+  if (section !== "to_review") {
+    return [...matching].sort((a, b) => resolvedAtOf(b).localeCompare(resolvedAtOf(a)));
   }
 
-  return [...matching].sort((a, b) => resolvedAtOf(b).localeCompare(resolvedAtOf(a)));
+  // Approvable items first, so a batch of cleanly parsed messages can be
+  // cleared with one tap each before working through the exceptions.
+  return [...matching].sort((a, b) => {
+    const byReadiness = Number(canApproveCaptureItem(b)) - Number(canApproveCaptureItem(a));
+    return byReadiness !== 0 ? byReadiness : b.updatedAt.localeCompare(a.updatedAt);
+  });
 }
 
 export function getSectionCounts(items: CaptureReviewItem[]): Record<CaptureReviewSection, number> {
@@ -50,7 +66,7 @@ export function getSectionCounts(items: CaptureReviewItem[]): Record<CaptureRevi
   ) as Record<CaptureReviewSection, number>;
 
   for (const item of items) {
-    counts[item.status] += 1;
+    counts[getSectionOf(item)] += 1;
   }
 
   return counts;

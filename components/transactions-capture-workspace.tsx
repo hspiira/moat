@@ -51,7 +51,8 @@ export function TransactionsCaptureWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
+      reviewCount={workspace.reviewCount}
+      captureInboxCount={workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
