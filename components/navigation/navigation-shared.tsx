@@ -190,7 +190,9 @@ export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
       <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
         {/* Names both things the screen hosts. "Review month close" gave no
             reason to open it if what you wanted was recurring bills. */}
-        <Link href="/transactions/review" onClick={onNavigate}>Recurring bills &amp; month close</Link>
+        <Link href="/transactions/review/month-close" onClick={onNavigate}>
+          Recurring bills &amp; month close
+        </Link>
       </Button>
     </div>
   );
@@ -451,13 +453,13 @@ export function MobileMoreButton({
           variant={isActive ? "secondary" : "ghost"}
           className={[
             "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-            isActive ? "text-foreground dark:text-cyan-100" : "text-muted-foreground",
+            isActive ? "text-foreground" : "text-muted-foreground",
           ].join(" ")}
         >
           <span
             className={[
               "inline-flex h-6 w-10 items-center justify-center transition-colors",
-              isActive ? "text-primary dark:text-cyan-300" : "bg-transparent",
+              isActive ? "text-primary" : "bg-transparent",
             ].join(" ")}
           >
             <IconComponent className="h-4 w-4" />

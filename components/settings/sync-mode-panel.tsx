@@ -209,7 +209,7 @@ export function SyncModePanel() {
                   });
                 }}
                 className={`grid gap-1 border px-3 py-3 text-left ${
-                  active ? "border-primary dark:border-cyan-300" : "border-border/20"
+                  active ? "border-primary" : "border-border/20"
                 }`}
               >
                 <div className="text-sm text-foreground">{option.label}</div>

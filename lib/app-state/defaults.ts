@@ -20,10 +20,23 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   { name: "School fees", kind: "expense" },
   { name: "Health", kind: "expense" },
   { name: "Church / giving", kind: "expense" },
+  { name: "Tips", kind: "expense" },
   { name: "Savings", kind: "savings" },
   { name: "Investments", kind: "savings" },
   { name: "Transfers", kind: "transfer" },
-  { name: "Debt repayment", kind: "expense" },
+  // Distinct from the "Money lent out" account so the form does not read
+  // "to Money lent out / Money lent out". Its own kind keeps a loan out of both
+  // the expense list and ordinary account-to-account transfers.
+  { name: "Lending", kind: "lending" },
+  // Not an expense: a debt payment reduces a liability. Its own kind keeps it
+  // out of the ordinary expense list, so it can never be filed under Food.
+  { name: "Debt repayment", kind: "debt_repayment" },
+  // The interest half of a loan payment *is* an expense — it leaves and never
+  // comes back. Only the principal half is a balance-sheet move.
+  { name: "Loan interest", kind: "expense" },
+  // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
+  // only the write-off is an expense.
+  { name: "Money written off", kind: "expense" },
 ];
 
 export const defaultAccountTypes: AccountType[] = [
@@ -33,6 +46,7 @@ export const defaultAccountTypes: AccountType[] = [
   "sacco",
   "investment",
   "debt",
+  "receivable",
 ];
 
 export const defaultGoalTypes: GoalType[] = [
@@ -46,6 +60,9 @@ export const defaultGoalTypes: GoalType[] = [
 ];
 
 export const FEES_CATEGORY_ID = "category:fees-charges";
+export const WRITE_OFF_CATEGORY_ID = "category:money-written-off";
+export const LOAN_INTEREST_CATEGORY_ID = "category:loan-interest";
+export const DEBT_REPAYMENT_CATEGORY_ID = "category:debt-repayment";
 
 export function buildFeesCategory(userId: string): Category {
   return {
@@ -67,6 +84,41 @@ export function buildDefaultCategories(userId: string): Category[] {
     isDefault: true,
     createdAt: DEFAULT_DATE,
   }));
+}
+
+/**
+ * Brings a device's seeded categories up to date, returning only the records
+ * that need writing.
+ *
+ * Seeds change over time. "Debt repayment" shipped as an ordinary expense, so
+ * on a device set up before it got its own kind it still sits among Food and
+ * Airtime — and because a debt payment now accepts only `debt_repayment`, it
+ * would have no valid category at all. Changing `defaultCategorySeeds` fixes new
+ * devices; this fixes the ones already out there.
+ *
+ * Only `isDefault` categories are ever touched, so a category the user made
+ * themselves is never rewritten even if its id or name collides.
+ */
+export function reconcileDefaultCategories(
+  stored: Category[],
+  userId: string,
+): Category[] {
+  const byId = new Map(stored.map((category) => [category.id, category]));
+
+  return buildDefaultCategories(userId).flatMap((seed) => {
+    const existing = byId.get(seed.id);
+
+    if (!existing) {
+      return [seed];
+    }
+    if (!existing.isDefault || existing.kind === seed.kind) {
+      return [];
+    }
+
+    // Correct the kind, keep everything the device already knows — including
+    // when it was first created and any rename the user made.
+    return [{ ...existing, kind: seed.kind }];
+  });
 }
 
 export const defaultResourceLinks: ResourceLink[] = [

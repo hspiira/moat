@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { DebtPayoffPlanner } from "@/components/accounts/debt-payoff-planner";
+import { LendingBand } from "@/components/accounts/lending-band";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { EmptyStateCard } from "@/components/page-shell/page-state";
 import { getDebtSummary } from "@/lib/domain/debt";
@@ -17,27 +18,36 @@ export function DebtWorkspace() {
     () => accounts.some((account) => getDebtSummary(account, transactions) !== null),
     [accounts, transactions],
   );
+  const hasReceivables = useMemo(
+    () => accounts.some((account) => account.type === "receivable" && !account.isArchived),
+    [accounts],
+  );
 
   return (
     <FeaturePageShell
-      title="Debt payoff"
-      description="Choose a payoff order and see when each balance clears."
+      title="Money owed"
+      description="What you owe, and what is owed to you."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      loadingMessage="Loading debt accounts..."
-      setupMessage="Complete onboarding and add at least one account before planning a payoff."
+      loadingMessage="Loading what you owe and what you are owed..."
+      setupMessage="Complete onboarding and add at least one account before tracking what is owed."
     >
-      {/* The planner itself returns null without debt accounts, which is right
-          when it is one panel among many on the accounts page. On its own route
-          that would be a blank screen, so the empty case gets an explanation
-          and the action that resolves it. */}
+      {/* Both panels return null when their side is empty, which is right when
+          they sit among other panels. On this route that would be a blank
+          screen, so the doubly-empty case gets an explanation and the action
+          that resolves it. */}
       {hasDebt ? (
         <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
-      ) : (
+      ) : null}
+
+      <LendingBand accounts={accounts} transactions={transactions} />
+
+      {/* Only genuinely empty when neither direction has anything in it. */}
+      {hasDebt || hasReceivables ? null : (
         <EmptyStateCard
-          title="No debt accounts yet"
-          message="Add an account with a debt type — a loan, SACCO borrowing, or a credit balance — and the payoff plan appears here."
+          title="Nothing owed in either direction"
+          message="Add a debt account for money you owe, or a 'Money lent out' account for money someone owes you."
           href="/accounts"
           cta="Go to accounts"
         />

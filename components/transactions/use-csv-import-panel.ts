@@ -23,7 +23,10 @@ import {
   defaultCsvMappings,
   type CsvMappings,
 } from "./csv-import-utils";
-import { categoryMatchesType } from "./transaction-form";
+import {
+  categoryMatchesType,
+  coerceCategoryForType,
+} from "@/lib/domain/transaction-classification";
 
 
 function guessHeader(headers: string[], matcher: (normalizedHeader: string) => boolean) {
@@ -179,7 +182,14 @@ export function useCsvImportPanel({
           originalAmount: row.originalAmount,
           fxRateToUgx: row.currency === "UGX" ? undefined : row.fxRateToUgx,
           occurredOn: row.occurredOn,
-          categoryId: row.categoryId,
+          // A CSV can pair any type column with any category column. Nobody is
+          // standing by to fix it, so snap it to a coherent pair rather than
+          // dropping the row.
+          categoryId: coerceCategoryForType(
+            categories,
+            row.type as TransactionType,
+            row.categoryId,
+          ),
           payee: row.payee || undefined,
           rawPayee: row.payee || undefined,
           note: row.note || undefined,

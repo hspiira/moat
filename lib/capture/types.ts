@@ -1,3 +1,4 @@
+import type { CategoryLike } from "@/lib/domain/transaction-classification";
 import type {
   CaptureEnvelope,
   CaptureFieldWarning,
@@ -54,9 +55,6 @@ export type CapturePipelineInput = {
   source: TransactionSource;
   accountId: string;
   fallbackFxRate?: number;
-  categories: {
-    id: string;
-    kind: "income" | "expense" | "savings" | "transfer";
-  }[];
+  categories: CategoryLike[];
   existingTransactions: Transaction[];
 };

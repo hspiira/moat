@@ -37,7 +37,7 @@ export function DesktopNavigation({
                   className={[
                     "h-11 w-full border-b-2 px-2 text-sm shadow-none",
                     isActive
-                      ? "border-b-primary text-foreground dark:border-b-cyan-400 dark:text-cyan-100"
+                      ? "border-b-primary text-foreground"
                       : "border-b-transparent text-muted-foreground/80 hover:text-foreground",
                   ].join(" ")}
                 >
@@ -46,7 +46,7 @@ export function DesktopNavigation({
                       <span
                         className={[
                           "inline-flex h-5 w-5 items-center justify-center transition-colors",
-                          isActive ? "text-primary dark:text-cyan-300" : "text-muted-foreground/80",
+                          isActive ? "text-primary" : "text-muted-foreground/80",
                         ].join(" ")}
                       >
                         <IconComponent

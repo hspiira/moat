@@ -28,6 +28,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { ensureLendingPool } from "@/lib/domain/lending";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -35,22 +36,25 @@ import {
 import {
   buildMonthCloseRecord,
   evaluateMonthClose,
+  getUnresolvedTransactions,
   type MonthCloseEvaluation,
 } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
-import {
-  categoryMatchesType,
-  defaultTransactionForm,
-  type TransactionFormState,
-} from "./transaction-form";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
+  buildDebtPaymentTransactions,
   buildFeeTransaction,
   buildManualTransaction,
   buildTransferPair,
 } from "./transaction-builder";
-import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
+import {
+  FEES_CATEGORY_ID,
+  buildFeesCategory,
+  reconcileDefaultCategories,
+} from "@/lib/app-state/defaults";
 import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
@@ -209,14 +213,11 @@ export function useTransactionsWorkspace() {
     [categories, periodTransactions],
   );
 
+  // One definition of "unresolved", shared with month close. This used to count
+  // "reviewed" as well, and an approved capture is written as "reviewed" — so
+  // every capture you approved permanently incremented "Needs review".
   const reviewCount = useMemo(
-    () =>
-      periodTransactions.filter(
-        (transaction) =>
-          transaction.reconciliationState === "draft" ||
-          transaction.reconciliationState === "parsed" ||
-          transaction.reconciliationState === "reviewed",
-      ).length,
+    () => getUnresolvedTransactions(periodTransactions).length,
     [periodTransactions],
   );
 
@@ -267,8 +268,21 @@ export function useTransactionsWorkspace() {
       // balances here would churn storage and the sync outbox on every view.
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
 
+      // Seeded categories do get written, because a stale kind is not cosmetic:
+      // "Debt repayment" seeded as an expense leaves a debt payment with no
+      // valid category at all. Returns nothing once a device is current, so
+      // this is a one-off write rather than churn on every load.
+      const categoryFixes = reconcileDefaultCategories(storedCategories, nextProfile.id);
+      if (categoryFixes.length > 0) {
+        await Promise.all(categoryFixes.map((category) => repositories.categories.upsert(category)));
+      }
+      const currentCategories =
+        categoryFixes.length > 0
+          ? await repositories.categories.listByUser(nextProfile.id)
+          : storedCategories;
+
       setAccounts(reconciledAccounts);
-      setCategories(storedCategories);
+      setCategories(currentCategories);
       setTransactions(sortTransactions(storedTransactions));
       setBudgets(storedBudgets);
       setCaptureReviewItems(storedCaptureReviewItems);
@@ -434,15 +448,44 @@ export function useTransactionsWorkspace() {
 
         let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
+          // The shared lending pool is offered as a destination before it
+          // exists, so the first loan materialises it. Must land before the
+          // legs, or the destination leg would reference a missing account.
+          const newPool = ensureLendingPool(
+            accounts,
+            transactionForm.destinationAccountId,
+            profile.id,
+            timestamp,
+          );
+          if (newPool) {
+            await repositories.accounts.upsert(newPool);
+          }
+
           const [source, destination] = buildTransferPair(buildInput);
           feeParent = source;
           await Promise.all([
             repositories.transactions.upsert(source),
             repositories.transactions.upsert(destination),
           ]);
+        } else if (transactionForm.type === "debt_payment") {
+          // Split into an interest expense and a principal transfer. The user
+          // enters one payment and taps nothing extra; the rate and balance on
+          // the loan supply the rest.
+          const loan = accounts.find(
+            (account) => account.id === transactionForm.destinationAccountId,
+          );
+          if (!loan) {
+            throw new Error("Choose which loan you are paying.");
+          }
+
+          const rows = buildDebtPaymentTransactions(buildInput, loan);
+          feeParent = rows[0];
+          await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
-          const payment = buildManualTransaction(buildInput, rules);
+          // Passing the catalogue makes the type/category pair a write-time
+          // check, not just something the picker happens to hide.
+          const payment = buildManualTransaction(buildInput, rules, categories);
           feeParent = payment;
           await repositories.transactions.upsert(payment);
         }
@@ -515,6 +558,9 @@ export function useTransactionsWorkspace() {
         fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
         feeAmount: feeChild ? String(feeChild.originalAmount) : "",
         occurredOn: transaction.occurredOn,
+        // Transfers cannot be edited in place, so a loan's due date is never
+        // repopulated here — only the receivable leg of a transfer carries one.
+        expectedRepaymentDate: "",
         note: transaction.note ?? "",
       });
     },

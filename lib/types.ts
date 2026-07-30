@@ -4,7 +4,8 @@ export type AccountType =
   | "bank"
   | "sacco"
   | "investment"
-  | "debt";
+  | "debt"
+  | "receivable";
 
 export type DebtInterestModel = "flat" | "reducing_balance";
 export type DebtLenderType = "bank" | "sacco" | "microfinance" | "informal";
@@ -54,7 +55,18 @@ export type GoalType =
   | "education"
   | "house_construction";
 
-export type CategoryKind = "income" | "expense" | "savings" | "transfer";
+/**
+ * The purpose axis. Each kind belongs to exactly one TransactionType — see
+ * `allowedCategoryKinds` in lib/domain/transaction-classification.ts. Two types
+ * sharing a kind is what once allowed "Debt payment" to be filed under "Food".
+ */
+export type CategoryKind =
+  | "income"
+  | "expense"
+  | "savings"
+  | "transfer"
+  | "debt_repayment"
+  | "lending";
 
 export type SalaryCycle = "month_end" | "mid_month" | "custom";
 
@@ -151,6 +163,13 @@ export type Transaction = {
   feeParentId?: string;
   /** The account balance the source message stated, used for gap reconciliation. */
   statedBalance?: number;
+  /**
+   * Lending only, set on the leg that lands on a receivable. Lives on the loan
+   * rather than the account so a borrower sitting in the shared lending pool
+   * can still have a due date. Always user-stated — never inferred the way a
+   * debt minimum payment is.
+   */
+  expectedRepaymentDate?: string;
   importBatchId?: string;
   createdAt: string;
   updatedAt: string;

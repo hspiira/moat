@@ -28,8 +28,8 @@ export const navItems: NavItem[] = [
   },
   {
     href: "/debt",
-    label: "Debt payoff",
-    description: "Payoff order and the date each balance clears.",
+    label: "Money owed",
+    description: "What you owe, what you are owed, and when each clears.",
   },
   {
     href: "/recurring",

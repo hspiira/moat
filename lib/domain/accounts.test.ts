@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getAccountBalanceBreakdown,
+  getAccountTotals,
   normalizeOpeningBalance,
   reconcileAccountBalances,
 } from "@/lib/domain/accounts";
@@ -82,6 +83,22 @@ describe("reconcileAccountBalances", () => {
     expect(normalizeOpeningBalance("debt", 500_000)).toBe(-500_000);
     expect(normalizeOpeningBalance("debt", -500_000)).toBe(-500_000);
     expect(normalizeOpeningBalance("cash", 500_000)).toBe(500_000);
+  });
+
+  it("normalizes receivable opening balances as assets", () => {
+    expect(normalizeOpeningBalance("receivable", 500_000)).toBe(500_000);
+    expect(normalizeOpeningBalance("receivable", -500_000)).toBe(500_000);
+  });
+
+  it("counts receivables in the account type census", () => {
+    const receivable: Account = {
+      ...account,
+      id: "account:loan-to-sarah",
+      name: "Loan to Sarah",
+      type: "receivable",
+    };
+
+    expect(getAccountTotals([account, receivable]).accountsByType.receivable).toBe(1);
   });
 
   it("returns a balance breakdown that explains the current balance", () => {

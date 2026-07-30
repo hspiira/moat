@@ -15,6 +15,7 @@ import {
 
 import { TransactionForm } from "./transactions/transaction-form";
 import { TransactionList } from "./transactions/transaction-list";
+import { TransactionDetailSheet } from "./transactions/transaction-detail-sheet";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -23,6 +24,7 @@ const LEDGER_PAGE_SIZE = 25;
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
   const [page, setPage] = useState(0);
+  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(workspace.transactions.length / LEDGER_PAGE_SIZE));
   // Clamp rather than reset so deletes on the last page don't strand the view.
@@ -33,6 +35,10 @@ export function TransactionsLedgerWorkspace() {
     pageStart + LEDGER_PAGE_SIZE,
   );
   const isEditing = Boolean(workspace.editingTransactionId);
+  // Resolved from the live list so a deleted transaction closes the sheet
+  // instead of stranding a stale copy in it.
+  const detailTransaction =
+    workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
 
   return (
     <TransactionsWorkspaceFrame
@@ -43,23 +49,49 @@ export function TransactionsLedgerWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
+      reviewCount={workspace.reviewCount}
+      captureInboxCount={workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-5">
-        {(workspace.reviewCount > 0 || workspace.captureReviewCount > 0 || workspace.duplicateCount > 0) && (
+        {/* Two separate queues, so one sentence each rather than three counts
+            summed into a number that matched neither. Captured items lead when
+            present: that is the queue that grows on its own. */}
+        {workspace.captureReviewCount > 0 ? (
           <Card className="border-border/20 bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="text-sm text-muted-foreground">
-                {workspace.reviewCount} transaction item(s), {workspace.captureReviewCount} captured item(s), and {workspace.duplicateCount} duplicate group(s) need attention.
+                {workspace.captureReviewCount} captured{" "}
+                {workspace.captureReviewCount === 1 ? "item is" : "items are"} waiting for review.
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/transactions/review">Open review</Link>
+                <Link href="/transactions/review">Open inbox</Link>
               </Button>
             </CardContent>
           </Card>
-        )}
+        ) : null}
+
+        {workspace.reviewCount > 0 || workspace.duplicateCount > 0 ? (
+          <Card className="border-border/20 bg-muted/20 shadow-none">
+            <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
+              <div className="text-sm text-muted-foreground">
+                {[
+                  workspace.reviewCount > 0 ? `${workspace.reviewCount} unposted` : null,
+                  workspace.duplicateCount > 0
+                    ? `${workspace.duplicateCount} possibly duplicated`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" and ")}{" "}
+                in this month.
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/transactions/review/month-close">Month close</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <TransactionList
           accounts={workspace.accounts}
@@ -68,6 +100,7 @@ export function TransactionsLedgerWorkspace() {
           isSubmitting={workspace.isSubmitting}
           onEdit={workspace.beginTransactionEdit}
           onDelete={(transaction) => void workspace.handleDeleteTransaction(transaction)}
+          onOpenDetail={(transaction) => setDetailTransactionId(transaction.id)}
         />
 
         {totalPages > 1 ? (
@@ -95,6 +128,14 @@ export function TransactionsLedgerWorkspace() {
           </div>
         ) : null}
       </div>
+
+      <TransactionDetailSheet
+        transaction={detailTransaction}
+        transactions={workspace.transactions}
+        accounts={workspace.accounts}
+        categories={workspace.categories}
+        onOpenChange={(open) => (open ? undefined : setDetailTransactionId(null))}
+      />
 
       <Sheet open={isEditing} onOpenChange={(open) => (open ? undefined : workspace.cancelEdit())}>
         <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">

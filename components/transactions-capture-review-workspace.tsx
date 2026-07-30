@@ -18,11 +18,14 @@ export function TransactionsCaptureReviewWorkspace() {
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.openCaptureReviewItems.length}
+      reviewCount={0}
+      captureInboxCount={workspace.openCaptureReviewItems.length}
       duplicateCount={workspace.captureReviewItems.filter((item) => item.status === "duplicate").length}
       periodSummary={workspace.periodSummary}
     >
-      <div className="grid gap-5">
+      {/* A fragment, not another grid: the frame already wraps children in a
+          gap-5 grid, so nesting an identical one only added a DOM layer. */}
+      <>
         <CaptureReviewSectionLinks current="capture" />
         <CaptureReviewQueue
           accounts={workspace.accounts}
@@ -33,9 +36,10 @@ export function TransactionsCaptureReviewWorkspace() {
           onApprove={workspace.approveItem}
           onReject={workspace.rejectItem}
           onMarkDuplicate={workspace.markDuplicate}
+          onClearDuplicate={workspace.clearDuplicate}
           onUpdateItem={workspace.updateItem}
         />
-      </div>
+      </>
     </TransactionsWorkspaceFrame>
   );
 }

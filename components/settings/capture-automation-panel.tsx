@@ -36,7 +36,7 @@ function NotificationSourceRow({
         <div className="text-sm text-foreground">{label}</div>
         <div className="text-xs text-muted-foreground">{packageName}</div>
       </div>
-      <div className={checked ? "text-primary dark:text-cyan-300" : "text-muted-foreground"}>
+      <div className={checked ? "text-primary" : "text-muted-foreground"}>
         {checked ? "Allowed" : "Blocked"}
       </div>
     </button>

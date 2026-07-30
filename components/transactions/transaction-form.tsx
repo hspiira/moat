@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
+import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
@@ -12,10 +14,10 @@ import { TextareaField } from "@/components/forms/textarea-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
-  categoryOptions,
+  categoryOptionGroups,
   optionsFromRecord,
+  transferDestinationOptions,
   supportedCurrencyOptionLabels,
-  transactionTypeLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 
@@ -32,6 +34,8 @@ export type TransactionFormState = {
   fxRateToUgx: string;
   feeAmount: string;
   occurredOn: string;
+  /** Lending only: the date the borrower agreed to repay by. Never inferred. */
+  expectedRepaymentDate: string;
   note: string;
 };
 
@@ -46,16 +50,11 @@ export const defaultTransactionForm: TransactionFormState = {
   fxRateToUgx: "",
   feeAmount: "",
   occurredOn: new Date().toISOString().slice(0, 10),
+  expectedRepaymentDate: "",
   note: "",
 };
 
-export function categoryMatchesType(category: Category, type: TransactionType) {
-  if (type === "income") return category.kind === "income";
-  if (type === "transfer") return category.kind === "transfer";
-  if (type === "savings_contribution") return category.kind === "savings";
-  return category.kind === "expense";
-}
-
+// Re-exported for the modules that already import it from here. The rule
 type Props = {
   accounts: Account[];
   categories: Category[];
@@ -89,7 +88,6 @@ export function TransactionForm({
   embedded,
   bare,
 }: Props) {
-  const availableCategories = categories.filter((c) => categoryMatchesType(c, form.type));
   const normalizedUgxAmount = useMemo(
     () =>
       normalizeAmountToUgx(Number(form.amount), form.currency, Number(form.fxRateToUgx || 0)),
@@ -97,6 +95,15 @@ export function TransactionForm({
   );
   const showFxFields = form.currency !== "UGX";
   const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
+  // A transfer into any receivable is a loan, whether that is the shared pool
+  // (which may not exist yet) or a borrower's own account.
+  const isLendingTransfer =
+    form.type === "transfer" &&
+    (form.destinationAccountId === LENDING_POOL_ACCOUNT_ID ||
+      accounts.some(
+        (account) =>
+          account.id === form.destinationAccountId && account.type === "receivable",
+      ));
 
   // Payee, note, and currency are the rare fields; they stay collapsed until
   // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
@@ -155,19 +162,24 @@ export function TransactionForm({
             </>
           ) : null}
 
+          {/* Category comes first now: it decides the transaction type, and
+              therefore which of the fields below are even relevant. */}
           <div className="grid gap-2">
             <SelectField
-              id="tx-type"
-              label="Type"
-              value={form.type}
-              options={optionsFromRecord(transactionTypeLabels)}
+              id="tx-category"
+              label="Category"
+              value={form.categoryId}
+              placeholder="What was it for?"
+              groups={categoryOptionGroups(categories)}
               onValueChange={(v) => {
-                const nextType = v as TransactionType;
+                const picked = categories.find((category) => category.id === v);
                 onFormChange((c) => ({
                   ...c,
-                  type: nextType,
-                  categoryId:
-                    categories.find((cat) => categoryMatchesType(cat, nextType))?.id ?? "",
+                  categoryId: v,
+                  // The category decides the type. There is no separate type
+                  // field left to disagree with it, so the pair is coherent by
+                  // construction rather than by validation.
+                  type: picked ? transactionTypeForCategory(picked) : c.type,
                 }));
               }}
             />
@@ -176,7 +188,11 @@ export function TransactionForm({
           <div className="grid gap-2">
             <SelectField
               id="tx-account"
-              label={form.type === "transfer" ? "From account" : "Account"}
+              label={
+                form.type === "transfer" || form.type === "debt_payment"
+                  ? "From account"
+                  : "Account"
+              }
               value={form.accountId}
               placeholder="Select account"
               options={accountOptions(accounts)}
@@ -191,22 +207,49 @@ export function TransactionForm({
                 label="To account"
                 value={form.destinationAccountId}
                 placeholder="Select destination"
-                options={accountOptions(accounts)}
+                options={transferDestinationOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
               />
             </div>
           ) : null}
 
-          <div className="grid gap-2">
-            <SelectField
-              id="tx-category"
-              label="Category"
-              value={form.categoryId}
-              placeholder="Select category"
-              options={categoryOptions(availableCategories)}
-              onValueChange={(v) => onFormChange((c) => ({ ...c, categoryId: v }))}
-            />
-          </div>
+          {form.type === "debt_payment" ? (
+            <div className="grid gap-2">
+              <SelectField
+                id="tx-loan"
+                label="Which loan"
+                value={form.destinationAccountId}
+                placeholder="Select loan"
+                options={accountOptions(accounts.filter((a) => a.type === "debt"))}
+                onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Interest and principal are separated automatically from the loan&apos;s rate.
+              </p>
+            </div>
+          ) : null}
+
+          {isLendingTransfer ? (
+            <>
+              <InputField
+                id="tx-borrower"
+                label="Who borrowed it"
+                value={form.payee}
+                onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+                placeholder="e.g. Sarah"
+                hint="Loans are grouped by this name, so spell it the same way each time."
+              />
+              <DatePickerField
+                id="tx-expected-repayment"
+                label="Expected back by (optional)"
+                value={form.expectedRepaymentDate}
+                onChange={(value) =>
+                  onFormChange((c) => ({ ...c, expectedRepaymentDate: value }))
+                }
+                hint="Only what you agreed. Moat never guesses a repayment date."
+              />
+            </>
+          ) : null}
 
           <DatePickerField
             id="tx-date"

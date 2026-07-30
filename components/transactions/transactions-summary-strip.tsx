@@ -9,7 +9,12 @@ import { Money } from "@/components/ui/money";
 type Props = {
   recordedCount: number;
   transactionCount: number;
+  /** Ledger records still unposted — draft or parsed. */
   reviewCount: number;
+  /** Captured items not yet approved or rejected. A separate queue, so a
+   *  separate number: adding them together produced one figure that matched
+   *  neither the ledger nor the capture inbox. */
+  captureInboxCount: number;
   duplicateCount: number;
   summary: MonthSummary;
 };
@@ -27,6 +32,7 @@ export function TransactionsSummaryStrip({
   recordedCount,
   transactionCount,
   reviewCount,
+  captureInboxCount,
   duplicateCount,
   summary,
 }: Props) {
@@ -38,6 +44,12 @@ export function TransactionsSummaryStrip({
           <SummaryRow label="This month" value={transactionCount} />
           {reviewCount > 0 ? (
             <SummaryRow label="Needs review" value={<span className="text-clay">{reviewCount}</span>} />
+          ) : null}
+          {captureInboxCount > 0 ? (
+            <SummaryRow
+              label="Capture inbox"
+              value={<span className="text-clay">{captureInboxCount}</span>}
+            />
           ) : null}
           {duplicateCount > 0 ? (
             <SummaryRow label="Duplicates" value={<span className="text-clay">{duplicateCount}</span>} />

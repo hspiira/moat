@@ -1,14 +1,7 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { TransactionsCaptureReviewWorkspace } from "@/components/transactions-capture-review-workspace";
-
-export default function TransactionsCaptureReviewPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <TransactionsCaptureReviewWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+// The capture inbox moved up to /transactions/review. Kept so existing links
+// and any installed-PWA shortcuts still land somewhere correct.
+export default function TransactionsCaptureReviewRedirect() {
+  redirect("/transactions/review");
 }

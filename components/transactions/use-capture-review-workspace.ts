@@ -11,6 +11,8 @@ import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
+import { canApproveCaptureItem, isCaptureItemEditable } from "@/lib/domain/capture-review";
+import { detectCaptureDuplicate } from "@/lib/capture/deduplication";
 import {
   buildTransactionFromCaptureReviewItem,
   createCorrectionLog,
@@ -29,6 +31,21 @@ import type {
 
 function sortByUpdatedAt(items: CaptureReviewItem[]) {
   return [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/** Marked by hand, with nothing to point at. Still blocks approval. */
+const MANUAL_DUPLICATE_ISSUE = "Marked as duplicate";
+
+/**
+ * Recomputes an open item's status from its issues. Settled items keep the
+ * status they were given: recomputing it was how an edited approved item slid
+ * back into the New queue while its ledger transaction stayed behind.
+ */
+function resolveOpenStatus(item: CaptureReviewItem, issues: string[]): CaptureReviewItem["status"] {
+  if (item.status === "approved" || item.status === "rejected") return item.status;
+  if (item.duplicateTransactionId || item.duplicateCaptureReviewItemId) return "duplicate";
+  if (issues.includes(MANUAL_DUPLICATE_ISSUE)) return "duplicate";
+  return issues.length > 0 ? "needs_review" : "new";
 }
 
 export function useCaptureReviewWorkspace() {
@@ -103,6 +120,15 @@ export function useCaptureReviewWorkspace() {
   }, [loadWorkspace]);
 
   const updateItem = useCallback(async (item: CaptureReviewItem) => {
+    if (!isCaptureItemEditable(item)) {
+      setError(
+        item.status === "approved"
+          ? "This item is already in the ledger. Edit the transaction instead."
+          : "This item was rejected and can no longer be edited.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
@@ -113,11 +139,14 @@ export function useCaptureReviewWorkspace() {
         fxRateToUgx: item.fxRateToUgx,
         duplicateTransactionId: item.duplicateTransactionId,
       });
+      if (item.issues.includes(MANUAL_DUPLICATE_ISSUE)) {
+        issues.push(MANUAL_DUPLICATE_ISSUE);
+      }
       await repositories.captureReviewItems.upsert({
         ...item,
         normalizedAmount,
         issues,
-        status: item.duplicateTransactionId ? "duplicate" : issues.length > 0 ? "needs_review" : "new",
+        status: resolveOpenStatus(item, issues),
         updatedAt: new Date().toISOString(),
       });
       await loadWorkspace();
@@ -130,6 +159,20 @@ export function useCaptureReviewWorkspace() {
 
   const approveItem = useCallback(async (item: CaptureReviewItem) => {
     if (!profile) return;
+
+    // The guard the inbox lacked. buildTransactionFromCaptureReviewItem mints a
+    // fresh id on every call, so a second approval writes a second, unrelated
+    // ledger row for the same capture.
+    if (!canApproveCaptureItem(item)) {
+      setError(
+        item.approvedTransactionId || item.status === "approved"
+          ? "This capture is already in the ledger."
+          : item.status === "rejected"
+            ? "This capture was rejected. Reopen it before approving."
+            : "Resolve the remaining capture issues before approving this item.",
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -208,6 +251,13 @@ export function useCaptureReviewWorkspace() {
   }, [loadWorkspace, profile, transactionRules]);
 
   const rejectItem = useCallback(async (item: CaptureReviewItem) => {
+    if (item.status === "approved" || item.approvedTransactionId) {
+      // Rejecting here would only relabel the capture; the ledger row it
+      // created would stay. Deleting that is the ledger's job, not the inbox's.
+      setError("This capture is already in the ledger. Delete the transaction to undo it.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
@@ -232,8 +282,43 @@ export function useCaptureReviewWorkspace() {
     setError(null);
     try {
       const timestamp = new Date().toISOString();
+
+      // Marking by hand used to record nothing, leaving an item flagged as a
+      // duplicate of nothing in particular — and still approvable, because
+      // validation only reacts to duplicateTransactionId. Reuse the pipeline's
+      // own matcher so the mark points at something the user can compare.
+      const match =
+        item.duplicateTransactionId || item.duplicateCaptureReviewItemId
+          ? null
+          : detectCaptureDuplicate({
+              candidate: item,
+              existingTransactions: transactions.filter(
+                (transaction) => transaction.captureReviewItemId !== item.id,
+              ),
+              existingReviewItems: captureReviewItems.filter((entry) => entry.id !== item.id),
+            });
+
+      const duplicateTransactionId = item.duplicateTransactionId ?? match?.transactionId;
+      const duplicateCaptureReviewItemId =
+        item.duplicateCaptureReviewItemId ?? match?.reviewItemId;
+
+      const issues = validateCaptureReviewItem({
+        originalAmount: item.originalAmount,
+        currency: item.currency,
+        fxRateToUgx: item.fxRateToUgx,
+        duplicateTransactionId,
+      });
+      if (!duplicateTransactionId) {
+        // Nothing to point at, so carry the reason explicitly rather than
+        // letting the item stay silently approvable.
+        issues.push(MANUAL_DUPLICATE_ISSUE);
+      }
+
       await repositories.captureReviewItems.upsert({
         ...item,
+        duplicateTransactionId,
+        duplicateCaptureReviewItemId,
+        issues,
         status: "duplicate",
         reviewedAt: timestamp,
         updatedAt: timestamp,
@@ -241,6 +326,35 @@ export function useCaptureReviewWorkspace() {
       await loadWorkspace();
     } catch (duplicateError) {
       setError(duplicateError instanceof Error ? duplicateError.message : "Unable to update duplicate state.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [captureReviewItems, loadWorkspace, transactions]);
+
+  const clearDuplicate = useCallback(async (item: CaptureReviewItem) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const timestamp = new Date().toISOString();
+      const issues = validateCaptureReviewItem({
+        originalAmount: item.originalAmount,
+        currency: item.currency,
+        fxRateToUgx: item.fxRateToUgx,
+        duplicateTransactionId: undefined,
+      });
+
+      await repositories.captureReviewItems.upsert({
+        ...item,
+        duplicateTransactionId: undefined,
+        duplicateCaptureReviewItemId: undefined,
+        issues,
+        status: issues.length > 0 ? "needs_review" : "new",
+        reviewedAt: timestamp,
+        updatedAt: timestamp,
+      });
+      await loadWorkspace();
+    } catch (clearError) {
+      setError(clearError instanceof Error ? clearError.message : "Unable to clear duplicate state.");
     } finally {
       setIsSubmitting(false);
     }
@@ -262,5 +376,6 @@ export function useCaptureReviewWorkspace() {
     approveItem,
     rejectItem,
     markDuplicate,
+    clearDuplicate,
   };
 }

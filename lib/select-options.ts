@@ -13,8 +13,19 @@ import type {
   TransactionSource,
   TransactionType,
 } from "@/lib/types";
-import type { SelectFieldOption } from "@/components/forms/select-field";
+import type {
+  SelectFieldOption,
+  SelectFieldOptionGroup,
+} from "@/components/forms/select-field";
 import { supportedCurrencyLabels } from "@/lib/currency";
+import {
+  LENDING_POOL_ACCOUNT_ID,
+  LENDING_POOL_ACCOUNT_NAME,
+} from "@/lib/domain/lending";
+import {
+  categoryKindLabels,
+  categoryKindOrder,
+} from "@/lib/domain/transaction-classification";
 
 export const accountTypeLabels: Record<AccountType, string> = {
   cash: "Cash",
@@ -23,6 +34,7 @@ export const accountTypeLabels: Record<AccountType, string> = {
   sacco: "SACCO",
   investment: "Investment",
   debt: "Debt / Obligation",
+  receivable: "Money lent out",
 };
 
 export const debtInterestModelLabels: Record<DebtInterestModel, string> = {
@@ -103,6 +115,38 @@ export function optionsFromRecord<T extends string>(
 
 export function accountOptions(accounts: Account[]): SelectFieldOption[] {
   return accounts.map((account) => ({ value: account.id, label: account.name }));
+}
+
+/**
+ * Every category, grouped under its kind. Because the transaction type is
+ * derived from the category, this one picker replaces the type dropdown as
+ * well — so the headings have to carry the meaning the type used to.
+ * Empty groups are dropped rather than rendered as bare headings.
+ */
+export function categoryOptionGroups(categories: Category[]): SelectFieldOptionGroup[] {
+  return categoryKindOrder
+    .map((kind) => ({
+      label: categoryKindLabels[kind],
+      options: categoryOptions(categories.filter((category) => category.kind === kind)),
+    }))
+    .filter((group) => group.options.length > 0);
+}
+
+/**
+ * Transfer destinations, plus the shared lending pool. The pool is offered
+ * before it exists so that lending needs no setup step — picking it creates it.
+ */
+export function transferDestinationOptions(accounts: Account[]): SelectFieldOption[] {
+  const options = accountOptions(accounts);
+
+  if (accounts.some((account) => account.id === LENDING_POOL_ACCOUNT_ID)) {
+    return options;
+  }
+
+  return [
+    ...options,
+    { value: LENDING_POOL_ACCOUNT_ID, label: LENDING_POOL_ACCOUNT_NAME },
+  ];
 }
 
 export function categoryOptions(categories: Category[]): SelectFieldOption[] {

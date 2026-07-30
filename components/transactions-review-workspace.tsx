@@ -1,48 +1,62 @@
 "use client";
 
+import { useState } from "react";
+
 import { MonthClosePanel } from "./transactions/month-close-panel";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
+import { TransactionDetailSheet } from "./transactions/transaction-detail-sheet";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
 export function TransactionsReviewWorkspace() {
   const workspace = useTransactionsWorkspace();
+  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
+
+  // Resolved from the live list so a deleted transaction closes the sheet
+  // instead of stranding a stale copy in it.
+  const detailTransaction =
+    workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
 
   return (
     <TransactionsWorkspaceFrame
       currentRoute="review"
       title="Month close"
-      description="Resolve duplicates and month-close issues away from the main ledger."
+      description="Clear what is outstanding, then close the period."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
       transactionCount={workspace.transactions.length}
       periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount + workspace.captureReviewCount}
+      reviewCount={workspace.reviewCount}
+      captureInboxCount={workspace.captureReviewCount}
       duplicateCount={workspace.duplicateCount}
       periodSummary={workspace.periodSummary}
     >
-      <div className="grid gap-5">
+      {/* A fragment, not another grid: the frame already wraps children in a
+          gap-5 grid, so nesting an identical one only added a DOM layer. */}
+      <>
         <CaptureReviewSectionLinks current="month-close" />
 
-        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <MonthClosePanel
           period={workspace.closePeriod}
           monthClose={workspace.monthClose}
           evaluation={workspace.monthCloseEvaluation}
           recurringEvaluations={workspace.recurringEvaluations}
+          accounts={workspace.accounts}
           isSubmitting={workspace.isSubmitting}
-          onRefresh={() => {
-            if (workspace.profile) {
-              void workspace.refreshMonthCloseState(workspace.profile.id);
-            }
-          }}
-          onClose={() => void workspace.closeMonth()}
           onExport={workspace.exportMonthClose}
+          onClose={() => void workspace.closeMonth()}
+          onOpenTransaction={(transaction) => setDetailTransactionId(transaction.id)}
         />
 
-        </div>
-      </div>
+        <TransactionDetailSheet
+          transaction={detailTransaction}
+          transactions={workspace.transactions}
+          accounts={workspace.accounts}
+          categories={workspace.categories}
+          onOpenChange={(open) => (open ? undefined : setDetailTransactionId(null))}
+        />
+      </>
     </TransactionsWorkspaceFrame>
   );
 }

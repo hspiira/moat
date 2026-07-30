@@ -14,16 +14,17 @@ import {
 } from "@/lib/capture/normalizers";
 import { parseWithProviderPacks } from "@/lib/capture/providers";
 import type { CapturePipelineCandidate, CapturePipelineInput } from "@/lib/capture/types";
-import type { CategoryKind, CaptureReviewItem } from "@/lib/types";
+import { defaultCategoryForType } from "@/lib/domain/transaction-classification";
+import type { CaptureReviewItem } from "@/lib/types";
 
 function inferCategoryId(
   categories: CapturePipelineInput["categories"],
   type: CapturePipelineCandidate["type"],
 ) {
-  const kind: CategoryKind =
-    type === "income" ? "income" : type === "savings_contribution" ? "savings" : "expense";
-
-  return categories.find((category) => category.kind === kind)?.id ?? "";
+  // Reads the shared type→kind map. This used to fall every non-income,
+  // non-savings type through to "expense", which filed SMS-parsed loan
+  // repayments under an ordinary expense category.
+  return defaultCategoryForType(categories, type)?.id ?? "";
 }
 
 export function parseCaptureEnvelope(input: CapturePipelineInput & { existingReviewItems?: CaptureReviewItem[] }) {

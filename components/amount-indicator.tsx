@@ -14,8 +14,8 @@ export type AmountDirection = "up" | "down" | "flat" | "transfer";
 export type AmountSign = "positive" | "negative" | "none";
 
 const toneClasses: Record<AmountTone, string> = {
-  positive: "text-emerald-700 dark:text-emerald-400",
-  negative: "text-red-700 dark:text-red-400",
+  positive: "text-pos",
+  negative: "text-neg",
   neutral: "text-foreground",
 };
 

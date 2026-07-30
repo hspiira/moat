@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { InputField } from "@/components/forms/input-field";
-import { SelectField } from "@/components/forms/select-field";
-import { TextareaField } from "@/components/forms/textarea-field";
-import { accountOptions, categoryOptions } from "@/lib/select-options";
-import type { Account, CaptureReviewItem, Category, Transaction, TransactionType } from "@/lib/types";
-import { formatMoney } from "@/lib/currency";
-import { pendingReviewGap } from "@/lib/domain/balance-gap";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import type { Account, CaptureReviewItem, Category, Transaction } from "@/lib/types";
+import {
+  getSectionCounts,
+  getSectionItems,
+  type CaptureReviewSection,
+} from "@/lib/domain/capture-review";
 import { EmptyState } from "@/components/ui/empty-state";
+
+import { CaptureReviewDetailSheet } from "./capture-review-detail-sheet";
+import { CaptureReviewFilterRail } from "./capture-review-filter-rail";
+import { CaptureReviewRow } from "./capture-review-row";
 
 type CaptureReviewQueueProps = {
   accounts: Account[];
@@ -22,244 +23,99 @@ type CaptureReviewQueueProps = {
   onApprove: (item: CaptureReviewItem) => Promise<void>;
   onReject: (item: CaptureReviewItem) => Promise<void>;
   onMarkDuplicate: (item: CaptureReviewItem) => Promise<void>;
+  onClearDuplicate: (item: CaptureReviewItem) => Promise<void>;
   onUpdateItem: (item: CaptureReviewItem) => Promise<void>;
 };
 
-type ReviewFilter = "new" | "needs_review" | "duplicate" | "resolved";
-
-const reviewFilterLabels: Record<ReviewFilter, string> = {
-  new: "New",
-  needs_review: "Needs review",
-  duplicate: "Duplicates",
-  resolved: "Resolved",
+const emptyMessages: Record<CaptureReviewSection, string> = {
+  to_review: "Nothing waiting for review.",
+  approved: "No captures have been approved yet.",
+  rejected: "No captures have been rejected.",
 };
 
-const typeOptions = [
-  { value: "income", label: "Income" },
-  { value: "expense", label: "Expense" },
-  { value: "savings_contribution", label: "Savings" },
-  { value: "debt_payment", label: "Debt payment" },
-];
-
-function getFilteredItems(items: CaptureReviewItem[], filter: ReviewFilter) {
-  if (filter === "resolved") {
-    return items.filter((item) => item.status === "approved" || item.status === "rejected");
-  }
-
-  return items.filter((item) => item.status === filter);
-}
-
-function ReviewItemEditor({
-  item,
+/**
+ * The capture inbox: one scannable row per captured item, in every section.
+ *
+ * Every open item used to render as a full form, which meant parsing a batch of
+ * five messages produced five stacked forms to scroll past. Reviewing is the
+ * common case, so the queue now reads as a list and the form lives one tap away
+ * in the sheet.
+ *
+ * Rendered bare, like the capture page's own form: the page header already says
+ * what this screen is for, so a card around it only repeated that and charged
+ * inset for it. Card padding inside the page gutter inside a bordered box per
+ * item cost 53px on each side of a 375px screen, leaving form inputs 269px wide.
+ */
+export function CaptureReviewQueue({
   accounts,
   categories,
+  items,
   transactions,
   isSubmitting,
   onApprove,
   onReject,
   onMarkDuplicate,
+  onClearDuplicate,
   onUpdateItem,
-}: CaptureReviewQueueProps & { item: CaptureReviewItem }) {
-  const [draft, setDraft] = useState(item);
+}: CaptureReviewQueueProps) {
+  const [section, setSection] = useState<CaptureReviewSection>("to_review");
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDraft(item);
-  }, [item]);
-
-  const balanceGap = useMemo(() => pendingReviewGap(draft, transactions), [draft, transactions]);
-
-  const amountLabel = useMemo(
-    () =>
-      draft.currency === "UGX"
-        ? `Amount (${draft.currency})`
-        : `Amount (${draft.currency}) · ${formatMoney(draft.normalizedAmount, "UGX")}`,
-    [draft.currency, draft.normalizedAmount],
+  const counts = useMemo(() => getSectionCounts(items), [items]);
+  const sectionItems = useMemo(() => getSectionItems(items, section), [items, section]);
+  const openItem = useMemo(
+    () => items.find((item) => item.id === openItemId) ?? null,
+    [items, openItemId],
   );
 
   return (
-    <div className="grid gap-3 border border-border/20 px-4 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <div className="text-sm text-foreground">{draft.payee || "Unlabeled capture"}</div>
-          <div className="text-xs text-muted-foreground">
-            {draft.source} · {draft.parserLabel ?? "generic parser"} · {Math.round(draft.confidenceScore * 100)}%
-          </div>
-        </div>
-        <div className="text-sm text-foreground">{formatMoney(draft.originalAmount, draft.currency)}</div>
-      </div>
+    // min-w-0 stops the rail's min-content width (its tabs are shrink-0 and
+    // nowrap, so it measures ~490px) from propagating up and stretching the
+    // page grid. The card used to absorb this with overflow-hidden; without a
+    // card the constraint has to be stated.
+    <div className="grid min-w-0 gap-3">
+      <CaptureReviewFilterRail section={section} counts={counts} onSelect={setSection} />
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <InputField
-          id={`capture-review-date-${draft.id}`}
-          label="Date"
-          value={draft.occurredOn}
-          onChange={(event) => setDraft((current) => ({ ...current, occurredOn: event.target.value }))}
-        />
-        <SelectField
-          id={`capture-review-account-${draft.id}`}
-          label="Account"
-          value={draft.accountId}
-          options={accountOptions(accounts)}
-          onValueChange={(value) => setDraft((current) => ({ ...current, accountId: value }))}
-        />
-        <SelectField
-          id={`capture-review-type-${draft.id}`}
-          label="Type"
-          value={draft.type}
-          options={typeOptions}
-          onValueChange={(value) =>
-            setDraft((current) => ({ ...current, type: value as Exclude<TransactionType, "transfer"> }))
-          }
-        />
-        <SelectField
-          id={`capture-review-category-${draft.id}`}
-          label="Category"
-          value={draft.categoryId}
-          options={categoryOptions(categories)}
-          onValueChange={(value) => setDraft((current) => ({ ...current, categoryId: value }))}
-        />
-        <InputField
-          id={`capture-review-payee-${draft.id}`}
-          label="Payee"
-          value={draft.payee}
-          onChange={(event) => setDraft((current) => ({ ...current, payee: event.target.value }))}
-        />
-        <InputField
-          id={`capture-review-amount-${draft.id}`}
-          label={amountLabel}
-          inputMode="decimal"
-          value={String(draft.originalAmount)}
-          onChange={(event) =>
-            setDraft((current) => ({
-              ...current,
-              originalAmount: Number(event.target.value) || 0,
-            }))
-          }
-        />
-        {draft.type === "expense" ? (
-          <InputField
-            id={`capture-review-fee-${draft.id}`}
-            label="Fee — charges & tax (UGX)"
-            inputMode="decimal"
-            value={draft.feeAmount ? String(draft.feeAmount) : ""}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                feeAmount: Number(event.target.value) || undefined,
-              }))
-            }
-          />
-        ) : null}
-      </div>
-
-      <TextareaField
-        id={`capture-review-note-${draft.id}`}
-        label="Note"
-        value={draft.note}
-        onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))}
-        className="min-h-20"
-      />
-
-      {draft.issues.length > 0 ? (
-        <div className="grid gap-1 text-xs text-destructive">
-          {draft.issues.map((issue) => (
-            <div key={`${draft.id}:${issue}`}>{issue}</div>
-          ))}
-        </div>
-      ) : null}
-
-      {draft.fieldWarnings.length > 0 ? (
-        <div className="grid gap-1 text-xs text-muted-foreground">
-          {draft.fieldWarnings.map((warning, index) => (
-            <div key={`${draft.id}:${warning.field}:${index}`}>
-              {warning.field}: {warning.message}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {balanceGap && balanceGap.gap < 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 border border-neg/40 bg-neg/10 px-3 py-2 text-xs">
-          <span className="text-foreground">
-            Bank balance is {formatMoney(Math.abs(balanceGap.gap), "UGX")} lower than recorded —
-            likely an unrecorded fee.
-          </span>
-          <button
-            type="button"
-            className="rounded-md border border-border/40 px-2 py-1 font-medium hover:bg-muted"
-            onClick={() =>
-              setDraft((current) => ({ ...current, feeAmount: Math.abs(balanceGap.gap) }))
-            }
-          >
-            Add as fee
-          </button>
-        </div>
-      ) : balanceGap && balanceGap.gap > 0 ? (
-        <div className="border border-border/30 px-3 py-2 text-xs text-muted-foreground">
-          Bank balance is {formatMoney(balanceGap.gap, "UGX")} higher than recorded — an uncaptured
-          credit?
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={() => void onUpdateItem(draft)}>
-          Save changes
-        </Button>
-        <Button type="button" size="sm" disabled={isSubmitting} onClick={() => void onApprove(draft)}>
-          Approve to ledger
-        </Button>
-        {draft.status !== "duplicate" ? (
-          <Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={() => void onMarkDuplicate(draft)}>
-            Mark duplicate
-          </Button>
-        ) : null}
-        {draft.status !== "rejected" ? (
-          <Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={() => void onReject(draft)}>
-            Reject
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-export function CaptureReviewQueue(props: CaptureReviewQueueProps) {
-  const [filter, setFilter] = useState<ReviewFilter>("new");
-  const filteredItems = useMemo(() => getFilteredItems(props.items, filter), [filter, props.items]);
-
-  return (
-    <Card className="gap-0 border-border/20 pt-0 shadow-none">
-      <CardContent className="grid gap-4 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-1">
-            <div className="text-sm text-foreground">Capture inbox</div>
-            <div className="text-sm text-muted-foreground">Check items read from messages before they become transactions.</div>
-          </div>
-          <div className="flex gap-2">
-            {(Object.entries(reviewFilterLabels) as Array<[ReviewFilter, string]>).map(([value, label]) => (
-              <Button
-                key={value}
-                type="button"
-                size="sm"
-                variant={filter === value ? "default" : "outline"}
-                onClick={() => setFilter(value)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {filteredItems.length === 0 ? (
-          <EmptyState className="py-8">Nothing waiting for review.</EmptyState>
+      {/* min-w-0 again, and it is the same trap as the rail: this is a grid
+          item, so min-width resolves to the subtree's min-content, and a
+          `truncate` block contributes its full untruncated text width because
+          overflow only zeroes that contribution for flex/grid items. Without it
+          a long payee stretched the list to 459px and the page clipped the
+          approve button off-screen. */}
+      <div className="min-w-0">
+        {sectionItems.length === 0 ? (
+          <EmptyState className="py-10">{emptyMessages[section]}</EmptyState>
         ) : (
-          <div className="grid gap-3">
-            {filteredItems.map((item) => (
-              <ReviewItemEditor key={item.id} item={item} {...props} />
+          <div className="divide-y divide-border/60 border-y border-border/60">
+            {sectionItems.map((item) => (
+              <CaptureReviewRow
+                key={item.id}
+                item={item}
+                accounts={accounts}
+                categories={categories}
+                isSubmitting={isSubmitting}
+                onOpen={(opened) => setOpenItemId(opened.id)}
+                onApprove={(approved) => void onApprove(approved)}
+              />
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      <CaptureReviewDetailSheet
+        item={openItem}
+        accounts={accounts}
+        categories={categories}
+        items={items}
+        transactions={transactions}
+        isSubmitting={isSubmitting}
+        onApprove={onApprove}
+        onReject={onReject}
+        onMarkDuplicate={onMarkDuplicate}
+        onClearDuplicate={onClearDuplicate}
+        onUpdateItem={onUpdateItem}
+        onOpenChange={(open) => (open ? undefined : setOpenItemId(null))}
+      />
+    </div>
   );
 }

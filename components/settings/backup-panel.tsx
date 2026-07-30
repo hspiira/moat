@@ -17,6 +17,8 @@ import {
   createEncryptedBackupBlob,
   restoreEncryptedBackupPayload,
 } from "@/lib/security/encrypted-backup";
+import { detectBackupFormat } from "@/lib/security/backup-format";
+import { restoreFullExport } from "@/lib/security/data-export";
 import { downloadBlob } from "@/lib/security/data-export";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
 import { PinInputField } from "@/components/forms/pin-input-field";
@@ -149,11 +151,6 @@ export function BackupPanel() {
       setError("Select a backup file first.");
       return;
     }
-    // Restores accept legacy 4-digit PINs so older backups stay recoverable.
-    if (restorePin.length < 4) {
-      setError("Enter the PIN used to create this backup.");
-      return;
-    }
 
     setIsWorking(true);
     setError(null);
@@ -161,6 +158,37 @@ export function BackupPanel() {
 
     try {
       const text = await file.text();
+      // Inspect the file before touching the decrypter. A plaintext export is
+      // valid JSON, so it used to reach decryptWithPin and fail there — which
+      // the catch below reported as a PIN problem, sending people to re-check a
+      // PIN that was never the issue.
+      const format = detectBackupFormat(text);
+
+      if (format.kind === "unrecognised") {
+        setError(format.reason);
+        return;
+      }
+
+      if (format.kind === "plain") {
+        await restoreFullExport(format.payload);
+        updateDrivePreferences((current) => ({
+          ...current,
+          lastRestoredAt: new Date().toISOString(),
+          lastRestoredName: file.name,
+        }));
+        setSuccess(
+          "Unencrypted export restored. Reload the app to see your data. Consider deleting that file — it holds your records in plain text.",
+        );
+        reset();
+        return;
+      }
+
+      // Restores accept legacy 4-digit PINs so older backups stay recoverable.
+      if (restorePin.length < 4) {
+        setError("This backup is encrypted. Enter the PIN used to create it.");
+        return;
+      }
+
       await restoreEncryptedBackupPayload({ payloadText: text, pin: restorePin });
       updateDrivePreferences((current) => ({
         ...current,
@@ -171,7 +199,9 @@ export function BackupPanel() {
       setSuccess("Backup restored successfully. Reload the app to see your data.");
       reset();
     } catch {
-      setError("Could not restore backup. Check that you selected the correct file and PIN.");
+      // Reaching here means the file *was* a well-formed encrypted backup, so
+      // the PIN really is the likely culprit.
+      setError("Could not decrypt this backup. Check the PIN used when it was created.");
     } finally {
       setIsWorking(false);
     }
@@ -380,12 +410,12 @@ export function BackupPanel() {
         {mode === "restore" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleRestore(e)}>
             <div className="grid gap-2">
-              <Label htmlFor="restore-file" className="text-xs">Backup file (.enc)</Label>
+              <Label htmlFor="restore-file" className="text-xs">Backup file (.enc) or export (.json)</Label>
               <input
                 id="restore-file"
                 ref={fileInputRef}
                 type="file"
-                accept=".enc,application/octet-stream"
+                accept=".enc,.json,application/json,application/octet-stream"
                 className="text-xs text-muted-foreground file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs file:font-medium"
               />
             </div>
