@@ -36,6 +36,7 @@ import {
 import {
   buildMonthCloseRecord,
   evaluateMonthClose,
+  getUnresolvedTransactions,
   type MonthCloseEvaluation,
 } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
@@ -210,14 +211,11 @@ export function useTransactionsWorkspace() {
     [categories, periodTransactions],
   );
 
+  // One definition of "unresolved", shared with month close. This used to count
+  // "reviewed" as well, and an approved capture is written as "reviewed" — so
+  // every capture you approved permanently incremented "Needs review".
   const reviewCount = useMemo(
-    () =>
-      periodTransactions.filter(
-        (transaction) =>
-          transaction.reconciliationState === "draft" ||
-          transaction.reconciliationState === "parsed" ||
-          transaction.reconciliationState === "reviewed",
-      ).length,
+    () => getUnresolvedTransactions(periodTransactions).length,
     [periodTransactions],
   );
 
@@ -456,7 +454,9 @@ export function useTransactionsWorkspace() {
           ]);
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
-          const payment = buildManualTransaction(buildInput, rules);
+          // Passing the catalogue makes the type/category pair a write-time
+          // check, not just something the picker happens to hide.
+          const payment = buildManualTransaction(buildInput, rules, categories);
           feeParent = payment;
           await repositories.transactions.upsert(payment);
         }

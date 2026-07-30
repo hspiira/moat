@@ -24,7 +24,13 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   { name: "Savings", kind: "savings" },
   { name: "Investments", kind: "savings" },
   { name: "Transfers", kind: "transfer" },
-  { name: "Debt repayment", kind: "expense" },
+  // Distinct from the "Money lent out" account so the form does not read
+  // "to Money lent out / Money lent out". Its own kind keeps a loan out of both
+  // the expense list and ordinary account-to-account transfers.
+  { name: "Lending", kind: "lending" },
+  // Not an expense: a debt payment reduces a liability. Its own kind keeps it
+  // out of the ordinary expense list, so it can never be filed under Food.
+  { name: "Debt repayment", kind: "debt_repayment" },
   // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
   // only the write-off is an expense.
   { name: "Money written off", kind: "expense" },

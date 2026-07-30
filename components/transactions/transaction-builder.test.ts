@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Transaction, TransactionRule } from "@/lib/types";
+import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
 import { FEES_CATEGORY_ID } from "@/lib/app-state/defaults";
 
@@ -158,6 +158,49 @@ describe("buildTransferPair", () => {
 });
 
 describe("buildManualTransaction", () => {
+  const catalogue: Category[] = [
+    {
+      id: "category:food",
+      userId: "user:default",
+      name: "Food",
+      kind: "expense",
+      isDefault: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "category:debt-repayment",
+      userId: "user:default",
+      name: "Debt repayment",
+      kind: "debt_repayment",
+      isDefault: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+
+  it("refuses to write a debt payment against an ordinary expense category", () => {
+    // The picker already hides this pair; nothing stopped a caller writing it.
+    expect(() =>
+      buildManualTransaction(
+        buildInput({ form: { ...baseForm, type: "debt_payment", categoryId: "category:food" } }),
+        [],
+        catalogue,
+      ),
+    ).toThrow(/cannot be used for a debt payment/i);
+  });
+
+  it("writes a debt payment against a debt repayment category", () => {
+    const transaction = buildManualTransaction(
+      buildInput({
+        form: { ...baseForm, type: "debt_payment", categoryId: "category:debt-repayment" },
+      }),
+      [],
+      catalogue,
+    );
+
+    expect(transaction.type).toBe("debt_payment");
+    expect(transaction.categoryId).toBe("category:debt-repayment");
+  });
+
   it("rejects a transaction with no account or category selected", () => {
     expect(() =>
       buildManualTransaction(buildInput({ form: { ...baseForm, accountId: "" } }), []),

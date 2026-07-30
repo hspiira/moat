@@ -46,6 +46,15 @@ describe("lending and giving seeds", () => {
     expect(writeOff?.kind).toBe("expense");
   });
 
+  it("gives debt repayment and lending their own kinds, out of the expense list", () => {
+    const categories = buildDefaultCategories("user:1");
+
+    expect(categories.find((c) => c.id === "category:debt-repayment")?.kind).toBe(
+      "debt_repayment",
+    );
+    expect(categories.find((c) => c.id === "category:lending")?.kind).toBe("lending");
+  });
+
   it("already covers giving, so no gifts category is added", () => {
     const categories = buildDefaultCategories("user:1");
 

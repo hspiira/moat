@@ -55,7 +55,18 @@ export type GoalType =
   | "education"
   | "house_construction";
 
-export type CategoryKind = "income" | "expense" | "savings" | "transfer";
+/**
+ * The purpose axis. Each kind belongs to exactly one TransactionType — see
+ * `allowedCategoryKinds` in lib/domain/transaction-classification.ts. Two types
+ * sharing a kind is what once allowed "Debt payment" to be filed under "Food".
+ */
+export type CategoryKind =
+  | "income"
+  | "expense"
+  | "savings"
+  | "transfer"
+  | "debt_repayment"
+  | "lending";
 
 export type SalaryCycle = "month_end" | "mid_month" | "custom";
 

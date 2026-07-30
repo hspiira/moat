@@ -4,7 +4,8 @@
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
-import type { Transaction, TransactionRule } from "@/lib/types";
+import { assertCategoryMatchesType } from "@/lib/domain/transaction-classification";
+import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
 import type { TransactionFormState } from "./transaction-form";
 
@@ -115,10 +116,18 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
   ];
 }
 
-/** Builds a manual (non-transfer) transaction with rules applied. */
+/**
+ * Builds a manual (non-transfer) transaction with rules applied.
+ *
+ * `categories` is optional only so existing callers that have no catalogue to
+ * hand keep working; pass it wherever one is available. Without it the
+ * type/category pair goes unchecked, which is what allowed a debt payment to be
+ * filed under Food.
+ */
 export function buildManualTransaction(
   input: TransactionBuildInput,
   rules: TransactionRule[],
+  categories?: Category[],
 ): Transaction {
   const { form, userId } = input;
   const { originalAmount, normalizedAmount } = validateTransactionAmounts(form);
@@ -128,6 +137,9 @@ export function buildManualTransaction(
   }
   if (!form.categoryId) {
     throw new Error("Choose a category for this transaction.");
+  }
+  if (categories) {
+    assertCategoryMatchesType(categories, form.type, form.categoryId);
   }
 
   const transactionId = input.editingTransactionId ?? `transaction:${crypto.randomUUID()}`;

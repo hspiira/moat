@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { formatMoney } from "@/lib/currency";
 import { pendingReviewGap } from "@/lib/domain/balance-gap";
+import { coerceCategoryForType } from "@/lib/domain/transaction-classification";
 import { useTextCapturePanel } from "./use-text-capture-panel";
 
 type Props = {
@@ -236,14 +237,11 @@ export function TextCapturePanel({
                       updateCandidate(candidate.id, (entry) => ({
                         ...entry,
                         type: value as Exclude<TransactionType, "transfer">,
-                        categoryId:
-                          categories.find((category) =>
-                            value === "income"
-                              ? category.kind === "income"
-                              : value === "savings_contribution"
-                                ? category.kind === "savings"
-                                : category.kind === "expense",
-                          )?.id ?? entry.categoryId,
+                        categoryId: coerceCategoryForType(
+                          categories,
+                          value as TransactionType,
+                          entry.categoryId,
+                        ),
                       }))
                     }
                   />

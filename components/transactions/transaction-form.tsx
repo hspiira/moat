@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
@@ -54,12 +55,10 @@ export const defaultTransactionForm: TransactionFormState = {
   note: "",
 };
 
-export function categoryMatchesType(category: Category, type: TransactionType) {
-  if (type === "income") return category.kind === "income";
-  if (type === "transfer") return category.kind === "transfer";
-  if (type === "savings_contribution") return category.kind === "savings";
-  return category.kind === "expense";
-}
+// Re-exported for the modules that already import it from here. The rule
+// itself lives in lib/domain — it is money logic, and it had drifted into three
+// divergent copies while it lived in components.
+export { categoryMatchesType };
 
 type Props = {
   accounts: Account[];
