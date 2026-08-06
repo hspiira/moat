@@ -32,6 +32,7 @@ export function DebtWorkspace() {
   return (
     <FeaturePageShell
       title="Money owed"
+      srOnlyTitle
       description="What you owe, and what is owed to you."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

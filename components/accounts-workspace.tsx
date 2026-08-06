@@ -67,6 +67,7 @@ export function AccountsWorkspace() {
     <div className="grid gap-5">
       <PageHeader
         title="Accounts"
+        srOnlyTitle
         aside={
           profile ? (
             <Button size="lg" onClick={openAddAccount}>

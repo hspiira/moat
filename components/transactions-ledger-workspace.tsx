@@ -44,6 +44,7 @@ export function TransactionsLedgerWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="ledger"
       title="Transactions"
+      srOnlyTitle
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

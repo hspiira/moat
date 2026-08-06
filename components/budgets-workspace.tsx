@@ -11,6 +11,7 @@ export function BudgetsWorkspace() {
   return (
     <FeaturePageShell
       title="Budgets"
+      srOnlyTitle
       description="Set a monthly limit per category and track what is left."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

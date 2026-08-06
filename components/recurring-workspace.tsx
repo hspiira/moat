@@ -11,6 +11,7 @@ export function RecurringWorkspace() {
   return (
     <FeaturePageShell
       title="Recurring bills"
+      srOnlyTitle
       description="Rent, school fees, and other obligations that repeat every month."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

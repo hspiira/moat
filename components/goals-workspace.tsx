@@ -68,6 +68,7 @@ export function GoalsWorkspace() {
     <div className="grid gap-5">
       <PageHeader
         title="Goals"
+        srOnlyTitle
         aside={
           profile ? (
             <Button size="lg" onClick={openNewGoal}>

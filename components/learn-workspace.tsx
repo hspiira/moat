@@ -88,6 +88,7 @@ export function LearnWorkspace() {
     <div className="grid gap-5">
       <PageHeader
         title="Learn Uganda"
+        srOnlyTitle
         description="Official and research-grade sources behind this app&apos;s Uganda-first assumptions."
         aside={
           <MetricChip

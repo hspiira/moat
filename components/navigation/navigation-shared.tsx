@@ -58,11 +58,29 @@ export const mobileSecondaryNav = [
   "/investment-compass",
   "/learn",
 ] as const;
+// Every route reachable from the More sheet must appear here: this list is
+// what lets the More pill name the current page, and a page the nav cannot
+// name has no wayfinding at all now that headings defer to the nav.
 const mobileContextNav = [
   {
     href: "/goals",
     label: "Goals",
     description: "Emergency fund and savings goal tracking.",
+  },
+  {
+    href: "/budgets",
+    label: "Budgets",
+    description: "Monthly spending limits per category.",
+  },
+  {
+    href: "/debt",
+    label: "Money owed",
+    description: "What you owe, what you are owed, and when each clears.",
+  },
+  {
+    href: "/recurring",
+    label: "Recurring bills",
+    description: "Rent, school fees, and other repeating obligations.",
   },
   {
     href: "/investment-compass",

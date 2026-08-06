@@ -11,14 +11,14 @@ import type { ChangeMetric } from "@/lib/domain/dashboard";
 const TARGET_MONTHS = 3;
 
 /**
- * Period-over-period delta shown beside a flow figure. Lives here rather than in
- * its own card: the standalone summary tiles repeated the same inflow/outflow
- * numbers this hero already shows, and the delta was the only thing they added.
+ * Period-over-period delta shown beside a flow figure.
  *
- * `invertTone` because direction and desirability come apart — more money in is
- * good, more money out is not, but both point up.
+ * Deliberately neutral. It used to be scored green/red for "good"/"bad", but
+ * that put a red badge beside a green income figure on the same row — two
+ * opposite colour codes an inch apart. Colour belongs to money amounts only;
+ * a delta is a fact, and the arrow plus the number states it.
  */
-function ChangeBadge({ change, invertTone }: { change: ChangeMetric; invertTone?: boolean }) {
+function ChangeBadge({ change, label }: { change: ChangeMetric; label: string }) {
   if (change.kind === "none") {
     return null;
   }
@@ -26,29 +26,34 @@ function ChangeBadge({ change, invertTone }: { change: ChangeMetric; invertTone?
   if (change.kind === "new") {
     return (
       <AmountIndicator
-        tone={invertTone ? "negative" : "positive"}
+        tone="neutral"
         direction="up"
         showIcon
         value="New"
-        className="text-[0.7rem] font-medium"
+        className="text-[0.7rem] font-medium text-muted-foreground"
         iconClassName="h-3 w-3"
       />
     );
   }
 
   const value = change.value ?? 0;
-  const rose = value > 0;
-  const isGood = invertTone ? !rose : rose;
 
   return (
-    <AmountIndicator
-      tone={value === 0 ? "neutral" : isGood ? "positive" : "negative"}
-      direction={value === 0 ? "flat" : rose ? "up" : "down"}
-      showIcon
-      value={`${Math.abs(value).toFixed(0)}%`}
-      className="text-[0.7rem] font-medium"
-      iconClassName="h-3 w-3"
-    />
+    <span title={`${label} vs previous period`}>
+      <AmountIndicator
+        tone="neutral"
+        direction={value === 0 ? "flat" : value > 0 ? "up" : "down"}
+        showIcon
+        value={`${Math.abs(value).toFixed(0)}%`}
+        className="text-[0.7rem] font-medium text-muted-foreground"
+        iconClassName="h-3 w-3"
+      />
+      <span className="sr-only">
+        {value === 0
+          ? `${label} unchanged from the previous period`
+          : `${label} ${value > 0 ? "up" : "down"} ${Math.abs(value).toFixed(0)}% on the previous period`}
+      </span>
+    </span>
   );
 }
 
@@ -125,7 +130,7 @@ export function DashboardMoatHero({
               icon={<IconArrowDownLeft className="size-3.5" />}
               label="In"
               periodLabel={periodLabel}
-              change={<ChangeBadge change={inflowChange} />}
+              change={<ChangeBadge change={inflowChange} label="Money in" />}
             >
               <Money amount={inflow} tone="positive" />
             </FlowStat>
@@ -133,7 +138,7 @@ export function DashboardMoatHero({
               icon={<IconArrowUpRight className="size-3.5" />}
               label="Out"
               periodLabel={periodLabel}
-              change={<ChangeBadge change={outflowChange} invertTone />}
+              change={<ChangeBadge change={outflowChange} label="Money out" />}
             >
               <Money amount={outflow} tone="negative" />
             </FlowStat>
