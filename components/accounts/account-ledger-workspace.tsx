@@ -31,6 +31,7 @@ import { formatDate } from "@/lib/format-date";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
+import { DebtSummary } from "./debt-summary";
 import { accountTypeLabels } from "./account-form";
 
 
@@ -171,6 +172,10 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
             <AccountBalanceBreakdown account={account} transactions={transactions} />
           </div>
+
+          {account.type === "debt" ? (
+            <DebtSummary account={account} transactions={transactions} />
+          ) : null}
 
           <Card className="shadow-none">
             <CardHeader>

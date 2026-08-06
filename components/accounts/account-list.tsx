@@ -9,6 +9,7 @@ import {
   IconChartLine,
   IconDeviceMobile,
   IconPencil,
+  IconPlus,
   IconReceipt2,
   IconTrash,
   IconUserDollar,
@@ -20,6 +21,7 @@ import { canDeleteAccount } from "@/lib/domain/account-cleanup";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -29,8 +31,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 
 import { accountTypeLabels } from "./account-form";
-import { AccountBalanceBreakdown } from "./account-balance-breakdown";
-import { DebtSummary } from "./debt-summary";
 
 const accountTypeIcons: Record<AccountType, typeof IconCash> = {
   cash: IconCash,
@@ -67,6 +67,14 @@ export function AccountList({
       <CardHeader>
         <CardTitle>Your accounts</CardTitle>
         <CardDescription>Balances update as you add transactions.</CardDescription>
+        {onAdd && active.length > 0 ? (
+          <CardAction>
+            <Button size="sm" variant="secondary" onClick={onAdd}>
+              <IconPlus />
+              Add
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="px-0">
         {active.length === 0 ? (
@@ -79,7 +87,7 @@ export function AccountList({
             ) : null}
           </EmptyState>
         ) : (
-          <div className="divide-y divide-border/60">
+          <div>
           {active.map((account) => {
             const TypeIcon = accountTypeIcons[account.type];
 
@@ -151,19 +159,6 @@ export function AccountList({
                     </Button>
                   ) : null}
                 </div>
-
-                <div className="relative z-10 mt-2 w-fit">
-                  <AccountBalanceBreakdown
-                    account={account}
-                    transactions={transactions}
-                    compact
-                  />
-                </div>
-                {account.type === "debt" ? (
-                  <div className="relative z-10 mt-2 w-fit">
-                    <DebtSummary account={account} transactions={transactions} />
-                  </div>
-                ) : null}
               </div>
             );
           })}

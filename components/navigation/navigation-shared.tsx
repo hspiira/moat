@@ -6,6 +6,7 @@ import {
   IconAdjustmentsHorizontal,
   IconBuildingBank,
   IconBusinessplan,
+  IconCalendarCheck,
   IconChalkboard,
   IconFileImport,
   IconHome2,
@@ -193,26 +194,6 @@ export function ThemeToggle({
   );
 }
 
-export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <div className="grid gap-2">
-      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/capture" onClick={onNavigate}>Capture transactions</Link>
-      </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
-      </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
-        {/* Names both things the screen hosts. "Review month close" gave no
-            reason to open it if what you wanted was recurring bills. */}
-        <Link href="/transactions/review/month-close" onClick={onNavigate}>
-          Recurring bills &amp; month close
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
 function DrawerSection({
   title,
   children,
@@ -240,7 +221,7 @@ function DrawerNavRow({
 }: {
   href: string;
   label: string;
-  description: string;
+  description?: string;
   icon: Icon;
   active?: boolean;
   onNavigate?: () => void;
@@ -254,13 +235,15 @@ function DrawerNavRow({
       <Link
         href={href}
         onClick={onNavigate}
-        className="grid w-full gap-1 rounded-lg px-3 py-3 text-left"
+        className="grid w-full gap-1 rounded-lg px-3 py-2.5 text-left"
       >
-        <span className="flex items-start gap-3">
-          <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="flex items-center gap-3">
+          <IconComponent className="h-4 w-4 shrink-0" />
           <span className="text-left">
             <span className="block text-sm font-medium text-foreground">{label}</span>
-            <span className="block text-xs text-muted-foreground">{description}</span>
+            {description ? (
+              <span className="block text-xs text-muted-foreground">{description}</span>
+            ) : null}
           </span>
         </span>
       </Link>
@@ -286,10 +269,10 @@ export function MobileCaptureSheet() {
         side="bottom"
         className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6">
+        <SheetHeader className="px-6 pb-2">
           <SheetTitle>Capture</SheetTitle>
-          <SheetDescription>
-            Pick the fastest way to add a transaction. Anything read from a message goes to review first.
+          <SheetDescription className="sr-only">
+            Add a transaction. Anything read from a message goes to review first.
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
@@ -311,13 +294,10 @@ export function MobileCaptureSheet() {
                 <Link
                   href={action.href}
                   onClick={() => setOpen(false)}
-                  className="grid w-full gap-1 rounded-lg bg-muted/40 px-4 py-3 text-left"
+                  className="flex w-full items-center gap-3 rounded-lg bg-muted/40 px-4 py-3 text-left text-sm font-medium text-foreground"
                 >
-                  <span className="flex items-center gap-3 text-sm font-medium text-foreground">
-                    <IconComponent className="h-4 w-4" />
-                    {action.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{action.description}</span>
+                  <IconComponent className="h-4 w-4" />
+                  {action.label}
                 </Link>
               </Button>
             );
@@ -346,77 +326,73 @@ export function MobileUtilitySheet({
         side="bottom"
         className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6 pb-3">
-          <SheetTitle>Navigation and actions</SheetTitle>
-          <SheetDescription>
-            Move between routes, manage quick actions, and switch theme.
+        <SheetHeader className="px-6 pb-2">
+          <SheetTitle>More</SheetTitle>
+          <SheetDescription className="sr-only">
+            The rest of Moat: destinations, data tools, theme and settings.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-6 pb-2">
-          <DrawerSection title="Quick actions">
-            <QuickActionLinks onNavigate={close} />
-          </DrawerSection>
+        <div className="grid flex-1 gap-5 overflow-y-auto overscroll-contain px-6 pb-2">
+          <div className="grid">
+            {mobileSecondaryNav.map((href) => {
+              const item = navItems.find((entry) => entry.href === href);
+              if (!item) return null;
+              const IconComponent = navIcons[item.href];
 
-          <DrawerSection title="More places">
-            <div className="grid">
-              {mobileSecondaryNav.map((href) => {
-                const item = navItems.find((entry) => entry.href === href);
-                if (!item) return null;
-                const IconComponent = navIcons[item.href];
-
-                return (
-                  <DrawerNavRow
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    description={item.description}
-                    icon={IconComponent}
-                    active={isActiveRoute(pathname, item.href)}
-                    onNavigate={close}
-                  />
-                );
-              })}
-            </div>
-          </DrawerSection>
+              return (
+                <DrawerNavRow
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={IconComponent}
+                  active={isActiveRoute(pathname, item.href)}
+                  onNavigate={close}
+                />
+              );
+            })}
+          </div>
 
           <DrawerSection title="Data tools">
             <div className="grid">
               <DrawerNavRow
                 href="/transactions/import"
                 label="CSV import"
-                description="Bring in bank or mobile money statements"
                 icon={IconFileImport}
                 active={isActiveRoute(pathname, "/transactions/import")}
                 onNavigate={close}
               />
               <DrawerNavRow
                 href="/transactions/tools"
-                // Budgets are the most-wanted thing behind this row and used to
-                // appear only third in the description, under a label naming
-                // neither. 145 lines of budget logic nobody could find.
+                // The label must name budgets: 145 lines of budget logic once
+                // hid behind a row that named neither of its contents.
                 label="Budgets & rules"
-                description="Spending limits, auto-categorisation, correction log"
                 icon={IconAdjustmentsHorizontal}
                 active={isActiveRoute(pathname, "/transactions/tools")}
+                onNavigate={close}
+              />
+              <DrawerNavRow
+                href="/transactions/review/month-close"
+                label="Month close"
+                icon={IconCalendarCheck}
+                active={isActiveRoute(pathname, "/transactions/review/month-close")}
                 onNavigate={close}
               />
             </div>
           </DrawerSection>
 
-          <DrawerSection title="Theme & settings">
-            <div className="flex items-center justify-between gap-3 px-3 py-2">
-              <div className="text-sm text-muted-foreground">Switch between light and dark mode.</div>
-              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10" />
-            </div>
+          <div className="grid">
             <DrawerNavRow
               href="/settings"
               label="Settings"
-              description="PIN lock, backup, data export, privacy"
               icon={IconSettings}
               active={isActiveRoute(pathname, "/settings")}
               onNavigate={close}
             />
-          </DrawerSection>
+            <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+              <span className="text-sm font-medium text-foreground">Theme</span>
+              <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

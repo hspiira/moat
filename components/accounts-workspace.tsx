@@ -1,7 +1,5 @@
 "use client";
 
-import { IconPlus } from "@tabler/icons-react";
-
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { getAccountTotals } from "@/lib/domain/accounts";
 import { useFormSheet } from "@/components/hooks/use-form-sheet";
@@ -11,7 +9,6 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
-import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -65,18 +62,7 @@ export function AccountsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title="Accounts"
-        srOnlyTitle
-        aside={
-          profile ? (
-            <Button size="lg" onClick={openAddAccount}>
-              <IconPlus />
-              Add account
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title="Accounts" srOnlyTitle />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading accounts..." /> : null}
@@ -90,20 +76,9 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <DuplicateAccountsPanel
-            accounts={accounts}
-            transactions={transactions}
-            isSubmitting={isSubmitting}
-            onMerge={(sourceId, targetId) => void handleMergeAccount(sourceId, targetId)}
-          />
-
-          <RepairAccountsPanel
-            accounts={accounts}
-            transactions={transactions}
-            isSubmitting={isSubmitting}
-            onRepair={handleRepairAccounts}
-          />
-
+          {/* Content first: what you have, then anything asking for a repair
+              decision, then the accounts themselves. Adding an account lives
+              on the list it adds to, not floating above the page. */}
           <Card>
             <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-8 sm:px-6">
               <div className="min-w-0 space-y-1">
@@ -128,6 +103,20 @@ export function AccountsWorkspace() {
               </dl>
             </CardContent>
           </Card>
+
+          <DuplicateAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onMerge={(sourceId, targetId) => void handleMergeAccount(sourceId, targetId)}
+          />
+
+          <RepairAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onRepair={handleRepairAccounts}
+          />
 
           <AccountList
             accounts={accounts}
