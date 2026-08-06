@@ -35,7 +35,7 @@ function borrowerCaption(borrower: BorrowerLoans): string {
 
 function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-border/20 py-3 last:border-b-0">
+    <div className="flex items-start justify-between gap-3 py-3">
       <div className="grid gap-0.5">
         <span className="font-medium text-foreground">{borrower.borrowerName}</span>
         <span
@@ -82,7 +82,7 @@ export function LendingBand({
   );
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle>Owed to you</CardTitle>
         <CardDescription>
