@@ -109,7 +109,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
               >
                 <span
                   className={[
-                    "text-[0.7rem] font-medium tracking-[0.16em] uppercase",
+                    "text-[0.7rem] font-medium",
                     isLead ? "text-primary-foreground/75" : "text-muted-foreground",
                   ].join(" ")}
                 >

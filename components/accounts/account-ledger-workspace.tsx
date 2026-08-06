@@ -157,7 +157,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
           <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
             <Card>
               <CardHeader className="gap-2 p-5">
-                <CardDescription className="text-xs font-medium tracking-[0.14em] uppercase">
+                <CardDescription className="text-xs font-medium">
                   Current balance
                 </CardDescription>
                 <CardTitle className="font-display text-[clamp(1.75rem,7vw,2.25rem)] leading-none tracking-tight">

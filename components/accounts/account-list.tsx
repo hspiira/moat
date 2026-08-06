@@ -1,46 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import {
-  IconArchive,
-  IconArchiveOff,
-  IconBuildingBank,
-  IconCash,
-  IconChartLine,
-  IconDeviceMobile,
-  IconPencil,
-  IconPlus,
-  IconReceipt2,
-  IconTrash,
-  IconUserDollar,
-  IconUsersGroup,
-} from "@tabler/icons-react";
+import { IconArchive, IconArchiveOff, IconPencil, IconTrash } from "@tabler/icons-react";
 
-import type { Account, AccountType, Transaction } from "@/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 import { canDeleteAccount } from "@/lib/domain/account-cleanup";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 
 import { accountTypeLabels } from "./account-form";
 
-const accountTypeIcons: Record<AccountType, typeof IconCash> = {
-  cash: IconCash,
-  mobile_money: IconDeviceMobile,
-  bank: IconBuildingBank,
-  sacco: IconUsersGroup,
-  investment: IconChartLine,
-  debt: IconReceipt2,
-  receivable: IconUserDollar,
-};
 
 type Props = {
   accounts: Account[];
@@ -63,22 +33,9 @@ export function AccountList({
   const archived = accounts.filter((a) => a.isArchived);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Your accounts</CardTitle>
-        <CardDescription>Balances update as you add transactions.</CardDescription>
-        {onAdd && active.length > 0 ? (
-          <CardAction>
-            <Button size="sm" variant="secondary" onClick={onAdd}>
-              <IconPlus />
-              Add
-            </Button>
-          </CardAction>
-        ) : null}
-      </CardHeader>
-      <CardContent className="px-0">
+    <section>
         {active.length === 0 ? (
-          <EmptyState className="mx-4">
+          <EmptyState>
             <p>No accounts yet. Add your first account to get started.</p>
             {onAdd ? (
               <Button size="sm" className="mt-3" onClick={onAdd}>
@@ -89,30 +46,21 @@ export function AccountList({
         ) : (
           <div>
           {active.map((account) => {
-            const TypeIcon = accountTypeIcons[account.type];
-
             return (
               <div
                 key={account.id}
-                className="group relative px-4 py-3 transition-colors hover:bg-muted/25"
+                className="group relative -mx-2 rounded-lg px-2 py-3.5 transition-colors hover:bg-muted/25"
               >
-                {/* Header: icon + name/type on the left, balance on the right.
-                    The whole card links to the ledger (::after overlay); Edit
-                    is lifted above the overlay so it stays independently
-                    clickable without nesting a button inside the link. */}
+                {/* The whole row links to the ledger (::after overlay); the
+                    action buttons are lifted above the overlay so they stay
+                    independently clickable without nesting inside the link. */}
                 <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
-                  >
-                    <TypeIcon className="size-4.5" />
-                  </span>
                   <Link
                     href={`/accounts/${encodeURIComponent(account.id)}`}
                     aria-label={`Open ${account.name} ledger`}
                     className="min-w-0 flex-1 after:absolute after:inset-0 after:content-['']"
                   >
-                    <div className="truncate text-sm font-medium text-foreground">
+                    <div className="truncate text-base font-medium text-foreground">
                       {account.name}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
@@ -203,7 +151,6 @@ export function AccountList({
             </div>
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+    </section>
   );
 }

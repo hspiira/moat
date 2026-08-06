@@ -9,8 +9,10 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -76,33 +78,32 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          {/* Content first: what you have, then anything asking for a repair
-              decision, then the accounts themselves. Adding an account lives
-              on the list it adds to, not floating above the page. */}
-          <Card>
-            <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-8 sm:px-6">
-              <div className="min-w-0 space-y-1">
-                <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                  Total balance
-                </p>
-                <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-none font-semibold tracking-tight">
-                  <Money
-                    amount={accountTotals.totalBalance}
-                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
-                    className="font-display"
-                  />
-                </div>
+          {/* The total sits bare on the canvas — the number is the hero, and a
+              box around it only shrinks it. Actions ride directly beneath. */}
+          <section className="space-y-4 pt-2">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Total balance</p>
+              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-none font-semibold tracking-tight">
+                <Money
+                  amount={accountTotals.totalBalance}
+                  tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
+                  className="font-display"
+                />
               </div>
-              <dl className="text-sm">
-                <div className="space-y-0.5">
-                  <dt className="text-xs text-muted-foreground">Accounts</dt>
-                  <dd className="text-xl font-semibold tabular-nums">
-                    {accountTotals.activeAccounts}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-muted-foreground">
+                across {accountTotals.activeAccounts}{" "}
+                {accountTotals.activeAccounts === 1 ? "account" : "accounts"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={openAddAccount} className="flex-1 sm:flex-none sm:px-6">
+                Add account
+              </Button>
+              <Button asChild variant="secondary" className="flex-1 sm:flex-none sm:px-6">
+                <Link href="/transactions/import">Import</Link>
+              </Button>
+            </div>
+          </section>
 
           <DuplicateAccountsPanel
             accounts={accounts}

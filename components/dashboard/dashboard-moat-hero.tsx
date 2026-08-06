@@ -114,7 +114,7 @@ export function DashboardMoatHero({
 
         <div className="min-w-0 space-y-4">
           <div className="space-y-1">
-            <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+            <p className="text-xs font-medium text-muted-foreground">
               Your moat
             </p>
             <div className="font-display text-3xl leading-none font-semibold tracking-tight text-foreground sm:text-4xl">

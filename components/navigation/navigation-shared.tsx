@@ -203,7 +203,7 @@ function DrawerSection({
 }) {
   return (
     <section className="grid gap-3">
-      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
       {children}

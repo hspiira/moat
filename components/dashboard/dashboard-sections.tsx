@@ -28,7 +28,7 @@ import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
 
 const CHART_PERIOD_LABELS_CLASS =
-  "flex justify-between text-[11px] uppercase tracking-[0.14em] text-muted-foreground";
+  "flex justify-between text-[11px] text-muted-foreground";
 
 /**
  * Present the savings rate as a headline. A raw percentage beyond ±100% reads

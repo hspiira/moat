@@ -200,7 +200,7 @@ export function CsvReviewCard({
             ["Foreign-currency rows", String(foreignCurrencyCount)],
           ].map(([label, value]) => (
             <div key={label} className="bg-background/60 px-3 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-[11px] text-muted-foreground">
                 {label}
               </div>
               <div className="mt-2 text-3xl font-semibold tracking-tight">{value}</div>
@@ -255,7 +255,7 @@ export function CsvPreviewCard({
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   Row {row.rowIndex}
                 </span>
                 <span className="text-sm tabular-nums text-foreground">

@@ -366,7 +366,7 @@ export function RecurringObligationsPanel({
 function BillSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid min-w-0 gap-0">
-      <h3 className="pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      <h3 className="pb-1 text-xs font-medium text-muted-foreground">
         {title}
       </h3>
       <div className="min-w-0 divide-y divide-border/60">{children}</div>

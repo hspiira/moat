@@ -119,7 +119,7 @@ export function LearnWorkspace() {
                 { kicker: "Guidance boundary", value: "Education, not hot picks" },
               ].map((principle) => (
                 <div key={principle.kicker} className="space-y-1">
-                  <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {principle.kicker}
                   </p>
                   <p className="font-display text-base leading-snug font-medium">

@@ -62,7 +62,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   return (
     <div className="grid gap-5">
       <header className="space-y-1">
-        <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+        <p className="text-xs font-medium text-muted-foreground">
           {periodWindow.title}
         </p>
         <div className="flex items-center justify-between gap-3">

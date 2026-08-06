@@ -157,7 +157,7 @@ export function SyncConflictsWorkspace() {
                   <CardContent className="grid gap-4">
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div className="grid gap-2">
-                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Local pending version
                         </div>
                         <pre className="overflow-x-auto rounded-md bg-muted/20 p-3 text-xs leading-relaxed text-foreground">
@@ -165,7 +165,7 @@ export function SyncConflictsWorkspace() {
                         </pre>
                       </div>
                       <div className="grid gap-2">
-                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Server version
                         </div>
                         <pre className="overflow-x-auto rounded-md bg-muted/20 p-3 text-xs leading-relaxed text-foreground">

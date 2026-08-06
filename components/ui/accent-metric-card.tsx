@@ -26,7 +26,7 @@ export function AccentMetricCard({
   return (
     <Card className={`${toneClassNames[tone]} shadow-none`}>
       <CardContent className="grid gap-2 p-5">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-foreground/65">{kicker}</div>
+        <div className="text-[11px] text-foreground/65">{kicker}</div>
         <div className="text-3xl font-semibold tracking-tight">{value}</div>
         {description ? <div className="text-sm text-foreground/75">{description}</div> : null}
       </CardContent>
