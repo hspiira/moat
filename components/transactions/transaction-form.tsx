@@ -21,10 +21,10 @@ import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
+import { CategoryField } from "@/components/transactions/category-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
-  categoryOptionGroups,
   optionsFromRecord,
   supportedCurrencyOptionLabels,
 } from "@/lib/select-options";
@@ -178,26 +178,21 @@ export function TransactionForm({
 
           {/* Category comes first now: it decides the transaction type, and
               therefore which of the fields below are even relevant. */}
-          <div className="grid gap-2">
-            <SelectField
-              id="tx-category"
-              label="Category"
-              value={form.categoryId}
-              placeholder="What was it for?"
-              groups={categoryOptionGroups(categories)}
-              onValueChange={(v) => {
-                const picked = categories.find((category) => category.id === v);
-                onFormChange((c) => ({
-                  ...c,
-                  categoryId: v,
-                  // The category decides the type. There is no separate type
-                  // field left to disagree with it, so the pair is coherent by
-                  // construction rather than by validation.
-                  type: picked ? transactionTypeForCategory(picked) : c.type,
-                }));
-              }}
-            />
-          </div>
+          <CategoryField
+            categories={categories}
+            value={form.categoryId}
+            type={form.type}
+            onSelect={(picked) =>
+              onFormChange((c) => ({
+                ...c,
+                categoryId: picked.id,
+                // The category decides the type. There is no separate type
+                // field left to disagree with it, so the pair is coherent by
+                // construction rather than by validation.
+                type: transactionTypeForCategory(picked),
+              }))
+            }
+          />
 
           <div className="grid gap-2">
             <SelectField
