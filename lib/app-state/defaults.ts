@@ -37,6 +37,9 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
   // only the write-off is an expense.
   { name: "Money written off", kind: "expense" },
+  // The mirror: a lender writing off what you owe them. Your liability falls
+  // and net worth rises, so it is income, not a negative expense.
+  { name: "Debt forgiven", kind: "income" },
 ];
 
 export const defaultAccountTypes: AccountType[] = [

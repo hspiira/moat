@@ -24,6 +24,7 @@ import {
 
 import { AccountForm } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
+import { DuplicateAccountsPanel } from "./accounts/duplicate-accounts-panel";
 import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 import { useAccountsWorkspace } from "./accounts/use-accounts-workspace";
 
@@ -42,6 +43,9 @@ export function AccountsWorkspace() {
     successMessage,
     setAccountForm,
     handleAccountSubmit,
+    handleArchiveAccount,
+    handleDeleteAccount,
+    handleMergeAccount,
     handleRepairAccounts,
     beginAccountEdit,
     cancelEdit,
@@ -85,6 +89,13 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
+          <DuplicateAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onMerge={(sourceId, targetId) => void handleMergeAccount(sourceId, targetId)}
+          />
+
           <RepairAccountsPanel
             accounts={accounts}
             transactions={transactions}
@@ -122,6 +133,8 @@ export function AccountsWorkspace() {
             transactions={transactions}
             onEdit={openEditAccount}
             onAdd={openAddAccount}
+            onArchive={(accountId, isArchived) => void handleArchiveAccount(accountId, isArchived)}
+            onDelete={(accountId) => void handleDeleteAccount(accountId)}
           />
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>

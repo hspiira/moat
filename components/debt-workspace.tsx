@@ -2,25 +2,31 @@
 
 import { useMemo } from "react";
 
+import { BorrowingBand } from "@/components/accounts/borrowing-band";
 import { DebtPayoffPlanner } from "@/components/accounts/debt-payoff-planner";
 import { LendingBand } from "@/components/accounts/lending-band";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { EmptyStateCard } from "@/components/page-shell/page-state";
-import { getDebtSummary } from "@/lib/domain/debt";
+import { getBorrowingPortfolio } from "@/lib/domain/borrowing";
+import { getDebtPortfolioSummary } from "@/lib/domain/debt";
+import { getLendingPortfolio } from "@/lib/domain/lending";
 
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 
 export function DebtWorkspace() {
   const workspace = useTransactionsWorkspace();
-  const { accounts, transactions } = workspace;
+  const { accounts, transactions, counterparties } = workspace;
+  const asOf = useMemo(() => new Date(), []);
 
-  const hasDebt = useMemo(
-    () => accounts.some((account) => getDebtSummary(account, transactions) !== null),
-    [accounts, transactions],
-  );
-  const hasReceivables = useMemo(
-    () => accounts.some((account) => account.type === "receivable" && !account.isArchived),
-    [accounts],
+  // Each panel already hides itself when its own side is empty. What the page
+  // needs to know is whether all three are, which is the only case that should
+  // render an explanation instead of a blank screen.
+  const hasAnything = useMemo(
+    () =>
+      getDebtPortfolioSummary(accounts, transactions).length > 0 ||
+      getLendingPortfolio(accounts, transactions, asOf, counterparties).borrowers.length > 0 ||
+      getBorrowingPortfolio(accounts, transactions, asOf, counterparties).lenders.length > 0,
+    [accounts, transactions, counterparties, asOf],
   );
 
   return (
@@ -33,23 +39,26 @@ export function DebtWorkspace() {
       loadingMessage="Loading what you owe and what you are owed..."
       setupMessage="Complete onboarding and add at least one account before tracking what is owed."
     >
-      {/* Both panels return null when their side is empty, which is right when
-          they sit among other panels. On this route that would be a blank
-          screen, so the doubly-empty case gets an explanation and the action
-          that resolves it. */}
-      {hasDebt ? (
-        <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
-      ) : null}
+      <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
-      <LendingBand accounts={accounts} transactions={transactions} />
+      <BorrowingBand
+        accounts={accounts}
+        transactions={transactions}
+        counterparties={counterparties}
+      />
 
-      {/* Only genuinely empty when neither direction has anything in it. */}
-      {hasDebt || hasReceivables ? null : (
+      <LendingBand
+        accounts={accounts}
+        transactions={transactions}
+        counterparties={counterparties}
+      />
+
+      {hasAnything ? null : (
         <EmptyStateCard
           title="Nothing owed in either direction"
-          message="Add a debt account for money you owe, or a 'Money lent out' account for money someone owes you."
-          href="/accounts"
-          cta="Go to accounts"
+          message="Record a transfer into 'Money lent out' when you lend someone money, or out of 'Money borrowed' when you borrow. Both accounts are already set up for you."
+          href="/transactions"
+          cta="Record a transaction"
         />
       )}
     </FeaturePageShell>

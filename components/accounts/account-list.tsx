@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import {
+  IconArchive,
+  IconArchiveOff,
   IconBuildingBank,
   IconCash,
   IconChartLine,
   IconDeviceMobile,
   IconPencil,
   IconReceipt2,
+  IconTrash,
   IconUserDollar,
   IconUsersGroup,
 } from "@tabler/icons-react";
 
 import type { Account, AccountType, Transaction } from "@/lib/types";
+import { canDeleteAccount } from "@/lib/domain/account-cleanup";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,10 +47,20 @@ type Props = {
   transactions: Transaction[];
   onEdit: (account: Account) => void;
   onAdd?: () => void;
+  onArchive?: (accountId: string, isArchived: boolean) => void;
+  onDelete?: (accountId: string) => void;
 };
 
-export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
+export function AccountList({
+  accounts,
+  transactions,
+  onEdit,
+  onAdd,
+  onArchive,
+  onDelete,
+}: Props) {
   const active = accounts.filter((a) => !a.isArchived);
+  const archived = accounts.filter((a) => a.isArchived);
 
   return (
     <Card>
@@ -112,6 +126,30 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
                   >
                     <IconPencil />
                   </Button>
+                  {onArchive ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Archive ${account.name}`}
+                      title={`Archive ${account.name}`}
+                      className="relative z-10 size-9 shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => onArchive(account.id, true)}
+                    >
+                      <IconArchive />
+                    </Button>
+                  ) : null}
+                  {onDelete && canDeleteAccount(account, transactions).allowed ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Delete ${account.name}`}
+                      title={`Delete ${account.name}`}
+                      className="relative z-10 size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => onDelete(account.id)}
+                    >
+                      <IconTrash />
+                    </Button>
+                  ) : null}
                 </div>
 
                 <div className="relative z-10 mt-2 w-fit">
@@ -131,6 +169,45 @@ export function AccountList({ accounts, transactions, onEdit, onAdd }: Props) {
           })}
           </div>
         )}
+
+        {archived.length > 0 ? (
+          <div className="mt-4 border-t border-border/40 px-4 pt-4">
+            <div className="text-xs font-medium text-muted-foreground">
+              Archived ({archived.length})
+            </div>
+            <div className="mt-2 grid gap-1">
+              {archived.map((account) => (
+                <div key={account.id} className="flex items-center justify-between gap-3 py-1">
+                  <span className="truncate text-sm text-muted-foreground">{account.name}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {onArchive ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 text-xs"
+                        onClick={() => onArchive(account.id, false)}
+                      >
+                        <IconArchiveOff className="mr-1 size-3.5" />
+                        Restore
+                      </Button>
+                    ) : null}
+                    {onDelete && canDeleteAccount(account, transactions).allowed ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`Delete ${account.name}`}
+                        className="size-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => onDelete(account.id)}
+                      >
+                        <IconTrash className="size-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
