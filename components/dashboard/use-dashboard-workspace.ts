@@ -3,7 +3,9 @@
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getAttentionItems } from "@/lib/domain/attention";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
+import { getSectionOf } from "@/lib/domain/capture-review";
 import {
   buildPeriodWindow,
   buildDashboardChartSeries,
@@ -23,6 +25,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = useState<PeriodFilter>("month");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,18 +36,27 @@ export function useDashboardWorkspace(profile: UserProfile) {
 
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const [storedAccounts, storedCategories, storedTransactions, storedBudgets] =
-        await Promise.all([
-          repositories.accounts.listByUser(profile.id),
-          repositories.categories.listByUser(profile.id),
-          repositories.transactions.listByUser(profile.id),
-          repositories.budgets.listByMonth(profile.id, currentMonth),
-        ]);
+      const [
+        storedAccounts,
+        storedCategories,
+        storedTransactions,
+        storedBudgets,
+        storedReviewItems,
+      ] = await Promise.all([
+        repositories.accounts.listByUser(profile.id),
+        repositories.categories.listByUser(profile.id),
+        repositories.transactions.listByUser(profile.id),
+        repositories.budgets.listByMonth(profile.id, currentMonth),
+        repositories.captureReviewItems.listByUser(profile.id),
+      ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
       setCategories(storedCategories);
       setTransactions(storedTransactions);
       setBudgets(storedBudgets);
+      setReviewCount(
+        storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
+      );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Couldn't load dashboard. Please try again.");
     } finally {
@@ -99,6 +111,10 @@ export function useDashboardWorkspace(profile: UserProfile) {
     () => getBudgetEnvelopes(budgets, categories, monthTransactions).slice(0, 4),
     [budgets, categories, monthTransactions],
   );
+  const attentionItems = useMemo(
+    () => getAttentionItems({ envelopes: budgetEnvelopes, reviewCount, insights }),
+    [budgetEnvelopes, reviewCount, insights],
+  );
   const topAccounts = useMemo(
     () =>
       [...accounts]
@@ -128,7 +144,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     periodWindow,
     summary,
     savingsRate,
-    insights,
+    attentionItems,
     chartLabel,
     chartSeries,
     budgetCoverage,
