@@ -164,13 +164,35 @@ export type Transaction = {
   /** The account balance the source message stated, used for gap reconciliation. */
   statedBalance?: number;
   /**
-   * Lending only, set on the leg that lands on a receivable. Lives on the loan
-   * rather than the account so a borrower sitting in the shared lending pool
-   * can still have a due date. Always user-stated — never inferred the way a
-   * debt minimum payment is.
+   * The person on the other side of a loan. This is the subsidiary-ledger key:
+   * the lending and borrowing pools are control accounts, and every per-person
+   * balance is derived by grouping on this rather than on the `payee` text.
+   */
+  counterpartyId?: string;
+  /**
+   * Always user-stated — never inferred the way a debt minimum payment is.
    */
   expectedRepaymentDate?: string;
   importBatchId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CounterpartyKind = "borrower" | "lender" | "both";
+
+/**
+ * A person money is owed to or by. Deliberately not an Account: an account is
+ * a place money sits, and a person is not. This is the subsidiary ledger behind
+ * the two pool control accounts.
+ */
+export type Counterparty = {
+  id: string;
+  userId: string;
+  name: string;
+  kind: CounterpartyKind;
+  phone?: string;
+  notes?: string;
+  isArchived: boolean;
   createdAt: string;
   updatedAt: string;
 };

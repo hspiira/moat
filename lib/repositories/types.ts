@@ -5,6 +5,7 @@ import type {
   CaptureReviewItem,
   Category,
   CorrectionLog,
+  Counterparty,
   Goal,
   ImportBatch,
   InvestmentProfile,
@@ -48,6 +49,8 @@ export interface CategoryRepository extends Repository<Category> {
   listDefaults(userId: string): Promise<Category[]>;
 }
 
+export type CounterpartyRepository = Repository<Counterparty>;
+
 export type GoalRepository = Repository<Goal>;
 
 export interface BudgetTargetRepository extends Repository<BudgetTarget> {
@@ -86,6 +89,7 @@ export interface RepositoryBundle {
   recurringObligations: RecurringObligationRepository;
   monthCloses: MonthCloseRepository;
   categories: CategoryRepository;
+  counterparties: CounterpartyRepository;
   goals: GoalRepository;
   budgets: BudgetTargetRepository;
   investmentProfiles: InvestmentProfileRepository;
