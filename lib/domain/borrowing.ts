@@ -1,10 +1,12 @@
 import { isTransferTransaction } from "@/lib/domain/transfers";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 /**
  * Informal borrowing, grouped by lender. The mirror of `lending.ts`, and kept
  * separate from `debt.ts` because an informal loan has no rate or term to
  * amortise — projecting one would invent a schedule nobody agreed to.
+ *
+ * The pool is a control account; each lender is a `Counterparty`.
  *
  * Sign convention on a debt account: the balance is negative while money is
  * owed, so a negative transfer leg is borrowing and a positive leg is
@@ -23,6 +25,7 @@ export type PayableStatus = "outstanding" | "settled" | "forgiven" | "overpaid";
 
 export type LenderLoans = {
   lenderKey: string;
+  counterpartyId?: string;
   lenderName: string;
   accountId?: string;
   amountBorrowed: number;
@@ -83,14 +86,30 @@ type Bucket = {
   lenderKey: string;
   lenderName: string;
   accountId?: string;
+  counterpartyId?: string;
   openingBalance: number;
   transactions: Transaction[];
 };
 
-/** Lowercased, since the same person gets typed differently across months. */
-function bucketFor(account: Account, transaction: Transaction): { key: string; name: string } {
+/** Rows written before counterparties existed fall back to the payee text. */
+function bucketFor(
+  account: Account,
+  transaction: Transaction,
+  counterparties: Map<string, Counterparty>,
+): { key: string; name: string; counterpartyId?: string } {
   if (account.id !== BORROWING_POOL_ACCOUNT_ID) {
     return { key: `account:${account.id}`, name: account.name };
+  }
+
+  const counterparty = transaction.counterpartyId
+    ? counterparties.get(transaction.counterpartyId)
+    : undefined;
+  if (counterparty) {
+    return {
+      key: `counterparty:${counterparty.id}`,
+      name: counterparty.name,
+      counterpartyId: counterparty.id,
+    };
   }
 
   const payee = transaction.payee?.trim();
@@ -143,6 +162,7 @@ function summarise(bucket: Bucket, asOf: Date): LenderLoans {
     lenderKey: bucket.lenderKey,
     lenderName: bucket.lenderName,
     accountId: bucket.accountId,
+    counterpartyId: bucket.counterpartyId,
     amountBorrowed,
     amountRepaid,
     amountForgiven,
@@ -180,7 +200,9 @@ export function getBorrowingPortfolio(
   accounts: Account[],
   transactions: Transaction[],
   asOf: Date,
+  counterparties: Counterparty[] = [],
 ): BorrowingPortfolio {
+  const byId = new Map(counterparties.map((entry) => [entry.id, entry]));
   const payables = new Map(
     accounts
       .filter((account) => isInformalDebt(account) && !account.isArchived)
@@ -188,6 +210,21 @@ export function getBorrowingPortfolio(
   );
 
   const buckets = new Map<string, Bucket>();
+
+  if (payables.has(BORROWING_POOL_ACCOUNT_ID)) {
+    for (const counterparty of counterparties) {
+      if (!counterparty.openingBalance || counterparty.isArchived) {
+        continue;
+      }
+      buckets.set(`counterparty:${counterparty.id}`, {
+        lenderKey: `counterparty:${counterparty.id}`,
+        lenderName: counterparty.name,
+        counterpartyId: counterparty.id,
+        openingBalance: -counterparty.openingBalance,
+        transactions: [],
+      });
+    }
+  }
 
   for (const account of payables.values()) {
     if (account.id === BORROWING_POOL_ACCOUNT_ID || account.openingBalance >= 0) {
@@ -213,7 +250,7 @@ export function getBorrowingPortfolio(
       continue;
     }
 
-    const { key, name } = bucketFor(account, transaction);
+    const { key, name, counterpartyId } = bucketFor(account, transaction, byId);
     const existing = buckets.get(key);
 
     if (existing) {
@@ -224,6 +261,7 @@ export function getBorrowingPortfolio(
     buckets.set(key, {
       lenderKey: key,
       lenderName: name,
+      counterpartyId,
       accountId: account.id === BORROWING_POOL_ACCOUNT_ID ? undefined : account.id,
       openingBalance: account.id === BORROWING_POOL_ACCOUNT_ID ? 0 : account.openingBalance,
       transactions: [transaction],

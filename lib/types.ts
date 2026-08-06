@@ -190,6 +190,12 @@ export type Counterparty = {
   userId: string;
   name: string;
   kind: CounterpartyKind;
+  /**
+   * Money already owed before Moat was in use. The matching pool account holds
+   * the same total in its own opening balance, so the control account and the
+   * sum of its subsidiary entries still agree.
+   */
+  openingBalance?: number;
   phone?: string;
   notes?: string;
   isArchived: boolean;

@@ -231,18 +231,28 @@ export function useAccountsWorkspace() {
   async function handleMergeAccount(sourceId: string, targetId: string) {
     const source = accounts.find((entry) => entry.id === sourceId);
     const target = accounts.find((entry) => entry.id === targetId);
-    if (!source || !target) return false;
+    if (!source || !target || !profile) return false;
 
     return mutate(async () => {
-      const plan = planAccountMerge(source, target, transactions, new Date().toISOString());
-      if (plan.blocked) {
+      const existingCounterparties = await repositories.counterparties.listByUser(profile.id);
+      const plan = planAccountMerge(
+        source,
+        target,
+        transactions,
+        existingCounterparties,
+        new Date().toISOString(),
+        () => `counterparty:${crypto.randomUUID()}`,
+      );
+      if (plan.blocked !== undefined) {
         throw new Error(plan.blocked);
       }
 
-      // The records move first. If this is interrupted the source account is
-      // still there holding whatever has not moved yet, which is recoverable;
-      // removing it first would orphan them.
+      // The counterparty and the moved records land before the account goes.
+      // If this is interrupted the source is still there holding whatever has
+      // not moved, which is recoverable; removing it first would orphan them.
+      await repositories.counterparties.upsert(plan.counterparty);
       await Promise.all(plan.transactions.map((row) => repositories.transactions.upsert(row)));
+      await repositories.accounts.upsert(plan.target);
       await repositories.accounts.remove(sourceId);
 
       return `${source.name} merged into ${target.name}.`;

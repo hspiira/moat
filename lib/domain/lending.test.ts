@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { buildCounterparty } from "@/lib/domain/counterparties";
 import {
   LENDING_POOL_ACCOUNT_ID,
   buildLendingPoolAccount,
@@ -380,5 +381,35 @@ describe("portfolio totals and ordering", () => {
     const transactions = [lend(500_000, "2026-01-01", { accountId: old.id })];
 
     expect(getLendingPortfolio([old], transactions, ASOF).borrowers).toEqual([]);
+  });
+
+  it("groups on the counterparty, so a typo in the payee cannot split a borrower", () => {
+    const sarah = buildCounterparty({
+      id: "counterparty:sarah",
+      userId: "user:default",
+      name: "Sarah",
+      kind: "borrower",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    const transactions = [
+      { ...lend(200_000, "2026-05-01", { payee: "Sarah" }), counterpartyId: sarah.id },
+      { ...lend(100_000, "2026-06-01", { payee: "Sarra" }), counterpartyId: sarah.id },
+    ];
+
+    const portfolio = getLendingPortfolio([pool], transactions, ASOF, [sarah]);
+
+    expect(portfolio.borrowers).toHaveLength(1);
+    expect(portfolio.borrowers[0].borrowerName).toBe("Sarah");
+    expect(portfolio.borrowers[0].counterpartyId).toBe(sarah.id);
+    expect(portfolio.borrowers[0].outstanding).toBe(300_000);
+  });
+
+  it("falls back to the payee for rows written before counterparties existed", () => {
+    const transactions = [lend(200_000, "2026-05-01", { payee: "Musa" })];
+
+    const portfolio = getLendingPortfolio([pool], transactions, ASOF, []);
+
+    expect(portfolio.borrowers[0].borrowerName).toBe("Musa");
+    expect(portfolio.borrowers[0].counterpartyId).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
 import { isReservedAccountId, isReservedAccountName } from "@/lib/app-state/default-accounts";
-import type { Account, Transaction } from "@/lib/types";
+import { resolveCounterparty } from "@/lib/domain/counterparties";
+import type { Account, Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
 
 /**
  * Nothing cascades a delete, and the reporting paths silently skip transactions
@@ -43,54 +44,86 @@ export function canDeleteAccount(
 }
 
 export type MergePlan =
-  | { blocked: string; transactions: [] }
-  | { blocked?: undefined; transactions: Transaction[] };
+  | { blocked: string }
+  | {
+      blocked?: undefined;
+      counterparty: Counterparty;
+      transactions: Transaction[];
+      /** The pool, with the merged account's opening balance folded in. */
+      target: Account;
+    };
+
+function counterpartyKindFor(accountType: Account["type"]): CounterpartyKind {
+  return accountType === "receivable" ? "borrower" : "lender";
+}
 
 /**
- * Re-points every record onto `target`, stamping the source account's name as
- * the payee because that is what a pool groups on. `rawPayee` is left alone: it
- * holds what was captured from an SMS, which is evidence rather than a key.
+ * Folds a per-person account into the pool it duplicates, turning the account
+ * itself into the counterparty that its name stood for.
+ *
+ * The opening balance moves onto both the counterparty and the pool, so the
+ * control account still equals the sum of its subsidiary entries and net worth
+ * does not move: the pool gains exactly what the removed account took with it.
  */
 export function planAccountMerge(
   source: Account,
   target: Account,
   transactions: Transaction[],
+  counterparties: Counterparty[],
   timestamp: string,
+  nextCounterpartyId: () => string,
 ): MergePlan {
   if (source.id === target.id) {
-    return { blocked: "An account cannot be merged into itself.", transactions: [] };
+    return { blocked: "An account cannot be merged into itself." };
   }
   if (isReservedAccountId(source.id)) {
-    return {
-      blocked: `${source.name} is created for everyone and cannot be merged away.`,
-      transactions: [],
-    };
+    return { blocked: `${source.name} is created for everyone and cannot be merged away.` };
   }
   if (source.type !== target.type) {
     return {
       blocked: `${source.name} and ${target.name} track opposite directions of money, so merging them would flip the sign on every record.`,
-      transactions: [],
     };
   }
-  // A pool balance cannot be attributed to any one person, so the portfolios
-  // skip it — carrying one across would add money no row accounts for.
-  if (source.openingBalance !== 0) {
-    return {
-      blocked: `${source.name} has an opening balance. Set it to zero and record that loan as a transaction first, or keep this account as its own ledger.`,
-      transactions: [],
-    };
-  }
+
+  const kind = counterpartyKindFor(source.type);
+  const resolved = resolveCounterparty(counterparties, {
+    name: source.name,
+    kind,
+    userId: source.userId,
+    id: nextCounterpartyId(),
+    timestamp,
+  });
+
+  const carried = Math.abs(source.openingBalance);
+  const counterparty =
+    carried === 0
+      ? resolved.counterparty
+      : {
+          ...resolved.counterparty,
+          openingBalance: (resolved.counterparty.openingBalance ?? 0) + carried,
+          updatedAt: timestamp,
+        };
 
   const moved = transactions
     .filter((transaction) => transaction.accountId === source.id)
     .map((transaction) => ({
       ...transaction,
       accountId: target.id,
-      payee: source.name,
+      counterpartyId: counterparty.id,
+      payee: counterparty.name,
       updatedAt: timestamp,
     }));
 
-  return { transactions: moved };
+  return {
+    counterparty,
+    transactions: moved,
+    target: {
+      ...target,
+      openingBalance: target.openingBalance + source.openingBalance,
+      balance: target.balance + source.openingBalance,
+      updatedAt: timestamp,
+    },
+  };
 }
 
 export function findDuplicatePoolAccounts(accounts: Account[]): Account[] {

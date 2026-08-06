@@ -6,8 +6,9 @@ import {
   planAccountMerge,
 } from "@/lib/domain/account-cleanup";
 import { buildBorrowingPoolAccount } from "@/lib/domain/borrowing";
+import { buildCounterparty } from "@/lib/domain/counterparties";
 import { buildLendingPoolAccount } from "@/lib/domain/lending";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 const TIMESTAMP = "2026-08-06T00:00:00.000Z";
 const pool = buildLendingPoolAccount("user:default", "2026-01-01T00:00:00.000Z");
@@ -76,64 +77,85 @@ describe("canDeleteAccount", () => {
 });
 
 describe("planAccountMerge", () => {
-  it("re-points every record and stamps the account name as the payee", () => {
-    const source = account({ name: "Loan to Sarah" });
+  function merge(
+    source: Account,
+    target: Account,
+    rows: Transaction[] = [],
+    counterparties: Counterparty[] = [],
+  ) {
+    let seq = 0;
+    return planAccountMerge(
+      source,
+      target,
+      rows,
+      counterparties,
+      TIMESTAMP,
+      () => `counterparty:${(seq += 1)}`,
+    );
+  }
+
+  it("turns the account into a counterparty and re-points every record at it", () => {
     const rows = [
       transaction(),
       transaction({ id: "tx:writeoff", type: "expense", amount: 20_000 }),
       transaction({ id: "tx:elsewhere", accountId: "account:wallet" }),
     ];
 
-    const plan = planAccountMerge(source, pool, rows, TIMESTAMP);
+    const plan = merge(account({ name: "Loan to Sarah" }), pool, rows);
 
     expect(plan.blocked).toBeUndefined();
+    if (plan.blocked !== undefined) return;
+
+    expect(plan.counterparty.name).toBe("Loan to Sarah");
+    expect(plan.counterparty.kind).toBe("borrower");
     expect(plan.transactions).toHaveLength(2);
     expect(plan.transactions.every((row) => row.accountId === pool.id)).toBe(true);
-    expect(plan.transactions.every((row) => row.payee === "Loan to Sarah")).toBe(true);
-    expect(plan.transactions.every((row) => row.updatedAt === TIMESTAMP)).toBe(true);
+    expect(
+      plan.transactions.every((row) => row.counterpartyId === plan.counterparty.id),
+    ).toBe(true);
     // The transfer pair must stay balanced, so the moved leg keeps its group
     // and its amount untouched.
     expect(plan.transactions[0].transferGroupId).toBe("transfer:abc");
     expect(plan.transactions[0].amount).toBe(120_000);
   });
 
-  it("leaves the originally captured text alone", () => {
-    const plan = planAccountMerge(
-      account({ name: "Loan to Sarah" }),
-      pool,
-      [transaction({ payee: "SARAH K", rawPayee: "MTN: SARAH K" })],
-      TIMESTAMP,
-    );
+  it("reuses a counterparty that already exists under that name", () => {
+    const existing = buildCounterparty({
+      id: "counterparty:sarah",
+      userId: "user:default",
+      name: "loan to sarah",
+      kind: "borrower",
+      timestamp: TIMESTAMP,
+    });
 
-    expect(plan.transactions[0].payee).toBe("Loan to Sarah");
-    expect(plan.transactions[0].rawPayee).toBe("MTN: SARAH K");
+    const plan = merge(account({ name: "Loan to Sarah" }), pool, [], [existing]);
+
+    expect(plan.blocked).toBeUndefined();
+    if (plan.blocked !== undefined) return;
+    expect(plan.counterparty.id).toBe("counterparty:sarah");
   });
 
-  it("refuses to merge away an opening balance it cannot attribute", () => {
-    const plan = planAccountMerge(
-      account({ openingBalance: 300_000, balance: 300_000 }),
-      pool,
-      [],
-      TIMESTAMP,
-    );
+  it("carries an opening balance onto the person and the pool together", () => {
+    const plan = merge(account({ openingBalance: 300_000, balance: 300_000 }), pool);
 
-    expect(plan.blocked).toContain("opening balance");
-    expect(plan.transactions).toEqual([]);
+    expect(plan.blocked).toBeUndefined();
+    if (plan.blocked !== undefined) return;
+
+    expect(plan.counterparty.openingBalance).toBe(300_000);
+    // Net worth cannot move: the pool gains exactly what the account took away.
+    expect(plan.target.openingBalance).toBe(pool.openingBalance + 300_000);
+    expect(plan.target.balance).toBe(pool.balance + 300_000);
   });
 
   it("refuses to merge across opposite directions of money", () => {
     const borrowingPool = buildBorrowingPoolAccount("user:default", TIMESTAMP);
 
-    const plan = planAccountMerge(account(), borrowingPool, [], TIMESTAMP);
-
-    expect(plan.blocked).toContain("opposite directions");
+    expect(merge(account(), borrowingPool).blocked).toContain("opposite directions");
   });
 
   it("refuses to merge a seeded pool away or into itself", () => {
-    expect(planAccountMerge(pool, account(), [], TIMESTAMP).blocked).toContain(
-      "cannot be merged away",
-    );
-    expect(planAccountMerge(pool, pool, [], TIMESTAMP).blocked).toContain("into itself");
+    expect(merge(pool, account()).blocked).toContain("cannot be merged away");
+    expect(merge(pool, pool).blocked).toContain("into itself");
   });
 });
 
