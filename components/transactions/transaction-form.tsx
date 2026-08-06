@@ -3,8 +3,18 @@
 import { useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
-import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
-import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
+import type {
+  Account,
+  Category,
+  Counterparty,
+  SupportedCurrency,
+  TransactionType,
+} from "@/lib/types";
+import {
+  NEW_COUNTERPARTY,
+  counterpartyOptionsFor,
+  describeTransferCounterparty,
+} from "@/lib/domain/transfer-counterparty";
 import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
@@ -29,6 +39,9 @@ export type TransactionFormState = {
   categoryId: string;
   currency: SupportedCurrency;
   payee: string;
+  /** The person on a loan. NEW_COUNTERPARTY means "use counterpartyName". */
+  counterpartyId: string;
+  counterpartyName: string;
   amount: string;
   fxRateToUgx: string;
   feeAmount: string;
@@ -45,6 +58,8 @@ export const defaultTransactionForm: TransactionFormState = {
   categoryId: "",
   currency: "UGX",
   payee: "",
+  counterpartyId: "",
+  counterpartyName: "",
   amount: "",
   fxRateToUgx: "",
   feeAmount: "",
@@ -57,6 +72,7 @@ export const defaultTransactionForm: TransactionFormState = {
 type Props = {
   accounts: Account[];
   categories: Category[];
+  counterparties: Counterparty[];
   form: TransactionFormState;
   editingId: string | null;
   isSubmitting: boolean;
@@ -75,6 +91,7 @@ type Props = {
 export function TransactionForm({
   accounts,
   categories,
+  counterparties,
   form,
   editingId,
   isSubmitting,
@@ -229,14 +246,30 @@ export function TransactionForm({
           {counterparty ? (
             <>
               {counterparty.requiresPayee ? (
-                <InputField
-                  id="tx-counterparty"
-                  label={counterparty.label}
-                  value={form.payee}
-                  onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
-                  placeholder={counterparty.placeholder}
-                  hint="Loans are grouped by this name, so spell it the same way each time."
-                />
+                <>
+                  <SelectField
+                    id="tx-counterparty"
+                    label={counterparty.label}
+                    value={form.counterpartyId}
+                    placeholder="Select or add a person"
+                    options={counterpartyOptionsFor(counterparties, counterparty.direction)}
+                    onValueChange={(value) =>
+                      onFormChange((c) => ({ ...c, counterpartyId: value }))
+                    }
+                  />
+                  {form.counterpartyId === NEW_COUNTERPARTY ? (
+                    <InputField
+                      id="tx-counterparty-name"
+                      label="Their name"
+                      value={form.counterpartyName}
+                      onChange={(e) =>
+                        onFormChange((c) => ({ ...c, counterpartyName: e.target.value }))
+                      }
+                      placeholder={counterparty.placeholder}
+                      hint="Added to your people, so next time you pick them from the list."
+                    />
+                  ) : null}
+                </>
               ) : null}
               {counterparty.showExpectedDate ? (
                 <DatePickerField

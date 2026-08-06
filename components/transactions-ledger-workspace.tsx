@@ -149,6 +149,7 @@ export function TransactionsLedgerWorkspace() {
                 embedded
                 accounts={workspace.accounts}
                 categories={workspace.categories}
+                counterparties={workspace.counterparties}
                 form={workspace.transactionForm}
                 editingId={workspace.editingTransactionId}
                 isSubmitting={workspace.isSubmitting}

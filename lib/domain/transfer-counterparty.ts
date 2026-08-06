@@ -1,6 +1,6 @@
 import { BORROWING_POOL_ACCOUNT_ID, isInformalDebt } from "@/lib/domain/borrowing";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
-import type { Account } from "@/lib/types";
+import type { Account, Counterparty } from "@/lib/types";
 
 /**
  * Both legs are inspected, not just the destination. A repayment puts the loan
@@ -83,4 +83,32 @@ export function describeTransferCounterparty(
   }
 
   return null;
+}
+
+export const NEW_COUNTERPARTY = "counterparty:new";
+
+/**
+ * Picking from a list rather than retyping a name is what stops one borrower
+ * becoming two. Someone recorded on the other side of the ledger still shows,
+ * since lending to a person you have borrowed from is ordinary.
+ */
+export function counterpartyOptionsFor(
+  counterparties: Counterparty[],
+  direction: TransferDirection,
+): { value: string; label: string }[] {
+  const wanted = direction === "lend" || direction === "collect" ? "borrower" : "lender";
+
+  const people = counterparties
+    .filter((entry) => !entry.isArchived)
+    .sort((left, right) => {
+      const leftMatches = left.kind === wanted || left.kind === "both";
+      const rightMatches = right.kind === wanted || right.kind === "both";
+      if (leftMatches !== rightMatches) {
+        return leftMatches ? -1 : 1;
+      }
+      return left.name.localeCompare(right.name);
+    })
+    .map((entry) => ({ value: entry.id, label: entry.name }));
+
+  return [...people, { value: NEW_COUNTERPARTY, label: "Someone else…" }];
 }
