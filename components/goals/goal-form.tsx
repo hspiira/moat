@@ -198,7 +198,7 @@ export function GoalForm({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} type="submit" size="sm">
+            <Button disabled={isSubmitting} type="submit" size="lg" className="w-full sm:w-auto">
               {isSubmitting ? "Saving…" : editingId ? "Update goal" : "Add goal"}
             </Button>
             {editingId ? (

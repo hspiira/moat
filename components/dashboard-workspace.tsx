@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { IconChevronRight } from "@tabler/icons-react";
+
 import { DashboardBalanceBridge } from "@/components/dashboard/dashboard-balance-bridge";
 import { DashboardMoatHero } from "@/components/dashboard/dashboard-moat-hero";
 import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
@@ -9,6 +12,7 @@ import {
   DashboardTopSpendingCategories,
 } from "@/components/dashboard/dashboard-sections";
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
+import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 import { ErrorStateCard } from "@/components/page-shell/page-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAccountTotals } from "@/lib/domain/accounts";
@@ -54,6 +58,8 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     inflowChange,
     outflowChange,
   } = useDashboardWorkspace(profile);
+
+  const record = useRecordTransaction();
 
   const { totalBalance, activeAccounts: activeAccountCount } = getAccountTotals(accounts);
   // Use the first name only so the heading and filter always share one row.
@@ -103,6 +109,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             chartSeries={chartSeries}
           />
 
+          <Link
+            href="/report"
+            className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+          >
+            See how your money has moved
+            <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+
           <details className="group">
             <summary className="cursor-pointer list-none rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
               How this period moved
@@ -120,9 +134,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             </div>
           </details>
 
-          <DashboardTopSpendingCategories categories={summary.topCategories} />
+          <DashboardTopSpendingCategories
+            categories={summary.topCategories}
+            onAddTransaction={record.open}
+          />
         </>
       )}
+
+      {record.sheet}
     </div>
   );
 }

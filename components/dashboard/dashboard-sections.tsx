@@ -274,11 +274,14 @@ export function DashboardCashFlowSection({
 
 export function DashboardTopSpendingCategories({
   categories,
+  onAddTransaction,
 }: {
+  onAddTransaction?: () => void;
   categories: {
     categoryId: string;
     categoryName: string;
     amount: number;
+    count: number;
   }[];
 }) {
   return (
@@ -299,9 +302,15 @@ export function DashboardTopSpendingCategories({
         {categories.length === 0 ? (
           <EmptyState>
             No spending recorded in this period.{" "}
-            <Link href="/transactions" className="underline underline-offset-4 hover:text-foreground">
-              Add transactions
-            </Link>
+            {/* Opens here rather than sending you to Transactions: the page
+                asked for a figure, not for a change of address. */}
+            <button
+              type="button"
+              onClick={onAddTransaction}
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Record one
+            </button>
           </EmptyState>
         ) : (
           (() => {
@@ -309,8 +318,13 @@ export function DashboardTopSpendingCategories({
             return categories.map((category) => (
               <div key={category.categoryId} className="grid gap-1.5 py-1">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="truncate text-sm font-medium text-foreground">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
                     {category.categoryName}
+                    {/* Frequency changes the meaning: 23 small buys and 4 big
+                        ones can total the same and need different answers. */}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
+                      {category.count}×
+                    </span>
                   </span>
                   <AmountIndicator
                     tone="negative"

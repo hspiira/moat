@@ -7,7 +7,7 @@ import { AmountField } from "@/components/forms/amount-field";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
-import { categoryOptions } from "@/lib/select-options";
+import { CategoryField } from "@/components/transactions/category-field";
 import type { Account, Category, TransactionSource, TransactionType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -245,13 +245,13 @@ export function TextCapturePanel({
                       }))
                     }
                   />
-                  <SelectField
+                  <CategoryField
                     id={`capture-category-${candidate.id}`}
-                    label="Category"
+                    categories={categories}
                     value={candidate.categoryId}
-                    options={categoryOptions(categories)}
-                    onValueChange={(value) =>
-                      updateCandidate(candidate.id, (entry) => ({ ...entry, categoryId: value }))
+                    type={candidate.type}
+                    onSelect={(picked) =>
+                      updateCandidate(candidate.id, (entry) => ({ ...entry, categoryId: picked.id }))
                     }
                   />
                   <InputField

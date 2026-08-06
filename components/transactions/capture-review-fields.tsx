@@ -6,7 +6,8 @@ import { AmountField } from "@/components/forms/amount-field";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
-import { accountOptions, categoryOptions } from "@/lib/select-options";
+import { accountOptions } from "@/lib/select-options";
+import { CategoryField } from "@/components/transactions/category-field";
 import type { Account, CaptureReviewItem, Category, Transaction, TransactionType } from "@/lib/types";
 import { formatMoney } from "@/lib/currency";
 import { pendingReviewGap } from "@/lib/domain/balance-gap";
@@ -75,12 +76,14 @@ export function CaptureReviewFields({
             onChange((current) => ({ ...current, type: value as Exclude<TransactionType, "transfer"> }))
           }
         />
-        <SelectField
+        <CategoryField
           id={`capture-review-category-${draft.id}`}
-          label="Category"
+          categories={categories}
           value={draft.categoryId}
-          options={categoryOptions(categories)}
-          onValueChange={(value) => onChange((current) => ({ ...current, categoryId: value }))}
+          type={draft.type}
+          onSelect={(picked) =>
+            onChange((current) => ({ ...current, categoryId: picked.id }))
+          }
         />
         <InputField
           id={`capture-review-payee-${draft.id}`}

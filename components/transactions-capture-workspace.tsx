@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import type { TransactionType } from "@/lib/types";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
 import { TransactionForm } from "./transactions/transaction-form";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
@@ -22,6 +24,11 @@ function methodFromCaptureParam(param: string | null): CaptureMethod | null {
   return null;
 }
 
+function typeFromCaptureParam(param: string | null): TransactionType | null {
+  if (param === "expense" || param === "income" || param === "transfer") return param;
+  return null;
+}
+
 export function TransactionsCaptureWorkspace() {
   const workspace = useTransactionsWorkspace();
   const searchParams = useSearchParams();
@@ -33,12 +40,31 @@ export function TransactionsCaptureWorkspace() {
   );
   // Re-sync when a fresh quick-capture navigation changes the param while we
   // are already on this route (render-time "adjust state on prop change").
-  const [seenCaptureParam, setSeenCaptureParam] = useState(captureParam);
+  const [seenCaptureParam, setSeenCaptureParam] = useState<string | null>(null);
   if (captureParam !== seenCaptureParam) {
     setSeenCaptureParam(captureParam);
     const nextMethod = methodFromCaptureParam(captureParam);
     if (nextMethod) {
       setMethod(nextMethod);
+    }
+    // Tapping "Expense" in the capture sheet already said what this is. The
+    // type was parsed off the URL and thrown away, so the picker still opened
+    // on every category the catalogue had.
+    const intent = typeFromCaptureParam(captureParam);
+    if (intent) {
+      workspace.setTransactionForm((current) => ({
+        ...current,
+        type: intent,
+        categoryId: categoryMatchesType(
+          workspace.categories.find((category) => category.id === current.categoryId) ?? {
+            id: "",
+            kind: "expense",
+          },
+          intent,
+        )
+          ? current.categoryId
+          : "",
+      }));
     }
   }
 

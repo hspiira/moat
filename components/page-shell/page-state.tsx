@@ -81,12 +81,15 @@ export function EmptyStateCard({
   href,
   cta,
   icon,
+  onAction,
 }: {
   title: string;
   message: string;
   href?: string;
   cta?: string;
   icon?: ReactNode;
+  /** Handles the call to action in place. Takes precedence over `href`. */
+  onAction?: () => void;
 }) {
   return (
     <Card className="bg-muted/20">
@@ -96,7 +99,12 @@ export function EmptyStateCard({
           <p className="font-display text-base font-medium text-foreground">{title}</p>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">{message}</p>
         </div>
-        {href && cta ? (
+        {cta && onAction ? (
+          <Button size="lg" className="mt-1" onClick={onAction}>
+            {cta}
+            <IconArrowRight />
+          </Button>
+        ) : href && cta ? (
           <Button asChild size="lg" className="mt-1">
             <Link href={href}>
               {cta}

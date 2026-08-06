@@ -152,6 +152,7 @@ export function TransactionRulesPanel({
               footer={
                 <Button
                   type="submit"
+                  size="lg"
                   form="rule-form"
                   disabled={isSubmitting || !form.name.trim()}
                   className="w-full"
