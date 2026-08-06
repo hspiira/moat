@@ -2,6 +2,8 @@
 
 import { startTransition, useEffect, useMemo, useState } from "react";
 
+import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
+
 import { MoneyCalendar } from "@/components/report/money-calendar";
 import { PositionChart } from "@/components/report/position-chart";
 import {
@@ -56,7 +58,11 @@ export function ReportWorkspace() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [days, setDays] = useState<WindowDays>(30);
+  const [days, setDays] = usePersistedSelection<WindowDays>(
+    "moat.report-window",
+    30,
+    (value): value is WindowDays => value === 7 || value === 30 || value === 90,
+  );
   const [month, setMonth] = useState(() => monthKey(new Date()));
 
   useEffect(() => {

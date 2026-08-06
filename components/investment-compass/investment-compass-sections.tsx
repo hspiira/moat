@@ -190,7 +190,7 @@ export function InvestmentProfileCard({
             }
           />
 
-          <Button disabled={isSubmitting} type="submit" size="sm">
+          <Button disabled={isSubmitting} type="submit" size="lg" className="w-full sm:w-auto">
             {isSubmitting ? "Saving..." : "Update profile"}
           </Button>
         </form>

@@ -12,6 +12,7 @@ import {
   DashboardTopSpendingCategories,
 } from "@/components/dashboard/dashboard-sections";
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
+import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 import { ErrorStateCard } from "@/components/page-shell/page-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAccountTotals } from "@/lib/domain/accounts";
@@ -57,6 +58,8 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     inflowChange,
     outflowChange,
   } = useDashboardWorkspace(profile);
+
+  const record = useRecordTransaction();
 
   const { totalBalance, activeAccounts: activeAccountCount } = getAccountTotals(accounts);
   // Use the first name only so the heading and filter always share one row.
@@ -131,9 +134,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             </div>
           </details>
 
-          <DashboardTopSpendingCategories categories={summary.topCategories} />
+          <DashboardTopSpendingCategories
+            categories={summary.topCategories}
+            onAddTransaction={record.open}
+          />
         </>
       )}
+
+      {record.sheet}
     </div>
   );
 }

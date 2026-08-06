@@ -397,7 +397,7 @@ export function BackupPanel() {
             />
             {error ? <ErrorNotice message={error} /> : null}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isWorking}>
+              <Button type="submit" disabled={isWorking}>
                 {isWorking ? "Encrypting..." : "Encrypt and download"}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={reset}>
@@ -429,7 +429,7 @@ export function BackupPanel() {
             />
             {error ? <ErrorNotice message={error} /> : null}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isWorking}>
+              <Button type="submit" disabled={isWorking}>
                 {isWorking ? "Restoring..." : "Restore backup"}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={reset}>

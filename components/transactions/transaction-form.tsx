@@ -358,7 +358,7 @@ export function TransactionForm({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} type="submit" className="w-full sm:w-auto">
+            <Button disabled={isSubmitting} type="submit" size="lg" className="w-full sm:w-auto">
               {isSubmitting ? "Saving..." : editingId ? "Update" : "Add transaction"}
             </Button>
             {editingId ? (

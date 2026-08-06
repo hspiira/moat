@@ -6,6 +6,7 @@ import { BorrowingBand } from "@/components/accounts/borrowing-band";
 import { DebtPayoffPlanner } from "@/components/accounts/debt-payoff-planner";
 import { LendingBand } from "@/components/accounts/lending-band";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 import { EmptyStateCard } from "@/components/page-shell/page-state";
 import { getBorrowingPortfolio } from "@/lib/domain/borrowing";
 import { getDebtPortfolioSummary } from "@/lib/domain/debt";
@@ -14,6 +15,7 @@ import { getLendingPortfolio } from "@/lib/domain/lending";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 
 export function DebtWorkspace() {
+  const record = useRecordTransaction();
   const workspace = useTransactionsWorkspace();
   const { accounts, transactions, counterparties } = workspace;
   const asOf = useMemo(() => new Date(), []);
@@ -58,10 +60,11 @@ export function DebtWorkspace() {
         <EmptyStateCard
           title="Nothing owed in either direction"
           message="Record a transfer into 'Money lent out' when you lend someone money, or out of 'Money borrowed' when you borrow. Both accounts are already set up for you."
-          href="/transactions"
           cta="Record a transaction"
+          onAction={record.open}
         />
       )}
+      {record.sheet}
     </FeaturePageShell>
   );
 }

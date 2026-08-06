@@ -76,7 +76,7 @@ export function AccountForm(props: Props) {
 
   const footer = (
     <div className="flex gap-2">
-      <Button type="submit" form="account-form" disabled={isSubmitting} className="flex-1">
+      <Button type="submit" form="account-form" disabled={isSubmitting} size="lg" className="flex-1">
         {isSubmitting ? "Saving…" : editingId ? "Update account" : "Add account"}
       </Button>
       {editingId ? (

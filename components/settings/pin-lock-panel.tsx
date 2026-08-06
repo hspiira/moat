@@ -152,7 +152,7 @@ export function PinLockPanel() {
             />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isWorking}>
+              <Button type="submit" disabled={isWorking}>
                 {isWorking ? "Setting PIN..." : "Set PIN"}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={resetForm}>
@@ -174,7 +174,7 @@ export function PinLockPanel() {
             />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" variant="destructive" disabled={isWorking}>
+              <Button type="submit" variant="destructive" disabled={isWorking}>
                 {isWorking ? "Removing..." : "Remove PIN lock"}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={resetForm}>

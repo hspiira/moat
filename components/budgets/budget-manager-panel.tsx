@@ -221,6 +221,7 @@ export function BudgetManagerPanel({
               <div className="grid gap-2">
                 <Button
                   type="submit"
+                  size="lg"
                   form="budget-form"
                   disabled={isSubmitting || !form.categoryId}
                   className="w-full"

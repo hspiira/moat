@@ -274,7 +274,9 @@ export function DashboardCashFlowSection({
 
 export function DashboardTopSpendingCategories({
   categories,
+  onAddTransaction,
 }: {
+  onAddTransaction?: () => void;
   categories: {
     categoryId: string;
     categoryName: string;
@@ -300,9 +302,15 @@ export function DashboardTopSpendingCategories({
         {categories.length === 0 ? (
           <EmptyState>
             No spending recorded in this period.{" "}
-            <Link href="/transactions" className="underline underline-offset-4 hover:text-foreground">
-              Add transactions
-            </Link>
+            {/* Opens here rather than sending you to Transactions: the page
+                asked for a figure, not for a change of address. */}
+            <button
+              type="button"
+              onClick={onAddTransaction}
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Record one
+            </button>
           </EmptyState>
         ) : (
           (() => {

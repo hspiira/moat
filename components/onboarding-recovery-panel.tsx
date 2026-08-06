@@ -221,7 +221,7 @@ export function OnboardingRecoveryPanel({
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={isWorking}>
+              <Button type="submit" size="lg" disabled={isWorking}>
                 {isWorking ? "Restoring..." : "Restore backup"}
               </Button>
               <Button type="button" variant="outline" onClick={onBack} disabled={isWorking}>

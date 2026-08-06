@@ -260,6 +260,7 @@ export function RecurringObligationsPanel({
             footer={
               <Button
                 type="submit"
+                size="lg"
                 form="obligation-form"
                 disabled={isSubmitting || !form.name.trim() || !form.categoryId}
                 className="w-full"
