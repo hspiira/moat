@@ -26,6 +26,8 @@ export function MobileNavigation({
 }) {
   const { hasPinLock, lockState, lock } = usePinLock();
 
+  // The active tab is a labelled pill and capture is a wordless circle. Both are
+  // filled with --primary, so shape is the only thing telling them apart.
   function renderNavButton(href: (typeof mobilePrimaryNav)[number]) {
     const item = navItems.find((entry) => entry.href === href);
     if (!item) return null;
@@ -34,43 +36,34 @@ export function MobileNavigation({
     const IconComponent = navIcons[item.href];
 
     return (
-      <Button
+      <Link
         key={item.href}
-        asChild
-        variant={isActive ? "secondary" : "ghost"}
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
         className={[
-          "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-          isActive ? "text-foreground" : "text-muted-foreground",
+          "flex h-11 items-center justify-center gap-2 rounded-full px-3",
+          "transition-[background-color,color,padding] duration-200 ease-out",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          isActive
+            ? "bg-primary pr-4 pl-3.5 text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground",
         ].join(" ")}
       >
-        <Link href={item.href} aria-current={isActive ? "page" : undefined}>
-          <span
-            className={[
-              "inline-flex h-6 w-10 items-center justify-center transition-colors",
-              isActive ? "text-primary" : "bg-transparent",
-            ].join(" ")}
-          >
-            <IconComponent className="h-4 w-4" />
-          </span>
-          <span className="leading-none">{item.label}</span>
-        </Link>
-      </Button>
+        <IconComponent className="size-5 shrink-0" stroke={isActive ? 2 : 1.7} />
+        {isActive ? (
+          <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+        ) : (
+          <span className="sr-only">{item.label}</span>
+        )}
+      </Link>
     );
   }
 
   return (
     <>
-      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-backdrop-filter:bg-background/84 lg:hidden">
-        <div className="flex items-center justify-between gap-3 px-4 py-1.5">
-          <div className="flex min-w-0 items-center gap-3">
-            <MoatMark className="h-9 w-9 shrink-0" />
-            {/* Brand wordmark on every route; each page's own header owns the
-                section title, so the top bar stays consistent and never
-                duplicates the heading below it. */}
-            <div className="truncate text-base font-semibold tracking-tight text-foreground">
-              Moat
-            </div>
-          </div>
+      <div className="sticky top-0 z-40 lg:hidden">
+        <div className="flex items-center justify-between gap-3 px-1 py-1.5">
+          <MoatMark className="h-9 w-9 shrink-0" />
 
           <div className="flex shrink-0 items-center gap-1">
             {hasPinLock && lockState.status === "unlocked" ? (
@@ -87,19 +80,24 @@ export function MobileNavigation({
             <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
           </div>
         </div>
+
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/30 bg-background/96 backdrop-blur supports-backdrop-filter:bg-background/88 lg:hidden">
-        <div className="px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))] pt-1">
-          <nav className="grid grid-cols-[1fr_1fr_auto_1fr_1fr] items-center gap-1">
-            {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
-            <div className="flex justify-center">
-              <MobileCaptureSheet />
-            </div>
-            {mobilePrimaryNav.slice(2).map(renderNavButton)}
-            <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
-          </nav>
-        </div>
+      {/* pointer-events-none on the positioning layer keeps the gutters either
+          side of the capsule tappable by the page beneath. */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 lg:hidden"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
+        <nav
+          aria-label="Primary"
+          className="pointer-events-auto flex items-center gap-1 rounded-full bg-card/80 p-1.5 shadow-lg shadow-black/25 backdrop-blur-xl"
+        >
+          {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
+          <MobileCaptureSheet />
+          {mobilePrimaryNav.slice(2).map(renderNavButton)}
+          <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
+        </nav>
       </div>
     </>
   );

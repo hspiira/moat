@@ -3,6 +3,12 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
+import {
+  isReservedAccountId,
+  isReservedAccountName,
+  reconcileDefaultAccounts,
+} from "@/lib/app-state/default-accounts";
+import { canDeleteAccount, planAccountMerge } from "@/lib/domain/account-cleanup";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { useToast } from "@/components/ui/toast";
@@ -47,7 +53,15 @@ export function useAccountsWorkspace() {
           repositories.accounts.listByUser(nextProfile.id),
           repositories.transactions.listByUser(nextProfile.id),
         ]);
-        setAccounts(reconcileAccountBalances(nextAccounts, nextTransactions));
+        const seeds = reconcileDefaultAccounts(
+          nextAccounts,
+          nextProfile.id,
+          new Date().toISOString(),
+        );
+        if (seeds.length > 0) {
+          await Promise.all(seeds.map((account) => repositories.accounts.upsert(account)));
+        }
+        setAccounts(reconcileAccountBalances([...nextAccounts, ...seeds], nextTransactions));
         setTransactions(nextTransactions);
       } else {
         setAccounts([]);
@@ -77,6 +91,11 @@ export function useAccountsWorkspace() {
     const nextFieldErrors: { name?: string; openingBalance?: string } = {};
     if (!accountForm.name.trim()) {
       nextFieldErrors.name = "Give this account a name.";
+    } else if (
+      isReservedAccountName(accountForm.name) &&
+      !isReservedAccountId(editingAccountId ?? "")
+    ) {
+      nextFieldErrors.name = `Moat already created "${accountForm.name.trim()}" for you. Name this one after the person instead, or record the loan against the existing account.`;
     }
     const balanceError = validateAmount(accountForm.openingBalance || "0", {
       allowZero: true,
@@ -102,6 +121,7 @@ export function useAccountsWorkspace() {
         Number(accountForm.openingBalance),
       );
       const wasEditing = Boolean(editingAccountId);
+      const existing = accounts.find((account) => account.id === accountId);
 
       await repositories.accounts.upsert({
         id: accountId,
@@ -133,8 +153,8 @@ export function useAccountsWorkspace() {
             : undefined,
         debtRepaymentFrequency:
           accountForm.type === "debt" ? accountForm.debtRepaymentFrequency : undefined,
-        isArchived: false,
-        createdAt: accounts.find((account) => account.id === accountId)?.createdAt ?? timestamp,
+        isArchived: existing?.isArchived ?? false,
+        createdAt: existing?.createdAt ?? timestamp,
         updatedAt: timestamp,
       });
 
@@ -155,6 +175,88 @@ export function useAccountsWorkspace() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function mutate(work: () => Promise<string>, failure: string): Promise<boolean> {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const message = await work();
+      const timestamp = new Date().toISOString();
+      setLastSavedAt(timestamp);
+      setSuccessMessage(message);
+      announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
+      show(message, "success");
+      await loadWorkspace();
+      return true;
+    } catch (mutationError) {
+      const message = errorMessage(mutationError, failure);
+      setError(message);
+      show(message, "error");
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleArchiveAccount(accountId: string, isArchived: boolean) {
+    const account = accounts.find((entry) => entry.id === accountId);
+    if (!account) return false;
+
+    return mutate(async () => {
+      await repositories.accounts.upsert({
+        ...account,
+        isArchived,
+        updatedAt: new Date().toISOString(),
+      });
+      return isArchived ? `${account.name} archived.` : `${account.name} restored.`;
+    }, "Couldn't update the account.");
+  }
+
+  async function handleDeleteAccount(accountId: string) {
+    const account = accounts.find((entry) => entry.id === accountId);
+    if (!account) return false;
+
+    return mutate(async () => {
+      const verdict = canDeleteAccount(account, transactions);
+      if (!verdict.allowed) {
+        throw new Error(verdict.reason);
+      }
+      await repositories.accounts.remove(accountId);
+      return `${account.name} deleted.`;
+    }, "Couldn't delete the account.");
+  }
+
+  async function handleMergeAccount(sourceId: string, targetId: string) {
+    const source = accounts.find((entry) => entry.id === sourceId);
+    const target = accounts.find((entry) => entry.id === targetId);
+    if (!source || !target || !profile) return false;
+
+    return mutate(async () => {
+      const existingCounterparties = await repositories.counterparties.listByUser(profile.id);
+      const plan = planAccountMerge(
+        source,
+        target,
+        transactions,
+        existingCounterparties,
+        new Date().toISOString(),
+        () => `counterparty:${crypto.randomUUID()}`,
+      );
+      if (plan.blocked !== undefined) {
+        throw new Error(plan.blocked);
+      }
+
+      // The counterparty and the moved records land before the account goes.
+      // If this is interrupted the source is still there holding whatever has
+      // not moved, which is recoverable; removing it first would orphan them.
+      await repositories.counterparties.upsert(plan.counterparty);
+      await Promise.all(plan.transactions.map((row) => repositories.transactions.upsert(row)));
+      await repositories.accounts.upsert(plan.target);
+      await repositories.accounts.remove(sourceId);
+
+      return `${source.name} merged into ${target.name}.`;
+    }, "Couldn't merge the account.");
   }
 
   async function handleRepairAccounts(repairs: { accountId: string; openingBalance: number }[]) {
@@ -229,6 +331,9 @@ export function useAccountsWorkspace() {
     successMessage,
     setAccountForm,
     handleAccountSubmit,
+    handleArchiveAccount,
+    handleDeleteAccount,
+    handleMergeAccount,
     handleRepairAccounts,
     beginAccountEdit,
     cancelEdit,

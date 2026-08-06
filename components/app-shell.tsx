@@ -9,8 +9,10 @@ type AppShellProps = {
 };
 
 export function AppShell({ children }: AppShellProps) {
+  // The bottom padding clears the floating capsule: it sits 1rem above the safe
+  // area and stands 3.5rem tall, so 5.5rem leaves a rem under the last row.
   return (
-    <div className="min-h-screen bg-background pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="min-h-screen bg-background pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         <AppNavigation />
         <PwaStatus />

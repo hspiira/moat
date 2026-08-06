@@ -152,7 +152,7 @@ export function SyncModePanel() {
 
   if (!profile || !syncProfile) {
     return (
-      <Card className="border-border/20 shadow-none">
+      <Card className="shadow-none">
         <CardContent className="p-5 text-sm text-muted-foreground">
           Finish setting up before managing storage.
         </CardContent>
@@ -164,7 +164,7 @@ export function SyncModePanel() {
   // sync controls that can't do anything yet.
   if (!hostedSyncEnabled) {
     return (
-      <Card className="border-border/20 shadow-none">
+      <Card className="shadow-none">
         <CardContent className="grid gap-1 p-5">
           <div className="text-sm text-foreground">Everything stays on this device</div>
           <div className="text-sm text-muted-foreground">
@@ -177,7 +177,7 @@ export function SyncModePanel() {
   }
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Storage and sync</div>
@@ -209,7 +209,7 @@ export function SyncModePanel() {
                   });
                 }}
                 className={`grid gap-1 border px-3 py-3 text-left ${
-                  active ? "border-primary" : "border-border/20"
+                  active ? "border-primary" : ""
                 }`}
               >
                 <div className="text-sm text-foreground">{option.label}</div>

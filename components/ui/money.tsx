@@ -2,7 +2,7 @@ import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { SupportedCurrency } from "@/lib/types";
 
-type MoneyTone = "auto" | "positive" | "negative" | "neutral" | "muted";
+type MoneyTone = "auto" | "positive" | "negative" | "warning" | "neutral" | "muted";
 
 /**
  * Renders a currency amount with tabular figures and money-semantic color.
@@ -30,6 +30,10 @@ export function Money({
   const toneClass = {
     positive: "text-pos",
     negative: "text-neg",
+    // Reserved warning step, for a figure that is close to a limit rather than
+    // past it. Callers state that in words too — clay and neg sit near enough
+    // in hue that colour alone would not separate them.
+    warning: "text-clay",
     neutral: "text-foreground",
     muted: "text-muted-foreground",
   }[resolvedTone];
@@ -48,8 +52,15 @@ export function Money({
           : amount < 0
             ? "−"
             : "";
+  // "in"/"out" describes a flow, so it only belongs on a signed figure. An
+  // unsigned tone is just emphasis — a budget's "USh 24,000 left" is a balance,
+  // and announcing it as "24,000 in" told screen-reader users the wrong thing.
   const srDirection =
-    resolvedTone === "positive" ? " in" : resolvedTone === "negative" ? " out" : "";
+    signed && resolvedTone === "positive"
+      ? " in"
+      : signed && resolvedTone === "negative"
+        ? " out"
+        : "";
 
   return (
     // Intl money strings join currency and digits with no-break spaces, so

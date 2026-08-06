@@ -26,7 +26,7 @@ export function CorrectionLogPanel({ profile }: { profile: UserProfile | null })
   }, [profile]);
 
   return (
-    <Card className="gap-0 border-border/20 pt-0 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Correction log</div>
@@ -40,7 +40,7 @@ export function CorrectionLogPanel({ profile }: { profile: UserProfile | null })
         ) : (
           <div className="grid gap-2">
             {logs.map((log) => (
-              <div key={log.id} className="grid gap-1 border border-border/20 px-4 py-3">
+              <div key={log.id} className="grid gap-1 px-4 py-3">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="text-foreground">{log.parserLabel ?? "Captured item"}</span>
                   <span className="text-muted-foreground">{log.createdAt.slice(0, 10)}</span>

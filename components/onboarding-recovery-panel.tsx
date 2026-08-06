@@ -175,7 +175,7 @@ export function OnboardingRecoveryPanel({
   }
 
   return (
-    <Card className="border-border/40 shadow-none">
+    <Card className="shadow-none">
       <CardContent className="grid gap-5 pt-6">
         <div className="space-y-1">
           <div className="text-base font-semibold text-foreground">
@@ -264,7 +264,7 @@ export function OnboardingRecoveryPanel({
                     driveFiles.map((file) => (
                       <div
                         key={file.fileId}
-                        className="flex flex-col gap-3 rounded-md border border-border/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-3 rounded-md px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="grid gap-1">
                           <div className="text-sm text-foreground">{file.name}</div>

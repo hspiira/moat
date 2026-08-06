@@ -15,6 +15,7 @@ export const storeNames = {
   recurringObligations: "recurringObligations",
   monthCloses: "monthCloses",
   categories: "categories",
+  counterparties: "counterparties",
   goals: "goals",
   budgets: "budgets",
   investmentProfiles: "investmentProfiles",

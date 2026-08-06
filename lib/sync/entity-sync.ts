@@ -4,6 +4,7 @@ import type {
   Account,
   BudgetTarget,
   Category,
+  Counterparty,
   Goal,
   InvestmentProfile,
   MonthClose,
@@ -21,6 +22,7 @@ type SyncableEntityType =
   | "recurringObligations"
   | "monthCloses"
   | "categories"
+  | "counterparties"
   | "goals"
   | "budgets"
   | "investmentProfiles";
@@ -77,6 +79,11 @@ const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
     strategy: "client_wins",
     upsert: (repositories, payload) => repositories.categories.upsert(payload as Category),
     remove: (repositories, entityId) => repositories.categories.remove(entityId),
+  },
+  counterparties: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) => repositories.counterparties.upsert(payload as Counterparty),
+    remove: (repositories, entityId) => repositories.counterparties.remove(entityId),
   },
   goals: {
     strategy: "manual_review",

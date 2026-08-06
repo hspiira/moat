@@ -80,6 +80,12 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
       upsert: vi.fn(async (value) => value),
       remove: vi.fn(),
     } as RepositoryBundle["categories"],
+    counterparties: {
+      getById: vi.fn(),
+      listByUser: vi.fn(),
+      upsert: vi.fn(async (value) => value),
+      remove: vi.fn(),
+    } as RepositoryBundle["counterparties"],
     goals: {
       getById: vi.fn(),
       listByUser: vi.fn(),

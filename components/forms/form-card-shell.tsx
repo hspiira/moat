@@ -47,7 +47,7 @@ export function FormCardShell({ title, description, children, footer, embedded, 
         <div className="flex-1 px-4 pt-4 pb-6">{children}</div>
         {footer ? (
           <div
-            className="sticky bottom-0 border-t border-border/40 bg-background px-4 py-3"
+            className="sticky bottom-0 bg-background px-4 py-3"
             style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
           >
             {footer}
@@ -58,7 +58,7 @@ export function FormCardShell({ title, description, children, footer, embedded, 
   }
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader tone="yellow" title={title} description={description} />
       <CardContent className="p-5">{children}</CardContent>
       {footer ? <CardContent className="px-5 pb-5">{footer}</CardContent> : null}

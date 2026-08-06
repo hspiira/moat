@@ -6,6 +6,7 @@ import {
   IconAdjustmentsHorizontal,
   IconBuildingBank,
   IconBusinessplan,
+  IconCalendarCheck,
   IconChalkboard,
   IconFileImport,
   IconHome2,
@@ -58,11 +59,29 @@ export const mobileSecondaryNav = [
   "/investment-compass",
   "/learn",
 ] as const;
+// Every route reachable from the More sheet must appear here: this list is
+// what lets the More pill name the current page, and a page the nav cannot
+// name has no wayfinding at all now that headings defer to the nav.
 const mobileContextNav = [
   {
     href: "/goals",
     label: "Goals",
     description: "Emergency fund and savings goal tracking.",
+  },
+  {
+    href: "/budgets",
+    label: "Budgets",
+    description: "Monthly spending limits per category.",
+  },
+  {
+    href: "/debt",
+    label: "Money owed",
+    description: "What you owe, what you are owed, and when each clears.",
+  },
+  {
+    href: "/recurring",
+    label: "Recurring bills",
+    description: "Rent, school fees, and other repeating obligations.",
   },
   {
     href: "/investment-compass",
@@ -129,16 +148,13 @@ export function getMobileContextNavItem(pathname: string) {
 export function MoatMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 44 44"
+      viewBox="0 0 24 24"
       className={className}
       role="img"
       aria-label="Moat"
-      fill="none"
+      fill="#ff0000"
     >
-      {/* The moat: a protective ring around what you're building. */}
-      <circle cx="22" cy="22" r="18.5" stroke="var(--primary)" strokeWidth="3" />
-      <circle cx="22" cy="22" r="12" stroke="var(--primary)" strokeOpacity="0.4" strokeWidth="2" />
-      <circle cx="22" cy="22" r="6" fill="var(--primary)" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M8.786 9.429a1.071 1.071 0 1 0 0-2.143a1.071 1.071 0 0 0 0 2.143m0 3.428a1.072 1.072 0 1 0 0-2.143a1.072 1.072 0 0 0 0 2.143m7.5-1.071a1.071 1.071 0 1 1-2.143 0a1.071 1.071 0 0 1 2.143 0m-9.214-.643a1.072 1.072 0 1 0 0-2.143a1.072 1.072 0 0 0 0 2.143m7.5-1.072a1.072 1.072 0 1 1-2.144 0a1.072 1.072 0 0 1 2.144 0M10.5 11.143a1.072 1.072 0 1 0 0-2.144a1.072 1.072 0 0 0 0 2.144M18 10.07a1.071 1.071 0 1 1-2.143 0a1.071 1.071 0 0 1 2.143 0m-2.786-.643a1.071 1.071 0 1 0 0-2.142a1.071 1.071 0 0 0 0 2.143M12.857 12a.857.857 0 1 1-1.713 0a.857.857 0 0 1 1.713 0m-2.571 2.571a.857.857 0 1 0 0-1.713a.857.857 0 0 0 0 1.713m9-2.571a.857.857 0 1 1-1.714 0a.857.857 0 0 1 1.714 0m-2.143 2.571a.857.857 0 1 0 0-1.714a.857.857 0 0 0 0 1.714M6.429 12a.857.857 0 1 1-1.714 0a.857.857 0 0 1 1.714 0m-2.572 1.714a.428.428 0 1 0 0-.857a.428.428 0 0 0 0 .857M6 15a.429.429 0 1 1-.857 0A.429.429 0 0 1 6 15m6 .428a.429.429 0 1 0 0-.857a.429.429 0 0 0 0 .857M18.857 15A.429.429 0 1 1 18 15a.429.429 0 0 1 .858 0m1.286-1.286a.428.428 0 1 0 0-.856a.428.428 0 0 0 0 .856m-12.214 0a.857.857 0 1 1-1.715 0a.857.857 0 0 1 1.715 0m5.571.857a.857.857 0 1 0 0-1.713a.857.857 0 0 0 0 1.713" />
     </svg>
   );
 }
@@ -178,26 +194,6 @@ export function ThemeToggle({
   );
 }
 
-export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <div className="grid gap-2">
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/capture" onClick={onNavigate}>Capture transactions</Link>
-      </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
-      </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
-        {/* Names both things the screen hosts. "Review month close" gave no
-            reason to open it if what you wanted was recurring bills. */}
-        <Link href="/transactions/review/month-close" onClick={onNavigate}>
-          Recurring bills &amp; month close
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
 function DrawerSection({
   title,
   children,
@@ -207,7 +203,7 @@ function DrawerSection({
 }) {
   return (
     <section className="grid gap-3">
-      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
       {children}
@@ -225,7 +221,7 @@ function DrawerNavRow({
 }: {
   href: string;
   label: string;
-  description: string;
+  description?: string;
   icon: Icon;
   active?: boolean;
   onNavigate?: () => void;
@@ -239,13 +235,15 @@ function DrawerNavRow({
       <Link
         href={href}
         onClick={onNavigate}
-        className="grid w-full gap-1 border-b border-border/15 py-3 text-left"
+        className="grid w-full gap-1 rounded-lg px-3 py-2.5 text-left"
       >
-        <span className="flex items-start gap-3">
-          <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="flex items-center gap-3">
+          <IconComponent className="h-4 w-4 shrink-0" />
           <span className="text-left">
             <span className="block text-sm font-medium text-foreground">{label}</span>
-            <span className="block text-xs text-muted-foreground">{description}</span>
+            {description ? (
+              <span className="block text-xs text-muted-foreground">{description}</span>
+            ) : null}
           </span>
         </span>
       </Link>
@@ -262,19 +260,19 @@ export function MobileCaptureSheet() {
           variant="secondary"
           size="icon"
           aria-label="Capture transaction"
-          className="h-12 w-12 border border-border/30 bg-primary text-primary-foreground shadow-none dark:text-primary-foreground"
+          className="size-11 shrink-0 rounded-full bg-primary text-primary-foreground shadow-none hover:bg-primary/90 dark:text-primary-foreground"
         >
-          <IconPlus className="h-5 w-5" />
+          <IconPlus className="size-5" />
         </Button>
       </SheetTrigger>
       <SheetContent
         side="bottom"
         className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6">
+        <SheetHeader className="px-6 pb-2">
           <SheetTitle>Capture</SheetTitle>
-          <SheetDescription>
-            Pick the fastest way to add a transaction. Anything read from a message goes to review first.
+          <SheetDescription className="sr-only">
+            Add a transaction. Anything read from a message goes to review first.
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
@@ -296,13 +294,10 @@ export function MobileCaptureSheet() {
                 <Link
                   href={action.href}
                   onClick={() => setOpen(false)}
-                  className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left"
+                  className="flex w-full items-center gap-3 rounded-lg bg-muted/40 px-4 py-3 text-left text-sm font-medium text-foreground"
                 >
-                  <span className="flex items-center gap-3 text-sm font-medium text-foreground">
-                    <IconComponent className="h-4 w-4" />
-                    {action.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{action.description}</span>
+                  <IconComponent className="h-4 w-4" />
+                  {action.label}
                 </Link>
               </Button>
             );
@@ -331,77 +326,73 @@ export function MobileUtilitySheet({
         side="bottom"
         className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6 pb-3">
-          <SheetTitle>Navigation and actions</SheetTitle>
-          <SheetDescription>
-            Move between routes, manage quick actions, and switch theme.
+        <SheetHeader className="px-6 pb-2">
+          <SheetTitle>More</SheetTitle>
+          <SheetDescription className="sr-only">
+            The rest of Moat: destinations, data tools, theme and settings.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid flex-1 gap-6 overflow-y-auto overscroll-contain px-6 pb-2">
-          <DrawerSection title="Quick actions">
-            <QuickActionLinks onNavigate={close} />
-          </DrawerSection>
+        <div className="grid flex-1 gap-5 overflow-y-auto overscroll-contain px-6 pb-2">
+          <div className="grid">
+            {mobileSecondaryNav.map((href) => {
+              const item = navItems.find((entry) => entry.href === href);
+              if (!item) return null;
+              const IconComponent = navIcons[item.href];
 
-          <DrawerSection title="More places">
-            <div className="grid">
-              {mobileSecondaryNav.map((href) => {
-                const item = navItems.find((entry) => entry.href === href);
-                if (!item) return null;
-                const IconComponent = navIcons[item.href];
-
-                return (
-                  <DrawerNavRow
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    description={item.description}
-                    icon={IconComponent}
-                    active={isActiveRoute(pathname, item.href)}
-                    onNavigate={close}
-                  />
-                );
-              })}
-            </div>
-          </DrawerSection>
+              return (
+                <DrawerNavRow
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={IconComponent}
+                  active={isActiveRoute(pathname, item.href)}
+                  onNavigate={close}
+                />
+              );
+            })}
+          </div>
 
           <DrawerSection title="Data tools">
             <div className="grid">
               <DrawerNavRow
                 href="/transactions/import"
                 label="CSV import"
-                description="Bring in bank or mobile money statements"
                 icon={IconFileImport}
                 active={isActiveRoute(pathname, "/transactions/import")}
                 onNavigate={close}
               />
               <DrawerNavRow
                 href="/transactions/tools"
-                // Budgets are the most-wanted thing behind this row and used to
-                // appear only third in the description, under a label naming
-                // neither. 145 lines of budget logic nobody could find.
+                // The label must name budgets: 145 lines of budget logic once
+                // hid behind a row that named neither of its contents.
                 label="Budgets & rules"
-                description="Spending limits, auto-categorisation, correction log"
                 icon={IconAdjustmentsHorizontal}
                 active={isActiveRoute(pathname, "/transactions/tools")}
+                onNavigate={close}
+              />
+              <DrawerNavRow
+                href="/transactions/review/month-close"
+                label="Month close"
+                icon={IconCalendarCheck}
+                active={isActiveRoute(pathname, "/transactions/review/month-close")}
                 onNavigate={close}
               />
             </div>
           </DrawerSection>
 
-          <DrawerSection title="Theme & settings">
-            <div className="flex items-center justify-between gap-3 border-b border-border/15 py-2">
-              <div className="text-sm text-muted-foreground">Switch between light and dark mode.</div>
-              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
-            </div>
+          <div className="grid">
             <DrawerNavRow
               href="/settings"
               label="Settings"
-              description="PIN lock, backup, data export, privacy"
               icon={IconSettings}
               active={isActiveRoute(pathname, "/settings")}
               onNavigate={close}
             />
-          </DrawerSection>
+            <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+              <span className="text-sm font-medium text-foreground">Theme</span>
+              <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -442,7 +433,8 @@ export function MobileMoreButton({
 }) {
   const activeContextItem = getMobileContextNavItem(pathname);
   const isActive = Boolean(activeContextItem);
-  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconPlus;
+  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconMenu2;
+  const label = activeContextItem?.label ?? "More";
 
   return (
     <MobileUtilitySheet
@@ -450,21 +442,20 @@ export function MobileMoreButton({
       onToggleTheme={onToggleTheme}
       trigger={
         <Button
-          variant={isActive ? "secondary" : "ghost"}
+          variant="ghost"
+          aria-label={label}
           className={[
-            "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-            isActive ? "text-foreground" : "text-muted-foreground",
+            "flex h-11 items-center justify-center gap-2 rounded-full px-3 shadow-none",
+            "transition-[background-color,color,padding] duration-200 ease-out",
+            isActive
+              ? "bg-primary pr-4 pl-3.5 text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           ].join(" ")}
         >
-          <span
-            className={[
-              "inline-flex h-6 w-10 items-center justify-center transition-colors",
-              isActive ? "text-primary" : "bg-transparent",
-            ].join(" ")}
-          >
-            <IconComponent className="h-4 w-4" />
-          </span>
-          <span className="leading-none">{activeContextItem?.label ?? "More"}</span>
+          <IconComponent className="size-5 shrink-0" stroke={isActive ? 2 : 1.7} />
+          {isActive ? (
+            <span className="text-sm font-medium whitespace-nowrap">{label}</span>
+          ) : null}
         </Button>
       }
     />

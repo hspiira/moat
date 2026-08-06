@@ -27,7 +27,7 @@ export function DashboardBudgetCoverage({
   }
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle className="text-base">Budgets</CardTitle>
         <CardDescription>
@@ -41,7 +41,7 @@ export function DashboardBudgetCoverage({
           </EmptyState>
         ) : (
           <>
-            <div className="grid gap-2 border border-border/20 px-4 py-3">
+            <div className="grid gap-2 px-4 py-3">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-foreground/72">Allocated</span>
                 <AmountIndicator tone="neutral" sign="none" value={formatMoney(allocated)} className="text-sm font-medium" />
@@ -64,7 +64,7 @@ export function DashboardBudgetCoverage({
             {envelopes.map((envelope) => (
               <div
                 key={envelope.categoryId}
-                className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3 text-sm"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
               >
                 <span className="text-foreground">{envelope.categoryName}</span>
                 <AmountIndicator

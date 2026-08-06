@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { navItems } from "@/lib/data";
 
 import { IconSettings } from "@tabler/icons-react";
@@ -35,10 +34,10 @@ export function DesktopNavigation({
                   asChild
                   variant="ghost"
                   className={[
-                    "h-11 w-full border-b-2 px-2 text-sm shadow-none",
+                    "h-11 w-full rounded-full px-2 text-sm shadow-none",
                     isActive
-                      ? "border-b-primary text-foreground"
-                      : "border-b-transparent text-muted-foreground/80 hover:text-foreground",
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                      : "text-muted-foreground/80 hover:text-foreground",
                   ].join(" ")}
                 >
                   <Link href={item.href}>
@@ -46,7 +45,7 @@ export function DesktopNavigation({
                       <span
                         className={[
                           "inline-flex h-5 w-5 items-center justify-center transition-colors",
-                          isActive ? "text-primary" : "text-muted-foreground/80",
+                          isActive ? "text-primary-foreground" : "text-muted-foreground/80",
                         ].join(" ")}
                       >
                         <IconComponent
@@ -71,7 +70,7 @@ export function DesktopNavigation({
             variant="ghost"
             size="icon"
             className={[
-              "h-10 w-10 border-border/30",
+              "h-10 w-10",
               isActiveRoute(pathname, "/settings")
                 ? "text-foreground"
                 : "text-muted-foreground/80 hover:text-foreground",
@@ -81,10 +80,9 @@ export function DesktopNavigation({
               <IconSettings className="h-4 w-4" />
             </Link>
           </Button>
-          <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
+          <ThemeToggle onClick={onToggleTheme} className="h-10 w-10" />
         </div>
       </div>
-      <Separator className="bg-border/50" />
     </div>
   );
 }

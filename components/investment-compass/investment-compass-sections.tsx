@@ -40,7 +40,7 @@ export const goalFocusOptions: { value: InvestmentProfile["goalFocus"]; label: s
 
 export function InvestmentEmptyState() {
   return (
-    <Card className="border-border/40 shadow-none">
+    <Card className="shadow-none">
       <CardContent className="grid gap-4 px-5 py-8 text-sm text-muted-foreground">
         <p>
           Complete onboarding so the compass can read your time horizon, goals, and transaction
@@ -66,7 +66,7 @@ export function InvestmentMetricCards({
   }
 
   return (
-    <Card className="ring-1 ring-primary/15">
+    <Card>
       <CardContent className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:gap-8">
         <MoatRing
           value={emergencyFundMonthsCovered / 3}
@@ -111,7 +111,7 @@ export function InvestmentProfileCard({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         tone="yellow"
         title="Your investment profile"
@@ -223,7 +223,7 @@ export function InvestmentGuidancePanels({
           {recommendedProducts.map((product) => (
             <div
               key={product}
-              className="border border-border/40 bg-muted/30 px-4 py-3 text-sm text-foreground"
+              className="bg-muted/30 px-4 py-3 text-sm text-foreground"
             >
               {product}
             </div>
@@ -231,7 +231,7 @@ export function InvestmentGuidancePanels({
         </CardContent>
       </Card>
 
-      <Card className="border-border/40 shadow-none">
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle className="text-base">Why this guidance</CardTitle>
         </CardHeader>
@@ -252,7 +252,7 @@ export function InvestmentGuidancePanels({
       </Card>
 
       {regulatedResources.length > 0 ? (
-        <Card className="border-border/40 shadow-none">
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="text-base">Regulated Uganda sources</CardTitle>
             <CardDescription>
@@ -266,14 +266,14 @@ export function InvestmentGuidancePanels({
                 href={resource.url}
                 rel="noreferrer"
                 target="_blank"
-                className="flex items-center justify-between gap-3 border border-border/40 bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-border/70 hover:bg-muted/50"
+                className="flex items-center justify-between gap-3 bg-muted/30 px-4 py-3 text-sm transition-colors hover:hover:bg-muted/50"
               >
                 <div>
                   <div className="font-medium text-foreground">{resource.title}</div>
                   <div className="mt-0.5 text-xs text-muted-foreground">{resource.sourceName}</div>
                 </div>
                 {resource.isOfficial ? (
-                  <span className="shrink-0 border border-border/40 px-2 py-0.5 text-xs text-muted-foreground">
+                  <span className="shrink-0 px-2 py-0.5 text-xs text-muted-foreground">
                     Official
                   </span>
                 ) : null}

@@ -126,7 +126,7 @@ export function TransactionRulesPanel({
   ];
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         tone="sage"
         title="Transaction rules"
@@ -304,7 +304,7 @@ export function TransactionRulesPanel({
               .map((rule) => (
                 <div
                   key={rule.id}
-                  className="flex items-center justify-between gap-3 border border-border/20 px-4 py-3"
+                  className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div className="space-y-0.5">
                     <div className="text-sm text-foreground">{rule.name}</div>

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { buildCounterparty } from "@/lib/domain/counterparties";
 import {
   LENDING_POOL_ACCOUNT_ID,
   buildLendingPoolAccount,
-  ensureLendingPool,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
 import type { Account, Transaction } from "@/lib/types";
@@ -82,32 +82,6 @@ function borrowerNamed(
 ) {
   return portfolio.borrowers.find((b) => b.borrowerName === name);
 }
-
-describe("materialising the pool on demand", () => {
-  const wallet = dedicated("account:wallet", "Wallet", { type: "cash" });
-
-  it("asks for the pool the first time money is lent into it", () => {
-    const created = ensureLendingPool(
-      [wallet],
-      LENDING_POOL_ACCOUNT_ID,
-      "user:default",
-      "2026-06-01T00:00:00.000Z",
-    );
-
-    expect(created?.id).toBe(LENDING_POOL_ACCOUNT_ID);
-    expect(created?.type).toBe("receivable");
-  });
-
-  it("does not recreate a pool that already exists", () => {
-    expect(
-      ensureLendingPool([wallet, pool], LENDING_POOL_ACCOUNT_ID, "user:default", "t"),
-    ).toBeNull();
-  });
-
-  it("does not create a pool for transfers that have nothing to do with lending", () => {
-    expect(ensureLendingPool([wallet], "account:savings", "user:default", "t")).toBeNull();
-  });
-});
 
 describe("the lending pool", () => {
   it("is a receivable account with a stable id", () => {
@@ -407,5 +381,35 @@ describe("portfolio totals and ordering", () => {
     const transactions = [lend(500_000, "2026-01-01", { accountId: old.id })];
 
     expect(getLendingPortfolio([old], transactions, ASOF).borrowers).toEqual([]);
+  });
+
+  it("groups on the counterparty, so a typo in the payee cannot split a borrower", () => {
+    const sarah = buildCounterparty({
+      id: "counterparty:sarah",
+      userId: "user:default",
+      name: "Sarah",
+      kind: "borrower",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    const transactions = [
+      { ...lend(200_000, "2026-05-01", { payee: "Sarah" }), counterpartyId: sarah.id },
+      { ...lend(100_000, "2026-06-01", { payee: "Sarra" }), counterpartyId: sarah.id },
+    ];
+
+    const portfolio = getLendingPortfolio([pool], transactions, ASOF, [sarah]);
+
+    expect(portfolio.borrowers).toHaveLength(1);
+    expect(portfolio.borrowers[0].borrowerName).toBe("Sarah");
+    expect(portfolio.borrowers[0].counterpartyId).toBe(sarah.id);
+    expect(portfolio.borrowers[0].outstanding).toBe(300_000);
+  });
+
+  it("falls back to the payee for rows written before counterparties existed", () => {
+    const transactions = [lend(200_000, "2026-05-01", { payee: "Musa" })];
+
+    const portfolio = getLendingPortfolio([pool], transactions, ASOF, []);
+
+    expect(portfolio.borrowers[0].borrowerName).toBe("Musa");
+    expect(portfolio.borrowers[0].counterpartyId).toBeUndefined();
   });
 });

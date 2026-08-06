@@ -111,7 +111,7 @@ export function ProfileStep({ form, onFormChange, consentGiven, onConsentChange 
                   form.investmentHorizonValue === preset.value &&
                   form.investmentHorizonUnit === preset.unit
                     ? "border-primary text-foreground"
-                    : "border-border/30 text-muted-foreground"
+                    : "text-muted-foreground"
                 }`}
               >
                 {preset.label}
@@ -165,7 +165,7 @@ export function ProfileStep({ form, onFormChange, consentGiven, onConsentChange 
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-md border border-border/40 bg-muted/20 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-md bg-muted/20 px-4 py-3">
         <input
           id="consent"
           type="checkbox"

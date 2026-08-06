@@ -54,7 +54,7 @@ export function SettingsWorkspace() {
   return (
     <div className="grid gap-8">
       <div className="space-y-1">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="sr-only">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Security, privacy, and data management for your Moat account.
         </p>

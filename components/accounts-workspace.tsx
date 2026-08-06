@@ -1,7 +1,5 @@
 "use client";
 
-import { IconPlus } from "@tabler/icons-react";
-
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { getAccountTotals } from "@/lib/domain/accounts";
 import { useFormSheet } from "@/components/hooks/use-form-sheet";
@@ -11,9 +9,10 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +23,7 @@ import {
 
 import { AccountForm } from "./accounts/account-form";
 import { AccountList } from "./accounts/account-list";
+import { DuplicateAccountsPanel } from "./accounts/duplicate-accounts-panel";
 import { RepairAccountsPanel } from "./accounts/repair-accounts-panel";
 import { useAccountsWorkspace } from "./accounts/use-accounts-workspace";
 
@@ -42,6 +42,9 @@ export function AccountsWorkspace() {
     successMessage,
     setAccountForm,
     handleAccountSubmit,
+    handleArchiveAccount,
+    handleDeleteAccount,
+    handleMergeAccount,
     handleRepairAccounts,
     beginAccountEdit,
     cancelEdit,
@@ -61,17 +64,7 @@ export function AccountsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title="Accounts"
-        aside={
-          profile ? (
-            <Button size="lg" onClick={openAddAccount}>
-              <IconPlus />
-              Add account
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title="Accounts" srOnlyTitle />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading accounts..." /> : null}
@@ -85,6 +78,40 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
+          {/* The total sits bare on the canvas — the number is the hero, and a
+              box around it only shrinks it. Actions ride directly beneath. */}
+          <section className="space-y-4 pt-2">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Total balance</p>
+              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-none font-semibold tracking-tight">
+                <Money
+                  amount={accountTotals.totalBalance}
+                  tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
+                  className="font-display"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                across {accountTotals.activeAccounts}{" "}
+                {accountTotals.activeAccounts === 1 ? "account" : "accounts"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={openAddAccount} className="flex-1 sm:flex-none sm:px-6">
+                Add account
+              </Button>
+              <Button asChild variant="secondary" className="flex-1 sm:flex-none sm:px-6">
+                <Link href="/transactions/import">Import</Link>
+              </Button>
+            </div>
+          </section>
+
+          <DuplicateAccountsPanel
+            accounts={accounts}
+            transactions={transactions}
+            isSubmitting={isSubmitting}
+            onMerge={(sourceId, targetId) => void handleMergeAccount(sourceId, targetId)}
+          />
+
           <RepairAccountsPanel
             accounts={accounts}
             transactions={transactions}
@@ -92,36 +119,13 @@ export function AccountsWorkspace() {
             onRepair={handleRepairAccounts}
           />
 
-          <Card className="ring-1 ring-primary/15">
-            <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-8 sm:px-6">
-              <div className="min-w-0 space-y-1">
-                <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                  Total balance
-                </p>
-                <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-none font-semibold tracking-tight">
-                  <Money
-                    amount={accountTotals.totalBalance}
-                    tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
-                    className="font-display"
-                  />
-                </div>
-              </div>
-              <dl className="text-sm">
-                <div className="space-y-0.5">
-                  <dt className="text-xs text-muted-foreground">Accounts</dt>
-                  <dd className="text-xl font-semibold tabular-nums">
-                    {accountTotals.activeAccounts}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-
           <AccountList
             accounts={accounts}
             transactions={transactions}
             onEdit={openEditAccount}
             onAdd={openAddAccount}
+            onArchive={(accountId, isArchived) => void handleArchiveAccount(accountId, isArchived)}
+            onDelete={(accountId) => void handleDeleteAccount(accountId)}
           />
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>

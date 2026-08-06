@@ -1,5 +1,7 @@
+import { buildDefaultAccounts } from "@/lib/app-state/default-accounts";
 import { buildDefaultCategories, defaultResourceLinks } from "@/lib/app-state/defaults";
 import type {
+  Account,
   Category,
   InvestmentProfile,
   ResourceLink,
@@ -8,6 +10,7 @@ import type {
 
 export type BootstrapState = {
   profile: UserProfile;
+  accounts: Account[];
   categories: Category[];
   resources: ResourceLink[];
   investmentProfile: InvestmentProfile;
@@ -16,6 +19,7 @@ export type BootstrapState = {
 export function createBootstrapState(profile: UserProfile): BootstrapState {
   return {
     profile,
+    accounts: buildDefaultAccounts(profile.id, profile.createdAt),
     categories: buildDefaultCategories(profile.id),
     resources: defaultResourceLinks,
     investmentProfile: {

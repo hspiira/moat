@@ -49,7 +49,7 @@ export function CsvMappingCard({
   onMappingChange: (field: CsvFieldKey, value: string) => void;
 }) {
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">1. Map columns</CardTitle>
         <CardDescription>Match your CSV headings to Moat fields.</CardDescription>
@@ -105,7 +105,7 @@ export function CsvDefaultsCard({
   );
 
   return (
-    <Card className="moat-panel-yellow border-border/20 shadow-none">
+    <Card className="moat-panel-yellow shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base text-foreground">2. Fill gaps</CardTitle>
         <CardDescription className="text-foreground/72">
@@ -184,7 +184,7 @@ export function CsvReviewCard({
   onClear: () => void;
 }) {
   return (
-    <Card className="moat-panel-mint border-border/20 shadow-none">
+    <Card className="moat-panel-mint shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base text-foreground">3. Review import</CardTitle>
         <CardDescription className="text-foreground/72">
@@ -199,8 +199,8 @@ export function CsvReviewCard({
             ["Duplicates", String(duplicateCount)],
             ["Foreign-currency rows", String(foreignCurrencyCount)],
           ].map(([label, value]) => (
-            <div key={label} className="border border-border/20 bg-background/60 px-3 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <div key={label} className="bg-background/60 px-3 py-3">
+              <div className="text-[11px] text-muted-foreground">
                 {label}
               </div>
               <div className="mt-2 text-3xl font-semibold tracking-tight">{value}</div>
@@ -231,7 +231,7 @@ export function CsvPreviewCard({
   categories: Category[];
 }) {
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Preview</CardTitle>
         <CardDescription>First six rows after mapping and fallback rules.</CardDescription>
@@ -248,14 +248,14 @@ export function CsvPreviewCard({
                 row.issues.length > 0
                   ? "border-destructive/30 bg-destructive/5"
                   : index === 0
-                    ? "moat-panel-sage border-border/20"
+                    ? "moat-panel-sage "
                     : index % 2 === 0
-                      ? "moat-panel-mint border-border/20"
-                      : "bg-muted/20 border-border/20"
+                      ? "moat-panel-mint "
+                      : "bg-muted/20 "
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   Row {row.rowIndex}
                 </span>
                 <span className="text-sm tabular-nums text-foreground">

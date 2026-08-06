@@ -39,9 +39,9 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
         <CardTitle>Your goals</CardTitle>
         <CardDescription>Your savings goals and how each is tracking.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="px-0">
         {goals.length === 0 ? (
-          <EmptyState>
+          <EmptyState className="mx-4">
             <p>No goals yet. Create your first goal to start building.</p>
             {onAdd ? (
               <Button size="sm" className="mt-3" onClick={onAdd}>
@@ -50,7 +50,8 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
             ) : null}
           </EmptyState>
         ) : (
-          goals.map((goal) => {
+          <div className="divide-y divide-border/60">
+          {goals.map((goal) => {
             const plan = getGoalContributionPlan(goal);
             const linkedAccount = accounts.find((a) => a.id === goal.linkedAccountId);
             const progressRatio =
@@ -60,7 +61,7 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
             return (
               <div
                 key={goal.id}
-                className="-mx-4 rounded-none border-y border-border/60 bg-card px-4 py-4 sm:mx-0 sm:rounded-md sm:border-x"
+                className="px-4 py-4"
               >
                 <div className="flex items-center gap-3">
                   <MoatRing
@@ -140,7 +141,8 @@ export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAd
                 )}
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </CardContent>
       <ConfirmDialog

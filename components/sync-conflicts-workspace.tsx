@@ -112,7 +112,7 @@ export function SyncConflictsWorkspace() {
       {error ? <ErrorNotice message={error} /> : null}
 
       {!userId && !isLoading ? (
-        <Card className="border-border/30 shadow-none">
+        <Card className="shadow-none">
           <CardContent className="p-5 text-sm text-muted-foreground">
             Finish onboarding before reviewing hosted sync conflicts.
           </CardContent>
@@ -120,7 +120,7 @@ export function SyncConflictsWorkspace() {
       ) : null}
 
       {isLoading ? (
-        <Card className="border-border/30 shadow-none">
+        <Card className="shadow-none">
           <CardContent className="p-5 text-sm text-muted-foreground">
             Loading sync conflicts...
           </CardContent>
@@ -128,7 +128,7 @@ export function SyncConflictsWorkspace() {
       ) : null}
 
       {!isLoading && userId && conflicts.length === 0 ? (
-        <Card className="border-border/30 shadow-none">
+        <Card className="shadow-none">
           <CardContent className="p-5 text-sm text-muted-foreground">
             No hosted sync conflicts need review right now.
           </CardContent>
@@ -142,7 +142,7 @@ export function SyncConflictsWorkspace() {
                 {entityType} · {items.length}
               </div>
               {items.map((conflict) => (
-                <Card key={conflict.item.id} className="border-border/30 shadow-none">
+                <Card key={conflict.item.id} className="shadow-none">
                   <CardHeader className="gap-2 pb-3">
                     <CardTitle className="text-base">
                       {conflict.item.entityType}:{conflict.item.entityId}
@@ -157,18 +157,18 @@ export function SyncConflictsWorkspace() {
                   <CardContent className="grid gap-4">
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div className="grid gap-2">
-                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Local pending version
                         </div>
-                        <pre className="overflow-x-auto rounded-md border border-border/30 bg-muted/20 p-3 text-xs leading-relaxed text-foreground">
+                        <pre className="overflow-x-auto rounded-md bg-muted/20 p-3 text-xs leading-relaxed text-foreground">
                           {formatValue(conflict.localPayload)}
                         </pre>
                       </div>
                       <div className="grid gap-2">
-                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Server version
                         </div>
-                        <pre className="overflow-x-auto rounded-md border border-border/30 bg-muted/20 p-3 text-xs leading-relaxed text-foreground">
+                        <pre className="overflow-x-auto rounded-md bg-muted/20 p-3 text-xs leading-relaxed text-foreground">
                           {formatValue(
                             conflict.serverRecord
                               ? {

@@ -13,7 +13,7 @@ import {
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
 import { getLendingPortfolio, type BorrowerLoans } from "@/lib/domain/lending";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 /**
  * The most useful single fact about a loan, in falling order of urgency: an
@@ -35,7 +35,7 @@ function borrowerCaption(borrower: BorrowerLoans): string {
 
 function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-border/20 py-3 last:border-b-0">
+    <div className="flex items-start justify-between gap-3 py-3">
       <div className="grid gap-0.5">
         <span className="font-medium text-foreground">{borrower.borrowerName}</span>
         <span
@@ -43,6 +43,7 @@ function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
             borrower.isOverdue ? "text-xs text-destructive" : "text-xs text-muted-foreground"
           }
         >
+          {borrower.isOverdue ? "⚠ " : ""}
           {borrowerCaption(borrower)}
         </span>
       </div>
@@ -59,15 +60,17 @@ function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
 export function LendingBand({
   accounts,
   transactions,
+  counterparties,
 }: {
   accounts: Account[];
   transactions: Transaction[];
+  counterparties: Counterparty[];
 }) {
   // One clock per mount keeps "overdue" stable across renders.
   const asOf = useMemo(() => new Date(), []);
   const portfolio = useMemo(
-    () => getLendingPortfolio(accounts, transactions, asOf),
-    [accounts, transactions, asOf],
+    () => getLendingPortfolio(accounts, transactions, asOf, counterparties),
+    [accounts, transactions, asOf, counterparties],
   );
 
   if (portfolio.borrowers.length === 0) {
@@ -79,7 +82,7 @@ export function LendingBand({
   );
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle>Owed to you</CardTitle>
         <CardDescription>

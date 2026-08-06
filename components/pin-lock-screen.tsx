@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconBackspace, IconFingerprint, IconLockFilled, IconLockOpen } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconBackspace,
+  IconFingerprint,
+  IconLockFilled,
+  IconLockOpen,
+} from "@tabler/icons-react";
 
 import { usePinLock } from "@/lib/security/pin-lock-context";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
@@ -135,6 +141,9 @@ function LockScreen({
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBiometricChecking, setIsBiometricChecking] = useState(false);
+  // With a passkey enrolled the OS sheet is already up, so the keypad starts
+  // hidden and appears on request or on biometric failure.
+  const [pinRequested, setPinRequested] = useState(!hasPasskey);
   const [shaking, setShaking] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(() => getUnlockLockoutMs());
   const [pinLength] = useState(() => getPinLength());
@@ -150,6 +159,7 @@ function LockScreen({
   const markRef = useRef<HTMLDivElement>(null);
 
   const isThrottled = lockoutMs > 0;
+  const showKeypad = pinRequested || isThrottled;
   const targetLength = pinLength ?? MAX_PIN_LENGTH;
   const knownLength = pinLength != null;
   const disabled = isChecking || isThrottled || exiting;
@@ -257,7 +267,10 @@ function LockScreen({
     setIsBiometricChecking(true);
     setError(null);
     const ok = await unlockWithPasskey();
-    if (!ok) setError("Biometric unlock didn't work. Enter your PIN instead.");
+    if (!ok) {
+      setError("Biometric unlock didn't work. Enter your PIN instead.");
+      setPinRequested(true);
+    }
     setIsBiometricChecking(false);
   }, [isBiometricChecking, isThrottled, exiting, unlockWithPasskey]);
 
@@ -279,6 +292,7 @@ function LockScreen({
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key >= "0" && event.key <= "9") {
         event.preventDefault();
+        setPinRequested(true);
         pushDigit(event.key);
       } else if (event.key === "Backspace") {
         event.preventDefault();
@@ -332,11 +346,19 @@ function LockScreen({
         >
           <h1 className="mt-5 font-display text-xl font-semibold tracking-tight">Moat is locked</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {hasPasskey ? "Enter your PIN or use biometrics." : "Enter your PIN to continue."}
+            {showKeypad
+              ? "Enter your PIN to continue."
+              : isBiometricChecking
+                ? "Waiting for Face ID or fingerprint…"
+                : "Unlock with Face ID or fingerprint."}
           </p>
 
           <div
-            className={cn("mt-8 flex items-center justify-center gap-3", shaking && "animate-shake")}
+            className={cn(
+              "mt-8 flex items-center justify-center gap-3 transition-opacity duration-200",
+              shaking && "animate-shake",
+              !showKeypad && "pointer-events-none opacity-0",
+            )}
             role="status"
             aria-label={`${pin.length} of ${knownLength ? targetLength : "several"} digits entered`}
           >
@@ -361,13 +383,16 @@ function LockScreen({
             })}
           </div>
 
-          <div className="mt-4 flex h-5 items-center justify-center text-center text-xs">
+          {/* The alert glyph carries the failure, not the colour. */}
+          <div className="mt-4 flex h-5 items-center justify-center gap-1.5 text-center text-xs">
             {isThrottled ? (
-              <span className="text-destructive" role="status">
+              <span className="flex items-center gap-1.5 text-destructive" role="status">
+                <IconAlertCircle className="size-3.5 shrink-0" aria-hidden />
                 {formatLockoutMessage(lockoutMs)}
               </span>
             ) : error ? (
-              <span className="text-destructive" role="alert">
+              <span className="flex items-center gap-1.5 text-destructive" role="alert">
+                <IconAlertCircle className="size-3.5 shrink-0" aria-hidden />
                 {error}
               </span>
             ) : isChecking ? (
@@ -377,7 +402,28 @@ function LockScreen({
             ) : null}
           </div>
 
-          <div className="mt-6 grid grid-cols-3 gap-x-6 gap-y-4">
+          {/* The keypad holds its space from first paint and only fades, so
+              revealing it never shoves the dots above it. */}
+          <div className="relative mt-6">
+            {!showKeypad ? (
+              <div className="absolute inset-0 z-10 grid place-items-center">
+                <button
+                  type="button"
+                  onClick={() => setPinRequested(true)}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  Use PIN instead
+                </button>
+              </div>
+            ) : null}
+
+            <div
+              className={cn(
+                "grid grid-cols-3 gap-x-6 gap-y-4 transition-opacity duration-200",
+                !showKeypad && "pointer-events-none opacity-0",
+              )}
+              aria-hidden={!showKeypad}
+            >
             {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
               <Key key={digit} onPress={() => pushDigit(digit)} disabled={disabled}>
                 {digit}
@@ -418,6 +464,7 @@ function LockScreen({
             ) : (
               <span aria-hidden />
             )}
+            </div>
           </div>
         </div>
       </div>

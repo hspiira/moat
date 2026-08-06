@@ -31,7 +31,7 @@ export function DetailSection({
 }) {
   return (
     <section className="grid gap-0.5">
-      <h3 className="pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      <h3 className="pb-1 text-xs font-medium text-muted-foreground">
         {title}
       </h3>
       {children}

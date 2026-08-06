@@ -42,12 +42,12 @@ export function AppHeroCard({
   return (
     <Card
       className={cn(
-        "border-border/20 bg-background shadow-none",
+        "bg-background shadow-none",
         // This card's fill is bg-background — identical to the page behind it —
         // so on mobile its border, ring, and padding add no structure, they just
         // stack on the app shell's own px-4 gutter and read as dead space. Drop
         // the chrome under sm and let the hero sit directly on the page.
-        "rounded-none border-0 py-0 ring-0 sm:rounded-xl sm:border sm:py-4 sm:ring-1",
+        "rounded-none border-0 py-0 ring-0 sm:py-4",
         className,
       )}
     >
@@ -73,7 +73,7 @@ export function AppHeroCard({
         </div>
 
         {aside ? (
-          <Card className={cn("border-border/20 bg-muted/35 shadow-none", asideClassName)}>
+          <Card className={cn("bg-muted/35 shadow-none", asideClassName)}>
             <CardContent className="p-0">{aside}</CardContent>
           </Card>
         ) : null}

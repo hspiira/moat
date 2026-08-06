@@ -18,6 +18,7 @@ type Props = {
   currentRoute: TransactionsRoute;
   title: string;
   description?: string;
+  srOnlyTitle?: boolean;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
@@ -34,6 +35,7 @@ export function TransactionsWorkspaceFrame({
   currentRoute,
   title,
   description,
+  srOnlyTitle,
   profile,
   isLoading,
   error,
@@ -47,7 +49,7 @@ export function TransactionsWorkspaceFrame({
 }: Props) {
   return (
     <div className="grid gap-5">
-      <PageHeader title={title} description={description} />
+      <PageHeader title={title} description={description} srOnlyTitle={srOnlyTitle} />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading transactions..." /> : null}

@@ -35,6 +35,7 @@ export function InvestmentCompassWorkspace() {
     <div className="grid gap-5">
       <PageHeader
         title="Investment Compass"
+        srOnlyTitle
         description="Rule-based guidance for Uganda. No stock picks, no guaranteed returns."
       />
 

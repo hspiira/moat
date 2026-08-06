@@ -1,14 +1,15 @@
 import { isTransferTransaction } from "@/lib/domain/transfers";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 /**
  * Receivables — money the user has lent out.
  *
- * The unit of interest is a *borrower*, not an account. By default every loan
- * lands in one shared pool account and the borrower is carried in the
- * transaction's `payee`, so lending to five people does not create five
- * accounts. A borrower who needs their own ledger can be given a dedicated
- * receivable account instead, and both shapes report through the same path.
+ * The unit of interest is a *borrower*, not an account. Every loan lands in one
+ * shared pool account — a control account, seeded at bootstrap — and the
+ * borrower is a `Counterparty` the transaction points at, so lending to five
+ * people creates one account and five subsidiary-ledger entries. A borrower who
+ * needs their own ledger can still have a dedicated receivable account, and
+ * both shapes report through the same path.
  *
  * This is the mirror of `debt.ts` in subject only. None of the borrowing
  * machinery applies: the user does not control when a borrower repays, so
@@ -26,8 +27,9 @@ const MILLISECONDS_PER_DAY = 86_400_000;
 export type ReceivableStatus = "outstanding" | "settled" | "written_off" | "overpaid";
 
 export type BorrowerLoans = {
-  /** Stable grouping key: the dedicated account, or the payee within the pool. */
+  /** Stable grouping key: the dedicated account, or the counterparty. */
   borrowerKey: string;
+  counterpartyId?: string;
   borrowerName: string;
   /** Set only when the borrower has their own account rather than the pool. */
   accountId?: string;
@@ -68,31 +70,6 @@ export function buildLendingPoolAccount(userId: string, timestamp: string): Acco
   };
 }
 
-/**
- * The pool is created the first time money is lent into it rather than seeded
- * for everyone, so people who never lend never see a lending account. Returns
- * the account to create, or null when nothing is needed.
- */
-export function ensureLendingPool(
-  accounts: Account[],
-  destinationAccountId: string,
-  userId: string,
-  timestamp: string,
-): Account | null {
-  if (destinationAccountId !== LENDING_POOL_ACCOUNT_ID) {
-    return null;
-  }
-  if (accounts.some((account) => account.id === LENDING_POOL_ACCOUNT_ID)) {
-    return null;
-  }
-
-  return buildLendingPoolAccount(userId, timestamp);
-}
-
-/**
- * Day number in UTC. Both sides of every date comparison go through this, so
- * results never depend on the machine's timezone.
- */
 function toUtcDay(value: Date): number {
   return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
 }
@@ -116,18 +93,34 @@ type Bucket = {
   borrowerKey: string;
   borrowerName: string;
   accountId?: string;
+  counterpartyId?: string;
   openingBalance: number;
   transactions: Transaction[];
 };
 
 /**
  * A dedicated account is one borrower, so it keys on the account. The pool
- * holds many, so it keys on the payee — trimmed and lowercased, since the same
- * person gets typed differently across months.
+ * holds many, so it keys on the counterparty. Rows written before
+ * counterparties existed fall back to the payee text they were grouped by.
  */
-function bucketFor(account: Account, transaction: Transaction): { key: string; name: string } {
+function bucketFor(
+  account: Account,
+  transaction: Transaction,
+  counterparties: Map<string, Counterparty>,
+): { key: string; name: string; counterpartyId?: string } {
   if (account.id !== LENDING_POOL_ACCOUNT_ID) {
     return { key: `account:${account.id}`, name: account.name };
+  }
+
+  const counterparty = transaction.counterpartyId
+    ? counterparties.get(transaction.counterpartyId)
+    : undefined;
+  if (counterparty) {
+    return {
+      key: `counterparty:${counterparty.id}`,
+      name: counterparty.name,
+      counterpartyId: counterparty.id,
+    };
   }
 
   const payee = transaction.payee?.trim();
@@ -180,6 +173,7 @@ function summarise(bucket: Bucket, asOf: Date): BorrowerLoans {
     borrowerKey: bucket.borrowerKey,
     borrowerName: bucket.borrowerName,
     accountId: bucket.accountId,
+    counterpartyId: bucket.counterpartyId,
     amountLent,
     amountRepaid,
     amountWrittenOff,
@@ -206,7 +200,9 @@ export function getLendingPortfolio(
   accounts: Account[],
   transactions: Transaction[],
   asOf: Date,
+  counterparties: Counterparty[] = [],
 ): LendingPortfolio {
+  const byId = new Map(counterparties.map((entry) => [entry.id, entry]));
   const receivables = new Map(
     accounts
       .filter((account) => account.type === "receivable" && !account.isArchived)
@@ -215,8 +211,25 @@ export function getLendingPortfolio(
 
   const buckets = new Map<string, Bucket>();
 
-  // A dedicated account carries its opening balance even with no transactions;
-  // the pool cannot attribute one to any borrower, so it never has one.
+  // Money owed before Moat was in use, attributed to the person rather than
+  // sitting unattributable on the pool. The pool's own opening balance holds
+  // the same total, so the two still agree.
+  if (receivables.has(LENDING_POOL_ACCOUNT_ID)) {
+    for (const counterparty of counterparties) {
+      if (!counterparty.openingBalance || counterparty.isArchived) {
+        continue;
+      }
+      buckets.set(`counterparty:${counterparty.id}`, {
+        borrowerKey: `counterparty:${counterparty.id}`,
+        borrowerName: counterparty.name,
+        counterpartyId: counterparty.id,
+        openingBalance: counterparty.openingBalance,
+        transactions: [],
+      });
+    }
+  }
+
+  // A dedicated account carries its opening balance even with no transactions.
   for (const account of receivables.values()) {
     if (account.id === LENDING_POOL_ACCOUNT_ID || account.openingBalance <= 0) {
       continue;
@@ -240,7 +253,7 @@ export function getLendingPortfolio(
       continue;
     }
 
-    const { key, name } = bucketFor(account, transaction);
+    const { key, name, counterpartyId } = bucketFor(account, transaction, byId);
     const existing = buckets.get(key);
 
     if (existing) {
@@ -251,6 +264,7 @@ export function getLendingPortfolio(
     buckets.set(key, {
       borrowerKey: key,
       borrowerName: name,
+      counterpartyId,
       accountId: account.id === LENDING_POOL_ACCOUNT_ID ? undefined : account.id,
       openingBalance: account.id === LENDING_POOL_ACCOUNT_ID ? 0 : account.openingBalance,
       transactions: [transaction],

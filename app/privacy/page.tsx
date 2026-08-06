@@ -245,7 +245,7 @@ export default function PrivacyPage() {
         <Card className="border-border/20 shadow-none">
           <CardContent className="grid gap-4 p-4 sm:p-5">
             <div className="grid gap-2">
-              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 Last updated
               </div>
               <div className="text-sm text-foreground">{LAST_UPDATED}</div>
@@ -274,7 +274,7 @@ export default function PrivacyPage() {
         <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
           <Card className="border-border/20 shadow-none lg:sticky lg:top-24">
             <CardContent className="grid gap-3 p-4">
-              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 On this page
               </div>
               <nav className="grid gap-1">

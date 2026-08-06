@@ -61,7 +61,7 @@ export function TransactionsCaptureWorkspace() {
         <div
           role="tablist"
           aria-label="Capture method"
-          className="grid grid-cols-2 gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5"
+          className="grid grid-cols-2 gap-1 rounded-lg bg-muted/30 p-0.5"
         >
           {methods.map((entry) => (
             <button
@@ -87,6 +87,7 @@ export function TransactionsCaptureWorkspace() {
             bare
             accounts={workspace.accounts}
             categories={workspace.categories}
+            counterparties={workspace.counterparties}
             form={workspace.transactionForm}
             editingId={workspace.editingTransactionId}
             isSubmitting={workspace.isSubmitting}

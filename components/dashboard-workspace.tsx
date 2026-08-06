@@ -1,14 +1,11 @@
 "use client";
 
 import { DashboardBalanceBridge } from "@/components/dashboard/dashboard-balance-bridge";
-import { DashboardBudgetCoverage } from "@/components/dashboard/dashboard-budget-coverage";
 import { DashboardMoatHero } from "@/components/dashboard/dashboard-moat-hero";
 import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
 import {
-  DashboardAccountBalances,
+  DashboardAttentionPanel,
   DashboardCashFlowSection,
-  DashboardInsightsPanel,
-  DashboardQuickActions,
   DashboardTopSpendingCategories,
 } from "@/components/dashboard/dashboard-sections";
 import { useDashboardWorkspace } from "@/components/dashboard/use-dashboard-workspace";
@@ -50,28 +47,13 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
     periodWindow,
     summary,
     savingsRate,
-    insights,
+    attentionItems,
     chartLabel,
     chartSeries,
-    budgetCoverage,
-    budgetEnvelopes,
-    topAccounts,
-    budgets,
-    transactions,
     accounts,
     inflowChange,
     outflowChange,
   } = useDashboardWorkspace(profile);
-
-  // Shortcuts to things that are otherwise several taps away. "Accounts" used
-  // to sit here, but it is a bottom-nav tab — a shortcut to a destination one
-  // tap away is a duplicate, not a shortcut. CSV import lives behind
-  // More → Data tools, which is where the real distance is.
-  const quickActions = [
-    { href: "/transactions/capture", title: "Add" },
-    { href: "/transactions/import", title: "Import" },
-    { href: "/goals", title: "Set goal" },
-  ];
 
   const { totalBalance, activeAccounts: activeAccountCount } = getAccountTotals(accounts);
   // Use the first name only so the heading and filter always share one row.
@@ -80,7 +62,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   return (
     <div className="grid gap-5">
       <header className="space-y-1">
-        <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+        <p className="text-xs font-medium text-muted-foreground">
           {periodWindow.title}
         </p>
         <div className="flex items-center justify-between gap-3">
@@ -111,7 +93,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             outflowChange={outflowChange}
           />
 
-          <DashboardQuickActions actions={quickActions} />
+          <DashboardAttentionPanel items={attentionItems} />
 
           <DashboardCashFlowSection
             savingsRate={savingsRate}
@@ -121,20 +103,12 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             chartSeries={chartSeries}
           />
 
-          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-            <DashboardTopSpendingCategories categories={summary.topCategories} />
-
-            <div className="grid content-start gap-5">
-              <DashboardAccountBalances accounts={topAccounts} transactions={transactions} />
-
-              <DashboardBudgetCoverage
-                hasBudgets={budgets.length > 0}
-                allocated={budgetCoverage.allocated}
-                spent={budgetCoverage.spent}
-                remaining={budgetCoverage.remaining}
-                envelopes={budgetEnvelopes}
-              />
-
+          <details className="group">
+            <summary className="cursor-pointer list-none rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              How this period moved
+              <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+            </summary>
+            <div className="pt-2">
               <DashboardBalanceBridge
                 openingBalance={summary.openingBalance}
                 inflow={summary.inflow}
@@ -143,10 +117,10 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
                 movement={summary.movement}
                 closingBalance={summary.closingBalance}
               />
-
-              <DashboardInsightsPanel insights={insights} />
             </div>
-          </div>
+          </details>
+
+          <DashboardTopSpendingCategories categories={summary.topCategories} />
         </>
       )}
     </div>

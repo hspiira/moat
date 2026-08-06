@@ -13,6 +13,11 @@ import {
   buildLendingPoolAccount,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
+import {
+  BORROWING_POOL_ACCOUNT_ID,
+  buildBorrowingPoolAccount,
+  getBorrowingPortfolio,
+} from "@/lib/domain/borrowing";
 import { buildTransferPair } from "@/components/transactions/transaction-builder";
 import { defaultTransactionForm } from "@/components/transactions/transaction-form";
 import { parseCsvText } from "@/lib/import/csv";
@@ -85,6 +90,31 @@ function buildWriteOff(amount: number, occurredOn: string): Transaction {
 }
 
 const lendingAmountArbitrary = fc.integer({ min: 1, max: 5_000_000 });
+
+/** A single leg sitting on the shared borrowing pool, attributed by payee. */
+function borrowingLeg(
+  amount: number,
+  occurredOn: string,
+  payee: string,
+  suffix: string,
+): Transaction {
+  return {
+    id: `transaction:borrowing-pool:${payee}:${suffix}`,
+    userId: "user:default",
+    accountId: BORROWING_POOL_ACCOUNT_ID,
+    type: "transfer",
+    amount,
+    currency: "UGX",
+    originalAmount: Math.abs(amount),
+    occurredOn,
+    categoryId: "category:transfers",
+    reconciliationState: "posted",
+    source: "manual",
+    payee,
+    createdAt: `${occurredOn}T00:00:00.000Z`,
+    updatedAt: `${occurredOn}T00:00:00.000Z`,
+  };
+}
 
 /** A single leg sitting on the shared lending pool, attributed by payee. */
 function poolLeg(
@@ -357,6 +387,47 @@ describe("accounting property invariants", () => {
           const secondPass = parseCsvText(serialized);
 
           expect(secondPass).toEqual(firstPass);
+        },
+      ),
+    );
+  });
+
+  it("every lender's balance sums to the borrowing pool's reconciled balance", () => {
+    const pool = buildBorrowingPoolAccount("user:default", "2026-01-01T00:00:00.000Z");
+
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            lender: fc.constantFrom("Grace", "Musa", "Cousin", "Chairman"),
+            amount: fc.integer({ min: 1, max: 2_000_000 }),
+            repay: fc.integer({ min: 0, max: 2_000_000 }),
+            // Forgiveness must be in here for the same reason write-offs are on
+            // the lending side: without it the invariant holds even when the
+            // forgiveness maths is broken.
+            forgiven: fc.integer({ min: 0, max: 2_000_000 }),
+            occurredOn: dateArbitrary.map(toIsoDate),
+          }),
+          { minLength: 1, maxLength: 12 },
+        ),
+        (loans) => {
+          const legs = loans.flatMap((loan, index) => [
+            borrowingLeg(-loan.amount, loan.occurredOn, loan.lender, `borrow-${index}`),
+            borrowingLeg(loan.repay, loan.occurredOn, loan.lender, `repay-${index}`),
+            {
+              ...borrowingLeg(loan.forgiven, loan.occurredOn, loan.lender, `forgiven-${index}`),
+              type: "income" as const,
+              categoryId: "category:debt-forgiven",
+            },
+          ]);
+
+          const [reconciledPool] = reconcileAccountBalances([pool], legs);
+          const portfolio = getBorrowingPortfolio([reconciledPool], legs, new Date("2026-07-29"));
+          const summed = portfolio.lenders.reduce((total, l) => total + l.outstanding, 0);
+
+          // A liability is stored negative, so the rows must add up to its
+          // mirror or the band shows figures that do not reconcile.
+          expect(summed).toBe(-reconciledPool.balance);
         },
       ),
     );

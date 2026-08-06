@@ -55,7 +55,7 @@ export function AccountBalanceBreakdown({
   }
 
   return (
-    <div className="grid gap-2 border border-border/20 px-4 py-3 text-sm">
+    <div className="grid gap-2 px-4 py-3 text-sm">
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">Opening</span>
@@ -84,7 +84,7 @@ export function AccountBalanceBreakdown({
           <BreakdownAmount amount={breakdown.transfers} />
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+      <div className="flex items-center justify-between gap-3 pt-2">
         <span className="text-muted-foreground">Net movement</span>
         <BreakdownAmount amount={breakdown.movement} />
       </div>

@@ -49,7 +49,7 @@ export function CsvImportPanel(props: Props) {
   } = useCsvImportPanel(props);
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         tone="lilac"
         title="CSV import"

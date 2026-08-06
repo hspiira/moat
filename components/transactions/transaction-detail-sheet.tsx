@@ -96,7 +96,7 @@ export function TransactionDetailSheet({
                 <DetailRow label={detail.fee.note ?? "Charges & tax"}>
                   <Money amount={detail.fee.amount} currency="UGX" tone="negative" signed />
                 </DetailRow>
-                <DetailRow label="Total off account" className="border-t border-border/30 pt-2">
+                <DetailRow label="Total off account" className="pt-2">
                   <Money
                     amount={detail.totalOffAccount}
                     currency="UGX"

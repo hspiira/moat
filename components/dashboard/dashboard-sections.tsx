@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
-import { AccountBalanceBreakdown } from "@/components/accounts/account-balance-breakdown";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Popover,
@@ -17,58 +23,12 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Account, Transaction } from "@/lib/types";
+import type { AttentionItem } from "@/lib/domain/attention";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
-import { cn } from "@/lib/utils";
-
-type ChartMode = "rate" | "flow" | "allocation";
-
-const CHART_MODES: { value: ChartMode; label: string }[] = [
-  { value: "rate", label: "Savings" },
-  { value: "flow", label: "Cash flow" },
-  { value: "allocation", label: "Allocation" },
-];
 
 const CHART_PERIOD_LABELS_CLASS =
-  "flex justify-between text-[11px] uppercase tracking-[0.14em] text-foreground/50";
-
-function ChartModeTabs({
-  mode,
-  onChange,
-}: {
-  mode: ChartMode;
-  onChange: (m: ChartMode) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Chart view"
-      className="flex w-full items-center rounded-lg border border-border/60 bg-muted/30 p-0.5 lg:w-auto"
-    >
-      {CHART_MODES.map(({ value, label }) => {
-        const active = mode === value;
-        return (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(value)}
-            className={cn(
-              "flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors lg:flex-none",
-              active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+  "flex justify-between text-[11px] text-muted-foreground";
 
 /**
  * Present the savings rate as a headline. A raw percentage beyond ±100% reads
@@ -116,14 +76,8 @@ export function DashboardSavingsOverview({
   chartLabel: string;
   chartSeries: DashboardChartPoint[];
 }) {
-  const [chartMode, setChartMode] = useState<ChartMode>("flow");
-
   const savings = describeSavingsRate(hasIncome, savingsRate);
 
-  const maxRate = useMemo(
-    () => Math.max(...chartSeries.map((point) => Math.abs(point.savingsRate)), 0.1),
-    [chartSeries],
-  );
   const maxFlow = useMemo(
     () => Math.max(...chartSeries.flatMap((point) => [Math.abs(point.saved), point.outflow]), 1),
     [chartSeries],
@@ -133,70 +87,22 @@ export function DashboardSavingsOverview({
     (p) => p.inflow > 0 || p.outflow > 0 || p.saved !== 0,
   );
 
-  function renderRateChart() {
-    const hasNegative = chartSeries.some((p) => p.savingsRate < 0);
-
+  function renderFlowChart() {
     if (!hasAnyData) {
       return (
         <div className="flex h-36 items-center justify-center lg:h-44">
-          <span className="text-xs text-foreground/40">No data for this period</span>
+          <span className="text-xs text-muted-foreground">No data for this period</span>
         </div>
       );
     }
 
     return (
       <div className="grid gap-2">
-        <div className="relative grid h-36 grid-cols-6 items-stretch gap-1.5 lg:h-44 lg:gap-2">
-          {hasNegative ? (
-            <div className="absolute inset-x-0 top-1/2 border-t border-border/30" />
-          ) : null}
-          {chartSeries.map((point, index) => {
-            const pct = Math.max(
-              (Math.abs(point.savingsRate) / maxRate) * 100,
-              point.savingsRate === 0 ? 0 : 10,
-            );
-            const isCurrent = index === chartSeries.length - 1;
-            const color =
-              point.savingsRate > 0
-                ? isCurrent
-                  ? "bg-foreground"
-                  : "bg-foreground/40"
-                : point.savingsRate < 0
-                  ? "bg-destructive"
-                  : "bg-foreground/15";
-
-            return (
-              <div key={point.key} className="relative flex items-end">
-                <div
-                  className={`w-full ${color} ${hasNegative ? "absolute" : ""}`}
-                  style={
-                    hasNegative
-                      ? point.savingsRate >= 0
-                        ? { height: `${pct / 2}%`, bottom: "50%" }
-                        : { height: `${pct / 2}%`, top: "50%" }
-                      : { height: `${pct}%` }
-                  }
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className={CHART_PERIOD_LABELS_CLASS}>
-          <span>{chartSeries[0]?.label ?? chartLabel}</span>
-          <span>{chartSeries[chartSeries.length - 1]?.label ?? "Current"}</span>
-        </div>
-      </div>
-    );
-  }
-
-  function renderFlowChart() {
-    return (
-      <div className="grid gap-2">
         {/* Diverging around zero: saved rises when the month built the moat and
             drops when it drained it; outflow always points down (money out) as
             muted context. Direction carries the meaning; color reinforces it. */}
         <div className="relative grid h-36 grid-cols-6 gap-1.5 lg:h-44 lg:gap-2">
-          <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-border/40" />
+          <div aria-hidden className="absolute inset-x-0 top-1/2" />
           {chartSeries.map((point, index) => {
             const isCurrent = index === chartSeries.length - 1;
             // Half the plot is above zero, half below, so scale to 50%.
@@ -262,55 +168,13 @@ export function DashboardSavingsOverview({
     );
   }
 
-  function renderAllocationChart() {
-    return (
-      <div className="grid gap-2">
-        <div className="grid h-36 grid-cols-6 items-end gap-1.5 lg:h-44 lg:gap-2">
-          {chartSeries.map((point, index) => {
-            const inflow = Math.max(point.inflow, 0);
-            const savedShare = inflow > 0 ? Math.max(point.saved, 0) / inflow : 0;
-            const spentShare = inflow > 0 ? Math.min(point.outflow / inflow, 1) : 0;
-            const isCurrent = index === chartSeries.length - 1;
-            return (
-              <div
-                key={point.key}
-                className="flex h-full flex-col justify-end overflow-hidden border border-border/20"
-              >
-                <div
-                  className={isCurrent ? "bg-foreground" : "bg-foreground/40"}
-                  style={{ height: `${savedShare * 100}%` }}
-                />
-                <div
-                  className="bg-destructive/55"
-                  style={{ height: `${spentShare * 100}%` }}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className={CHART_PERIOD_LABELS_CLASS}>
-          <span>Saved share</span>
-          <span>Spent share</span>
-        </div>
-      </div>
-    );
-  }
-
-  const chart =
-    chartMode === "rate"
-      ? renderRateChart()
-      : chartMode === "flow"
-        ? renderFlowChart()
-        : renderAllocationChart();
 
   return (
-    <Card className="moat-panel-sage border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardContent className="p-5">
-        <div className="grid gap-5 lg:grid-cols-2 lg:gap-8 lg:items-center">
+        <div className="grid gap-5 lg:grid-cols-2 lg:items-center lg:gap-8">
 
-          {/* Stat column */}
           <div className="space-y-4">
-            {/* Label + info, then the view switcher on its own row (mobile). */}
             <div className="space-y-3">
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span>Savings rate</span>
@@ -337,11 +201,6 @@ export function DashboardSavingsOverview({
                   </PopoverContent>
                 </Popover>
               </div>
-              {/* View switcher — full-width segmented control on mobile, moved
-                  into the chart column on lg. */}
-              <div className="lg:hidden">
-                <ChartModeTabs mode={chartMode} onChange={setChartMode} />
-              </div>
             </div>
 
             <AmountIndicator
@@ -351,7 +210,7 @@ export function DashboardSavingsOverview({
               className="text-5xl font-semibold tracking-tight sm:text-6xl"
             />
 
-            <p className="text-xs text-foreground/65">
+            <p className="text-xs text-muted-foreground">
               {hasIncome ? (
                 <>
                   {savings.note ? <>{savings.note} </> : null}
@@ -372,14 +231,9 @@ export function DashboardSavingsOverview({
             </p>
           </div>
 
-          {/* Chart column */}
           <div className="grid gap-3">
-            {/* Tabs — hidden on mobile (shown in stat column), visible on lg */}
-            <div className="hidden justify-end lg:flex">
-              <ChartModeTabs mode={chartMode} onChange={setChartMode} />
-            </div>
-            {chart}
-            <p className="text-[11px] text-foreground/50">
+            {renderFlowChart()}
+            <p className="text-[11px] text-muted-foreground">
               Last six {chartLabel.toLowerCase()} periods.
             </p>
           </div>
@@ -428,10 +282,18 @@ export function DashboardTopSpendingCategories({
   }[];
 }) {
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">Top spending categories</CardTitle>
+        <CardTitle className="text-base">Where it went</CardTitle>
         <CardDescription>Selected period only. Transfers are excluded.</CardDescription>
+        <CardAction>
+          <Link
+            href="/transactions"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            See all ›
+          </Link>
+        </CardAction>
       </CardHeader>
       <CardContent className="grid gap-2">
         {categories.length === 0 ? (
@@ -473,142 +335,53 @@ export function DashboardTopSpendingCategories({
   );
 }
 
-export function DashboardAccountBalances({
-  accounts,
-  transactions,
-}: {
-  accounts: Account[];
-  transactions: Transaction[];
-}) {
-  return (
-    <Card className="border-border/20 shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">Current account balances</CardTitle>
-        <CardDescription>
-          All recorded history plus opening balances, independent of the filter.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-2">
-        {accounts.length === 0 ? (
-          <EmptyState>
-            No accounts.{" "}
-            <Link href="/accounts" className="underline underline-offset-4 hover:text-foreground">
-              Add an account
-            </Link>
-          </EmptyState>
-        ) : (
-          accounts.map((account, index) => (
-            <div
-              key={account.id}
-              className={`-mx-4 grid gap-2 border-y px-4 py-3 sm:mx-0 sm:border-x ${
-                index % 2 === 0 ? "moat-panel-sage border-border/20" : "bg-muted/20 border-border/20"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <Link
-                  href={`/accounts/${encodeURIComponent(account.id)}`}
-                  className="group flex min-w-0 flex-1 items-center gap-1"
-                  aria-label={`Open ${account.name} ledger`}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-foreground">{account.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {account.type.replaceAll("_", " ")}
-                    </div>
-                  </div>
-                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-                <AmountIndicator
-                  tone={
-                    account.balance > 0
-                      ? "positive"
-                      : account.balance < 0
-                        ? "negative"
-                        : "neutral"
-                  }
-                  sign={
-                    account.balance > 0
-                      ? "positive"
-                      : account.balance < 0
-                        ? "negative"
-                        : "none"
-                  }
-                  value={formatMoney(account.balance)}
-                  className="shrink-0 text-sm font-medium"
-                />
-              </div>
-              <AccountBalanceBreakdown account={account} transactions={transactions} compact />
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-export function DashboardInsightsPanel({
-  insights,
-}: {
-  insights: { id: string; title: string; body: string }[];
-}) {
-  // Nothing to say means say nothing. A card whose only content is "no insights
-  // yet" costs prime vertical space to report an absence, which is exactly the
-  // noise that made this dashboard hard to scan.
-  if (insights.length === 0) {
+export function DashboardAttentionPanel({ items }: { items: AttentionItem[] }) {
+  // Nothing to say means say nothing. A card whose only content is "nothing
+  // needs attention" spends prime vertical space reporting an absence.
+  if (items.length === 0) {
     return null;
   }
 
   return (
-    <Card className="moat-panel-lilac border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">This period</CardTitle>
-        <CardDescription className="text-foreground/65">
-          Prompts from the selected time window.
-        </CardDescription>
+        <CardTitle className="text-base">
+          Needs attention{" "}
+          <span className="font-normal text-muted-foreground tabular-nums">({items.length})</span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {insights.length === 0 ? (
-          <EmptyState className="border-border/30 bg-background/10 py-6 text-foreground/75">
-            Add more transactions for personalised prompts.
-          </EmptyState>
-        ) : (
-          <ul className="grid gap-3">
-            {insights.map((insight) => (
-              <li key={insight.id} className="flex gap-2.5 text-sm">
-                <span className="mt-1.5 size-1.5 shrink-0 bg-foreground" />
-                <span className="leading-6 text-foreground/80">
-                  <span className="font-medium text-foreground">{insight.title}: </span>
-                  {insight.body}
+        <ul className="grid gap-1">
+          {items.map((item) => {
+            const body = (
+              <>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">{item.title}</span>
+                  <span className="text-xs leading-5 text-muted-foreground">{item.body}</span>
                 </span>
+                {item.href ? (
+                  <IconChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground/60" />
+                ) : null}
+              </>
+            );
+
+            return (
+              <li key={item.id}>
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div className="flex items-start gap-3 px-3 py-2.5">{body}</div>
+                )}
               </li>
-            ))}
-          </ul>
-        )}
+            );
+          })}
+        </ul>
       </CardContent>
     </Card>
-  );
-}
-
-export function DashboardQuickActions({
-  actions,
-}: {
-  actions: { href: string; title: string }[];
-}) {
-  // No section heading: three labelled buttons don't need a line of prose
-  // telling the reader they are buttons. 44px tall so they match the form
-  // controls rather than being the smallest tap target on the screen.
-  return (
-    <div className="grid grid-cols-3 gap-2 lg:hidden">
-      {actions.map((action) => (
-        <Button
-          key={action.href}
-          asChild
-          variant="outline"
-          className="h-11 justify-center px-2 text-xs"
-        >
-          <Link href={action.href}>{action.title}</Link>
-        </Button>
-      ))}
-    </div>
   );
 }

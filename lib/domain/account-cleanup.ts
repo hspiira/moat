@@ -1,0 +1,136 @@
+import { isReservedAccountId, isReservedAccountName } from "@/lib/app-state/default-accounts";
+import { resolveCounterparty } from "@/lib/domain/counterparties";
+import type { Account, Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
+
+/**
+ * Nothing cascades a delete, and the reporting paths silently skip transactions
+ * whose account they cannot find — orphans vanish from the bands while sitting
+ * in storage forever. So delete is only offered when there is nothing to
+ * orphan; anything with history is archived or merged instead.
+ */
+
+export type DeleteVerdict = { allowed: true } | { allowed: false; reason: string };
+
+export function countAccountTransactions(
+  accountId: string,
+  transactions: Transaction[],
+): number {
+  return transactions.filter((transaction) => transaction.accountId === accountId).length;
+}
+
+export function canDeleteAccount(
+  account: Account,
+  transactions: Transaction[],
+): DeleteVerdict {
+  if (isReservedAccountId(account.id)) {
+    return {
+      allowed: false,
+      reason: `${account.name} is created for everyone and cannot be deleted. Archive it instead to hide it.`,
+    };
+  }
+
+  const count = countAccountTransactions(account.id, transactions);
+  if (count > 0) {
+    return {
+      allowed: false,
+      reason:
+        count === 1
+          ? "This account has 1 transaction. Archive it, or merge it, so the record is not lost."
+          : `This account has ${count} transactions. Archive it, or merge it, so the records are not lost.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+export type MergePlan =
+  | { blocked: string }
+  | {
+      blocked?: undefined;
+      counterparty: Counterparty;
+      transactions: Transaction[];
+      /** The pool, with the merged account's opening balance folded in. */
+      target: Account;
+    };
+
+function counterpartyKindFor(accountType: Account["type"]): CounterpartyKind {
+  return accountType === "receivable" ? "borrower" : "lender";
+}
+
+/**
+ * Folds a per-person account into the pool it duplicates, turning the account
+ * itself into the counterparty that its name stood for.
+ *
+ * The opening balance moves onto both the counterparty and the pool, so the
+ * control account still equals the sum of its subsidiary entries and net worth
+ * does not move: the pool gains exactly what the removed account took with it.
+ */
+export function planAccountMerge(
+  source: Account,
+  target: Account,
+  transactions: Transaction[],
+  counterparties: Counterparty[],
+  timestamp: string,
+  nextCounterpartyId: () => string,
+): MergePlan {
+  if (source.id === target.id) {
+    return { blocked: "An account cannot be merged into itself." };
+  }
+  if (isReservedAccountId(source.id)) {
+    return { blocked: `${source.name} is created for everyone and cannot be merged away.` };
+  }
+  if (source.type !== target.type) {
+    return {
+      blocked: `${source.name} and ${target.name} track opposite directions of money, so merging them would flip the sign on every record.`,
+    };
+  }
+
+  const kind = counterpartyKindFor(source.type);
+  const resolved = resolveCounterparty(counterparties, {
+    name: source.name,
+    kind,
+    userId: source.userId,
+    id: nextCounterpartyId(),
+    timestamp,
+  });
+
+  const carried = Math.abs(source.openingBalance);
+  const counterparty =
+    carried === 0
+      ? resolved.counterparty
+      : {
+          ...resolved.counterparty,
+          openingBalance: (resolved.counterparty.openingBalance ?? 0) + carried,
+          updatedAt: timestamp,
+        };
+
+  const moved = transactions
+    .filter((transaction) => transaction.accountId === source.id)
+    .map((transaction) => ({
+      ...transaction,
+      accountId: target.id,
+      counterpartyId: counterparty.id,
+      payee: counterparty.name,
+      updatedAt: timestamp,
+    }));
+
+  return {
+    counterparty,
+    transactions: moved,
+    target: {
+      ...target,
+      openingBalance: target.openingBalance + source.openingBalance,
+      balance: target.balance + source.openingBalance,
+      updatedAt: timestamp,
+    },
+  };
+}
+
+export function findDuplicatePoolAccounts(accounts: Account[]): Account[] {
+  return accounts.filter(
+    (account) =>
+      !account.isArchived &&
+      !isReservedAccountId(account.id) &&
+      isReservedAccountName(account.name),
+  );
+}

@@ -19,7 +19,7 @@ export function DebtSummary({
   }
 
   return (
-    <div className="grid gap-2 border border-border/20 px-4 py-3 text-sm">
+    <div className="grid gap-2 px-4 py-3 text-sm">
       <div className="flex items-center justify-between gap-3">
         <span className="text-muted-foreground">Principal</span>
         <AmountIndicator

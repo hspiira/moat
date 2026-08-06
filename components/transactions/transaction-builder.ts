@@ -99,6 +99,10 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
       type: "transfer",
       amount: -Math.abs(normalizedAmount),
       transferGroupId,
+      // Carried on both legs because the loan leg is the destination when
+      // lending out and the source when borrowing. Only the loan account's own
+      // leg is ever read, so the other copy is inert.
+      expectedRepaymentDate: form.expectedRepaymentDate || undefined,
       createdAt: preservedCreatedAt(input, sourceId),
       ...shared,
     },
@@ -109,8 +113,6 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
       type: "transfer",
       amount: Math.abs(normalizedAmount),
       transferGroupId,
-      // The loan lives on the leg that lands in the receivable, not on the
-      // leg that left the wallet, so a due date only belongs here.
       expectedRepaymentDate: form.expectedRepaymentDate || undefined,
       createdAt: preservedCreatedAt(input, destinationId),
       ...shared,

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export function MetricChip({
   value,
   label,
-  className = "border-border/40 bg-muted/30",
+  className = "bg-muted/30",
 }: {
   value: React.ReactNode;
   label: string;

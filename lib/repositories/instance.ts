@@ -83,6 +83,7 @@ function createBundleProxy(): RepositoryBundle {
     recurringObligations: lazyRepository("recurringObligations"),
     monthCloses: lazyRepository("monthCloses", ["getByPeriod"]),
     categories: lazyRepository("categories", ["listDefaults"]),
+    counterparties: lazyRepository("counterparties"),
     goals: lazyRepository("goals"),
     budgets: lazyRepository("budgets", ["listByMonth"]),
     investmentProfiles: lazyDelegate(

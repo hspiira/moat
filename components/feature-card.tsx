@@ -14,7 +14,7 @@ type FeatureCardProps = {
 
 export function FeatureCard({ title, summary, bullets }: FeatureCardProps) {
   return (
-    <Card className="h-full border-border/70 bg-card/90 shadow-sm">
+    <Card className="h-full bg-card/90 shadow-sm">
       <CardHeader className="space-y-3">
         <CardTitle className="text-lg">{title}</CardTitle>
         <CardDescription className="text-sm leading-6">

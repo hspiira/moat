@@ -23,12 +23,21 @@ import type {
   Account,
   CaptureReviewItem,
   Category,
+  Counterparty,
+  CounterpartyKind,
   MonthClose,
   Transaction,
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { ensureLendingPool } from "@/lib/domain/lending";
+import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
+import { backfillCounterparties, resolveCounterparty } from "@/lib/domain/counterparties";
+import {
+  NEW_COUNTERPARTY,
+  describeTransferCounterparty,
+} from "@/lib/domain/transfer-counterparty";
+import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
+import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -71,6 +80,11 @@ function useLatest<T>(value: T) {
   return ref;
 }
 
+const POOL_COUNTERPARTY_KINDS = new Map<string, CounterpartyKind>([
+  [LENDING_POOL_ACCOUNT_ID, "borrower"],
+  [BORROWING_POOL_ACCOUNT_ID, "lender"],
+]);
+
 function sortTransactions(transactions: Transaction[]) {
   return [...transactions].sort((a, b) => {
     if (a.occurredOn === b.occurredOn) return b.createdAt.localeCompare(a.createdAt);
@@ -103,6 +117,7 @@ export function useTransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
   const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
@@ -243,6 +258,7 @@ export function useTransactionsWorkspace() {
         setAccounts([]);
         setCategories([]);
         setTransactions([]);
+        setCounterparties([]);
         setBudgets([]);
         setCaptureReviewItems([]);
         setTransactionRules([]);
@@ -251,11 +267,13 @@ export function useTransactionsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedCategories, storedTransactions] = await Promise.all([
-        repositories.accounts.listByUser(nextProfile.id),
-        repositories.categories.listByUser(nextProfile.id),
-        repositories.transactions.listByUser(nextProfile.id),
-      ]);
+      const [storedAccounts, storedCategories, storedTransactions, storedCounterparties] =
+        await Promise.all([
+          repositories.accounts.listByUser(nextProfile.id),
+          repositories.categories.listByUser(nextProfile.id),
+          repositories.transactions.listByUser(nextProfile.id),
+          repositories.counterparties.listByUser(nextProfile.id),
+        ]);
       const [storedCaptureReviewItems, storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
         repositories.captureReviewItems.listByUser(nextProfile.id),
         repositories.transactionRules.listByUser(nextProfile.id),
@@ -264,9 +282,21 @@ export function useTransactionsWorkspace() {
         repositories.budgets.listByMonth(nextProfile.id, closePeriod),
       ]);
 
+      const accountSeeds = reconcileDefaultAccounts(
+        storedAccounts,
+        nextProfile.id,
+        new Date().toISOString(),
+      );
+      if (accountSeeds.length > 0) {
+        await Promise.all(accountSeeds.map((account) => repositories.accounts.upsert(account)));
+      }
+
       // Reconcile in memory for display only. Loading is a read — persisting
       // balances here would churn storage and the sync outbox on every view.
-      const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
+      const reconciledAccounts = reconcileAccountBalances(
+        [...storedAccounts, ...accountSeeds],
+        storedTransactions,
+      );
 
       // Seeded categories do get written, because a stale kind is not cosmetic:
       // "Debt repayment" seeded as an expense leaves a debt payment with no
@@ -281,9 +311,33 @@ export function useTransactionsWorkspace() {
           ? await repositories.categories.listByUser(nextProfile.id)
           : storedCategories;
 
+      // Loans recorded before counterparties existed were grouped by their
+      // payee text. Promoting each distinct payee to a record once keeps that
+      // history in the same buckets it has always been in.
+      const backfill = backfillCounterparties(
+        storedTransactions,
+        storedCounterparties,
+        POOL_COUNTERPARTY_KINDS,
+        nextProfile.id,
+        new Date().toISOString(),
+        () => `counterparty:${crypto.randomUUID()}`,
+      );
+      if (backfill.counterparties.length > 0 || backfill.transactions.length > 0) {
+        await Promise.all([
+          ...backfill.counterparties.map((entry) => repositories.counterparties.upsert(entry)),
+          ...backfill.transactions.map((row) => repositories.transactions.upsert(row)),
+        ]);
+      }
+      const stampedById = new Map(backfill.transactions.map((row) => [row.id, row]));
+      const currentTransactions =
+        stampedById.size > 0
+          ? storedTransactions.map((row) => stampedById.get(row.id) ?? row)
+          : storedTransactions;
+      setCounterparties([...storedCounterparties, ...backfill.counterparties]);
+
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
-      setTransactions(sortTransactions(storedTransactions));
+      setTransactions(sortTransactions(currentTransactions));
       setBudgets(storedBudgets);
       setCaptureReviewItems(storedCaptureReviewItems);
       setTransactionRules(storedRules);
@@ -427,6 +481,49 @@ export function useTransactionsWorkspace() {
     await Promise.all(changed.map((account) => repositories.accounts.upsert(account)));
   }, []);
 
+  /**
+   * Turns whatever the loan fields hold into a stored person. Picking an
+   * existing one reuses it; naming a new one creates it, unless that name is
+   * already on file — in which case the existing record wins, which is the
+   * whole point of not keying on text.
+   */
+  const resolveFormCounterparty = useCallback(
+    async (userId: string, timestamp: string): Promise<Counterparty | null> => {
+      const { counterpartyId, counterpartyName } = transactionForm;
+
+      if (counterpartyId && counterpartyId !== NEW_COUNTERPARTY) {
+        return counterparties.find((entry) => entry.id === counterpartyId) ?? null;
+      }
+      if (!counterpartyName.trim()) {
+        return null;
+      }
+
+      const direction = describeTransferCounterparty(
+        accounts,
+        transactionForm.accountId,
+        transactionForm.destinationAccountId,
+      )?.direction;
+      if (!direction) {
+        return null;
+      }
+
+      const stored = await repositories.counterparties.listByUser(userId);
+      const { counterparty, isNew } = resolveCounterparty(stored, {
+        name: counterpartyName,
+        kind: direction === "lend" || direction === "collect" ? "borrower" : "lender",
+        userId,
+        id: `counterparty:${crypto.randomUUID()}`,
+        timestamp,
+      });
+
+      if (isNew || !stored.some((entry) => entry.id === counterparty.id && entry.kind === counterparty.kind)) {
+        await repositories.counterparties.upsert(counterparty);
+      }
+      return counterparty;
+    },
+    [accounts, counterparties, transactionForm],
+  );
+
   const handleTransactionSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -448,24 +545,14 @@ export function useTransactionsWorkspace() {
 
         let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
-          // The shared lending pool is offered as a destination before it
-          // exists, so the first loan materialises it. Must land before the
-          // legs, or the destination leg would reference a missing account.
-          const newPool = ensureLendingPool(
-            accounts,
-            transactionForm.destinationAccountId,
-            profile.id,
-            timestamp,
-          );
-          if (newPool) {
-            await repositories.accounts.upsert(newPool);
-          }
-
+          const party = await resolveFormCounterparty(profile.id, timestamp);
           const [source, destination] = buildTransferPair(buildInput);
           feeParent = source;
+          const stamp = (row: Transaction): Transaction =>
+            party ? { ...row, counterpartyId: party.id, payee: party.name } : row;
           await Promise.all([
-            repositories.transactions.upsert(source),
-            repositories.transactions.upsert(destination),
+            repositories.transactions.upsert(stamp(source)),
+            repositories.transactions.upsert(stamp(destination)),
           ]);
         } else if (transactionForm.type === "debt_payment") {
           // Split into an interest expense and a principal transfer. The user
@@ -536,6 +623,7 @@ export function useTransactionsWorkspace() {
       persistReconciledBalances,
       profile,
       refreshMonthCloseState,
+      resolveFormCounterparty,
       show,
       transactionForm,
       transactions,
@@ -554,6 +642,8 @@ export function useTransactionsWorkspace() {
         categoryId: transaction.categoryId,
         currency: transaction.currency,
         payee: transaction.payee ?? transaction.rawPayee ?? "",
+        counterpartyId: transaction.counterpartyId ?? "",
+        counterpartyName: "",
         amount: String(transaction.originalAmount),
         fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
         feeAmount: feeChild ? String(feeChild.originalAmount) : "",
@@ -687,6 +777,7 @@ export function useTransactionsWorkspace() {
     profile,
     accounts,
     categories,
+    counterparties,
     transactions,
     periodTransactions,
     periodSummary,

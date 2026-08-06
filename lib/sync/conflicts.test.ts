@@ -54,6 +54,7 @@ function createRepositories(items: SyncOutboxItem[]): RepositoryBundle {
     recurringObligations: {} as RepositoryBundle["recurringObligations"],
     monthCloses: {} as RepositoryBundle["monthCloses"],
     categories: {} as RepositoryBundle["categories"],
+    counterparties: {} as RepositoryBundle["counterparties"],
     goals: {} as RepositoryBundle["goals"],
     budgets: {} as RepositoryBundle["budgets"],
     investmentProfiles: {} as RepositoryBundle["investmentProfiles"],

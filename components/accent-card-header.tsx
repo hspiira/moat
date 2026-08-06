@@ -37,7 +37,7 @@ export function AccentCardHeader({
     <CardHeader
       className={cn(
         accentToneClasses[tone],
-        "min-h-20 gap-1 border-b border-border/20 py-3 text-foreground",
+        "min-h-20 gap-1 py-3 text-foreground",
         className,
       )}
     >
