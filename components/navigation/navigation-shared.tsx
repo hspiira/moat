@@ -181,13 +181,13 @@ export function ThemeToggle({
 export function QuickActionLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="grid gap-2">
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
         <Link href="/transactions/capture" onClick={onNavigate}>Capture transactions</Link>
       </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
         <Link href="/transactions/import" onClick={onNavigate}>Import statements</Link>
       </Button>
-      <Button asChild variant="ghost" className="h-auto justify-start border border-border/20 px-3 py-3 whitespace-normal shadow-none">
+      <Button asChild variant="ghost" className="h-auto justify-start rounded-lg bg-muted/40 px-3 py-3 whitespace-normal shadow-none">
         {/* Names both things the screen hosts. "Review month close" gave no
             reason to open it if what you wanted was recurring bills. */}
         <Link href="/transactions/review/month-close" onClick={onNavigate}>
@@ -239,7 +239,7 @@ function DrawerNavRow({
       <Link
         href={href}
         onClick={onNavigate}
-        className="grid w-full gap-1 border-b border-border/15 py-3 text-left"
+        className="grid w-full gap-1 rounded-lg px-3 py-3 text-left"
       >
         <span className="flex items-start gap-3">
           <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
@@ -262,9 +262,9 @@ export function MobileCaptureSheet() {
           variant="secondary"
           size="icon"
           aria-label="Capture transaction"
-          className="h-12 w-12 border border-border/30 bg-primary text-primary-foreground shadow-none dark:text-primary-foreground"
+          className="size-11 shrink-0 rounded-full bg-primary text-primary-foreground shadow-none hover:bg-primary/90 dark:text-primary-foreground"
         >
-          <IconPlus className="h-5 w-5" />
+          <IconPlus className="size-5" />
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -296,7 +296,7 @@ export function MobileCaptureSheet() {
                 <Link
                   href={action.href}
                   onClick={() => setOpen(false)}
-                  className="grid w-full gap-1 border border-border/20 px-4 py-3 text-left"
+                  className="grid w-full gap-1 rounded-lg bg-muted/40 px-4 py-3 text-left"
                 >
                   <span className="flex items-center gap-3 text-sm font-medium text-foreground">
                     <IconComponent className="h-4 w-4" />
@@ -389,7 +389,7 @@ export function MobileUtilitySheet({
           </DrawerSection>
 
           <DrawerSection title="Theme & settings">
-            <div className="flex items-center justify-between gap-3 border-b border-border/15 py-2">
+            <div className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="text-sm text-muted-foreground">Switch between light and dark mode.</div>
               <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
             </div>
@@ -442,7 +442,8 @@ export function MobileMoreButton({
 }) {
   const activeContextItem = getMobileContextNavItem(pathname);
   const isActive = Boolean(activeContextItem);
-  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconPlus;
+  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconMenu2;
+  const label = activeContextItem?.label ?? "More";
 
   return (
     <MobileUtilitySheet
@@ -450,21 +451,20 @@ export function MobileMoreButton({
       onToggleTheme={onToggleTheme}
       trigger={
         <Button
-          variant={isActive ? "secondary" : "ghost"}
+          variant="ghost"
+          aria-label={label}
           className={[
-            "h-auto min-h-12 flex-col gap-0.5 px-2 py-1 text-center text-[11px] font-medium shadow-none",
-            isActive ? "text-foreground" : "text-muted-foreground",
+            "flex h-11 items-center justify-center gap-2 rounded-full px-3 shadow-none",
+            "transition-[background-color,color,padding] duration-200 ease-out",
+            isActive
+              ? "bg-primary pr-4 pl-3.5 text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           ].join(" ")}
         >
-          <span
-            className={[
-              "inline-flex h-6 w-10 items-center justify-center transition-colors",
-              isActive ? "text-primary" : "bg-transparent",
-            ].join(" ")}
-          >
-            <IconComponent className="h-4 w-4" />
-          </span>
-          <span className="leading-none">{activeContextItem?.label ?? "More"}</span>
+          <IconComponent className="size-5 shrink-0" stroke={isActive ? 2 : 1.7} />
+          {isActive ? (
+            <span className="text-sm font-medium whitespace-nowrap">{label}</span>
+          ) : null}
         </Button>
       }
     />
