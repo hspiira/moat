@@ -37,7 +37,7 @@ const strategyLabels: Record<DebtPayoffStrategy, string> = {
 
 function PlanCard({ title, plan, recommended }: { title: string; plan: DebtPayoffPlan; recommended: boolean }) {
   return (
-    <div className={`grid gap-2 border px-4 py-4 ${recommended ? "border-primary/30 bg-primary/5" : "border-border/20"}`}>
+    <div className={`grid gap-2 border px-4 py-4 ${recommended ? "border-primary/30 bg-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm text-foreground">{title}</div>
@@ -112,7 +112,7 @@ export function DebtPayoffPlanner({
   }
 
   return (
-    <Card id="debt" className="scroll-mt-20 border-border/20 shadow-none">
+    <Card id="debt" className="scroll-mt-20 shadow-none">
       <CardHeader>
         <CardTitle className="text-base">Debt payoff planner</CardTitle>
         <CardDescription>
@@ -186,7 +186,7 @@ export function DebtPayoffPlanner({
           </div>
           <div className="grid gap-2">
             {actions.map((action) => (
-              <div key={action.accountId} className="border border-border/20 px-4 py-3">
+              <div key={action.accountId} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm text-foreground">

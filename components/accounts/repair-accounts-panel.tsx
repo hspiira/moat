@@ -65,7 +65,7 @@ export function RepairAccountsPanel({
   }
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         tone="lilac"
         title="Opening balance repair"
@@ -76,7 +76,7 @@ export function RepairAccountsPanel({
           const recommended = getRepairRecommendation(account, breakdown);
 
           return (
-            <div key={account.id} className="grid gap-3 border border-border/20 px-4 py-4">
+            <div key={account.id} className="grid gap-3 px-4 py-4">
               <div className="space-y-1">
                 <div className="text-sm font-medium text-foreground">{account.name}</div>
                 <div className="text-xs text-muted-foreground">

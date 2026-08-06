@@ -92,7 +92,7 @@ export function DashboardMoatHero({
   const ringTone = runwayMonths >= TARGET_MONTHS ? "positive" : "moat";
 
   return (
-    <Card className="overflow-hidden ring-1 ring-primary/15">
+    <Card className="overflow-hidden">
       <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8 sm:px-7">
         <div className="flex flex-col items-center gap-2 justify-self-center sm:justify-self-start">
           <MoatRing
@@ -120,7 +120,7 @@ export function DashboardMoatHero({
             </p>
           </div>
 
-          <dl className="grid grid-cols-1 gap-2 border-t border-border/60 pt-4 sm:grid-cols-3 sm:gap-3">
+          <dl className="grid grid-cols-1 gap-2 pt-4 sm:grid-cols-3 sm:gap-3">
             <FlowStat
               icon={<IconArrowDownLeft className="size-3.5" />}
               label="In"

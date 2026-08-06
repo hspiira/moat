@@ -90,7 +90,7 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <Card className="ring-1 ring-primary/15">
+          <Card>
             <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
               <MoatRing
                 value={emergencyProgress}

@@ -141,7 +141,7 @@ export function PwaStatus() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/30 pb-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
       <div className="flex flex-wrap items-center gap-2">
         {!isOnline ? <Badge variant="secondary">Offline mode</Badge> : null}
         {!isInstalled ? <Badge variant="outline">Saved locally</Badge> : null}

@@ -30,7 +30,7 @@ export function CaptureReviewFilterRail({
     <div
       role="tablist"
       aria-label="Capture inbox sections"
-      className="grid grid-cols-3 gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5"
+      className="grid grid-cols-3 gap-1 rounded-lg bg-muted/30 p-0.5"
     >
       {captureReviewSections.map((value) => {
         const isActive = section === value;

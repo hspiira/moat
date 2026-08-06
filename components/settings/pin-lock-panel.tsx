@@ -81,7 +81,7 @@ export function PinLockPanel() {
   }
 
   return (
-    <Card className="border-border/30 shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">PIN lock</CardTitle>
         <CardDescription>

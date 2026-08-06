@@ -104,7 +104,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
                   "grid content-start gap-2 rounded-xl p-5",
                   isLead
                     ? "bg-primary text-primary-foreground"
-                    : "border border-border/60 bg-card text-card-foreground",
+                    : "bg-card text-card-foreground",
                 ].join(" ")}
               >
                 <span
@@ -140,14 +140,14 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
         {/* Rows, not tiles: five stacked colour-cycled cards read as five
             competing blocks on a phone. A divided list scans in one pass and
             keeps the tap targets full-width. */}
-        <ul className="grid overflow-hidden rounded-xl border border-border/60">
+        <ul className="grid overflow-hidden rounded-xl">
           {modulePreviews.map((module, index) => {
             const IconComponent = moduleIcons[module.href];
 
             return (
               <li
                 key={module.href}
-                className={index > 0 ? "border-t border-border/60" : undefined}
+                className={index > 0 ? "" : undefined}
               >
                 <Link
                   href={module.href}

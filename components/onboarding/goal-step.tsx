@@ -18,7 +18,7 @@ type Props = {
 export function GoalStep({ goal, onGoalChange }: Props) {
   return (
     <>
-      <div className="flex items-start gap-3 rounded-md border border-border/40 bg-muted/20 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-md bg-muted/20 px-4 py-3">
         <input
           id="goal-enabled"
           type="checkbox"
@@ -75,7 +75,7 @@ export function GoalStep({ goal, onGoalChange }: Props) {
           />
         </>
       ) : (
-        <div className="rounded-md border border-border/30 px-4 py-3 text-sm text-muted-foreground">
+        <div className="rounded-md px-4 py-3 text-sm text-muted-foreground">
           Skipping this is fine. You can add goals later once your first transactions are
           in.
         </div>

@@ -13,7 +13,7 @@ type Props = {
 export function SecurityStep({ security, onSecurityChange }: Props) {
   return (
     <>
-      <div className="flex items-start gap-3 rounded-md border border-border/40 bg-muted/20 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-md bg-muted/20 px-4 py-3">
         <input
           id="security-enabled"
           type="checkbox"
@@ -56,7 +56,7 @@ export function SecurityStep({ security, onSecurityChange }: Props) {
           </p>
         </>
       ) : (
-        <div className="rounded-md border border-border/40 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        <div className="rounded-md bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
           Without a PIN, anyone who picks up this device can open Moat and see your
           finances. You can turn a PIN on anytime from Settings.
         </div>

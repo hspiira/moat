@@ -40,7 +40,7 @@ export function DuplicateAccountsPanel({
   }
 
   return (
-    <Card className="gap-0 pt-0 border-border/20 shadow-none">
+    <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         tone="lilac"
         title="Duplicate accounts"
@@ -54,7 +54,7 @@ export function DuplicateAccountsPanel({
           return (
             <div
               key={duplicate.id}
-              className="grid gap-3 border border-border/20 px-4 py-4 sm:flex sm:items-center sm:justify-between"
+              className="grid gap-3 px-4 py-4 sm:flex sm:items-center sm:justify-between"
             >
               <div className="space-y-1">
                 <div className="text-sm font-medium text-foreground">{duplicate.name}</div>

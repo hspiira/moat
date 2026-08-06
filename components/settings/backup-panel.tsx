@@ -310,7 +310,7 @@ export function BackupPanel() {
   }
 
   return (
-    <Card className="border-border/30 shadow-none">
+    <Card className="shadow-none">
         <CardHeader className="pb-3">
         <CardTitle className="text-base">Encrypted backup</CardTitle>
         <CardDescription>
@@ -475,7 +475,7 @@ export function BackupPanel() {
                   </Button>
                 </div>
 
-                <div className="grid gap-3 border border-border/30 p-4">
+                <div className="grid gap-3 p-4">
                   <div className="text-sm font-medium text-foreground">Upload encrypted backup</div>
                   <PinInputField
                     id="drive-backup-pin"
@@ -492,7 +492,7 @@ export function BackupPanel() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 border border-border/30 p-4">
+                <div className="grid gap-3 p-4">
                   <div className="text-sm font-medium text-foreground">Restore from Google Drive</div>
                   <PinInputField
                     id="drive-restore-pin"
@@ -512,7 +512,7 @@ export function BackupPanel() {
                       {driveFiles.map((file) => (
                         <div
                           key={file.fileId}
-                          className="flex flex-col gap-2 border border-border/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="min-w-0">
                             <div className="truncate text-sm text-foreground">{file.name}</div>

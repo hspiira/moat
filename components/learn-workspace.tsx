@@ -110,7 +110,7 @@ export function LearnWorkspace() {
 
       {!isLoading ? (
         <div className="grid gap-5">
-          <Card className="ring-1 ring-primary/15">
+          <Card>
             <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-3 sm:gap-6">
               {[
                 { kicker: "Official first", value: "Verify before you move money" },
@@ -136,7 +136,7 @@ export function LearnWorkspace() {
             };
             return (
               <Card key={topic}>
-                <CardHeader className="border-b border-border/60 pb-4 [.border-b]:pb-4">
+                <CardHeader className="pb-4 [.]:pb-4">
                   <CardTitle className="font-display text-lg">{copy.title}</CardTitle>
                   <CardDescription className="max-w-3xl leading-6">{copy.summary}</CardDescription>
                 </CardHeader>
@@ -147,7 +147,7 @@ export function LearnWorkspace() {
                       href={resource.url}
                       rel="noreferrer"
                       target="_blank"
-                      className="group flex items-start justify-between gap-3 rounded-md border border-border/60 px-4 py-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
+                      className="group flex items-start justify-between gap-3 rounded-md px-4 py-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">

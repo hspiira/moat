@@ -18,7 +18,7 @@ export function DashboardPeriodFilter({
   onChange: (period: PeriodFilter) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 border border-border/30 p-1">
+    <div className="flex items-center gap-1 p-1">
       {periodOptions.map((option) => (
         <Button
           key={option.id}

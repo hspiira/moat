@@ -157,7 +157,7 @@ export function TransactionForm({
                 placeholder="e.g. 3700"
                 required={showFxFields}
               />
-              <div className="border border-border/20 px-3 py-2 text-xs text-muted-foreground">
+              <div className="px-3 py-2 text-xs text-muted-foreground">
                 {hasValidNormalizedAmount ? (
                   <>
                     Saved as{" "}
@@ -297,7 +297,7 @@ export function TransactionForm({
           />
 
           {detailsOpen ? (
-            <div className="grid gap-4 border-t border-border/30 pt-4">
+            <div className="grid gap-4 pt-4">
               <InputField
                 id="tx-payee"
                 label="Payee / source"

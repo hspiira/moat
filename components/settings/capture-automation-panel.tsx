@@ -30,7 +30,7 @@ function NotificationSourceRow({
     <button
       type="button"
       onClick={onToggle}
-      className="flex items-center justify-between gap-3 border border-border/20 px-3 py-3 text-left"
+      className="flex items-center justify-between gap-3 px-3 py-3 text-left"
     >
       <div className="grid gap-0.5">
         <div className="text-sm text-foreground">{label}</div>
@@ -66,7 +66,7 @@ export function CaptureAutomationPanel() {
   }
 
   return (
-    <Card className="border-border/20 shadow-none">
+    <Card className="shadow-none">
       <CardContent className="grid gap-4 p-5">
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Read money messages automatically</div>

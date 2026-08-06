@@ -59,7 +59,7 @@ export function TransactionsLedgerWorkspace() {
             summed into a number that matched neither. Captured items lead when
             present: that is the queue that grows on its own. */}
         {workspace.captureReviewCount > 0 ? (
-          <Card className="border-border/20 bg-muted/20 shadow-none">
+          <Card className="bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="text-sm text-muted-foreground">
                 {workspace.captureReviewCount} captured{" "}
@@ -73,7 +73,7 @@ export function TransactionsLedgerWorkspace() {
         ) : null}
 
         {workspace.reviewCount > 0 || workspace.duplicateCount > 0 ? (
-          <Card className="border-border/20 bg-muted/20 shadow-none">
+          <Card className="bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="text-sm text-muted-foreground">
                 {[

@@ -103,7 +103,7 @@ export function AccountsWorkspace() {
             onRepair={handleRepairAccounts}
           />
 
-          <Card className="ring-1 ring-primary/15">
+          <Card>
             <CardContent className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-8 sm:px-6">
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">

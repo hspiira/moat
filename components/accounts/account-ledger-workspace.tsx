@@ -154,7 +154,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
       {!isLoading && profile && account ? (
         <>
           <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
-            <Card className="ring-1 ring-primary/15">
+            <Card>
               <CardHeader className="gap-2 p-5">
                 <CardDescription className="text-xs font-medium tracking-[0.14em] uppercase">
                   Current balance
@@ -172,7 +172,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             <AccountBalanceBreakdown account={account} transactions={transactions} />
           </div>
 
-          <Card className="border-border/20 shadow-none">
+          <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="text-base">Transactions affecting this account</CardTitle>
               <CardDescription>
@@ -201,7 +201,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                       return (
                         <li
                           key={row.id}
-                          className={`rounded-md border border-border/50 px-3 py-2.5 ${getRowTone(row.transaction)}`}
+                          className={`rounded-md px-3 py-2.5 ${getRowTone(row.transaction)}`}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">

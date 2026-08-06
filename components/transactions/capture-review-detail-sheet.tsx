@@ -191,7 +191,7 @@ export function CaptureReviewDetailSheet({
                     </span>
                   </div>
                   {counterpart ? (
-                    <div className="grid gap-1 border-t border-border/50 pt-2 text-foreground">
+                    <div className="grid gap-1 pt-2 text-foreground">
                       <span>
                         {formatDate(counterpart.occurredOn)} ·{" "}
                         {accounts.find((entry) => entry.id === counterpart.accountId)?.name ??
@@ -297,7 +297,7 @@ export function CaptureReviewDetailSheet({
 
             {isOpenItem ? (
               <div
-                className="sticky bottom-0 mt-auto grid gap-2 border-t border-border/40 bg-background px-4 py-3"
+                className="sticky bottom-0 mt-auto grid gap-2 bg-background px-4 py-3"
                 style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
               >
                 <div className="flex gap-2">

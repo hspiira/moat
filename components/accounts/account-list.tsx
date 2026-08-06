@@ -171,7 +171,7 @@ export function AccountList({
         )}
 
         {archived.length > 0 ? (
-          <div className="mt-4 border-t border-border/40 px-4 pt-4">
+          <div className="mt-4 px-4 pt-4">
             <div className="text-xs font-medium text-muted-foreground">
               Archived ({archived.length})
             </div>

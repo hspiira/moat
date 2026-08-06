@@ -102,7 +102,7 @@ export function DashboardSavingsOverview({
             drops when it drained it; outflow always points down (money out) as
             muted context. Direction carries the meaning; color reinforces it. */}
         <div className="relative grid h-36 grid-cols-6 gap-1.5 lg:h-44 lg:gap-2">
-          <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-border/40" />
+          <div aria-hidden className="absolute inset-x-0 top-1/2" />
           {chartSeries.map((point, index) => {
             const isCurrent = index === chartSeries.length - 1;
             // Half the plot is above zero, half below, so scale to 50%.

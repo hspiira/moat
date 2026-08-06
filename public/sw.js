@@ -2,7 +2,7 @@
 // a cache it has not seen, so an installed app would otherwise keep serving the
 // old shell and never fetch a newly added route. The activate handler below
 // drops superseded caches, so this upgrades in place with no user action.
-const CACHE_NAME = "moat-v6";
+const CACHE_NAME = "moat-v7";
 const OFFLINE_URL = "/offline";
 
 // Every statically-rendered route is precached at install, not just on first
@@ -34,9 +34,10 @@ const APP_SHELL_URLS = [
   "/transactions/tools",
   "/manifest.webmanifest",
   "/icons/icon.svg",
-  "/icons/logo.svg",
-  "/icons/logo.png",
-  "/icons/maskable-icon.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/maskable-512.png",
+  "/icons/apple-touch-icon.png",
 ];
 
 self.addEventListener("install", (event) => {

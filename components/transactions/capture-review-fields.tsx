@@ -124,7 +124,7 @@ export function CaptureReviewFields({
           </span>
           <button
             type="button"
-            className="w-fit rounded-md border border-border/40 px-2 py-1 font-medium hover:bg-muted"
+            className="w-fit rounded-md px-2 py-1 font-medium hover:bg-muted"
             onClick={() => onChange((current) => ({ ...current, feeAmount: Math.abs(balanceGap.gap) }))}
           >
             Add as fee

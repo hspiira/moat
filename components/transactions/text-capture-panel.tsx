@@ -138,7 +138,7 @@ export function TextCapturePanel({
         />
 
         {detailsOpen ? (
-          <div className="grid gap-3 border-t border-border/30 pt-4 sm:grid-cols-2">
+          <div className="grid gap-3 pt-4 sm:grid-cols-2">
             <SelectField
               id="capture-source"
               label="Source"
@@ -205,7 +205,7 @@ export function TextCapturePanel({
         ) : (
           <div className="grid gap-3">
             {candidates.map((candidate, index) => (
-              <div key={candidate.id} className="grid gap-3 border border-border/20 px-4 py-4">
+              <div key={candidate.id} className="grid gap-3 px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium text-foreground">Candidate {index + 1}</div>

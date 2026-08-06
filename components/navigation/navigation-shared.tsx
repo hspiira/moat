@@ -391,7 +391,7 @@ export function MobileUtilitySheet({
           <DrawerSection title="Theme & settings">
             <div className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="text-sm text-muted-foreground">Switch between light and dark mode.</div>
-              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10 border-border/30" />
+              <ThemeToggle onClick={onToggleTheme} className="h-10 w-10" />
             </div>
             <DrawerNavRow
               href="/settings"

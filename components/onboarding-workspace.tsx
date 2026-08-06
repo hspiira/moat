@@ -95,7 +95,7 @@ export function OnboardingWorkspace() {
                 key={option.mode}
                 type="button"
                 onClick={() => setMode(option.mode)}
-                className="flex items-start gap-3 rounded-md border border-border/60 bg-card px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
+                className="flex items-start gap-3 rounded-md bg-card px-4 py-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
               >
                 <span
                   aria-hidden
@@ -154,7 +154,7 @@ export function OnboardingWorkspace() {
                   ? "border-primary bg-primary text-primary-foreground"
                   : index < stepIndex
                     ? "border-primary/40 text-foreground"
-                    : "border-border/40"
+                    : ""
               }`}
             >
               {index + 1}. {stepLabels[currentStep]}
@@ -186,7 +186,7 @@ export function OnboardingWorkspace() {
       {/* Chromeless under sm: the app shell already provides the page gutter,
           so the card's border and padding stack on top of it and cost ~17% of a
           375px screen without adding structure a phone user can perceive. */}
-      <Card className="rounded-none border-0 bg-transparent py-0 shadow-none ring-0 sm:rounded-xl sm:border sm:border-border/40 sm:bg-card sm:py-4 sm:ring-1">
+      <Card className="rounded-none border-0 bg-transparent py-0 shadow-none ring-0 sm:rounded-xl sm:bg-card sm:py-4">
         <CardContent className="px-0 pt-2 sm:px-4 sm:pt-6">
           <form className="grid gap-5" onSubmit={handleSubmit}>
             {step === "profile" ? (

@@ -40,7 +40,7 @@ export function ErrorStateCard({ message }: { message: string }) {
   return (
     // py-0 on the Card: its default py-4 stacked with the content's own padding
     // put 32px above and below a single line of text.
-    <Card className="border-none bg-destructive/8 py-0 ring-1 ring-destructive/25">
+    <Card className="border-none bg-destructive/10 py-0">
       <CardContent className="flex items-start gap-3 px-4 py-3.5">
         <IconAlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
         <div className="min-w-0 space-y-0.5">
@@ -89,7 +89,7 @@ export function EmptyStateCard({
   icon?: ReactNode;
 }) {
   return (
-    <Card className="border-dashed bg-muted/20">
+    <Card className="bg-muted/20">
       <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
         {icon ? <div className="text-muted-foreground">{icon}</div> : null}
         <div className="space-y-1">
