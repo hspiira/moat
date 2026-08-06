@@ -8,6 +8,7 @@ import {
   IconBusinessplan,
   IconCalendarCheck,
   IconChalkboard,
+  IconChartHistogram,
   IconFileImport,
   IconHome2,
   IconLock,
@@ -46,12 +47,14 @@ export const navIcons: Record<string, Icon> = {
   "/recurring": IconRepeat,
   "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
+  "/report": IconChartHistogram,
   "/settings": IconSettings,
   "/privacy": IconLock,
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 export const mobileSecondaryNav = [
+  "/report",
   "/goals",
   "/budgets",
   "/debt",
@@ -63,6 +66,11 @@ export const mobileSecondaryNav = [
 // what lets the More pill name the current page, and a page the nav cannot
 // name has no wayfinding at all now that headings defer to the nav.
 const mobileContextNav = [
+  {
+    href: "/report",
+    label: "Report",
+    description: "How your money has moved over time.",
+  },
   {
     href: "/goals",
     label: "Goals",

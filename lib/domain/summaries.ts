@@ -35,26 +35,27 @@ function buildSummary(
   );
   const closingBalance = openingBalance + movement;
 
-  const categoryTotals = new Map<string, number>();
+  const categoryTotals = new Map<string, { amount: number; count: number }>();
 
   for (const transaction of spendingTransactions) {
     if (!isSpendingTransaction(transaction)) {
       continue;
     }
 
-    categoryTotals.set(
-      transaction.categoryId,
-      (categoryTotals.get(transaction.categoryId) ?? 0) + Math.abs(transaction.amount),
-    );
+    const entry = categoryTotals.get(transaction.categoryId) ?? { amount: 0, count: 0 };
+    entry.amount += Math.abs(transaction.amount);
+    entry.count += 1;
+    categoryTotals.set(transaction.categoryId, entry);
   }
 
   const categoryLookup = new Map(categories.map((category) => [category.id, category.name]));
 
   const topCategories = [...categoryTotals.entries()]
-    .map(([categoryId, amount]) => ({
+    .map(([categoryId, entry]) => ({
       categoryId,
       categoryName: categoryLookup.get(categoryId) ?? "Uncategorized",
-      amount,
+      amount: entry.amount,
+      count: entry.count,
     }))
     .sort((left, right) => right.amount - left.amount)
     .slice(0, 5);

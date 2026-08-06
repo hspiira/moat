@@ -17,6 +17,11 @@ export const navItems: NavItem[] = [
     description: "Record income, expenses, transfers, and savings.",
   },
   {
+    href: "/report",
+    label: "Report",
+    description: "How your money has moved over time.",
+  },
+  {
     href: "/goals",
     label: "Goals",
     description: "Emergency fund and savings goal tracking.",

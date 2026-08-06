@@ -2,8 +2,8 @@
 
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { getAttentionItems } from "@/lib/domain/attention";
+import { getAccountTotals, reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getAttentionItems, getHabitItems } from "@/lib/domain/attention";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { getSectionOf } from "@/lib/domain/capture-review";
 import {
@@ -19,6 +19,8 @@ import { getMonthlyInsights } from "@/lib/domain/insights";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
+
+const TARGET_COVER_MONTHS = 3;
 
 export function useDashboardWorkspace(profile: UserProfile) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -111,9 +113,22 @@ export function useDashboardWorkspace(profile: UserProfile) {
     () => getBudgetEnvelopes(budgets, categories, monthTransactions).slice(0, 4),
     [budgets, categories, monthTransactions],
   );
+  const { totalBalance } = useMemo(() => getAccountTotals(accounts), [accounts]);
+  const coverMonths = summary.outflow > 0 && totalBalance > 0 ? totalBalance / summary.outflow : 0;
   const attentionItems = useMemo(
-    () => getAttentionItems({ envelopes: budgetEnvelopes, reviewCount, insights }),
-    [budgetEnvelopes, reviewCount, insights],
+    () =>
+      getAttentionItems({
+        envelopes: budgetEnvelopes,
+        reviewCount,
+        insights,
+        habits: getHabitItems({
+          savingsRate,
+          hasIncome: summary.inflow > 0,
+          coverMonths,
+          targetCoverMonths: TARGET_COVER_MONTHS,
+        }),
+      }),
+    [budgetEnvelopes, reviewCount, insights, savingsRate, summary.inflow, coverMonths],
   );
   const topAccounts = useMemo(
     () =>

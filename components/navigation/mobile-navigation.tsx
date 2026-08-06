@@ -87,7 +87,9 @@ export function MobileNavigation({
           side of the capsule tappable by the page beneath. */}
       <div
         className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 lg:hidden"
-        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+        // The home-indicator inset is already a gap. Adding a full rem on top
+        // of it floated the capsule halfway up the screen on iOS.
+        style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}
       >
         <nav
           aria-label="Primary"

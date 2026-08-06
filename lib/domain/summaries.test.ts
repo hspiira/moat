@@ -115,6 +115,7 @@ describe("getMonthSummary", () => {
         categoryId: "category:food",
         categoryName: "Food",
         amount: 300_000,
+        count: 1,
       },
     ]);
   });

@@ -466,6 +466,7 @@ export type MonthSummary = {
     categoryId: string;
     categoryName: string;
     amount: number;
+    count: number;
   }[];
 };
 

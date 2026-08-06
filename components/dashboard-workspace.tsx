@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { IconChevronRight } from "@tabler/icons-react";
+
 import { DashboardBalanceBridge } from "@/components/dashboard/dashboard-balance-bridge";
 import { DashboardMoatHero } from "@/components/dashboard/dashboard-moat-hero";
 import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
@@ -102,6 +105,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             chartLabel={chartLabel}
             chartSeries={chartSeries}
           />
+
+          <Link
+            href="/report"
+            className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+          >
+            See how your money has moved
+            <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
 
           <details className="group">
             <summary className="cursor-pointer list-none rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
