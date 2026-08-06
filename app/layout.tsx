@@ -6,6 +6,7 @@ import { PinLockProvider } from "@/lib/security/pin-lock-context";
 import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { SyncOutboxDrain } from "@/components/sync-outbox-drain";
 import { AppSelfHeal } from "@/components/app-self-heal";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
@@ -71,6 +72,7 @@ export default function RootLayout({
           <ToastProvider>
             <PinLockProvider>
               <PwaRegister />
+              <SyncOutboxDrain />
               <AppSelfHeal />
               <NativeCaptureBridgeRegister />
               <PinLockGate>{children}</PinLockGate>
