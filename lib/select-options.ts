@@ -19,10 +19,6 @@ import type {
 } from "@/components/forms/select-field";
 import { supportedCurrencyLabels } from "@/lib/currency";
 import {
-  LENDING_POOL_ACCOUNT_ID,
-  LENDING_POOL_ACCOUNT_NAME,
-} from "@/lib/domain/lending";
-import {
   categoryKindLabels,
   categoryKindOrder,
 } from "@/lib/domain/transaction-classification";
@@ -34,7 +30,9 @@ export const accountTypeLabels: Record<AccountType, string> = {
   sacco: "SACCO",
   investment: "Investment",
   debt: "Debt / Obligation",
-  receivable: "Money lent out",
+  // Distinct from the "Money lent out" pool account, so a user adding their own
+  // per-borrower ledger cannot end up with two accounts of the same name.
+  receivable: "Owed to you",
 };
 
 export const debtInterestModelLabels: Record<DebtInterestModel, string> = {
@@ -130,23 +128,6 @@ export function categoryOptionGroups(categories: Category[]): SelectFieldOptionG
       options: categoryOptions(categories.filter((category) => category.kind === kind)),
     }))
     .filter((group) => group.options.length > 0);
-}
-
-/**
- * Transfer destinations, plus the shared lending pool. The pool is offered
- * before it exists so that lending needs no setup step — picking it creates it.
- */
-export function transferDestinationOptions(accounts: Account[]): SelectFieldOption[] {
-  const options = accountOptions(accounts);
-
-  if (accounts.some((account) => account.id === LENDING_POOL_ACCOUNT_ID)) {
-    return options;
-  }
-
-  return [
-    ...options,
-    { value: LENDING_POOL_ACCOUNT_ID, label: LENDING_POOL_ACCOUNT_NAME },
-  ];
 }
 
 export function categoryOptions(categories: Category[]): SelectFieldOption[] {

@@ -398,6 +398,7 @@ export function useOnboardingWorkspace() {
       const openingBalance = normalizeOpeningBalance(account.type, Number(account.openingBalance));
 
       await Promise.all(bootstrapState.categories.map((c) => repositories.categories.upsert(c)));
+      await Promise.all(bootstrapState.accounts.map((a) => repositories.accounts.upsert(a)));
       await repositories.investmentProfiles.save(bootstrapState.investmentProfile);
       await repositories.resources.replaceAll(bootstrapState.resources);
       await repositories.accounts.upsert({

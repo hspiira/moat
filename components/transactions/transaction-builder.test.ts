@@ -88,7 +88,7 @@ describe("validateTransactionAmounts", () => {
 });
 
 describe("buildTransferPair", () => {
-  it("puts an agreed repayment date on the receiving leg only", () => {
+  it("carries an agreed repayment date on both legs", () => {
     const [source, destination] = buildTransferPair(
       buildInput({
         form: {
@@ -100,9 +100,10 @@ describe("buildTransferPair", () => {
       }),
     );
 
+    // Both legs carry it: the loan leg is the destination when lending out and
+    // the source when borrowing, and only the loan account's own leg is read.
     expect(destination.expectedRepaymentDate).toBe("2026-09-01");
-    // The money-left-my-wallet leg is not the loan; only the receivable is.
-    expect(source.expectedRepaymentDate).toBeUndefined();
+    expect(source.expectedRepaymentDate).toBe("2026-09-01");
   });
 
   it("leaves the repayment date unset when none was agreed", () => {

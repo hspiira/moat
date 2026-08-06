@@ -9,6 +9,7 @@ import type { Account, Transaction } from "@/lib/types";
  * transaction's `payee`, so lending to five people does not create five
  * accounts. A borrower who needs their own ledger can be given a dedicated
  * receivable account instead, and both shapes report through the same path.
+ * The pool is seeded at bootstrap — see `lib/app-state/default-accounts.ts`.
  *
  * This is the mirror of `debt.ts` in subject only. None of the borrowing
  * machinery applies: the user does not control when a borrower repays, so
@@ -68,31 +69,6 @@ export function buildLendingPoolAccount(userId: string, timestamp: string): Acco
   };
 }
 
-/**
- * The pool is created the first time money is lent into it rather than seeded
- * for everyone, so people who never lend never see a lending account. Returns
- * the account to create, or null when nothing is needed.
- */
-export function ensureLendingPool(
-  accounts: Account[],
-  destinationAccountId: string,
-  userId: string,
-  timestamp: string,
-): Account | null {
-  if (destinationAccountId !== LENDING_POOL_ACCOUNT_ID) {
-    return null;
-  }
-  if (accounts.some((account) => account.id === LENDING_POOL_ACCOUNT_ID)) {
-    return null;
-  }
-
-  return buildLendingPoolAccount(userId, timestamp);
-}
-
-/**
- * Day number in UTC. Both sides of every date comparison go through this, so
- * results never depend on the machine's timezone.
- */
 function toUtcDay(value: Date): number {
   return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
 }

@@ -28,7 +28,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { ensureLendingPool } from "@/lib/domain/lending";
+import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -264,9 +264,21 @@ export function useTransactionsWorkspace() {
         repositories.budgets.listByMonth(nextProfile.id, closePeriod),
       ]);
 
+      const accountSeeds = reconcileDefaultAccounts(
+        storedAccounts,
+        nextProfile.id,
+        new Date().toISOString(),
+      );
+      if (accountSeeds.length > 0) {
+        await Promise.all(accountSeeds.map((account) => repositories.accounts.upsert(account)));
+      }
+
       // Reconcile in memory for display only. Loading is a read — persisting
       // balances here would churn storage and the sync outbox on every view.
-      const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
+      const reconciledAccounts = reconcileAccountBalances(
+        [...storedAccounts, ...accountSeeds],
+        storedTransactions,
+      );
 
       // Seeded categories do get written, because a stale kind is not cosmetic:
       // "Debt repayment" seeded as an expense leaves a debt payment with no
@@ -448,19 +460,6 @@ export function useTransactionsWorkspace() {
 
         let feeParent: Transaction;
         if (transactionForm.type === "transfer") {
-          // The shared lending pool is offered as a destination before it
-          // exists, so the first loan materialises it. Must land before the
-          // legs, or the destination leg would reference a missing account.
-          const newPool = ensureLendingPool(
-            accounts,
-            transactionForm.destinationAccountId,
-            profile.id,
-            timestamp,
-          );
-          if (newPool) {
-            await repositories.accounts.upsert(newPool);
-          }
-
           const [source, destination] = buildTransferPair(buildInput);
           feeParent = source;
           await Promise.all([

@@ -1,3 +1,4 @@
+import { isInformalDebt } from "@/lib/domain/borrowing";
 import type { Account, Transaction } from "@/lib/types";
 
 const BALANCE_EPSILON = 0.01;
@@ -90,6 +91,19 @@ function inferMinimumPayment(account: Account, outstandingBalance: number, avera
   return Math.max(outstandingBalance * DEFAULT_MIN_PAYMENT_RATE + interestOnly, interestOnly);
 }
 
+/**
+ * Without a rate, a term, or a payment history, `inferMinimumPayment` falls
+ * through to `DEFAULT_MIN_PAYMENT_RATE` and every balance projects to the same
+ * ~34 months — a number that looks like a schedule but is just 1/0.03.
+ */
+function hasProjectableSchedule(account: Account, averagePayment: number): boolean {
+  return (
+    averagePayment > 0 ||
+    (account.debtInterestRate ?? 0) > 0 ||
+    (account.debtTermMonths ?? 0) > 0
+  );
+}
+
 function compareDebtsByStrategy(strategy: DebtPayoffStrategy) {
   return (
     left: { interestRate: number; balance: number; name: string },
@@ -139,17 +153,19 @@ export function getDebtSummary(account: Account, transactions: Transaction[]): D
     interestRate,
     account.debtInterestModel,
   );
-  const inferredMinimumPayment = inferMinimumPayment(
-    account,
-    outstandingBalance,
-    averagePayment,
-  );
+  const projectable = hasProjectableSchedule(account, averagePayment);
+  const inferredMinimumPayment = projectable
+    ? inferMinimumPayment(account, outstandingBalance, averagePayment)
+    : 0;
 
   let estimatedPayoffMonths: number | null = null;
   let warning: string | undefined;
 
   if (outstandingBalance === 0) {
     estimatedPayoffMonths = 0;
+  } else if (!projectable) {
+    warning =
+      "No rate, term, or payment history recorded, so there is nothing to project a payoff from.";
   } else if (inferredMinimumPayment > estimatedMonthlyInterest) {
     estimatedPayoffMonths = Math.ceil(
       outstandingBalance / (inferredMinimumPayment - estimatedMonthlyInterest),
@@ -181,8 +197,10 @@ export function getDebtSummary(account: Account, transactions: Transaction[]): D
   };
 }
 
+/** Informal borrowing is excluded — `borrowing.ts` reports it instead. */
 export function getDebtPortfolioSummary(accounts: Account[], transactions: Transaction[]) {
   return accounts
+    .filter((account) => !isInformalDebt(account))
     .map((account) => getDebtSummary(account, transactions))
     .filter((summary): summary is DebtSummary => Boolean(summary))
     .filter((summary) => summary.outstandingBalance > 0);

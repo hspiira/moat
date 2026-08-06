@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type { Account, Category, SupportedCurrency, TransactionType } from "@/lib/types";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
 import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
@@ -16,7 +16,6 @@ import {
   accountOptions,
   categoryOptionGroups,
   optionsFromRecord,
-  transferDestinationOptions,
   supportedCurrencyOptionLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
@@ -95,15 +94,13 @@ export function TransactionForm({
   );
   const showFxFields = form.currency !== "UGX";
   const hasValidNormalizedAmount = Number.isFinite(normalizedUgxAmount) && normalizedUgxAmount > 0;
-  // A transfer into any receivable is a loan, whether that is the shared pool
-  // (which may not exist yet) or a borrower's own account.
-  const isLendingTransfer =
-    form.type === "transfer" &&
-    (form.destinationAccountId === LENDING_POOL_ACCOUNT_ID ||
-      accounts.some(
-        (account) =>
-          account.id === form.destinationAccountId && account.type === "receivable",
-      ));
+  const counterparty = useMemo(
+    () =>
+      form.type === "transfer"
+        ? describeTransferCounterparty(accounts, form.accountId, form.destinationAccountId)
+        : null,
+    [accounts, form.accountId, form.destinationAccountId, form.type],
+  );
 
   // Payee, note, and currency are the rare fields; they stay collapsed until
   // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
@@ -207,7 +204,7 @@ export function TransactionForm({
                 label="To account"
                 value={form.destinationAccountId}
                 placeholder="Select destination"
-                options={transferDestinationOptions(accounts)}
+                options={accountOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
               />
             </div>
@@ -229,25 +226,33 @@ export function TransactionForm({
             </div>
           ) : null}
 
-          {isLendingTransfer ? (
+          {counterparty ? (
             <>
-              <InputField
-                id="tx-borrower"
-                label="Who borrowed it"
-                value={form.payee}
-                onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
-                placeholder="e.g. Sarah"
-                hint="Loans are grouped by this name, so spell it the same way each time."
-              />
-              <DatePickerField
-                id="tx-expected-repayment"
-                label="Expected back by (optional)"
-                value={form.expectedRepaymentDate}
-                onChange={(value) =>
-                  onFormChange((c) => ({ ...c, expectedRepaymentDate: value }))
-                }
-                hint="Only what you agreed. Moat never guesses a repayment date."
-              />
+              {counterparty.requiresPayee ? (
+                <InputField
+                  id="tx-counterparty"
+                  label={counterparty.label}
+                  value={form.payee}
+                  onChange={(e) => onFormChange((c) => ({ ...c, payee: e.target.value }))}
+                  placeholder={counterparty.placeholder}
+                  hint="Loans are grouped by this name, so spell it the same way each time."
+                />
+              ) : null}
+              {counterparty.showExpectedDate ? (
+                <DatePickerField
+                  id="tx-expected-repayment"
+                  label={
+                    counterparty.direction === "borrow"
+                      ? "Agreed to repay by (optional)"
+                      : "Expected back by (optional)"
+                  }
+                  value={form.expectedRepaymentDate}
+                  onChange={(value) =>
+                    onFormChange((c) => ({ ...c, expectedRepaymentDate: value }))
+                  }
+                  hint="Only what you agreed. Moat never guesses a repayment date."
+                />
+              ) : null}
             </>
           ) : null}
 

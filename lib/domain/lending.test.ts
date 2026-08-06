@@ -4,7 +4,6 @@ import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import {
   LENDING_POOL_ACCOUNT_ID,
   buildLendingPoolAccount,
-  ensureLendingPool,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
 import type { Account, Transaction } from "@/lib/types";
@@ -82,32 +81,6 @@ function borrowerNamed(
 ) {
   return portfolio.borrowers.find((b) => b.borrowerName === name);
 }
-
-describe("materialising the pool on demand", () => {
-  const wallet = dedicated("account:wallet", "Wallet", { type: "cash" });
-
-  it("asks for the pool the first time money is lent into it", () => {
-    const created = ensureLendingPool(
-      [wallet],
-      LENDING_POOL_ACCOUNT_ID,
-      "user:default",
-      "2026-06-01T00:00:00.000Z",
-    );
-
-    expect(created?.id).toBe(LENDING_POOL_ACCOUNT_ID);
-    expect(created?.type).toBe("receivable");
-  });
-
-  it("does not recreate a pool that already exists", () => {
-    expect(
-      ensureLendingPool([wallet, pool], LENDING_POOL_ACCOUNT_ID, "user:default", "t"),
-    ).toBeNull();
-  });
-
-  it("does not create a pool for transfers that have nothing to do with lending", () => {
-    expect(ensureLendingPool([wallet], "account:savings", "user:default", "t")).toBeNull();
-  });
-});
 
 describe("the lending pool", () => {
   it("is a receivable account with a stable id", () => {
