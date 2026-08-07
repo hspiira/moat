@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAttentionItems } from "@/lib/domain/attention";
+import { getAttentionItems, getBillsDueSoon } from "@/lib/domain/attention";
 import type { BudgetEnvelope } from "@/lib/domain/budgets";
 
 function envelope(overrides: Partial<BudgetEnvelope> = {}): BudgetEnvelope {
@@ -57,5 +57,62 @@ describe("getAttentionItems", () => {
     const [item] = getAttentionItems({ envelopes: [], reviewCount: 1, insights: [] });
 
     expect(item.title).toBe("1 capture to review");
+  });
+});
+
+describe("getBillsDueSoon", () => {
+  const evaluation = (overrides: Record<string, unknown> = {}) => ({
+    obligation: {
+      id: "ob1",
+      name: "Rent",
+      type: "rent",
+      categoryId: "c1",
+      expectedAmount: 500_000,
+      cadence: "monthly",
+      dueDay: 10,
+      status: "active",
+      ...(overrides.obligation as Record<string, unknown> | undefined),
+    },
+    matchedTransactions: [],
+    matchedAmount: 0,
+    expectedAmount: 500_000,
+    state: "missing",
+    ...overrides,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) as any;
+
+  it("lists an unpaid bill due within the window", () => {
+    const [item] = getBillsDueSoon([evaluation()], new Date(2026, 7, 7));
+
+    expect(item.title).toBe("Rent is due in 3 days");
+    expect(item.body).toContain("500,000");
+    expect(item.href).toBe("/recurring");
+  });
+
+  it("keeps an overdue bill listed until paid", () => {
+    const [item] = getBillsDueSoon([evaluation()], new Date(2026, 7, 20));
+
+    expect(item.title).toBe("Rent was due on the 10th");
+  });
+
+  it("says nothing about a paid bill", () => {
+    expect(
+      getBillsDueSoon([evaluation({ state: "paid" })], new Date(2026, 7, 9)),
+    ).toEqual([]);
+  });
+
+  it("ignores bills whose due day is still far off", () => {
+    expect(
+      getBillsDueSoon([evaluation()], new Date(2026, 7, 1)),
+    ).toEqual([]);
+  });
+
+  it("reports the remaining amount when partially paid", () => {
+    const [item] = getBillsDueSoon(
+      [evaluation({ matchedAmount: 300_000, state: "partial" })],
+      new Date(2026, 7, 9),
+    );
+
+    expect(item.body).toContain("200,000");
   });
 });

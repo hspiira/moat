@@ -1,5 +1,68 @@
 import type { BudgetEnvelope } from "@/lib/domain/budgets";
+import type { RecurringEvaluation } from "@/lib/domain/recurring";
 import { formatMoney } from "@/lib/currency";
+
+const DUE_SOON_WINDOW_DAYS = 5;
+
+/**
+ * Unpaid obligations whose due day falls within the next few days. Overdue
+ * bills stay listed until paid: an unpaid bill does not stop mattering when
+ * its date passes.
+ */
+export function getBillsDueSoon(
+  evaluations: RecurringEvaluation[],
+  today: Date,
+): AttentionItem[] {
+  const dayOfMonth = today.getDate();
+
+  return evaluations
+    .filter((evaluation) => evaluation.state !== "paid")
+    .filter((evaluation) => {
+      const dueDay = evaluation.obligation.dueDay;
+      if (!dueDay) return false;
+      return dueDay <= dayOfMonth + DUE_SOON_WINDOW_DAYS;
+    })
+    .map((evaluation) => {
+      const dueDay = evaluation.obligation.dueDay ?? 0;
+      const daysLeft = dueDay - dayOfMonth;
+      const outstanding = Math.max(
+        0,
+        evaluation.expectedAmount - evaluation.matchedAmount,
+      );
+      const when =
+        daysLeft < 0
+          ? `was due on the ${ordinal(dueDay)}`
+          : daysLeft === 0
+            ? "is due today"
+            : daysLeft === 1
+              ? "is due tomorrow"
+              : `is due in ${daysLeft} days`;
+
+      return {
+        id: `bill-due:${evaluation.obligation.id}`,
+        title: `${evaluation.obligation.name} ${when}`,
+        body:
+          outstanding > 0
+            ? `${formatMoney(outstanding)} still to pay this month.`
+            : "Not yet marked as paid this month.",
+        href: "/recurring",
+      };
+    });
+}
+
+function ordinal(day: number): string {
+  const suffix =
+    day % 100 >= 11 && day % 100 <= 13
+      ? "th"
+      : day % 10 === 1
+        ? "st"
+        : day % 10 === 2
+          ? "nd"
+          : day % 10 === 3
+            ? "rd"
+            : "th";
+  return `${day}${suffix}`;
+}
 
 export type AttentionItem = {
   id: string;
@@ -61,11 +124,13 @@ export function getHabitItems(input: HabitInput): AttentionItem[] {
  */
 export function getAttentionItems({
   envelopes,
+  billsDueSoon = [],
   reviewCount,
   insights,
   habits = [],
 }: {
   envelopes: BudgetEnvelope[];
+  billsDueSoon?: AttentionItem[];
   reviewCount: number;
   insights: { id: string; title: string; body: string }[];
   habits?: AttentionItem[];
@@ -93,6 +158,7 @@ export function getAttentionItems({
 
   return [
     ...overspent,
+    ...billsDueSoon,
     ...review,
     ...insights.map((insight) => ({ ...insight })),
     // Habits go last: they are observations, not decisions waiting on you.

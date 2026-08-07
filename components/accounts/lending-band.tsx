@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
+import { Button } from "@/components/ui/button";
+import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 import {
   Card,
   CardContent,
@@ -12,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
-import { getLendingPortfolio, type BorrowerLoans } from "@/lib/domain/lending";
+import { getLendingPortfolio, LENDING_POOL_ACCOUNT_ID, type BorrowerLoans } from "@/lib/domain/lending";
 import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 /**
@@ -33,11 +35,17 @@ function borrowerCaption(borrower: BorrowerLoans): string {
   return "No activity yet";
 }
 
-function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
+function BorrowerRow({
+  borrower,
+  onRecordRepayment,
+}: {
+  borrower: BorrowerLoans;
+  onRecordRepayment: (borrower: BorrowerLoans) => void;
+}) {
   return (
-    <div className="flex items-start justify-between gap-3 py-3">
-      <div className="grid gap-0.5">
-        <span className="font-medium text-foreground">{borrower.borrowerName}</span>
+    <div className="flex items-center justify-between gap-3 py-3">
+      <div className="grid min-w-0 gap-0.5">
+        <span className="truncate font-medium text-foreground">{borrower.borrowerName}</span>
         <span
           className={
             borrower.isOverdue ? "text-xs text-destructive" : "text-xs text-muted-foreground"
@@ -47,12 +55,24 @@ function BorrowerRow({ borrower }: { borrower: BorrowerLoans }) {
           {borrowerCaption(borrower)}
         </span>
       </div>
-      <AmountIndicator
-        tone={borrower.outstanding > 0 ? "negative" : "neutral"}
-        sign="none"
-        value={formatMoney(borrower.outstanding, "UGX")}
-        className="text-sm font-medium"
-      />
+      <div className="flex shrink-0 items-center gap-2">
+        <AmountIndicator
+          tone={borrower.outstanding > 0 ? "negative" : "neutral"}
+          sign="none"
+          value={formatMoney(borrower.outstanding, "UGX")}
+          className="text-sm font-medium"
+        />
+        {borrower.status === "outstanding" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => onRecordRepayment(borrower)}
+          >
+            Record repayment
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -66,6 +86,7 @@ export function LendingBand({
   transactions: Transaction[];
   counterparties: Counterparty[];
 }) {
+  const record = useRecordTransaction();
   // One clock per mount keeps "overdue" stable across renders.
   const asOf = useMemo(() => new Date(), []);
   const portfolio = useMemo(
@@ -80,6 +101,17 @@ export function LendingBand({
   const unsettled = portfolio.borrowers.filter(
     (borrower) => borrower.status === "outstanding" || borrower.status === "overpaid",
   );
+
+  // Repayment is a transfer out of the receivable pool back into a real
+  // account. The sheet opens pre-filled so nobody needs to know that.
+  function openRepayment(borrower: BorrowerLoans) {
+    record.open({
+      type: "transfer",
+      accountId: borrower.accountId ?? LENDING_POOL_ACCOUNT_ID,
+      counterpartyId: borrower.counterpartyId ?? "",
+      amount: borrower.outstanding > 0 ? String(borrower.outstanding) : "",
+    });
+  }
 
   return (
     <Card className="shadow-none">
@@ -121,7 +153,11 @@ export function LendingBand({
         <div className="grid">
           {unsettled.length > 0 ? (
             unsettled.map((borrower) => (
-              <BorrowerRow key={borrower.borrowerKey} borrower={borrower} />
+              <BorrowerRow
+                key={borrower.borrowerKey}
+                borrower={borrower}
+                onRecordRepayment={openRepayment}
+              />
             ))
           ) : (
             <p className="py-3 text-sm text-muted-foreground">
@@ -130,6 +166,7 @@ export function LendingBand({
           )}
         </div>
       </CardContent>
+      {record.sheet}
     </Card>
   );
 }

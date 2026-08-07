@@ -117,6 +117,9 @@ export function useTransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pendingSyncTransactionIds, setPendingSyncTransactionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
@@ -274,13 +277,40 @@ export function useTransactionsWorkspace() {
           repositories.transactions.listByUser(nextProfile.id),
           repositories.counterparties.listByUser(nextProfile.id),
         ]);
-      const [storedCaptureReviewItems, storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
+      const [
+        storedCaptureReviewItems,
+        storedRules,
+        storedObligations,
+        storedMonthClose,
+        storedBudgets,
+        storedSyncProfile,
+        storedOutbox,
+      ] = await Promise.all([
         repositories.captureReviewItems.listByUser(nextProfile.id),
         repositories.transactionRules.listByUser(nextProfile.id),
         repositories.recurringObligations.listByUser(nextProfile.id),
         repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
         repositories.budgets.listByMonth(nextProfile.id, closePeriod),
+        repositories.syncProfiles.getByUser(nextProfile.id),
+        repositories.syncOutbox.listByUser(nextProfile.id),
       ]);
+
+      // Only meaningful when hosted sync is on; otherwise nothing is "waiting".
+      const syncEnabled =
+        storedSyncProfile?.hostedSyncEnabled && storedSyncProfile.mode === "hosted_opt_in";
+      setPendingSyncTransactionIds(
+        syncEnabled
+          ? new Set(
+              storedOutbox
+                .filter(
+                  (item) =>
+                    item.entityType === "transaction" &&
+                    (item.status === "pending" || item.status === "failed"),
+                )
+                .map((item) => item.entityId),
+            )
+          : new Set(),
+      );
 
       const accountSeeds = reconcileDefaultAccounts(
         storedAccounts,
@@ -779,6 +809,7 @@ export function useTransactionsWorkspace() {
     categories,
     counterparties,
     transactions,
+    pendingSyncTransactionIds,
     periodTransactions,
     periodSummary,
     reviewCount,

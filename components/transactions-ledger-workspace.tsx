@@ -98,6 +98,7 @@ export function TransactionsLedgerWorkspace() {
           accounts={workspace.accounts}
           categories={workspace.categories}
           transactions={pageTransactions}
+          pendingSyncIds={workspace.pendingSyncTransactionIds}
           isSubmitting={workspace.isSubmitting}
           onEdit={workspace.beginTransactionEdit}
           onDelete={(transaction) => void workspace.handleDeleteTransaction(transaction)}

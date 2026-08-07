@@ -4,6 +4,7 @@ import {
   IconArrowDownLeft,
   IconArrowsExchange,
   IconArrowUpRight,
+  IconClock,
   IconDotsVertical,
   IconPencil,
   IconPigMoney,
@@ -32,6 +33,8 @@ type Props = {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  /** Transactions with local changes not yet accepted by hosted sync. */
+  pendingSyncIds?: Set<string>;
   isSubmitting: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
@@ -79,6 +82,7 @@ export function TransactionList({
   accounts,
   categories,
   transactions,
+  pendingSyncIds,
   isSubmitting,
   onEdit,
   onDelete,
@@ -147,13 +151,25 @@ export function TransactionList({
                       </div>
                     </div>
 
-                    <Money
-                      amount={transaction.amount}
-                      currency="UGX"
-                      tone={presentation.tone}
-                      signed={presentation.signed}
-                      className="shrink-0 text-sm font-semibold sm:text-base"
-                    />
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {pendingSyncIds?.has(transaction.id) ? (
+                        <IconClock
+                          aria-hidden
+                          className="size-3.5 text-muted-foreground"
+                          title="Waiting to sync"
+                        />
+                      ) : null}
+                      <Money
+                        amount={transaction.amount}
+                        currency="UGX"
+                        tone={presentation.tone}
+                        signed={presentation.signed}
+                        className="text-sm font-semibold sm:text-base"
+                      />
+                      {pendingSyncIds?.has(transaction.id) ? (
+                        <span className="sr-only">Waiting to sync</span>
+                      ) : null}
+                    </span>
                   </button>
 
                   <Popover>
