@@ -11,9 +11,11 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   // Clears the floating capsule: 3.5rem of capsule plus a rem of breathing
   // room, above whichever is larger of the home-indicator inset or 0.625rem.
+  // overflow-x-clip, not hidden: clip does not create a scroll container, so
+  // the sticky top bar and the fixed capsule keep working.
   return (
-    <div className="min-h-screen bg-background pb-[calc(4.5rem+max(0.625rem,env(safe-area-inset-bottom)))] lg:pb-0">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+    <div className="min-h-screen overflow-x-clip bg-background pb-[calc(4.5rem+max(0.625rem,env(safe-area-inset-bottom)))] lg:pb-0">
+      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         <AppNavigation />
         <PwaStatus />
         <NativeCaptureIntake />

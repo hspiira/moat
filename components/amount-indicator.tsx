@@ -53,11 +53,11 @@ export function AmountIndicator({
     typeof value === "string" ? value.replace(/^[+\-\u2212]\s*/, "") : value;
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5", toneClasses[tone], className)}>
+    <span className={cn("inline-flex min-w-0 items-center gap-1.5", toneClasses[tone], className)}>
       {IconComponent ? (
         <IconComponent className={cn("h-4 w-4 shrink-0", iconClassName)} aria-hidden="true" />
       ) : null}
-      <span className={cn("tabular-nums", valueClassName)}>
+      <span className={cn("tabular-nums wrap-anywhere", valueClassName)}>
         {signPrefix}
         {normalizedValue}
       </span>
