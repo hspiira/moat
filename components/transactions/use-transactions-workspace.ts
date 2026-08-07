@@ -23,21 +23,13 @@ import type {
   Account,
   CaptureReviewItem,
   Category,
-  Counterparty,
-  CounterpartyKind,
   MonthClose,
   Transaction,
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
-import { backfillCounterparties, resolveCounterparty } from "@/lib/domain/counterparties";
-import {
-  NEW_COUNTERPARTY,
-  describeTransferCounterparty,
-} from "@/lib/domain/transfer-counterparty";
-import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -52,6 +44,7 @@ import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { useCounterparties } from "./use-counterparties";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
   buildDebtPaymentTransactions,
@@ -79,11 +72,6 @@ function useLatest<T>(value: T) {
   });
   return ref;
 }
-
-const POOL_COUNTERPARTY_KINDS = new Map<string, CounterpartyKind>([
-  [LENDING_POOL_ACCOUNT_ID, "borrower"],
-  [BORROWING_POOL_ACCOUNT_ID, "lender"],
-]);
 
 function sortTransactions(transactions: Transaction[]) {
   return [...transactions].sort((a, b) => {
@@ -120,7 +108,8 @@ export function useTransactionsWorkspace() {
   const [pendingSyncTransactionIds, setPendingSyncTransactionIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const { counterparties, setCounterparties, loadAndBackfill, resolveSelection } =
+    useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
   const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
@@ -270,13 +259,11 @@ export function useTransactionsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedCategories, storedTransactions, storedCounterparties] =
-        await Promise.all([
-          repositories.accounts.listByUser(nextProfile.id),
-          repositories.categories.listByUser(nextProfile.id),
-          repositories.transactions.listByUser(nextProfile.id),
-          repositories.counterparties.listByUser(nextProfile.id),
-        ]);
+      const [storedAccounts, storedCategories, storedTransactions] = await Promise.all([
+        repositories.accounts.listByUser(nextProfile.id),
+        repositories.categories.listByUser(nextProfile.id),
+        repositories.transactions.listByUser(nextProfile.id),
+      ]);
       const [
         storedCaptureReviewItems,
         storedRules,
@@ -341,29 +328,7 @@ export function useTransactionsWorkspace() {
           ? await repositories.categories.listByUser(nextProfile.id)
           : storedCategories;
 
-      // Loans recorded before counterparties existed were grouped by their
-      // payee text. Promoting each distinct payee to a record once keeps that
-      // history in the same buckets it has always been in.
-      const backfill = backfillCounterparties(
-        storedTransactions,
-        storedCounterparties,
-        POOL_COUNTERPARTY_KINDS,
-        nextProfile.id,
-        new Date().toISOString(),
-        () => `counterparty:${crypto.randomUUID()}`,
-      );
-      if (backfill.counterparties.length > 0 || backfill.transactions.length > 0) {
-        await Promise.all([
-          ...backfill.counterparties.map((entry) => repositories.counterparties.upsert(entry)),
-          ...backfill.transactions.map((row) => repositories.transactions.upsert(row)),
-        ]);
-      }
-      const stampedById = new Map(backfill.transactions.map((row) => [row.id, row]));
-      const currentTransactions =
-        stampedById.size > 0
-          ? storedTransactions.map((row) => stampedById.get(row.id) ?? row)
-          : storedTransactions;
-      setCounterparties([...storedCounterparties, ...backfill.counterparties]);
+      const currentTransactions = await loadAndBackfill(nextProfile.id, storedTransactions);
 
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
@@ -417,7 +382,15 @@ export function useTransactionsWorkspace() {
     } finally {
       setIsLoading(false);
     }
-  }, [closePeriod, setBudgetForm, setBudgets, setRecurringObligations, setTransactionRules]);
+  }, [
+    closePeriod,
+    loadAndBackfill,
+    setBudgetForm,
+    setBudgets,
+    setCounterparties,
+    setRecurringObligations,
+    setTransactionRules,
+  ]);
 
   // Stable indirection so the sub-hooks can trigger a reload without a
   // circular dependency between hook definitions.
@@ -511,47 +484,19 @@ export function useTransactionsWorkspace() {
     await Promise.all(changed.map((account) => repositories.accounts.upsert(account)));
   }, []);
 
-  /**
-   * Turns whatever the loan fields hold into a stored person. Picking an
-   * existing one reuses it; naming a new one creates it, unless that name is
-   * already on file — in which case the existing record wins, which is the
-   * whole point of not keying on text.
-   */
   const resolveFormCounterparty = useCallback(
-    async (userId: string, timestamp: string): Promise<Counterparty | null> => {
-      const { counterpartyId, counterpartyName } = transactionForm;
-
-      if (counterpartyId && counterpartyId !== NEW_COUNTERPARTY) {
-        return counterparties.find((entry) => entry.id === counterpartyId) ?? null;
-      }
-      if (!counterpartyName.trim()) {
-        return null;
-      }
-
-      const direction = describeTransferCounterparty(
-        accounts,
-        transactionForm.accountId,
-        transactionForm.destinationAccountId,
-      )?.direction;
-      if (!direction) {
-        return null;
-      }
-
-      const stored = await repositories.counterparties.listByUser(userId);
-      const { counterparty, isNew } = resolveCounterparty(stored, {
-        name: counterpartyName,
-        kind: direction === "lend" || direction === "collect" ? "borrower" : "lender",
+    (userId: string, timestamp: string) =>
+      resolveSelection({
         userId,
-        id: `counterparty:${crypto.randomUUID()}`,
         timestamp,
-      });
-
-      if (isNew || !stored.some((entry) => entry.id === counterparty.id && entry.kind === counterparty.kind)) {
-        await repositories.counterparties.upsert(counterparty);
-      }
-      return counterparty;
-    },
-    [accounts, counterparties, transactionForm],
+        direction: describeTransferCounterparty(
+          accounts,
+          transactionForm.accountId,
+          transactionForm.destinationAccountId,
+        )?.direction,
+        selection: transactionForm,
+      }),
+    [accounts, resolveSelection, transactionForm],
   );
 
   const handleTransactionSubmit = useCallback(

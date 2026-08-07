@@ -1,6 +1,10 @@
-import { isReservedAccountId, isReservedAccountName } from "@/lib/app-state/default-accounts";
 import { resolveCounterparty } from "@/lib/domain/counterparties";
-import type { Account, Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
+import {
+  isReservedAccountId,
+  isReservedAccountName,
+  ledgerForAccountType,
+} from "@/lib/domain/reserved-accounts";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 /**
  * Nothing cascades a delete, and the reporting paths silently skip transactions
@@ -53,9 +57,14 @@ export type MergePlan =
       target: Account;
     };
 
-function counterpartyKindFor(accountType: Account["type"]): CounterpartyKind {
-  return accountType === "receivable" ? "borrower" : "lender";
-}
+export type MergeRequest = {
+  source: Account;
+  target: Account;
+  transactions: Transaction[];
+  counterparties: Counterparty[];
+  timestamp: string;
+  nextCounterpartyId: () => string;
+};
 
 /**
  * Folds a per-person account into the pool it duplicates, turning the account
@@ -65,14 +74,10 @@ function counterpartyKindFor(accountType: Account["type"]): CounterpartyKind {
  * control account still equals the sum of its subsidiary entries and net worth
  * does not move: the pool gains exactly what the removed account took with it.
  */
-export function planAccountMerge(
-  source: Account,
-  target: Account,
-  transactions: Transaction[],
-  counterparties: Counterparty[],
-  timestamp: string,
-  nextCounterpartyId: () => string,
-): MergePlan {
+export function planAccountMerge(request: MergeRequest): MergePlan {
+  const { source, target, transactions, counterparties, timestamp, nextCounterpartyId } =
+    request;
+
   if (source.id === target.id) {
     return { blocked: "An account cannot be merged into itself." };
   }
@@ -85,10 +90,14 @@ export function planAccountMerge(
     };
   }
 
-  const kind = counterpartyKindFor(source.type);
+  const ledger = ledgerForAccountType(source.type);
+  if (!ledger) {
+    return { blocked: `${source.name} is not a lending or borrowing account.` };
+  }
+
   const resolved = resolveCounterparty(counterparties, {
     name: source.name,
-    kind,
+    kind: ledger.counterpartyKind,
     userId: source.userId,
     id: nextCounterpartyId(),
     timestamp,

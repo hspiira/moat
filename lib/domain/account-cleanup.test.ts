@@ -84,14 +84,14 @@ describe("planAccountMerge", () => {
     counterparties: Counterparty[] = [],
   ) {
     let seq = 0;
-    return planAccountMerge(
+    return planAccountMerge({
       source,
       target,
-      rows,
+      transactions: rows,
       counterparties,
-      TIMESTAMP,
-      () => `counterparty:${(seq += 1)}`,
-    );
+      timestamp: TIMESTAMP,
+      nextCounterpartyId: () => `counterparty:${(seq += 1)}`,
+    });
   }
 
   it("turns the account into a counterparty and re-points every record at it", () => {

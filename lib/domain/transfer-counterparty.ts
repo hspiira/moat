@@ -1,6 +1,7 @@
-import { BORROWING_POOL_ACCOUNT_ID, isInformalDebt } from "@/lib/domain/borrowing";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
-import type { Account, Counterparty } from "@/lib/types";
+import { BORROWING_LEDGER, isInformalDebt } from "@/lib/domain/borrowing";
+import { LENDING_LEDGER } from "@/lib/domain/lending";
+import { isReservedAccountId } from "@/lib/domain/reserved-accounts";
+import type { Account, Counterparty, CounterpartyKind } from "@/lib/types";
 
 /**
  * Both legs are inspected, not just the destination. A repayment puts the loan
@@ -24,10 +25,16 @@ function isLoanLeg(account: Account | undefined): boolean {
 }
 
 function isPool(account: Account | undefined): boolean {
-  return (
-    account !== undefined &&
-    (account.id === LENDING_POOL_ACCOUNT_ID || account.id === BORROWING_POOL_ACCOUNT_ID)
-  );
+  return account !== undefined && isReservedAccountId(account.id);
+}
+
+/** The single place a transfer direction becomes a counterparty role. */
+export function counterpartyKindForDirection(
+  direction: TransferDirection,
+): CounterpartyKind {
+  return direction === "lend" || direction === "collect"
+    ? LENDING_LEDGER.counterpartyKind
+    : BORROWING_LEDGER.counterpartyKind;
 }
 
 export function describeTransferCounterparty(
@@ -96,7 +103,7 @@ export function counterpartyOptionsFor(
   counterparties: Counterparty[],
   direction: TransferDirection,
 ): { value: string; label: string }[] {
-  const wanted = direction === "lend" || direction === "collect" ? "borrower" : "lender";
+  const wanted = counterpartyKindForDirection(direction);
 
   const people = counterparties
     .filter((entry) => !entry.isArchived)

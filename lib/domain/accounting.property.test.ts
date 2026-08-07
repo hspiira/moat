@@ -350,7 +350,7 @@ describe("accounting property invariants", () => {
 
           const [reconciledPool] = reconcileAccountBalances([pool], legs);
           const portfolio = getLendingPortfolio([reconciledPool], legs, new Date("2026-07-29"));
-          const summed = portfolio.borrowers.reduce((total, b) => total + b.outstanding, 0);
+          const summed = portfolio.parties.reduce((total, b) => total + b.outstanding, 0);
 
           // If these ever diverge, the band shows per-borrower figures that do
           // not add up to the account they all live in.
@@ -423,7 +423,7 @@ describe("accounting property invariants", () => {
 
           const [reconciledPool] = reconcileAccountBalances([pool], legs);
           const portfolio = getBorrowingPortfolio([reconciledPool], legs, new Date("2026-07-29"));
-          const summed = portfolio.lenders.reduce((total, l) => total + l.outstanding, 0);
+          const summed = portfolio.parties.reduce((total, l) => total + l.outstanding, 0);
 
           // A liability is stored negative, so the rows must add up to its
           // mirror or the band shows figures that do not reconcile.

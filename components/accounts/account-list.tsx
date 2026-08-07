@@ -5,6 +5,7 @@ import { IconArchiveOff, IconPencil, IconTrash } from "@tabler/icons-react";
 
 import type { Account, AccountType, Transaction } from "@/lib/types";
 import { canDeleteAccount } from "@/lib/domain/account-cleanup";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
@@ -80,6 +81,19 @@ export function AccountList({
 }: Props) {
   const active = accounts.filter((a) => !a.isArchived);
   const archived = accounts.filter((a) => a.isArchived);
+
+  // One pass over the ledger instead of a full scan per account per render.
+  const deletable = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const transaction of transactions) {
+      counts.set(transaction.accountId, (counts.get(transaction.accountId) ?? 0) + 1);
+    }
+    return new Set(
+      accounts
+        .filter((account) => !counts.has(account.id) && canDeleteAccount(account, []).allowed)
+        .map((account) => account.id),
+    );
+  }, [accounts, transactions]);
 
   const holdingGroups = HOLDING_ORDER.map((type) => ({
     type,
@@ -159,7 +173,7 @@ export function AccountList({
                       Restore
                     </Button>
                   ) : null}
-                  {onDelete && canDeleteAccount(account, transactions).allowed ? (
+                  {onDelete && deletable.has(account.id) ? (
                     <Button
                       size="icon"
                       variant="ghost"

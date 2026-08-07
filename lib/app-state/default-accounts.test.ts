@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildDefaultAccounts,
-  isReservedAccountId,
-  isReservedAccountName,
   reconcileDefaultAccounts,
 } from "@/lib/app-state/default-accounts";
+import { isReservedAccountId, isReservedAccountName } from "@/lib/domain/reserved-accounts";
 import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
 import type { Account } from "@/lib/types";

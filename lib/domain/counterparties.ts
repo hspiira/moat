@@ -8,7 +8,9 @@ import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
  * stable, so the name becomes a label rather than a key.
  */
 
-export const UNKNOWN_COUNTERPARTY_KEY = "counterparty:unknown";
+export function newCounterpartyId(): string {
+  return `counterparty:${crypto.randomUUID()}`;
+}
 
 export function normalizeCounterpartyName(name: string): string {
   return name.trim().replace(/\s+/g, " ");
@@ -19,23 +21,25 @@ export function counterpartyMatchKey(name: string): string {
   return normalizeCounterpartyName(name).toLowerCase();
 }
 
-export function buildCounterparty(params: {
+export type CounterpartyDraft = {
   id: string;
   userId: string;
   name: string;
   kind: CounterpartyKind;
   timestamp: string;
   openingBalance?: number;
-}): Counterparty {
+};
+
+export function buildCounterparty(draft: CounterpartyDraft): Counterparty {
   return {
-    id: params.id,
-    userId: params.userId,
-    name: normalizeCounterpartyName(params.name),
-    kind: params.kind,
-    openingBalance: params.openingBalance || undefined,
+    id: draft.id,
+    userId: draft.userId,
+    name: normalizeCounterpartyName(draft.name),
+    kind: draft.kind,
+    openingBalance: draft.openingBalance || undefined,
     isArchived: false,
-    createdAt: params.timestamp,
-    updatedAt: params.timestamp,
+    createdAt: draft.timestamp,
+    updatedAt: draft.timestamp,
   };
 }
 
@@ -57,32 +61,44 @@ export function widenKind(current: CounterpartyKind, next: CounterpartyKind): Co
 
 export type ResolvedCounterparty = {
   counterparty: Counterparty;
-  isNew: boolean;
+  /** True when the record is new or its kind widened — that is, needs writing. */
+  changed: boolean;
 };
 
 export function resolveCounterparty(
   counterparties: Counterparty[],
-  params: { name: string; kind: CounterpartyKind; userId: string; id: string; timestamp: string },
+  draft: CounterpartyDraft,
 ): ResolvedCounterparty {
-  const existing = findCounterpartyByName(counterparties, params.name);
+  const existing = findCounterpartyByName(counterparties, draft.name);
 
-  if (existing) {
-    const kind = widenKind(existing.kind, params.kind);
-    return {
-      counterparty:
-        kind === existing.kind
-          ? existing
-          : { ...existing, kind, updatedAt: params.timestamp },
-      isNew: false,
-    };
+  if (!existing) {
+    return { counterparty: buildCounterparty(draft), changed: true };
   }
 
-  return { counterparty: buildCounterparty(params), isNew: true };
+  const kind = widenKind(existing.kind, draft.kind);
+  if (kind === existing.kind) {
+    return { counterparty: existing, changed: false };
+  }
+
+  return {
+    counterparty: { ...existing, kind, updatedAt: draft.timestamp },
+    changed: true,
+  };
 }
 
 export type CounterpartyBackfill = {
   counterparties: Counterparty[];
   transactions: Transaction[];
+};
+
+export type BackfillRequest = {
+  transactions: Transaction[];
+  existing: Counterparty[];
+  /** Which pool account implies which role. */
+  poolKinds: Map<string, CounterpartyKind>;
+  userId: string;
+  timestamp: string;
+  nextId: () => string;
 };
 
 /**
@@ -92,18 +108,11 @@ export type CounterpartyBackfill = {
  * Runs once per device. Rows with no payee are left alone: inventing a party
  * for them would assert an identity the user never gave.
  */
-export function backfillCounterparties(
-  transactions: Transaction[],
-  existing: Counterparty[],
-  poolKinds: Map<string, CounterpartyKind>,
-  userId: string,
-  timestamp: string,
-  nextId: () => string,
-): CounterpartyBackfill {
-  const resolved = [...existing];
-  const byKey = new Map(resolved.map((entry) => [counterpartyMatchKey(entry.name), entry]));
-  const created: Counterparty[] = [];
-  const updated = new Map<string, Counterparty>();
+export function backfillCounterparties(request: BackfillRequest): CounterpartyBackfill {
+  const { transactions, existing, poolKinds, userId, timestamp, nextId } = request;
+
+  const byKey = new Map(existing.map((entry) => [counterpartyMatchKey(entry.name), entry]));
+  const touched = new Map<string, Counterparty>();
   const stamped: Transaction[] = [];
 
   for (const transaction of transactions) {
@@ -115,37 +124,23 @@ export function backfillCounterparties(
 
     const key = counterpartyMatchKey(name);
     const match = byKey.get(key);
+    let counterparty: Counterparty;
 
     if (!match) {
-      const counterparty = buildCounterparty({
-        id: nextId(),
-        userId,
-        name,
-        kind,
-        timestamp,
-      });
-      byKey.set(key, counterparty);
-      created.push(counterparty);
-      stamped.push({ ...transaction, counterpartyId: counterparty.id, updatedAt: timestamp });
-      continue;
-    }
-
-    const widened = widenKind(match.kind, kind);
-    if (widened !== match.kind) {
-      const next = { ...match, kind: widened, updatedAt: timestamp };
-      byKey.set(key, next);
-      if (created.some((entry) => entry.id === next.id)) {
-        created[created.findIndex((entry) => entry.id === next.id)] = next;
-      } else {
-        updated.set(next.id, next);
+      counterparty = buildCounterparty({ id: nextId(), userId, name, kind, timestamp });
+      touched.set(counterparty.id, counterparty);
+    } else {
+      const widened = widenKind(match.kind, kind);
+      counterparty = widened === match.kind ? match : { ...match, kind: widened, updatedAt: timestamp };
+      if (counterparty !== match) {
+        touched.set(counterparty.id, counterparty);
       }
     }
 
-    stamped.push({ ...transaction, counterpartyId: match.id, updatedAt: timestamp });
+    byKey.set(key, counterparty);
+
+    stamped.push({ ...transaction, counterpartyId: counterparty.id, updatedAt: timestamp });
   }
 
-  return {
-    counterparties: [...created, ...updated.values()],
-    transactions: stamped,
-  };
+  return { counterparties: [...touched.values()], transactions: stamped };
 }

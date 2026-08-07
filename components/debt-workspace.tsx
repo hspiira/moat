@@ -2,9 +2,12 @@
 
 import { useMemo } from "react";
 
-import { BorrowingBand } from "@/components/accounts/borrowing-band";
+import {
+  BORROWING_BAND_COPY,
+  LENDING_BAND_COPY,
+  PartyBand,
+} from "@/components/accounts/party-band";
 import { DebtPayoffPlanner } from "@/components/accounts/debt-payoff-planner";
-import { LendingBand } from "@/components/accounts/lending-band";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 import { EmptyStateCard } from "@/components/page-shell/page-state";
@@ -18,18 +21,20 @@ export function DebtWorkspace() {
   const record = useRecordTransaction();
   const workspace = useTransactionsWorkspace();
   const { accounts, transactions, counterparties } = workspace;
-  const asOf = useMemo(() => new Date(), []);
 
-  // Each panel already hides itself when its own side is empty. What the page
-  // needs to know is whether all three are, which is the only case that should
-  // render an explanation instead of a blank screen.
-  const hasAnything = useMemo(
-    () =>
-      getDebtPortfolioSummary(accounts, transactions).length > 0 ||
-      getLendingPortfolio(accounts, transactions, asOf, counterparties).borrowers.length > 0 ||
-      getBorrowingPortfolio(accounts, transactions, asOf, counterparties).lenders.length > 0,
-    [accounts, transactions, counterparties, asOf],
-  );
+  // Derived once here and handed down, rather than each band computing its own
+  // and this page computing both again just to test for emptiness.
+  const { lending, borrowing, formalDebts } = useMemo(() => {
+    const asOf = new Date();
+    return {
+      lending: getLendingPortfolio(accounts, transactions, asOf, counterparties),
+      borrowing: getBorrowingPortfolio(accounts, transactions, asOf, counterparties),
+      formalDebts: getDebtPortfolioSummary(accounts, transactions),
+    };
+  }, [accounts, transactions, counterparties]);
+
+  const hasAnything =
+    formalDebts.length > 0 || lending.parties.length > 0 || borrowing.parties.length > 0;
 
   return (
     <FeaturePageShell
@@ -44,17 +49,8 @@ export function DebtWorkspace() {
     >
       <DebtPayoffPlanner accounts={accounts} transactions={transactions} />
 
-      <BorrowingBand
-        accounts={accounts}
-        transactions={transactions}
-        counterparties={counterparties}
-      />
-
-      <LendingBand
-        accounts={accounts}
-        transactions={transactions}
-        counterparties={counterparties}
-      />
+      <PartyBand portfolio={borrowing} copy={BORROWING_BAND_COPY} />
+      <PartyBand portfolio={lending} copy={LENDING_BAND_COPY} />
 
       {hasAnything ? null : (
         <EmptyStateCard

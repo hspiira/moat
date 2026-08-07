@@ -1,39 +1,9 @@
-import {
-  BORROWING_POOL_ACCOUNT_ID,
-  BORROWING_POOL_ACCOUNT_NAME,
-  buildBorrowingPoolAccount,
-} from "@/lib/domain/borrowing";
-import {
-  LENDING_POOL_ACCOUNT_ID,
-  LENDING_POOL_ACCOUNT_NAME,
-  buildLendingPoolAccount,
-} from "@/lib/domain/lending";
+import { buildPoolAccount } from "@/lib/domain/party-ledger";
+import { PARTY_LEDGERS } from "@/lib/domain/reserved-accounts";
 import type { Account } from "@/lib/types";
 
-export const RESERVED_ACCOUNT_IDS = [
-  LENDING_POOL_ACCOUNT_ID,
-  BORROWING_POOL_ACCOUNT_ID,
-] as const;
-
-export const RESERVED_ACCOUNT_NAMES = [
-  LENDING_POOL_ACCOUNT_NAME,
-  BORROWING_POOL_ACCOUNT_NAME,
-] as const;
-
-export function isReservedAccountId(accountId: string): boolean {
-  return RESERVED_ACCOUNT_IDS.some((reserved) => reserved === accountId);
-}
-
-export function isReservedAccountName(name: string): boolean {
-  const normalized = name.trim().toLowerCase();
-  return RESERVED_ACCOUNT_NAMES.some((reserved) => reserved.toLowerCase() === normalized);
-}
-
 export function buildDefaultAccounts(userId: string, timestamp: string): Account[] {
-  return [
-    buildLendingPoolAccount(userId, timestamp),
-    buildBorrowingPoolAccount(userId, timestamp),
-  ];
+  return PARTY_LEDGERS.map((ledger) => buildPoolAccount(ledger, userId, timestamp));
 }
 
 /**
