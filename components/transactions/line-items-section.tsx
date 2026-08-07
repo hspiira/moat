@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Money } from "@/components/ui/money";
+import { formatMoney } from "@/lib/currency";
 import { lineItemAmount, summarizeItemization } from "@/lib/domain/line-items";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Transaction, TransactionLineItem } from "@/lib/types";
@@ -39,17 +40,35 @@ export function LineItemsSection({
   onDelete: (lineItem: TransactionLineItem) => void;
 }) {
   const [draft, setDraft] = useState(emptyDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const summary = summarizeItemization(transaction.amount, lineItems);
+
+  const beginEdit = (line: TransactionLineItem) => {
+    setEditingId(line.id);
+    setDraft({
+      label: line.label,
+      quantity: line.quantity != null ? String(line.quantity) : "",
+      unitPrice: line.unitPrice != null ? String(line.unitPrice) : "",
+      amount: line.amount != null ? String(line.amount) : "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft(emptyDraft);
+  };
 
   const submitDraft = () => {
     if (!draft.label.trim()) return;
     onSave({
+      id: editingId ?? undefined,
       transactionId: transaction.id,
       label: draft.label,
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       unitPrice: parseAmountInput(draft.unitPrice) ?? undefined,
       amount: parseAmountInput(draft.amount) ?? undefined,
     });
+    setEditingId(null);
     setDraft(emptyDraft);
   };
 
@@ -77,6 +96,14 @@ export function LineItemsSection({
                     size="sm"
                     variant="ghost"
                     disabled={isSubmitting}
+                    onClick={() => beginEdit(line)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={isSubmitting}
                     onClick={() => onDelete(line)}
                   >
                     Remove
@@ -94,8 +121,8 @@ export function LineItemsSection({
 
       <p className="text-xs text-muted-foreground">
         {summary.overItemizedBy > 0
-          ? `Items exceed the transaction by ${summary.overItemizedBy.toLocaleString()} UGX.`
-          : `Itemized ${summary.itemizedTotal.toLocaleString()} of ${transaction.amount.toLocaleString()} UGX — ${summary.unitemized.toLocaleString()} unitemized.`}
+          ? `Items exceed the transaction by ${formatMoney(summary.overItemizedBy)}.`
+          : `Itemized ${formatMoney(summary.itemizedTotal)} of ${formatMoney(transaction.amount)} — ${formatMoney(summary.unitemized)} unitemized.`}
       </p>
 
       <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end">
@@ -135,13 +162,20 @@ export function LineItemsSection({
             onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
           />
         </div>
-        <Button
-          size="sm"
-          disabled={isSubmitting || !draft.label.trim()}
-          onClick={submitDraft}
-        >
-          Add item
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            disabled={isSubmitting || !draft.label.trim()}
+            onClick={submitDraft}
+          >
+            {editingId ? "Save" : "Add item"}
+          </Button>
+          {editingId ? (
+            <Button size="sm" variant="ghost" disabled={isSubmitting} onClick={cancelEdit}>
+              Cancel
+            </Button>
+          ) : null}
+        </div>
       </div>
     </DetailSection>
   );

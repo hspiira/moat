@@ -35,8 +35,14 @@ function recentCutoff(today: string): string {
   return `${year}${rest}`;
 }
 
+/**
+ * Per-unit price, so a 2-pack's total isn't compared against a single
+ * item's unit price as if they were the same thing.
+ */
 function pricePoint(observation: PriceObservation): number | undefined {
-  return observation.unitPrice ?? observation.amount;
+  if (observation.unitPrice != null) return observation.unitPrice;
+  if (observation.amount == null) return undefined;
+  return observation.amount / (observation.quantity ?? 1);
 }
 
 export function summarizeItemPrices(

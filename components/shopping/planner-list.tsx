@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
+import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
 import type { Item, ItemPriceSummary, PlannedPurchase } from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
@@ -14,13 +15,13 @@ function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
   const lastPrice = last.unitPrice ?? last.amount;
   const parts = [
     lastPrice != null
-      ? `last ${lastPrice.toLocaleString()} @ ${last.merchant}`
+      ? `last ${formatMoney(lastPrice)} @ ${last.merchant}`
       : `last bought @ ${last.merchant}`,
   ];
   const best = summary.bestRecent;
   const bestPrice = best ? (best.unitPrice ?? best.amount) : undefined;
   if (best && bestPrice != null && best.lineItemId !== last.lineItemId) {
-    parts.push(`best ${bestPrice.toLocaleString()} @ ${best.merchant}`);
+    parts.push(`best ${formatMoney(bestPrice)} @ ${best.merchant}`);
   }
   return parts.join(" · ");
 }

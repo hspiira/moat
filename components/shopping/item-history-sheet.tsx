@@ -53,6 +53,9 @@ export function ItemHistorySheet({
                   >
                     <span className="min-w-0 truncate">
                       {formatDate(observation.occurredOn)} · {observation.merchant}
+                      {observation.quantity != null ? (
+                        <span className="text-muted-foreground"> × {observation.quantity}</span>
+                      ) : null}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       {observation.lineItemId === bestId ? (

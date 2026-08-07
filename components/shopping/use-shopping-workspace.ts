@@ -49,6 +49,7 @@ export function useShoppingWorkspace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refresh = useCallback(async () => {
+    setError(null);
     try {
       const loadedProfile = await repositories.userProfile.get();
       setProfile(loadedProfile);
@@ -119,6 +120,7 @@ export function useShoppingWorkspace() {
     }) => {
       if (!profile) return;
       setIsSubmitting(true);
+      setError(null);
       try {
         const timestamp = new Date().toISOString();
         const resolved = resolveItem({
@@ -156,20 +158,31 @@ export function useShoppingWorkspace() {
 
   const dropPurchase = useCallback(
     async (purchase: PlannedPurchase) => {
-      await repositories.plannedPurchases.upsert({
-        ...purchase,
-        status: "dropped",
-        updatedAt: new Date().toISOString(),
-      });
-      await refresh();
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await repositories.plannedPurchases.upsert({
+          ...purchase,
+          status: "dropped",
+          updatedAt: new Date().toISOString(),
+        });
+        await refresh();
+      } catch (submitError) {
+        setError(
+          submitError instanceof Error ? submitError.message : "Couldn't drop the item.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
     },
     [refresh],
   );
 
   const checkOff = useCallback(
-    async (selected: PlannedPurchase[], target: CheckOffTarget) => {
-      if (!profile || selected.length === 0) return;
+    async (selected: PlannedPurchase[], target: CheckOffTarget): Promise<boolean> => {
+      if (!profile || selected.length === 0) return false;
       setIsSubmitting(true);
+      setError(null);
       try {
         const timestamp = new Date().toISOString();
         let transactionId: string;
@@ -206,10 +219,12 @@ export function useShoppingWorkspace() {
           );
         }
         await refresh();
+        return true;
       } catch (submitError) {
         setError(
           submitError instanceof Error ? submitError.message : "Couldn't record the purchase.",
         );
+        return false;
       } finally {
         setIsSubmitting(false);
       }

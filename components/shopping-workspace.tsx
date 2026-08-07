@@ -87,7 +87,8 @@ export function ShoppingWorkspace() {
         expenseCategories={workspace.expenseCategories}
         isSubmitting={workspace.isSubmitting}
         onConfirm={(target) => {
-          void workspace.checkOff(selectedPurchases, target).then(() => {
+          void workspace.checkOff(selectedPurchases, target).then((succeeded) => {
+            if (!succeeded) return;
             setSelectedIds(new Set());
             setIsCheckOffOpen(false);
           });
