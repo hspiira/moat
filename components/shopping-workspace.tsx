@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 
 import { CheckOffSheet } from "./shopping/check-off-sheet";
+import { ItemHistorySheet } from "./shopping/item-history-sheet";
 import { PlannerAddForm } from "./shopping/planner-add-form";
 import { PlannerList } from "./shopping/planner-list";
 import { useShoppingWorkspace } from "./shopping/use-shopping-workspace";
@@ -93,7 +94,14 @@ export function ShoppingWorkspace() {
         }}
         onOpenChange={setIsCheckOffOpen}
       />
-      {/* ItemHistorySheet (Task 10) mounts here. */}
+      <ItemHistorySheet
+        item={historyItemId ? (itemsById.get(historyItemId) ?? null) : null}
+        observations={workspace.observations.filter(
+          (observation) => observation.itemId === historyItemId,
+        )}
+        summary={historyItemId ? workspace.priceSummaries.get(historyItemId) : undefined}
+        onOpenChange={(open) => (open ? undefined : setHistoryItemId(null))}
+      />
     </FeaturePageShell>
   );
 }

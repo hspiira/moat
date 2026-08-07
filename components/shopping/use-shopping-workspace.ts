@@ -88,9 +88,13 @@ export function useShoppingWorkspace() {
   const today = new Date().toISOString().slice(0, 10);
   const groups = useMemo(() => groupPlannerRows(purchases, today), [purchases, today]);
   const estimate = useMemo(() => estimatePlannedTotal(purchases), [purchases]);
+  const observations = useMemo(
+    () => derivePriceObservations(lineItems, transactions),
+    [lineItems, transactions],
+  );
   const priceSummaries: Map<string, ItemPriceSummary> = useMemo(
-    () => summarizeItemPrices(derivePriceObservations(lineItems, transactions), today),
-    [lineItems, transactions, today],
+    () => summarizeItemPrices(observations, today),
+    [observations, today],
   );
   const recentExpenses = useMemo(
     () =>
@@ -222,6 +226,7 @@ export function useShoppingWorkspace() {
     purchases,
     groups,
     estimate,
+    observations,
     priceSummaries,
     recentExpenses,
     accounts,
