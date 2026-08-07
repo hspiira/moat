@@ -68,7 +68,9 @@ export function Money({
     // overflow-wrap:anywhere lets them break as a last resort.
     <span
       className={cn(
-        "font-mono tabular-nums tracking-tight wrap-anywhere",
+        // Sans with tabular figures: mono made every amount read like code
+        // sitting in a page of prose.
+        "tabular-nums tracking-tight wrap-anywhere",
         toneClass,
         className,
       )}
