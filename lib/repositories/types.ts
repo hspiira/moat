@@ -9,12 +9,16 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  Item,
   MonthClose,
+  PlannedPurchase,
+  PlannedPurchaseStatus,
   RecurringObligation,
   ResourceLink,
   SyncOutboxItem,
   SyncProfile,
   Transaction,
+  TransactionLineItem,
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
@@ -78,6 +82,18 @@ export interface SyncOutboxRepository extends Repository<SyncOutboxItem> {
   listPendingByUser(userId: string): Promise<SyncOutboxItem[]>;
 }
 
+export interface ItemRepository extends Repository<Item> {
+  findByNormalizedName(userId: string, normalizedName: string): Promise<Item | null>;
+}
+
+export interface PlannedPurchaseRepository extends Repository<PlannedPurchase> {
+  listByStatus(userId: string, status: PlannedPurchaseStatus): Promise<PlannedPurchase[]>;
+}
+
+export interface TransactionLineItemRepository extends Repository<TransactionLineItem> {
+  listByTransactionId(userId: string, transactionId: string): Promise<TransactionLineItem[]>;
+}
+
 export interface RepositoryBundle {
   userProfile: UserProfileRepository;
   accounts: AccountRepository;
@@ -97,4 +113,7 @@ export interface RepositoryBundle {
   resources: ResourceRepository;
   syncProfiles: SyncProfileRepository;
   syncOutbox: SyncOutboxRepository;
+  items: ItemRepository;
+  plannedPurchases: PlannedPurchaseRepository;
+  transactionLineItems: TransactionLineItemRepository;
 }
