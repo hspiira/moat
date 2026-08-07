@@ -826,55 +826,75 @@ export function useTransactionsWorkspace() {
       categoryId?: string;
     }) => {
       if (!profile) return;
-      const timestamp = new Date().toISOString();
-      const existingItems = await repositories.items.listByUser(profile.id);
-      const resolved = resolveItem({
-        existing: existingItems,
-        rawName: input.label,
-        userId: profile.id,
-        timestamp,
-      });
-      if (resolved.isNew) {
-        await repositories.items.upsert(resolved.item);
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const timestamp = new Date().toISOString();
+        const existingItems = await repositories.items.listByUser(profile.id);
+        const resolved = resolveItem({
+          existing: existingItems,
+          rawName: input.label,
+          userId: profile.id,
+          timestamp,
+        });
+        if (resolved.isNew) {
+          await repositories.items.upsert(resolved.item);
+        }
+        const existing = input.id
+          ? lineItems.find((line) => line.id === input.id)
+          : undefined;
+        await repositories.transactionLineItems.upsert({
+          id: input.id ?? `line:${crypto.randomUUID()}`,
+          userId: profile.id,
+          transactionId: input.transactionId,
+          itemId: resolved.item.id,
+          label: input.label.trim(),
+          quantity: input.quantity,
+          unitPrice: input.unitPrice,
+          amount: input.amount,
+          categoryId: input.categoryId,
+          plannedPurchaseId: existing?.plannedPurchaseId,
+          createdAt: existing?.createdAt ?? timestamp,
+          updatedAt: timestamp,
+        });
+        await loadWorkspace();
+      } catch (saveError) {
+        const message = errorMessage(saveError, "Couldn't save the item.");
+        setError(message);
+        show(message, "error");
+      } finally {
+        setIsSubmitting(false);
       }
-      const existing = input.id
-        ? lineItems.find((line) => line.id === input.id)
-        : undefined;
-      await repositories.transactionLineItems.upsert({
-        id: input.id ?? `line:${crypto.randomUUID()}`,
-        userId: profile.id,
-        transactionId: input.transactionId,
-        itemId: resolved.item.id,
-        label: input.label.trim(),
-        quantity: input.quantity,
-        unitPrice: input.unitPrice,
-        amount: input.amount,
-        categoryId: input.categoryId,
-        plannedPurchaseId: existing?.plannedPurchaseId,
-        createdAt: existing?.createdAt ?? timestamp,
-        updatedAt: timestamp,
-      });
-      await loadWorkspace();
     },
-    [lineItems, loadWorkspace, profile],
+    [lineItems, loadWorkspace, profile, show],
   );
 
   const deleteLineItem = useCallback(
     async (lineItem: TransactionLineItem) => {
       if (!profile) return;
-      const timestamp = new Date().toISOString();
-      await repositories.transactionLineItems.remove(lineItem.id);
-      if (lineItem.plannedPurchaseId) {
-        const purchase = await repositories.plannedPurchases.getById(
-          lineItem.plannedPurchaseId,
-        );
-        if (purchase) {
-          await repositories.plannedPurchases.upsert(revertPurchase(purchase, timestamp));
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const timestamp = new Date().toISOString();
+        await repositories.transactionLineItems.remove(lineItem.id);
+        if (lineItem.plannedPurchaseId) {
+          const purchase = await repositories.plannedPurchases.getById(
+            lineItem.plannedPurchaseId,
+          );
+          if (purchase) {
+            await repositories.plannedPurchases.upsert(revertPurchase(purchase, timestamp));
+          }
         }
+        await loadWorkspace();
+      } catch (deleteError) {
+        const message = errorMessage(deleteError, "Couldn't delete the item.");
+        setError(message);
+        show(message, "error");
+      } finally {
+        setIsSubmitting(false);
       }
-      await loadWorkspace();
     },
-    [loadWorkspace, profile],
+    [loadWorkspace, profile, show],
   );
 
   const exportMonthClose = useCallback(() => {
