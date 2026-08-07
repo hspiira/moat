@@ -105,7 +105,7 @@ export function CsvDefaultsCard({
   );
 
   return (
-    <Card className="moat-panel-yellow shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base text-foreground">2. Fill gaps</CardTitle>
         <CardDescription className="text-foreground/72">
@@ -184,7 +184,7 @@ export function CsvReviewCard({
   onClear: () => void;
 }) {
   return (
-    <Card className="moat-panel-mint shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base text-foreground">3. Review import</CardTitle>
         <CardDescription className="text-foreground/72">
@@ -248,9 +248,9 @@ export function CsvPreviewCard({
                 row.issues.length > 0
                   ? "border-destructive/30 bg-destructive/5"
                   : index === 0
-                    ? "moat-panel-sage "
+                    ? "bg-muted/40 "
                     : index % 2 === 0
-                      ? "moat-panel-mint "
+                      ? "bg-muted/40 "
                       : "bg-muted/20 "
               }`}
             >

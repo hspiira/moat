@@ -128,7 +128,6 @@ export function TransactionRulesPanel({
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        tone="sage"
         title="Transaction rules"
         description="Tidy up payees and prefill fields automatically — rules never post on their own."
       />

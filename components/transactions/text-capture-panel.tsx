@@ -329,7 +329,7 @@ export function TextCapturePanel({
   if (embedded) {
     return (
       <div>
-        <AccentCardHeader tone="sage" title="From a message" className="rounded-none" />
+        <AccentCardHeader title="From a message" className="rounded-none" />
         <div className="px-4 pt-4 pb-6">{content}</div>
       </div>
     );

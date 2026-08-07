@@ -113,7 +113,6 @@ export function InvestmentProfileCard({
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        tone="yellow"
         title="Your investment profile"
         description="Your guidance updates as you change these."
         titleClassName="text-base"
