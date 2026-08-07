@@ -6,6 +6,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 
+import { CheckOffSheet } from "./shopping/check-off-sheet";
 import { PlannerAddForm } from "./shopping/planner-add-form";
 import { PlannerList } from "./shopping/planner-list";
 import { useShoppingWorkspace } from "./shopping/use-shopping-workspace";
@@ -77,7 +78,22 @@ export function ShoppingWorkspace() {
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
       </div>
-      {/* CheckOffSheet (Task 9) and ItemHistorySheet (Task 10) mount here. */}
+      <CheckOffSheet
+        open={isCheckOffOpen}
+        selected={selectedPurchases}
+        recentExpenses={workspace.recentExpenses}
+        accounts={workspace.accounts}
+        expenseCategories={workspace.expenseCategories}
+        isSubmitting={workspace.isSubmitting}
+        onConfirm={(target) => {
+          void workspace.checkOff(selectedPurchases, target).then(() => {
+            setSelectedIds(new Set());
+            setIsCheckOffOpen(false);
+          });
+        }}
+        onOpenChange={setIsCheckOffOpen}
+      />
+      {/* ItemHistorySheet (Task 10) mounts here. */}
     </FeaturePageShell>
   );
 }

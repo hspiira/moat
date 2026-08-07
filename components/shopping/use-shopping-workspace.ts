@@ -15,6 +15,8 @@ import {
 } from "@/lib/domain/price-observations";
 import { repositories } from "@/lib/repositories/instance";
 import type {
+  Account,
+  Category,
   Item,
   ItemPriceSummary,
   PlannedPurchase,
@@ -42,6 +44,8 @@ export function useShoppingWorkspace() {
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
   const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -49,17 +53,27 @@ export function useShoppingWorkspace() {
       const loadedProfile = await repositories.userProfile.get();
       setProfile(loadedProfile);
       if (!loadedProfile) return;
-      const [loadedItems, loadedPurchases, loadedLines, loadedTransactions] =
-        await Promise.all([
-          repositories.items.listByUser(loadedProfile.id),
-          repositories.plannedPurchases.listByUser(loadedProfile.id),
-          repositories.transactionLineItems.listByUser(loadedProfile.id),
-          repositories.transactions.listByUser(loadedProfile.id),
-        ]);
+      const [
+        loadedItems,
+        loadedPurchases,
+        loadedLines,
+        loadedTransactions,
+        loadedAccounts,
+        loadedCategories,
+      ] = await Promise.all([
+        repositories.items.listByUser(loadedProfile.id),
+        repositories.plannedPurchases.listByUser(loadedProfile.id),
+        repositories.transactionLineItems.listByUser(loadedProfile.id),
+        repositories.transactions.listByUser(loadedProfile.id),
+        repositories.accounts.listByUser(loadedProfile.id),
+        repositories.categories.listByUser(loadedProfile.id),
+      ]);
       setItems(loadedItems);
       setPurchases(loadedPurchases);
       setLineItems(loadedLines);
       setTransactions(loadedTransactions);
+      setAccounts(loadedAccounts);
+      setCategories(loadedCategories);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Couldn't load shopping.");
     } finally {
@@ -85,6 +99,10 @@ export function useShoppingWorkspace() {
         .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn))
         .slice(0, 15),
     [transactions],
+  );
+  const expenseCategories = useMemo(
+    () => categories.filter((category) => category.kind === "expense"),
+    [categories],
   );
 
   const addPurchase = useCallback(
@@ -206,6 +224,9 @@ export function useShoppingWorkspace() {
     estimate,
     priceSummaries,
     recentExpenses,
+    accounts,
+    categories,
+    expenseCategories,
     addPurchase,
     dropPurchase,
     checkOff,
