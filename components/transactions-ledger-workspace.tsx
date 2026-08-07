@@ -136,7 +136,11 @@ export function TransactionsLedgerWorkspace() {
         transactions={workspace.transactions}
         accounts={workspace.accounts}
         categories={workspace.categories}
+        lineItems={workspace.lineItems}
+        isSubmitting={workspace.isSubmitting}
         onOpenChange={(open) => (open ? undefined : setDetailTransactionId(null))}
+        onSaveLineItem={(input) => void workspace.saveLineItem(input)}
+        onDeleteLineItem={(lineItem) => void workspace.deleteLineItem(lineItem)}
       />
 
       <Sheet open={isEditing} onOpenChange={(open) => (open ? undefined : workspace.cancelEdit())}>

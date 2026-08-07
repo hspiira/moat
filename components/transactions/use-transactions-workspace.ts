@@ -27,6 +27,7 @@ import type {
   CounterpartyKind,
   MonthClose,
   Transaction,
+  TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
@@ -38,7 +39,9 @@ import {
 } from "@/lib/domain/transfer-counterparty";
 import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { resolveItem } from "@/lib/domain/item-normalization";
 import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
+import { revertPurchase } from "@/lib/domain/planned-purchases";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -118,6 +121,7 @@ export function useTransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
   const [pendingSyncTransactionIds, setPendingSyncTransactionIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -262,6 +266,7 @@ export function useTransactionsWorkspace() {
         setAccounts([]);
         setCategories([]);
         setTransactions([]);
+        setLineItems([]);
         setCounterparties([]);
         setBudgets([]);
         setCaptureReviewItems([]);
@@ -271,12 +276,13 @@ export function useTransactionsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedCategories, storedTransactions, storedCounterparties] =
+      const [storedAccounts, storedCategories, storedTransactions, storedCounterparties, storedLineItems] =
         await Promise.all([
           repositories.accounts.listByUser(nextProfile.id),
           repositories.categories.listByUser(nextProfile.id),
           repositories.transactions.listByUser(nextProfile.id),
           repositories.counterparties.listByUser(nextProfile.id),
+          repositories.transactionLineItems.listByUser(nextProfile.id),
         ]);
       const [
         storedCaptureReviewItems,
@@ -369,6 +375,7 @@ export function useTransactionsWorkspace() {
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
       setTransactions(sortTransactions(currentTransactions));
+      setLineItems(storedLineItems);
       setBudgets(storedBudgets);
       setCaptureReviewItems(storedCaptureReviewItems);
       setTransactionRules(storedRules);
@@ -808,6 +815,68 @@ export function useTransactionsWorkspace() {
     }
   }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile, show]);
 
+  const saveLineItem = useCallback(
+    async (input: {
+      id?: string;
+      transactionId: string;
+      label: string;
+      quantity?: number;
+      unitPrice?: number;
+      amount?: number;
+      categoryId?: string;
+    }) => {
+      if (!profile) return;
+      const timestamp = new Date().toISOString();
+      const existingItems = await repositories.items.listByUser(profile.id);
+      const resolved = resolveItem({
+        existing: existingItems,
+        rawName: input.label,
+        userId: profile.id,
+        timestamp,
+      });
+      if (resolved.isNew) {
+        await repositories.items.upsert(resolved.item);
+      }
+      const existing = input.id
+        ? lineItems.find((line) => line.id === input.id)
+        : undefined;
+      await repositories.transactionLineItems.upsert({
+        id: input.id ?? `line:${crypto.randomUUID()}`,
+        userId: profile.id,
+        transactionId: input.transactionId,
+        itemId: resolved.item.id,
+        label: input.label.trim(),
+        quantity: input.quantity,
+        unitPrice: input.unitPrice,
+        amount: input.amount,
+        categoryId: input.categoryId,
+        plannedPurchaseId: existing?.plannedPurchaseId,
+        createdAt: existing?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      });
+      await loadWorkspace();
+    },
+    [lineItems, loadWorkspace, profile],
+  );
+
+  const deleteLineItem = useCallback(
+    async (lineItem: TransactionLineItem) => {
+      if (!profile) return;
+      const timestamp = new Date().toISOString();
+      await repositories.transactionLineItems.remove(lineItem.id);
+      if (lineItem.plannedPurchaseId) {
+        const purchase = await repositories.plannedPurchases.getById(
+          lineItem.plannedPurchaseId,
+        );
+        if (purchase) {
+          await repositories.plannedPurchases.upsert(revertPurchase(purchase, timestamp));
+        }
+      }
+      await loadWorkspace();
+    },
+    [loadWorkspace, profile],
+  );
+
   const exportMonthClose = useCallback(() => {
     const csv = buildMonthCloseCsv(transactions, categories, closePeriod);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -826,6 +895,7 @@ export function useTransactionsWorkspace() {
     categories,
     counterparties,
     transactions,
+    lineItems,
     pendingSyncTransactionIds,
     periodTransactions,
     periodSummary,
@@ -863,6 +933,8 @@ export function useTransactionsWorkspace() {
     toggleRule: rulesAndObligations.toggleRule,
     saveObligation: rulesAndObligations.saveObligation,
     toggleObligation: rulesAndObligations.toggleObligation,
+    saveLineItem,
+    deleteLineItem,
     closeMonth,
     exportMonthClose,
     saveBudget: budgetPlanner.saveBudget,
