@@ -57,35 +57,35 @@ export function AccountBalanceBreakdown({
   return (
     <div className="grid gap-2 px-4 py-3 text-sm">
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Opening</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Opening</span>
           <BreakdownAmount amount={breakdown.openingBalance} positiveNeutral />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Current</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Current</span>
           <BreakdownAmount amount={breakdown.currentBalance} positiveNeutral />
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Inflow</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Inflow</span>
           <BreakdownAmount amount={breakdown.inflow} />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Outflow</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Outflow</span>
           <BreakdownAmount amount={-breakdown.outflow} />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Savings alloc.</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Savings alloc.</span>
           <BreakdownAmount amount={-breakdown.savingsAllocations} />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Transfers</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Transfers</span>
           <BreakdownAmount amount={breakdown.transfers} />
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 pt-2">
-        <span className="text-muted-foreground">Net movement</span>
+        <span className="shrink-0 text-muted-foreground">Net movement</span>
         <BreakdownAmount amount={breakdown.movement} />
       </div>
       {account.type !== "debt" && breakdown.openingBalance < 0 ? (

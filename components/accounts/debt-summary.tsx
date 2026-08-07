@@ -20,8 +20,8 @@ export function DebtSummary({
 
   return (
     <div className="grid gap-2 px-4 py-3 text-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Principal</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Principal</span>
         <AmountIndicator
           tone="neutral"
           sign="none"
@@ -29,8 +29,8 @@ export function DebtSummary({
           className="text-sm font-medium"
         />
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Outstanding</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Outstanding</span>
         <AmountIndicator
           tone={summary.outstandingBalance > 0 ? "negative" : "neutral"}
           sign={summary.outstandingBalance > 0 ? "negative" : "none"}
@@ -38,14 +38,14 @@ export function DebtSummary({
           className="text-sm font-medium"
         />
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Interest rate</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Interest rate</span>
         <span className="text-foreground">
           {summary.interestRate}% · {summary.interestModel === "flat" ? "flat" : "reducing"}
         </span>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Min / avg payment</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Min / avg payment</span>
         <AmountIndicator
           tone={summary.averagePayment > 0 ? "positive" : "neutral"}
           sign={summary.averagePayment > 0 ? "positive" : "none"}
@@ -56,12 +56,12 @@ export function DebtSummary({
           className="text-sm font-medium"
         />
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Monthly interest</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Monthly interest</span>
         <span className="text-foreground">{formatMoney(summary.estimatedMonthlyInterest, "UGX")}</span>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">Payoff estimate</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="shrink-0 text-muted-foreground">Payoff estimate</span>
         <span className="text-foreground">
           {summary.estimatedPayoffMonths !== null
             ? `${summary.estimatedPayoffMonths} months`
