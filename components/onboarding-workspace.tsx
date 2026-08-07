@@ -149,12 +149,12 @@ export function OnboardingWorkspace() {
             <li
               key={currentStep}
               aria-current={index === stepIndex ? "step" : undefined}
-              className={`rounded-full border px-3 py-1 transition-colors ${
+              className={`rounded-full px-3 py-1 transition-colors ${
                 index === stepIndex
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground"
                   : index < stepIndex
-                    ? "border-primary/40 text-foreground"
-                    : ""
+                    ? "bg-muted text-foreground"
+                    : "bg-muted/40"
               }`}
             >
               {index + 1}. {stepLabels[currentStep]}

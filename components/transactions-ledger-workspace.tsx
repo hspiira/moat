@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { IconSearch, IconX } from "@tabler/icons-react";
+
+import { searchTransactions } from "@/lib/domain/transaction-search";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,16 +27,20 @@ const LEDGER_PAGE_SIZE = 25;
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(workspace.transactions.length / LEDGER_PAGE_SIZE));
+  const visibleTransactions = useMemo(
+    () =>
+      searchTransactions(workspace.transactions, query, workspace.accounts, workspace.categories),
+    [workspace.transactions, query, workspace.accounts, workspace.categories],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / LEDGER_PAGE_SIZE));
   // Clamp rather than reset so deletes on the last page don't strand the view.
   const currentPage = Math.min(page, totalPages - 1);
   const pageStart = currentPage * LEDGER_PAGE_SIZE;
-  const pageTransactions = workspace.transactions.slice(
-    pageStart,
-    pageStart + LEDGER_PAGE_SIZE,
-  );
+  const pageTransactions = visibleTransactions.slice(pageStart, pageStart + LEDGER_PAGE_SIZE);
   const isEditing = Boolean(workspace.editingTransactionId);
   // Resolved from the live list so a deleted transaction closes the sheet
   // instead of stranding a stale copy in it.
@@ -94,6 +101,49 @@ export function TransactionsLedgerWorkspace() {
           </Card>
         ) : null}
 
+        <div className="relative">
+          <IconSearch
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(0);
+            }}
+            placeholder="Search payee, category, note, or amount"
+            aria-label="Search transactions"
+            className="h-11 w-full rounded-lg bg-muted/50 pr-10 pl-10 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          />
+          {query ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery("");
+                setPage(0);
+              }}
+              className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <IconX className="size-4" />
+            </button>
+          ) : null}
+        </div>
+
+        {query && visibleTransactions.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No transactions match &ldquo;{query.trim()}&rdquo;.
+          </p>
+        ) : null}
+        {query && visibleTransactions.length > 0 ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {visibleTransactions.length}{" "}
+            {visibleTransactions.length === 1 ? "match" : "matches"}
+          </p>
+        ) : null}
+
         <TransactionList
           accounts={workspace.accounts}
           categories={workspace.categories}
@@ -116,8 +166,8 @@ export function TransactionsLedgerWorkspace() {
               Previous
             </Button>
             <span className="text-xs text-muted-foreground">
-              {pageStart + 1}–{Math.min(pageStart + LEDGER_PAGE_SIZE, workspace.transactions.length)}{" "}
-              of {workspace.transactions.length}
+              {pageStart + 1}–{Math.min(pageStart + LEDGER_PAGE_SIZE, visibleTransactions.length)}{" "}
+              of {visibleTransactions.length}
             </span>
             <Button
               size="sm"
