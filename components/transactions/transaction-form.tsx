@@ -365,6 +365,7 @@ export function TransactionForm({
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 className="w-full sm:w-auto"
                 onClick={onCancelEdit}
               >

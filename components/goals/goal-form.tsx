@@ -202,7 +202,7 @@ export function GoalForm({
               {isSubmitting ? "Saving…" : editingId ? "Update goal" : "Add goal"}
             </Button>
             {editingId ? (
-              <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>
+              <Button type="button" variant="outline" size="lg" onClick={onCancelEdit}>
                 Cancel
               </Button>
             ) : null}
