@@ -38,6 +38,7 @@ import {
 } from "@/lib/domain/transfer-counterparty";
 import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
 import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -704,9 +705,25 @@ export function useTransactionsWorkspace() {
         transactions
           .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
           .forEach((entry) => idsToRemove.add(entry.id));
-        await Promise.all(
-          [...idsToRemove].map((id) => repositories.transactions.remove(id)),
-        );
+        const [lineItems, plannedPurchases] = await Promise.all([
+          repositories.transactionLineItems.listByUser(profile.id),
+          repositories.plannedPurchases.listByUser(profile.id),
+        ]);
+        const cascade = planLineItemCascade({
+          deletedTransactionIds: idsToRemove,
+          lineItems,
+          plannedPurchases,
+          timestamp: new Date().toISOString(),
+        });
+        await Promise.all([
+          ...[...idsToRemove].map((id) => repositories.transactions.remove(id)),
+          ...cascade.lineItemIdsToDelete.map((id) =>
+            repositories.transactionLineItems.remove(id),
+          ),
+          ...cascade.purchasesToRevert.map((purchase) =>
+            repositories.plannedPurchases.upsert(purchase),
+          ),
+        ]);
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);
