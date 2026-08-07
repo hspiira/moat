@@ -51,7 +51,6 @@ export function CsvImportPanel(props: Props) {
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        tone="lilac"
         title="CSV import"
         description="Upload, map, review, then confirm."
       />

@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 
+import type { TransactionFormState } from "@/components/transactions/transaction-form";
+
 import {
   Sheet,
   SheetContent,
@@ -24,12 +26,25 @@ export function RecordTransactionSheet({
   open,
   onOpenChange,
   onRecorded,
+  initialForm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecorded?: () => void;
+  /** Seeds the form each time the sheet opens — e.g. the ledger's account. */
+  initialForm?: Partial<TransactionFormState>;
 }) {
   const workspace = useTransactionsWorkspace();
+
+  // Render-time adjust: apply the seed on the transition into open, so the
+  // caller's context (which account's page asked) reaches the form.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && initialForm) {
+      workspace.setTransactionForm((current) => ({ ...current, ...initialForm }));
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -78,10 +93,22 @@ export function RecordTransactionSheet({
  */
 export function useRecordTransaction(onRecorded?: () => void) {
   const [open, setOpen] = useState(false);
+  const [initialForm, setInitialForm] = useState<Partial<TransactionFormState> | undefined>();
 
   const sheet: ReactNode = (
-    <RecordTransactionSheet open={open} onOpenChange={setOpen} onRecorded={onRecorded} />
+    <RecordTransactionSheet
+      open={open}
+      onOpenChange={setOpen}
+      onRecorded={onRecorded}
+      initialForm={initialForm}
+    />
   );
 
-  return { open: () => setOpen(true), sheet };
+  return {
+    open: (prefill?: Partial<TransactionFormState>) => {
+      setInitialForm(prefill);
+      setOpen(true);
+    },
+    sheet,
+  };
 }

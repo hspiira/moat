@@ -7,9 +7,12 @@ import type {
   Counterparty,
   Goal,
   InvestmentProfile,
+  Item,
   MonthClose,
+  PlannedPurchase,
   RecurringObligation,
   Transaction,
+  TransactionLineItem,
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
@@ -25,7 +28,10 @@ type SyncableEntityType =
   | "counterparties"
   | "goals"
   | "budgets"
-  | "investmentProfiles";
+  | "investmentProfiles"
+  | "items"
+  | "plannedPurchases"
+  | "transactionLineItems";
 
 type ConflictStrategy = "client_wins" | "server_wins" | "manual_review";
 
@@ -100,6 +106,23 @@ const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
     upsert: (repositories, payload) =>
       repositories.investmentProfiles.save(payload as InvestmentProfile),
     remove: noop,
+  },
+  items: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) => repositories.items.upsert(payload as Item),
+    remove: (repositories, entityId) => repositories.items.remove(entityId),
+  },
+  plannedPurchases: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) =>
+      repositories.plannedPurchases.upsert(payload as PlannedPurchase),
+    remove: (repositories, entityId) => repositories.plannedPurchases.remove(entityId),
+  },
+  transactionLineItems: {
+    strategy: "manual_review",
+    upsert: (repositories, payload) =>
+      repositories.transactionLineItems.upsert(payload as TransactionLineItem),
+    remove: (repositories, entityId) => repositories.transactionLineItems.remove(entityId),
   },
 };
 

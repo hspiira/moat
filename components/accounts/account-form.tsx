@@ -80,7 +80,7 @@ export function AccountForm(props: Props) {
         {isSubmitting ? "Saving…" : editingId ? "Update account" : "Add account"}
       </Button>
       {editingId ? (
-        <Button type="button" variant="outline" onClick={onCancelEdit}>
+        <Button type="button" variant="outline" size="lg" onClick={onCancelEdit}>
           Cancel
         </Button>
       ) : null}

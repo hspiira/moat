@@ -43,7 +43,7 @@ export function FormCardShell({ title, description, children, footer, embedded, 
   if (embedded) {
     return (
       <div className="flex min-h-full flex-col">
-        <AccentCardHeader tone="yellow" title={title} description={description} className="rounded-none" />
+        <AccentCardHeader title={title} description={description} className="rounded-none" />
         <div className="flex-1 px-4 pt-4 pb-6">{children}</div>
         {footer ? (
           <div
@@ -59,7 +59,7 @@ export function FormCardShell({ title, description, children, footer, embedded, 
 
   return (
     <Card className="gap-0 pt-0 shadow-none">
-      <AccentCardHeader tone="yellow" title={title} description={description} />
+      <AccentCardHeader title={title} description={description} />
       <CardContent className="p-5">{children}</CardContent>
       {footer ? <CardContent className="px-5 pb-5">{footer}</CardContent> : null}
     </Card>

@@ -10,13 +10,6 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -29,6 +22,9 @@ import { repositories } from "@/lib/repositories/instance";
 import { transactionTypeLabels } from "@/lib/select-options";
 import { formatDate } from "@/lib/format-date";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+
+import { Button } from "@/components/ui/button";
+import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 import { DebtSummary } from "./debt-summary";
@@ -44,19 +40,8 @@ function normalizeAccountId(value: string) {
 }
 
 
-function getRowTone(transaction: Transaction) {
-  if (transaction.type === "income") {
-    return "border-l-[3px] border-l-pos/70 bg-pos/[0.04]";
-  }
-
-  if (transaction.type === "transfer") {
-    return "border-l-[3px] border-l-border/60 bg-muted/[0.18]";
-  }
-
-  return "border-l-[3px] border-l-neg/70 bg-neg/[0.04]";
-}
-
 export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
+  const record = useRecordTransaction();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -129,14 +114,24 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
   return (
     <div className="grid gap-5">
-      <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
+      <header className="space-y-1">
+        <h1 className="text-sm text-muted-foreground">
           {account?.name ?? "Account"}
+          {account ? (
+            <span>
+              {" · "}
+              {account.institutionName ?? accountTypeLabels[account.type]}
+            </span>
+          ) : null}
         </h1>
         {account ? (
-          <span className="text-xs text-muted-foreground">
-            · {accountTypeLabels[account.type]}
-          </span>
+          <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
+            <Money
+              amount={account.balance}
+              tone={account.balance < 0 ? "negative" : "neutral"}
+              className="font-display"
+            />
+          </div>
         ) : null}
       </header>
 
@@ -154,67 +149,56 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
       {!isLoading && profile && account ? (
         <>
-          <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr]">
-            <Card>
-              <CardHeader className="gap-2 p-5">
-                <CardDescription className="text-xs font-medium">
-                  Current balance
-                </CardDescription>
-                <CardTitle className="font-display text-[clamp(1.75rem,7vw,2.25rem)] leading-none tracking-tight">
-                  <Money
-                    amount={account.balance}
-                    tone={account.balance < 0 ? "negative" : "neutral"}
-                    className="font-display"
-                  />
-                </CardTitle>
-              </CardHeader>
-            </Card>
-
-            <AccountBalanceBreakdown account={account} transactions={transactions} />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => record.open({ accountId: account.id })}
+              className="flex-1 sm:flex-none sm:px-6"
+            >
+              Record transaction
+            </Button>
           </div>
+
+          <AccountBalanceBreakdown account={account} transactions={transactions} />
 
           {account.type === "debt" ? (
             <DebtSummary account={account} transactions={transactions} />
           ) : null}
 
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base">Transactions affecting this account</CardTitle>
-              <CardDescription>
-                Every transaction here adds up to the balance above.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <section className="grid gap-2">
+            <h2 className="text-xs font-medium text-muted-foreground">History</h2>
+            <div>
               {ledgerRows.length === 0 ? (
                 <EmptyState>
                   No transactions recorded for this account.
                 </EmptyState>
               ) : (
                 <>
-                  {/* Mobile: stacked statement list — one line per entry, no wrapping. */}
-                  <ul className="flex flex-col gap-2 md:hidden">
+                  {/* Mobile: who or what leads each row in the foreground; the
+                      date is metadata and reads second. */}
+                  <ul className="flex flex-col divide-y divide-border/50 md:hidden">
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
-                      // Fold payee/category/note into one detail line; the band
-                      // colour and amount colour already convey the direction,
-                      // so no separate title row is needed.
-                      const detail = [row.payee?.trim(), category?.name, row.note?.trim()]
+                      const title =
+                        row.payee?.trim() || category?.name || transactionTypeLabels[row.type];
+                      const meta = [
+                        formatDate(row.date),
+                        row.payee?.trim() ? category?.name : null,
+                        row.note?.trim(),
+                      ]
                         .filter(Boolean)
                         .join(" · ");
 
                       return (
                         <li
                           key={row.id}
-                          className={`rounded-md px-3 py-2.5 ${getRowTone(row.transaction)}`}
+                          className="py-2.5 transition-colors hover:bg-muted/25"
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-                              <span className="font-medium text-foreground">
-                                {formatDate(row.date)}
-                              </span>
-                              {detail ? <span> · {detail}</span> : null}
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-foreground">{title}</p>
+                              <p className="truncate text-xs text-muted-foreground">{meta}</p>
+                            </div>
                             <div className="shrink-0 text-right leading-tight">
                               <Money
                                 amount={isCredit ? row.credit : row.debit}
@@ -262,7 +246,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                             .join(" · ");
 
                           return (
-                            <TableRow key={row.id} className={getRowTone(row.transaction)}>
+                            <TableRow key={row.id}>
                               <TableCell className="whitespace-nowrap align-top text-xs text-muted-foreground">
                                 {formatDate(row.date)}
                               </TableCell>
@@ -303,8 +287,10 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
+
+          {record.sheet}
         </>
       ) : null}
     </div>

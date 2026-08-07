@@ -161,14 +161,14 @@ export function RecurringObligationsPanel({
 
   return (
     <div id="recurring" className="grid min-w-0 scroll-mt-20 gap-4">
-      <div className="grid gap-1">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span className="text-sm text-muted-foreground">Still to pay this month</span>
+      <div className="grid gap-1 pt-2">
+        <p className="text-sm text-muted-foreground">Still to pay this month</p>
+        <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
           <Money
             amount={sections.outstandingTotal}
             currency="UGX"
             tone={sections.outstandingTotal > 0 ? "warning" : "positive"}
-            className="text-2xl font-semibold"
+            className="font-display"
           />
         </div>
         <p className="text-sm text-muted-foreground">
@@ -177,8 +177,8 @@ export function RecurringObligationsPanel({
         </p>
       </div>
 
-      <div>
-        <Button type="button" size="sm" onClick={() => openForCreate()}>
+      <div className="flex gap-2">
+        <Button type="button" onClick={() => openForCreate()} className="flex-1 sm:flex-none sm:px-6">
           <IconPlus className="size-4" /> Add bill
         </Button>
       </div>
@@ -370,7 +370,7 @@ function BillSection({ title, children }: { title: string; children: React.React
       <h3 className="pb-1 text-xs font-medium text-muted-foreground">
         {title}
       </h3>
-      <div className="min-w-0 divide-y divide-border/60">{children}</div>
+      <div className="min-w-0">{children}</div>
     </section>
   );
 }

@@ -1,6 +1,11 @@
 "use client";
 
+import { IconArchive, IconArchiveOff, IconTrash } from "@tabler/icons-react";
+
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
+import { canDeleteAccount } from "@/lib/domain/account-cleanup";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getAccountTotals } from "@/lib/domain/accounts";
 import { useFormSheet } from "@/components/hooks/use-form-sheet";
 import { PageHeader } from "@/components/page-shell/page-header";
@@ -53,6 +58,12 @@ export function AccountsWorkspace() {
   const accountTotals = getAccountTotals(accounts);
 
   const formSheet = useFormSheet(cancelEdit);
+  const editingAccount = accounts.find((account) => account.id === editingAccountId) ?? null;
+  // Accounts were the one thing still deleted on a single tap.
+  const confirmDelete = useConfirmDelete<string>(async (accountId) => {
+    const ok = await handleDeleteAccount(accountId);
+    if (ok) formSheet.close();
+  });
 
   function openAddAccount() {
     formSheet.openForCreate();
@@ -83,7 +94,7 @@ export function AccountsWorkspace() {
           <section className="space-y-4 pt-2">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total balance</p>
-              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-none font-semibold tracking-tight">
+              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
                 <Money
                   amount={accountTotals.totalBalance}
                   tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}
@@ -125,7 +136,12 @@ export function AccountsWorkspace() {
             onEdit={openEditAccount}
             onAdd={openAddAccount}
             onArchive={(accountId, isArchived) => void handleArchiveAccount(accountId, isArchived)}
-            onDelete={(accountId) => void handleDeleteAccount(accountId)}
+            onDelete={(accountId) =>
+              confirmDelete.request(
+                accountId,
+                accounts.find((account) => account.id === accountId)?.name ?? "This account",
+              )
+            }
           />
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
@@ -154,8 +170,48 @@ export function AccountsWorkspace() {
                 }}
                 onCancelEdit={formSheet.close}
               />
+
+              {editingAccount ? (
+                <div className="mt-2 grid gap-2 px-5 pb-5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="justify-start text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      void handleArchiveAccount(editingAccount.id, !editingAccount.isArchived);
+                      formSheet.close();
+                    }}
+                  >
+                    {editingAccount.isArchived ? <IconArchiveOff /> : <IconArchive />}
+                    {editingAccount.isArchived ? "Restore from archive" : "Archive account"}
+                  </Button>
+                  {(() => {
+                    const verdict = canDeleteAccount(editingAccount, transactions);
+                    return verdict.allowed ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => confirmDelete.request(editingAccount.id, editingAccount.name)}
+                      >
+                        <IconTrash />
+                        Delete account
+                      </Button>
+                    ) : (
+                      <p className="px-3 text-xs text-muted-foreground">{verdict.reason}</p>
+                    );
+                  })()}
+                </div>
+              ) : null}
             </SheetContent>
           </Sheet>
+
+          <ConfirmDialog
+            {...confirmDelete.dialogProps}
+            title="Delete this account?"
+            description={`${confirmDelete.label} and its settings will be removed permanently.`}
+            confirmLabel="Delete"
+          />
         </>
       ) : null}
     </div>

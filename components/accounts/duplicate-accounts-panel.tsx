@@ -6,7 +6,7 @@ import { AccentCardHeader } from "@/components/accent-card-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
-import { RESERVED_ACCOUNT_IDS } from "@/lib/app-state/default-accounts";
+import { PARTY_LEDGERS } from "@/lib/domain/reserved-accounts";
 import {
   countAccountTransactions,
   findDuplicatePoolAccounts,
@@ -31,7 +31,7 @@ export function DuplicateAccountsPanel({
   const targetFor = (duplicate: Account) =>
     accounts.find(
       (account) =>
-        RESERVED_ACCOUNT_IDS.some((reserved) => reserved === account.id) &&
+        PARTY_LEDGERS.some((ledger) => ledger.poolAccountId === account.id) &&
         account.type === duplicate.type,
     );
 
@@ -42,7 +42,6 @@ export function DuplicateAccountsPanel({
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        tone="lilac"
         title="Duplicate accounts"
         description="These have the same name as an account Moat sets up for everyone. Merging keeps every record and turns the account into the person it was named after."
       />

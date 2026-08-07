@@ -81,13 +81,13 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    expect(portfolio.lenders).toHaveLength(2);
+    expect(portfolio.parties).toHaveLength(2);
 
-    const grace = portfolio.lenders.find((lender) => lender.lenderKey === "payee:auntie grace");
-    expect(grace?.amountBorrowed).toBe(300_000);
+    const grace = portfolio.parties.find((lender) => lender.partyKey === "payee:auntie grace");
+    expect(grace?.amountAdvanced).toBe(300_000);
     expect(grace?.amountRepaid).toBe(50_000);
     expect(grace?.outstanding).toBe(250_000);
-    expect(grace?.borrowedOn).toBe("2026-05-01");
+    expect(grace?.advancedOn).toBe("2026-05-01");
     expect(grace?.lastRepaymentOn).toBe("2026-07-01");
     expect(portfolio.totalOutstanding).toBe(330_000);
   });
@@ -102,8 +102,8 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    expect(portfolio.lenders[0].status).toBe("settled");
-    expect(portfolio.lenders[0].outstanding).toBe(0);
+    expect(portfolio.parties[0].status).toBe("settled");
+    expect(portfolio.parties[0].outstanding).toBe(0);
   });
 
   it("marks forgiven debt rather than counting it as a repayment", () => {
@@ -113,9 +113,9 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    expect(portfolio.lenders[0].amountRepaid).toBe(0);
-    expect(portfolio.lenders[0].amountForgiven).toBe(150_000);
-    expect(portfolio.lenders[0].status).toBe("forgiven");
+    expect(portfolio.parties[0].amountRepaid).toBe(0);
+    expect(portfolio.parties[0].amountCancelled).toBe(150_000);
+    expect(portfolio.parties[0].status).toBe("cancelled");
   });
 
   it("reports an overpayment instead of absorbing it", () => {
@@ -128,8 +128,8 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    expect(portfolio.lenders[0].outstanding).toBe(-20_000);
-    expect(portfolio.lenders[0].status).toBe("overpaid");
+    expect(portfolio.parties[0].outstanding).toBe(-20_000);
+    expect(portfolio.parties[0].status).toBe("overpaid");
   });
 
   it("flags an agreed date that has passed, and never invents one", () => {
@@ -142,14 +142,14 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    const grace = portfolio.lenders.find((lender) => lender.lenderName === "Grace");
-    const musa = portfolio.lenders.find((lender) => lender.lenderName === "Musa");
+    const grace = portfolio.parties.find((lender) => lender.partyName === "Grace");
+    const musa = portfolio.parties.find((lender) => lender.partyName === "Musa");
 
     expect(grace?.isOverdue).toBe(true);
     expect(musa?.expectedRepaymentDate).toBeUndefined();
     expect(musa?.isOverdue).toBe(false);
     // Overdue sorts ahead of the larger balance.
-    expect(portfolio.lenders[0].lenderName).toBe("Grace");
+    expect(portfolio.parties[0].partyName).toBe("Grace");
   });
 
   it("keeps a dedicated lender account on its own key and counts its opening balance", () => {
@@ -160,10 +160,10 @@ describe("borrowing portfolio", () => {
 
     const portfolio = getBorrowingPortfolio([pool, account], [], ASOF);
 
-    expect(portfolio.lenders).toHaveLength(1);
-    expect(portfolio.lenders[0].lenderKey).toBe("account:account:musa");
-    expect(portfolio.lenders[0].amountBorrowed).toBe(400_000);
-    expect(portfolio.lenders[0].outstanding).toBe(400_000);
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyKey).toBe("account:account:musa");
+    expect(portfolio.parties[0].amountAdvanced).toBe(400_000);
+    expect(portfolio.parties[0].outstanding).toBe(400_000);
   });
 
   it("buckets pooled borrowing with no lender under one unnamed row", () => {
@@ -173,9 +173,9 @@ describe("borrowing portfolio", () => {
       ASOF,
     );
 
-    expect(portfolio.lenders).toHaveLength(1);
-    expect(portfolio.lenders[0].lenderName).toBe("Unnamed lender");
-    expect(portfolio.lenders[0].outstanding).toBe(150_000);
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyName).toBe("Unnamed lender");
+    expect(portfolio.parties[0].outstanding).toBe(150_000);
   });
 
   it("ignores archived accounts and accounts that are not informal debt", () => {
@@ -193,7 +193,7 @@ describe("borrowing portfolio", () => {
 
     const portfolio = getBorrowingPortfolio([pool, archived, formal], [], ASOF);
 
-    expect(portfolio.lenders).toHaveLength(0);
+    expect(portfolio.parties).toHaveLength(0);
   });
 
   it("treats a loan with a stated rate, term, or principal as formal", () => {
@@ -216,7 +216,7 @@ describe("borrowing portfolio", () => {
 
     const [reconciled] = reconcileAccountBalances([pool], legs);
     const portfolio = getBorrowingPortfolio([reconciled], legs, ASOF);
-    const summed = portfolio.lenders.reduce((total, lender) => total + lender.outstanding, 0);
+    const summed = portfolio.parties.reduce((total, lender) => total + lender.outstanding, 0);
 
     // A liability is stored negative, so the rows must add up to its mirror.
     expect(summed).toBe(-reconciled.balance);

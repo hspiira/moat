@@ -12,9 +12,10 @@ import {
 import { formatDate } from "@/lib/format-date";
 import { getTransactionDetail } from "@/lib/domain/transaction-detail";
 import { transactionTypeLabels } from "@/lib/select-options";
-import type { Account, Category, Transaction } from "@/lib/types";
+import type { Account, Category, Transaction, TransactionLineItem } from "@/lib/types";
 
 import { DetailRow, DetailSection } from "./detail-row";
+import { LineItemsSection } from "./line-items-section";
 
 const outflowTypes = new Set(["expense", "debt_payment"]);
 
@@ -43,13 +44,28 @@ export function TransactionDetailSheet({
   transactions,
   accounts,
   categories,
+  lineItems,
+  isSubmitting,
   onOpenChange,
+  onSaveLineItem,
+  onDeleteLineItem,
 }: {
   transaction: Transaction | null;
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  lineItems?: TransactionLineItem[];
+  isSubmitting?: boolean;
   onOpenChange: (open: boolean) => void;
+  onSaveLineItem?: (input: {
+    id?: string;
+    transactionId: string;
+    label: string;
+    quantity?: number;
+    unitPrice?: number;
+    amount?: number;
+  }) => void;
+  onDeleteLineItem?: (lineItem: TransactionLineItem) => void;
 }) {
   const detail = transaction ? getTransactionDetail(transaction, transactions) : null;
   const subject = detail?.subject ?? null;
@@ -151,6 +167,16 @@ export function TransactionDetailSheet({
                 {formatDate(subject.createdAt, { alwaysYear: true })}
               </DetailRow>
             </DetailSection>
+
+            {subject && subject.type === "expense" && onSaveLineItem && onDeleteLineItem ? (
+              <LineItemsSection
+                transaction={subject}
+                lineItems={(lineItems ?? []).filter((line) => line.transactionId === subject.id)}
+                isSubmitting={isSubmitting ?? false}
+                onSave={onSaveLineItem}
+                onDelete={onDeleteLineItem}
+              />
+            ) : null}
           </div>
         ) : null}
       </SheetContent>

@@ -4,6 +4,7 @@ import {
   IconArrowDownLeft,
   IconArrowsExchange,
   IconArrowUpRight,
+  IconClock,
   IconDotsVertical,
   IconPencil,
   IconPigMoney,
@@ -32,6 +33,8 @@ type Props = {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  /** Transactions with local changes not yet accepted by hosted sync. */
+  pendingSyncIds?: Set<string>;
   isSubmitting: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
@@ -64,10 +67,22 @@ const presentationByType: Record<TransactionType, RowPresentation> = {
 };
 
 
+/** Newest first, one section per calendar day. */
+function groupByDay(transactions: Transaction[]): [string, Transaction[]][] {
+  const groups = new Map<string, Transaction[]>();
+  for (const transaction of transactions) {
+    const bucket = groups.get(transaction.occurredOn) ?? [];
+    bucket.push(transaction);
+    groups.set(transaction.occurredOn, bucket);
+  }
+  return [...groups.entries()];
+}
+
 export function TransactionList({
   accounts,
   categories,
   transactions,
+  pendingSyncIds,
   isSubmitting,
   onEdit,
   onDelete,
@@ -86,8 +101,14 @@ export function TransactionList({
             <EmptyState>No transactions yet.</EmptyState>
           </div>
         ) : (
-          <ul className="divide-y divide-border/60">
-            {transactions.map((transaction) => {
+          <div className="grid gap-4">
+            {groupByDay(transactions).map(([day, dayTransactions]) => (
+              <section key={day}>
+                <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
+                  {formatDate(day)}
+                </h3>
+                <ul className="divide-y divide-border/50">
+                  {dayTransactions.map((transaction) => {
               const account = accounts.find((a) => a.id === transaction.accountId);
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
@@ -123,20 +144,32 @@ export function TransactionList({
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="truncate text-sm font-medium text-foreground">{title}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {formatDate(transaction.occurredOn)} · {account?.name ?? "—"}
+                        {account?.name ?? "—"}
                         {category && !isTransfer ? ` · ${category.name}` : ""}
                         {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
                         {isLinkedFee ? " · Fee" : ""}
                       </div>
                     </div>
 
-                    <Money
-                      amount={transaction.amount}
-                      currency="UGX"
-                      tone={presentation.tone}
-                      signed={presentation.signed}
-                      className="shrink-0 text-sm font-semibold sm:text-base"
-                    />
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      {pendingSyncIds?.has(transaction.id) ? (
+                        <IconClock
+                          aria-hidden
+                          className="size-3.5 text-muted-foreground"
+                          title="Waiting to sync"
+                        />
+                      ) : null}
+                      <Money
+                        amount={transaction.amount}
+                        currency="UGX"
+                        tone={presentation.tone}
+                        signed={presentation.signed}
+                        className="text-sm font-semibold sm:text-base"
+                      />
+                      {pendingSyncIds?.has(transaction.id) ? (
+                        <span className="sr-only">Waiting to sync</span>
+                      ) : null}
+                    </span>
                   </button>
 
                   <Popover>
@@ -176,8 +209,11 @@ export function TransactionList({
                   </Popover>
                 </li>
               );
-            })}
-          </ul>
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         )}
       </CardContent>
       <ConfirmDialog

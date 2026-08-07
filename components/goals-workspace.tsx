@@ -66,18 +66,7 @@ export function GoalsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader
-        title="Goals"
-        srOnlyTitle
-        aside={
-          profile ? (
-            <Button size="lg" onClick={openNewGoal}>
-              <IconPlus />
-              New goal
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title="Goals" srOnlyTitle />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading goals..." /> : null}
@@ -91,6 +80,8 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
+          {/* Content first, then the action beneath it — a lone button above
+              an empty header row was the page's opening line. */}
           <Card>
             <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
               <MoatRing
@@ -111,7 +102,7 @@ export function GoalsWorkspace() {
                 <p className="text-xs font-medium text-muted-foreground">
                   Suggested emergency fund
                 </p>
-                <div className="font-display text-3xl leading-none font-semibold tracking-tight">
+                <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
                   <Money amount={emergencyFundSuggestion} tone="neutral" className="font-display" />
                 </div>
                 <p className="max-w-lg text-sm leading-6 text-muted-foreground">
@@ -124,6 +115,13 @@ export function GoalsWorkspace() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex gap-2">
+            <Button onClick={openNewGoal} className="flex-1 sm:flex-none sm:px-6">
+              <IconPlus />
+              New goal
+            </Button>
+          </div>
 
           <GoalList
             accounts={accounts}

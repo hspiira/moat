@@ -3,7 +3,7 @@
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import { getAccountTotals, reconcileAccountBalances } from "@/lib/domain/accounts";
-import { getAttentionItems, getHabitItems } from "@/lib/domain/attention";
+import { getAttentionItems, getBillsDueSoon, getHabitItems } from "@/lib/domain/attention";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { getSectionOf } from "@/lib/domain/capture-review";
 import {
@@ -16,10 +16,11 @@ import {
   type PeriodFilter,
 } from "@/lib/domain/dashboard";
 import { getMonthlyInsights } from "@/lib/domain/insights";
+import { evaluateRecurringObligations } from "@/lib/domain/recurring";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 import { repositories } from "@/lib/repositories/instance";
-import type { Account, BudgetTarget, Category, Transaction, UserProfile } from "@/lib/types";
+import type { Account, BudgetTarget, Category, RecurringObligation, Transaction, UserProfile } from "@/lib/types";
 
 const TARGET_COVER_MONTHS = 3;
 
@@ -28,6 +29,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
+  const [obligations, setObligations] = useState<RecurringObligation[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = usePersistedSelection<PeriodFilter>(
     "moat.dashboard-period",
@@ -50,18 +52,21 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedTransactions,
         storedBudgets,
         storedReviewItems,
+        storedObligations,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
         repositories.transactions.listByUser(profile.id),
         repositories.budgets.listByMonth(profile.id, currentMonth),
         repositories.captureReviewItems.listByUser(profile.id),
+        repositories.recurringObligations.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
       setCategories(storedCategories);
       setTransactions(storedTransactions);
       setBudgets(storedBudgets);
+      setObligations(storedObligations);
       setReviewCount(
         storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
       );
@@ -121,10 +126,21 @@ export function useDashboardWorkspace(profile: UserProfile) {
   );
   const { totalBalance } = useMemo(() => getAccountTotals(accounts), [accounts]);
   const coverMonths = summary.outflow > 0 && totalBalance > 0 ? totalBalance / summary.outflow : 0;
+  // Explicit obligations only: inferred bills are guesses, and a guess does
+  // not belong in a list of things asking for a decision.
+  const billsDueSoon = useMemo(
+    () =>
+      getBillsDueSoon(
+        evaluateRecurringObligations(obligations, monthTransactions, currentMonth),
+        new Date(),
+      ),
+    [obligations, monthTransactions, currentMonth],
+  );
   const attentionItems = useMemo(
     () =>
       getAttentionItems({
         envelopes: budgetEnvelopes,
+        billsDueSoon,
         reviewCount,
         insights,
         habits: getHabitItems({
@@ -134,7 +150,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
           targetCoverMonths: TARGET_COVER_MONTHS,
         }),
       }),
-    [budgetEnvelopes, reviewCount, insights, savingsRate, summary.inflow, coverMonths],
+    [budgetEnvelopes, billsDueSoon, reviewCount, insights, savingsRate, summary.inflow, coverMonths],
   );
   const topAccounts = useMemo(
     () =>

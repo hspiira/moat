@@ -75,7 +75,7 @@ describe("resolveCounterparty", () => {
       timestamp: TIMESTAMP,
     });
 
-    expect(result.isNew).toBe(true);
+    expect(result.changed).toBe(true);
     expect(result.counterparty.name).toBe("Musa");
     expect(result.counterparty.kind).toBe("borrower");
   });
@@ -91,7 +91,7 @@ describe("resolveCounterparty", () => {
       timestamp: TIMESTAMP,
     });
 
-    expect(result.isNew).toBe(false);
+    expect(result.changed).toBe(false);
     expect(result.counterparty.id).toBe("counterparty:1");
   });
 
@@ -106,7 +106,8 @@ describe("resolveCounterparty", () => {
       timestamp: TIMESTAMP,
     });
 
-    expect(result.isNew).toBe(false);
+    // Widening is a change: the stored record now needs writing back.
+    expect(result.changed).toBe(true);
     expect(result.counterparty.kind).toBe("both");
   });
 });
@@ -114,14 +115,14 @@ describe("resolveCounterparty", () => {
 describe("backfillCounterparties", () => {
   function run(transactions: Transaction[], existing: Counterparty[] = []) {
     let seq = 0;
-    return backfillCounterparties(
+    return backfillCounterparties({
       transactions,
       existing,
       poolKinds,
-      "user:default",
-      TIMESTAMP,
-      () => `counterparty:${(seq += 1)}`,
-    );
+      userId: "user:default",
+      timestamp: TIMESTAMP,
+      nextId: () => `counterparty:${(seq += 1)}`,
+    });
   }
 
   it("turns each distinct payee into one record and stamps its id", () => {

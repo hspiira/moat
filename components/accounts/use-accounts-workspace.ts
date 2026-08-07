@@ -3,12 +3,10 @@
 import { startTransition, useEffect, useState } from "react";
 
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
-import {
-  isReservedAccountId,
-  isReservedAccountName,
-  reconcileDefaultAccounts,
-} from "@/lib/app-state/default-accounts";
+import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
+import { isReservedAccountId, isReservedAccountName } from "@/lib/domain/reserved-accounts";
 import { canDeleteAccount, planAccountMerge } from "@/lib/domain/account-cleanup";
+import { newCounterpartyId } from "@/lib/domain/counterparties";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { useToast } from "@/components/ui/toast";
@@ -235,14 +233,14 @@ export function useAccountsWorkspace() {
 
     return mutate(async () => {
       const existingCounterparties = await repositories.counterparties.listByUser(profile.id);
-      const plan = planAccountMerge(
+      const plan = planAccountMerge({
         source,
         target,
         transactions,
-        existingCounterparties,
-        new Date().toISOString(),
-        () => `counterparty:${crypto.randomUUID()}`,
-      );
+        counterparties: existingCounterparties,
+        timestamp: new Date().toISOString(),
+        nextCounterpartyId: newCounterpartyId,
+      });
       if (plan.blocked !== undefined) {
         throw new Error(plan.blocked);
       }

@@ -1,23 +1,9 @@
 import type { ReactNode } from "react";
 
-import {
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const accentToneClasses = {
-  yellow: "moat-panel-yellow",
-  lilac: "moat-panel-lilac",
-  mint: "moat-panel-mint",
-  sage: "moat-panel-sage",
-} as const;
-
-export type AccentTone = keyof typeof accentToneClasses;
-
 type AccentCardHeaderProps = {
-  tone: AccentTone;
   title: ReactNode;
   description?: ReactNode;
   className?: string;
@@ -26,7 +12,6 @@ type AccentCardHeaderProps = {
 };
 
 export function AccentCardHeader({
-  tone,
   title,
   description,
   className,
@@ -34,18 +19,12 @@ export function AccentCardHeader({
   descriptionClassName,
 }: AccentCardHeaderProps) {
   return (
-    <CardHeader
-      className={cn(
-        accentToneClasses[tone],
-        "min-h-20 gap-1 py-3 text-foreground",
-        className,
-      )}
-    >
-      <CardTitle className={cn("text-lg text-foreground", titleClassName)}>
-        {title}
-      </CardTitle>
+    <CardHeader className={cn("gap-1 bg-muted/40 py-4 text-foreground", className)}>
+      <CardTitle className={cn("text-lg text-foreground", titleClassName)}>{title}</CardTitle>
       {description ? (
-        <CardDescription className={cn("text-foreground/72 leading-6", descriptionClassName)}>
+        <CardDescription
+          className={cn("leading-6 text-muted-foreground", descriptionClassName)}
+        >
           {description}
         </CardDescription>
       ) : null}

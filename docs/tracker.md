@@ -45,6 +45,7 @@ A consolidation pass reconciled the docs with the code and closed several review
 - Goals at `/goals` — target-based goals, monthly contribution math, progress from savings transactions, emergency fund priority
 - Investment Compass at `/investment-compass` — rule-based guidance engine, horizon + liquidity + emergency coverage + debt signals
 - Learn Uganda at `/learn` — official and research resources grouped by topic
+- Purchase planner at `/shopping` — planned items with estimates, check-off into transaction line items, and per-item price history derived from the user's own purchases
 - Dashboard at `/` — monthly summary, top categories, account balances, monthly prompts
 - Light / dark theme toggle in navigation
 - All forms use shadcn/ui components — no native input/select/textarea in any user-facing component

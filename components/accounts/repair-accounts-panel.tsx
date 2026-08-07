@@ -67,7 +67,6 @@ export function RepairAccountsPanel({
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        tone="lilac"
         title="Opening balance repair"
         description="These non-debt accounts have a negative opening balance. Review them and apply a one-time correction if that isn't right."
       />

@@ -25,7 +25,7 @@ export function DashboardBalanceBridge({
   // open when a balance looks wrong, not something you read every day. Native
   // <details> so it works without JS and stays keyboard-accessible for free.
   return (
-    <Card className="moat-panel-lilac py-0 shadow-none">
+    <Card className="py-0 shadow-none">
       <details className="group/bridge">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
           <span className="grid gap-0.5 text-left">

@@ -154,15 +154,19 @@ export function BudgetManagerPanel({
 
   return (
     <div id="budgets" className="grid min-w-0 scroll-mt-20 gap-4">
-      {/* The one figure worth leading with: what is still yours to spend. */}
-      <div className="grid gap-1">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span className="text-sm text-muted-foreground">Left to spend</span>
+      {/* The one figure worth leading with: what is still yours to spend.
+          The label flips to "Over budget by" rather than colouring an absolute
+          number red — hue alone cannot carry "this is overdrawn". */}
+      <div className="grid gap-1 pt-2">
+        <p className="text-sm text-muted-foreground">
+          {position.remaining < 0 ? "Over budget by" : "Left to spend"}
+        </p>
+        <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
           <Money
             amount={Math.abs(position.remaining)}
             currency="UGX"
             tone={position.remaining < 0 ? "negative" : "positive"}
-            className="text-2xl font-semibold"
+            className="font-display"
           />
         </div>
         <p className="text-sm text-muted-foreground">
@@ -183,8 +187,8 @@ export function BudgetManagerPanel({
         ) : null}
       </div>
 
-      <div>
-        <Button type="button" size="sm" onClick={openForCreate}>
+      <div className="flex gap-2">
+        <Button type="button" onClick={openForCreate} className="flex-1 sm:flex-none sm:px-6">
           <IconPlus className="size-4" /> Add budget
         </Button>
       </div>
@@ -195,7 +199,7 @@ export function BudgetManagerPanel({
             No budgets for this month yet. Add one to start tracking a category.
           </EmptyState>
         ) : (
-          <div className="min-w-0 divide-y divide-border/60">
+          <div className="min-w-0">
             {envelopes.map((envelope) => (
               <EnvelopeRow
                 key={envelope.categoryId}

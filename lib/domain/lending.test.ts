@@ -80,7 +80,7 @@ function borrowerNamed(
   portfolio: ReturnType<typeof getLendingPortfolio>,
   name: string,
 ) {
-  return portfolio.borrowers.find((b) => b.borrowerName === name);
+  return portfolio.parties.find((b) => b.partyName === name);
 }
 
 describe("the lending pool", () => {
@@ -97,7 +97,7 @@ describe("the lending pool", () => {
     ];
     const portfolio = getLendingPortfolio([pool], transactions, ASOF);
 
-    expect(portfolio.borrowers).toHaveLength(2);
+    expect(portfolio.parties).toHaveLength(2);
     expect(borrowerNamed(portfolio, "Sarah")?.outstanding).toBe(500_000);
     expect(borrowerNamed(portfolio, "Musa")?.outstanding).toBe(200_000);
   });
@@ -110,7 +110,7 @@ describe("the lending pool", () => {
     ];
     const [reconciledPool] = reconcileAccountBalances([pool], transactions);
     const portfolio = getLendingPortfolio([reconciledPool], transactions, ASOF);
-    const summed = portfolio.borrowers.reduce((total, b) => total + b.outstanding, 0);
+    const summed = portfolio.parties.reduce((total, b) => total + b.outstanding, 0);
 
     expect(summed).toBe(reconciledPool.balance);
     expect(summed).toBe(580_000);
@@ -124,7 +124,7 @@ describe("the lending pool", () => {
     const sarah = borrowerNamed(getLendingPortfolio([pool], transactions, ASOF), "Sarah");
 
     expect(sarah).toMatchObject({
-      amountLent: 500_000,
+      amountAdvanced: 500_000,
       amountRepaid: 200_000,
       outstanding: 300_000,
       lastRepaymentOn: "2026-07-10",
@@ -139,8 +139,8 @@ describe("the lending pool", () => {
     ];
     const sarah = borrowerNamed(getLendingPortfolio([pool], transactions, ASOF), "Sarah");
 
-    expect(sarah?.amountLent).toBe(150_000);
-    expect(sarah?.lentOn).toBe("2026-05-01");
+    expect(sarah?.amountAdvanced).toBe(150_000);
+    expect(sarah?.advancedOn).toBe("2026-05-01");
   });
 
   it("matches borrowers case-insensitively but shows the name as first written", () => {
@@ -150,17 +150,17 @@ describe("the lending pool", () => {
     ];
     const portfolio = getLendingPortfolio([pool], transactions, ASOF);
 
-    expect(portfolio.borrowers).toHaveLength(1);
-    expect(portfolio.borrowers[0].borrowerName).toBe("Sarah");
-    expect(portfolio.borrowers[0].outstanding).toBe(60_000);
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyName).toBe("Sarah");
+    expect(portfolio.parties[0].outstanding).toBe(60_000);
   });
 
   it("gathers pooled lending with no payee under one unnamed borrower", () => {
     const transactions = [lend(70_000, "2026-05-01")];
     const portfolio = getLendingPortfolio([pool], transactions, ASOF);
 
-    expect(portfolio.borrowers).toHaveLength(1);
-    expect(portfolio.borrowers[0].borrowerName).toBe("Unnamed borrower");
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyName).toBe("Unnamed borrower");
   });
 });
 
@@ -170,9 +170,9 @@ describe("per-borrower accounts", () => {
     const transactions = [lend(500_000, "2026-06-01", { accountId: sarah.id })];
     const portfolio = getLendingPortfolio([sarah], transactions, ASOF);
 
-    expect(portfolio.borrowers).toHaveLength(1);
-    expect(portfolio.borrowers[0]).toMatchObject({
-      borrowerName: "Loan to Sarah",
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0]).toMatchObject({
+      partyName: "Loan to Sarah",
       accountId: "account:sarah",
       outstanding: 500_000,
     });
@@ -185,8 +185,8 @@ describe("per-borrower accounts", () => {
     const transactions = [lend(100_000, "2026-06-01", { accountId: brother.id })];
     const portfolio = getLendingPortfolio([brother], transactions, ASOF);
 
-    expect(portfolio.borrowers[0].amountLent).toBe(400_000);
-    expect(portfolio.borrowers[0].outstanding).toBe(400_000);
+    expect(portfolio.parties[0].amountAdvanced).toBe(400_000);
+    expect(portfolio.parties[0].outstanding).toBe(400_000);
   });
 
   it("reports pooled and dedicated borrowers side by side", () => {
@@ -197,7 +197,7 @@ describe("per-borrower accounts", () => {
     ];
     const portfolio = getLendingPortfolio([pool, sarah], transactions, ASOF);
 
-    expect(portfolio.borrowers).toHaveLength(2);
+    expect(portfolio.parties).toHaveLength(2);
     expect(portfolio.totalOutstanding).toBe(700_000);
   });
 
@@ -206,7 +206,7 @@ describe("per-borrower accounts", () => {
     const transactions = [lend(500_000, "2026-06-01", { accountId: sarah.id })];
     const portfolio = getLendingPortfolio([pool, sarah], transactions, ASOF);
 
-    expect(portfolio.borrowers.map((b) => b.borrowerName)).toEqual(["Loan to Sarah"]);
+    expect(portfolio.parties.map((b) => b.partyName)).toEqual(["Loan to Sarah"]);
   });
 });
 
@@ -241,9 +241,9 @@ describe("status and overdue", () => {
     const cousin = borrowerNamed(getLendingPortfolio([pool], transactions, ASOF), "Cousin");
 
     expect(cousin).toMatchObject({
-      amountWrittenOff: 500_000,
+      amountCancelled: 500_000,
       outstanding: 0,
-      status: "written_off",
+      status: "cancelled",
     });
   });
 
@@ -325,11 +325,11 @@ describe("status and overdue", () => {
 describe("portfolio totals and ordering", () => {
   it("returns empty totals when nothing has been lent", () => {
     expect(getLendingPortfolio([pool], [], ASOF)).toEqual({
-      totalLent: 0,
+      totalAdvanced: 0,
       totalRepaid: 0,
-      totalWrittenOff: 0,
+      totalCancelled: 0,
       totalOutstanding: 0,
-      borrowers: [],
+      parties: [],
     });
   });
 
@@ -337,7 +337,7 @@ describe("portfolio totals and ordering", () => {
     const bank = dedicated("account:bank", "Bank", { type: "bank", balance: 900_000 });
     const transactions = [lend(900_000, "2026-06-01", { accountId: bank.id, payee: "Sarah" })];
 
-    expect(getLendingPortfolio([bank], transactions, ASOF).borrowers).toEqual([]);
+    expect(getLendingPortfolio([bank], transactions, ASOF).parties).toEqual([]);
   });
 
   it("totals across borrowers", () => {
@@ -349,9 +349,9 @@ describe("portfolio totals and ordering", () => {
     ];
 
     expect(getLendingPortfolio([pool], transactions, ASOF)).toMatchObject({
-      totalLent: 800_000,
+      totalAdvanced: 800_000,
       totalRepaid: 200_000,
-      totalWrittenOff: 300_000,
+      totalCancelled: 300_000,
       totalOutstanding: 300_000,
     });
   });
@@ -363,7 +363,7 @@ describe("portfolio totals and ordering", () => {
     ];
     const portfolio = getLendingPortfolio([pool], transactions, ASOF);
 
-    expect(portfolio.borrowers.map((b) => b.borrowerName)).toEqual(["Late", "Big"]);
+    expect(portfolio.parties.map((b) => b.partyName)).toEqual(["Late", "Big"]);
   });
 
   it("sorts by largest balance when nobody is overdue", () => {
@@ -373,14 +373,14 @@ describe("portfolio totals and ordering", () => {
     ];
     const portfolio = getLendingPortfolio([pool], transactions, ASOF);
 
-    expect(portfolio.borrowers.map((b) => b.borrowerName)).toEqual(["Big", "Small"]);
+    expect(portfolio.parties.map((b) => b.partyName)).toEqual(["Big", "Small"]);
   });
 
   it("excludes archived receivable accounts", () => {
     const old = dedicated("account:old", "Old loan", { isArchived: true });
     const transactions = [lend(500_000, "2026-01-01", { accountId: old.id })];
 
-    expect(getLendingPortfolio([old], transactions, ASOF).borrowers).toEqual([]);
+    expect(getLendingPortfolio([old], transactions, ASOF).parties).toEqual([]);
   });
 
   it("groups on the counterparty, so a typo in the payee cannot split a borrower", () => {
@@ -398,10 +398,10 @@ describe("portfolio totals and ordering", () => {
 
     const portfolio = getLendingPortfolio([pool], transactions, ASOF, [sarah]);
 
-    expect(portfolio.borrowers).toHaveLength(1);
-    expect(portfolio.borrowers[0].borrowerName).toBe("Sarah");
-    expect(portfolio.borrowers[0].counterpartyId).toBe(sarah.id);
-    expect(portfolio.borrowers[0].outstanding).toBe(300_000);
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyName).toBe("Sarah");
+    expect(portfolio.parties[0].counterpartyId).toBe(sarah.id);
+    expect(portfolio.parties[0].outstanding).toBe(300_000);
   });
 
   it("falls back to the payee for rows written before counterparties existed", () => {
@@ -409,7 +409,7 @@ describe("portfolio totals and ordering", () => {
 
     const portfolio = getLendingPortfolio([pool], transactions, ASOF, []);
 
-    expect(portfolio.borrowers[0].borrowerName).toBe("Musa");
-    expect(portfolio.borrowers[0].counterpartyId).toBeUndefined();
+    expect(portfolio.parties[0].partyName).toBe("Musa");
+    expect(portfolio.parties[0].counterpartyId).toBeUndefined();
   });
 });

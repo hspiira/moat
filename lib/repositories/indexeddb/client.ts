@@ -6,12 +6,12 @@ export { storeNames };
 export type { StoreName };
 
 const DATABASE_NAME = "moat-db";
-const DATABASE_VERSION = 9;
+const DATABASE_VERSION = 10;
 
 // Single source of truth for the additive schema migrations. Both the
 // upgrade path (runMigrations) and the reporting helper below derive from it,
 // so a new version is added in exactly one place.
-const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9] as const;
+const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9, 10] as const;
 
 type MetaRecord = {
   id: "schema";
@@ -64,6 +64,9 @@ const storeIndexes: Partial<Record<StoreName, StoreIndexDefinition[]>> = {
     { name: USER_ID_INDEX, keyPath: "userId" },
     { name: USER_ID_STATUS_INDEX, keyPath: ["userId", "status"] },
   ],
+  items: [{ name: USER_ID_INDEX, keyPath: "userId" }],
+  plannedPurchases: [{ name: USER_ID_INDEX, keyPath: "userId" }],
+  transactionLineItems: [{ name: USER_ID_INDEX, keyPath: "userId" }],
 };
 
 function ensureStore(database: IDBDatabase, storeName: StoreName) {
@@ -129,6 +132,11 @@ const migrationSteps: Partial<Record<number, (database: IDBDatabase) => void>> =
   },
   9: (database) => {
     ensureStore(database, "counterparties");
+  },
+  10: (database) => {
+    ensureStore(database, "items");
+    ensureStore(database, "plannedPurchases");
+    ensureStore(database, "transactionLineItems");
   },
 };
 

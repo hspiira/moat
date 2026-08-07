@@ -23,21 +23,17 @@ import type {
   Account,
   CaptureReviewItem,
   Category,
-  Counterparty,
-  CounterpartyKind,
   MonthClose,
   Transaction,
+  TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
-import { backfillCounterparties, resolveCounterparty } from "@/lib/domain/counterparties";
-import {
-  NEW_COUNTERPARTY,
-  describeTransferCounterparty,
-} from "@/lib/domain/transfer-counterparty";
-import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
+import { resolveItem } from "@/lib/domain/item-normalization";
+import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
+import { revertPurchase } from "@/lib/domain/planned-purchases";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
@@ -52,6 +48,7 @@ import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { useCounterparties } from "./use-counterparties";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
   buildDebtPaymentTransactions,
@@ -79,11 +76,6 @@ function useLatest<T>(value: T) {
   });
   return ref;
 }
-
-const POOL_COUNTERPARTY_KINDS = new Map<string, CounterpartyKind>([
-  [LENDING_POOL_ACCOUNT_ID, "borrower"],
-  [BORROWING_POOL_ACCOUNT_ID, "lender"],
-]);
 
 function sortTransactions(transactions: Transaction[]) {
   return [...transactions].sort((a, b) => {
@@ -117,7 +109,12 @@ export function useTransactionsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
+  const [pendingSyncTransactionIds, setPendingSyncTransactionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const { counterparties, setCounterparties, loadAndBackfill, resolveSelection } =
+    useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
   const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
@@ -258,6 +255,7 @@ export function useTransactionsWorkspace() {
         setAccounts([]);
         setCategories([]);
         setTransactions([]);
+        setLineItems([]);
         setCounterparties([]);
         setBudgets([]);
         setCaptureReviewItems([]);
@@ -267,20 +265,47 @@ export function useTransactionsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedCategories, storedTransactions, storedCounterparties] =
+      const [storedAccounts, storedCategories, storedTransactions, storedLineItems] =
         await Promise.all([
           repositories.accounts.listByUser(nextProfile.id),
           repositories.categories.listByUser(nextProfile.id),
           repositories.transactions.listByUser(nextProfile.id),
-          repositories.counterparties.listByUser(nextProfile.id),
+          repositories.transactionLineItems.listByUser(nextProfile.id),
         ]);
-      const [storedCaptureReviewItems, storedRules, storedObligations, storedMonthClose, storedBudgets] = await Promise.all([
+      const [
+        storedCaptureReviewItems,
+        storedRules,
+        storedObligations,
+        storedMonthClose,
+        storedBudgets,
+        storedSyncProfile,
+        storedOutbox,
+      ] = await Promise.all([
         repositories.captureReviewItems.listByUser(nextProfile.id),
         repositories.transactionRules.listByUser(nextProfile.id),
         repositories.recurringObligations.listByUser(nextProfile.id),
         repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
         repositories.budgets.listByMonth(nextProfile.id, closePeriod),
+        repositories.syncProfiles.getByUser(nextProfile.id),
+        repositories.syncOutbox.listByUser(nextProfile.id),
       ]);
+
+      // Only meaningful when hosted sync is on; otherwise nothing is "waiting".
+      const syncEnabled =
+        storedSyncProfile?.hostedSyncEnabled && storedSyncProfile.mode === "hosted_opt_in";
+      setPendingSyncTransactionIds(
+        syncEnabled
+          ? new Set(
+              storedOutbox
+                .filter(
+                  (item) =>
+                    item.entityType === "transaction" &&
+                    (item.status === "pending" || item.status === "failed"),
+                )
+                .map((item) => item.entityId),
+            )
+          : new Set(),
+      );
 
       const accountSeeds = reconcileDefaultAccounts(
         storedAccounts,
@@ -311,33 +336,12 @@ export function useTransactionsWorkspace() {
           ? await repositories.categories.listByUser(nextProfile.id)
           : storedCategories;
 
-      // Loans recorded before counterparties existed were grouped by their
-      // payee text. Promoting each distinct payee to a record once keeps that
-      // history in the same buckets it has always been in.
-      const backfill = backfillCounterparties(
-        storedTransactions,
-        storedCounterparties,
-        POOL_COUNTERPARTY_KINDS,
-        nextProfile.id,
-        new Date().toISOString(),
-        () => `counterparty:${crypto.randomUUID()}`,
-      );
-      if (backfill.counterparties.length > 0 || backfill.transactions.length > 0) {
-        await Promise.all([
-          ...backfill.counterparties.map((entry) => repositories.counterparties.upsert(entry)),
-          ...backfill.transactions.map((row) => repositories.transactions.upsert(row)),
-        ]);
-      }
-      const stampedById = new Map(backfill.transactions.map((row) => [row.id, row]));
-      const currentTransactions =
-        stampedById.size > 0
-          ? storedTransactions.map((row) => stampedById.get(row.id) ?? row)
-          : storedTransactions;
-      setCounterparties([...storedCounterparties, ...backfill.counterparties]);
+      const currentTransactions = await loadAndBackfill(nextProfile.id, storedTransactions);
 
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
       setTransactions(sortTransactions(currentTransactions));
+      setLineItems(storedLineItems);
       setBudgets(storedBudgets);
       setCaptureReviewItems(storedCaptureReviewItems);
       setTransactionRules(storedRules);
@@ -387,7 +391,15 @@ export function useTransactionsWorkspace() {
     } finally {
       setIsLoading(false);
     }
-  }, [closePeriod, setBudgetForm, setBudgets, setRecurringObligations, setTransactionRules]);
+  }, [
+    closePeriod,
+    loadAndBackfill,
+    setBudgetForm,
+    setBudgets,
+    setCounterparties,
+    setRecurringObligations,
+    setTransactionRules,
+  ]);
 
   // Stable indirection so the sub-hooks can trigger a reload without a
   // circular dependency between hook definitions.
@@ -481,47 +493,19 @@ export function useTransactionsWorkspace() {
     await Promise.all(changed.map((account) => repositories.accounts.upsert(account)));
   }, []);
 
-  /**
-   * Turns whatever the loan fields hold into a stored person. Picking an
-   * existing one reuses it; naming a new one creates it, unless that name is
-   * already on file — in which case the existing record wins, which is the
-   * whole point of not keying on text.
-   */
   const resolveFormCounterparty = useCallback(
-    async (userId: string, timestamp: string): Promise<Counterparty | null> => {
-      const { counterpartyId, counterpartyName } = transactionForm;
-
-      if (counterpartyId && counterpartyId !== NEW_COUNTERPARTY) {
-        return counterparties.find((entry) => entry.id === counterpartyId) ?? null;
-      }
-      if (!counterpartyName.trim()) {
-        return null;
-      }
-
-      const direction = describeTransferCounterparty(
-        accounts,
-        transactionForm.accountId,
-        transactionForm.destinationAccountId,
-      )?.direction;
-      if (!direction) {
-        return null;
-      }
-
-      const stored = await repositories.counterparties.listByUser(userId);
-      const { counterparty, isNew } = resolveCounterparty(stored, {
-        name: counterpartyName,
-        kind: direction === "lend" || direction === "collect" ? "borrower" : "lender",
+    (userId: string, timestamp: string) =>
+      resolveSelection({
         userId,
-        id: `counterparty:${crypto.randomUUID()}`,
         timestamp,
-      });
-
-      if (isNew || !stored.some((entry) => entry.id === counterparty.id && entry.kind === counterparty.kind)) {
-        await repositories.counterparties.upsert(counterparty);
-      }
-      return counterparty;
-    },
-    [accounts, counterparties, transactionForm],
+        direction: describeTransferCounterparty(
+          accounts,
+          transactionForm.accountId,
+          transactionForm.destinationAccountId,
+        )?.direction,
+        selection: transactionForm,
+      }),
+    [accounts, resolveSelection, transactionForm],
   );
 
   const handleTransactionSubmit = useCallback(
@@ -674,9 +658,25 @@ export function useTransactionsWorkspace() {
         transactions
           .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
           .forEach((entry) => idsToRemove.add(entry.id));
-        await Promise.all(
-          [...idsToRemove].map((id) => repositories.transactions.remove(id)),
-        );
+        const [lineItems, plannedPurchases] = await Promise.all([
+          repositories.transactionLineItems.listByUser(profile.id),
+          repositories.plannedPurchases.listByUser(profile.id),
+        ]);
+        const cascade = planLineItemCascade({
+          deletedTransactionIds: idsToRemove,
+          lineItems,
+          plannedPurchases,
+          timestamp: new Date().toISOString(),
+        });
+        await Promise.all([
+          ...[...idsToRemove].map((id) => repositories.transactions.remove(id)),
+          ...cascade.lineItemIdsToDelete.map((id) =>
+            repositories.transactionLineItems.remove(id),
+          ),
+          ...cascade.purchasesToRevert.map((purchase) =>
+            repositories.plannedPurchases.upsert(purchase),
+          ),
+        ]);
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);
@@ -761,6 +761,88 @@ export function useTransactionsWorkspace() {
     }
   }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile, show]);
 
+  const saveLineItem = useCallback(
+    async (input: {
+      id?: string;
+      transactionId: string;
+      label: string;
+      quantity?: number;
+      unitPrice?: number;
+      amount?: number;
+      categoryId?: string;
+    }) => {
+      if (!profile) return;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const timestamp = new Date().toISOString();
+        const existingItems = await repositories.items.listByUser(profile.id);
+        const resolved = resolveItem({
+          existing: existingItems,
+          rawName: input.label,
+          userId: profile.id,
+          timestamp,
+        });
+        if (resolved.isNew) {
+          await repositories.items.upsert(resolved.item);
+        }
+        const existing = input.id
+          ? lineItems.find((line) => line.id === input.id)
+          : undefined;
+        await repositories.transactionLineItems.upsert({
+          id: input.id ?? `line:${crypto.randomUUID()}`,
+          userId: profile.id,
+          transactionId: input.transactionId,
+          itemId: resolved.item.id,
+          label: input.label.trim(),
+          quantity: input.quantity,
+          unitPrice: input.unitPrice,
+          amount: input.amount,
+          categoryId: input.categoryId,
+          plannedPurchaseId: existing?.plannedPurchaseId,
+          createdAt: existing?.createdAt ?? timestamp,
+          updatedAt: timestamp,
+        });
+        await loadWorkspace();
+      } catch (saveError) {
+        const message = errorMessage(saveError, "Couldn't save the item.");
+        setError(message);
+        show(message, "error");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [lineItems, loadWorkspace, profile, show],
+  );
+
+  const deleteLineItem = useCallback(
+    async (lineItem: TransactionLineItem) => {
+      if (!profile) return;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const timestamp = new Date().toISOString();
+        await repositories.transactionLineItems.remove(lineItem.id);
+        if (lineItem.plannedPurchaseId) {
+          const purchase = await repositories.plannedPurchases.getById(
+            lineItem.plannedPurchaseId,
+          );
+          if (purchase) {
+            await repositories.plannedPurchases.upsert(revertPurchase(purchase, timestamp));
+          }
+        }
+        await loadWorkspace();
+      } catch (deleteError) {
+        const message = errorMessage(deleteError, "Couldn't delete the item.");
+        setError(message);
+        show(message, "error");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [loadWorkspace, profile, show],
+  );
+
   const exportMonthClose = useCallback(() => {
     const csv = buildMonthCloseCsv(transactions, categories, closePeriod);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -779,6 +861,8 @@ export function useTransactionsWorkspace() {
     categories,
     counterparties,
     transactions,
+    lineItems,
+    pendingSyncTransactionIds,
     periodTransactions,
     periodSummary,
     reviewCount,
@@ -815,6 +899,8 @@ export function useTransactionsWorkspace() {
     toggleRule: rulesAndObligations.toggleRule,
     saveObligation: rulesAndObligations.saveObligation,
     toggleObligation: rulesAndObligations.toggleObligation,
+    saveLineItem,
+    deleteLineItem,
     closeMonth,
     exportMonthClose,
     saveBudget: budgetPlanner.saveBudget,
