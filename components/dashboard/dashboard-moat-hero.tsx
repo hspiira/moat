@@ -117,7 +117,7 @@ export function DashboardMoatHero({
             <p className="text-xs font-medium text-muted-foreground">
               Your moat
             </p>
-            <div className="font-display text-3xl leading-none font-semibold tracking-tight text-foreground sm:text-4xl">
+            <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-4xl">
               <Money amount={totalBalance} tone="neutral" className="font-display" />
             </div>
             <p className="text-sm text-muted-foreground">

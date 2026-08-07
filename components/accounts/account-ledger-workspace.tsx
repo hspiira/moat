@@ -125,7 +125,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
           ) : null}
         </h1>
         {account ? (
-          <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-none font-semibold tracking-tight">
+          <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
             <Money
               amount={account.balance}
               tone={account.balance < 0 ? "negative" : "neutral"}
@@ -173,27 +173,32 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 </EmptyState>
               ) : (
                 <>
-                  {/* Mobile: stacked statement list — one line per entry, no wrapping. */}
-                  <ul className="flex flex-col md:hidden">
+                  {/* Mobile: who or what leads each row in the foreground; the
+                      date is metadata and reads second. */}
+                  <ul className="flex flex-col divide-y divide-border/50 md:hidden">
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
-                      // Fold payee/category/note into one detail line; the band
-                      // colour and amount colour already convey the direction,
-                      // so no separate title row is needed.
-                      const detail = [row.payee?.trim(), category?.name, row.note?.trim()]
+                      const title =
+                        row.payee?.trim() || category?.name || transactionTypeLabels[row.type];
+                      const meta = [
+                        formatDate(row.date),
+                        row.payee?.trim() ? category?.name : null,
+                        row.note?.trim(),
+                      ]
                         .filter(Boolean)
                         .join(" · ");
 
                       return (
-                        <li key={row.id} className="-mx-2 rounded-lg px-2 py-3 transition-colors hover:bg-muted/25">
+                        <li
+                          key={row.id}
+                          className="py-2.5 transition-colors hover:bg-muted/25"
+                        >
                           <div className="flex items-center justify-between gap-3">
-                            <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-                              <span className="font-medium text-foreground">
-                                {formatDate(row.date)}
-                              </span>
-                              {detail ? <span> · {detail}</span> : null}
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-foreground">{title}</p>
+                              <p className="truncate text-xs text-muted-foreground">{meta}</p>
+                            </div>
                             <div className="shrink-0 text-right leading-tight">
                               <Money
                                 amount={isCredit ? row.credit : row.debit}

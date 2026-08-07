@@ -94,7 +94,7 @@ export function AccountsWorkspace() {
           <section className="space-y-4 pt-2">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total balance</p>
-              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-none font-semibold tracking-tight">
+              <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
                 <Money
                   amount={accountTotals.totalBalance}
                   tone={accountTotals.totalBalance < 0 ? "negative" : "neutral"}

@@ -153,7 +153,7 @@ export function ReportWorkspace() {
             <CardContent className="grid gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">{windowLabel} change</p>
-                <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-none font-semibold tracking-tight">
+                <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-[1.1] font-semibold tracking-tight">
                   <Money amount={series.change} tone="auto" signed className="font-display" />
                 </div>
                 {series.changePercent.kind === "delta" ? (

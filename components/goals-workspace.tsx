@@ -102,7 +102,7 @@ export function GoalsWorkspace() {
                 <p className="text-xs font-medium text-muted-foreground">
                   Suggested emergency fund
                 </p>
-                <div className="font-display text-3xl leading-none font-semibold tracking-tight">
+                <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
                   <Money amount={emergencyFundSuggestion} tone="neutral" className="font-display" />
                 </div>
                 <p className="max-w-lg text-sm leading-6 text-muted-foreground">
