@@ -23,6 +23,9 @@ export const storeNames = {
   resources: "resources",
   syncProfiles: "syncProfiles",
   syncOutbox: "syncOutbox",
+  items: "items",
+  plannedPurchases: "plannedPurchases",
+  transactionLineItems: "transactionLineItems",
 } as const;
 
 export type StoreName = (typeof storeNames)[keyof typeof storeNames];

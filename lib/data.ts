@@ -17,6 +17,11 @@ export const navItems: NavItem[] = [
     description: "Record income, expenses, transfers, and savings.",
   },
   {
+    href: "/shopping",
+    label: "Shopping",
+    description: "Plan what to buy and remember what it cost last time.",
+  },
+  {
     href: "/report",
     label: "Report",
     description: "How your money has moved over time.",

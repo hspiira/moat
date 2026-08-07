@@ -6,13 +6,16 @@ import type {
   GoalRepository,
   ImportBatchRepository,
   InvestmentProfileRepository,
+  ItemRepository,
   MonthCloseRepository,
+  PlannedPurchaseRepository,
   RecurringObligationRepository,
   Repository,
   RepositoryBundle,
   ResourceRepository,
   SyncOutboxRepository,
   SyncProfileRepository,
+  TransactionLineItemRepository,
   TransactionRepository,
   TransactionRuleRepository,
   UserProfileRepository,
@@ -29,12 +32,15 @@ import type {
   Goal,
   ImportBatch,
   InvestmentProfile,
+  Item,
   MonthClose,
+  PlannedPurchase,
   RecurringObligation,
   ResourceLink,
   SyncOutboxItem,
   SyncProfile,
   Transaction,
+  TransactionLineItem,
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
@@ -328,6 +334,44 @@ function createSyncOutboxRepository(adapter: StorageAdapter): SyncOutboxReposito
   };
 }
 
+function createItemRepository(adapter: StorageAdapter): ItemRepository {
+  const repository = createUserScopedRepository<Item>(adapter, "items");
+  return {
+    ...repository,
+    async findByNormalizedName(userId, normalizedName) {
+      const items = await repository.listByUser(userId);
+      return items.find((item) => item.normalizedName === normalizedName) ?? null;
+    },
+  };
+}
+
+function createPlannedPurchaseRepository(adapter: StorageAdapter): PlannedPurchaseRepository {
+  const repository = createUserScopedRepository<PlannedPurchase>(adapter, "plannedPurchases");
+  return {
+    ...repository,
+    async listByStatus(userId, status) {
+      const purchases = await repository.listByUser(userId);
+      return purchases.filter((purchase) => purchase.status === status);
+    },
+  };
+}
+
+function createTransactionLineItemRepository(
+  adapter: StorageAdapter,
+): TransactionLineItemRepository {
+  const repository = createUserScopedRepository<TransactionLineItem>(
+    adapter,
+    "transactionLineItems",
+  );
+  return {
+    ...repository,
+    async listByTransactionId(userId, transactionId) {
+      const lineItems = await repository.listByUser(userId);
+      return lineItems.filter((lineItem) => lineItem.transactionId === transactionId);
+    },
+  };
+}
+
 /**
  * Assemble the full repository bundle for a backend from its storage adapter.
  * This is the single implementation of repository behavior; the IndexedDB and
@@ -362,5 +406,8 @@ export function createRepositoryBundle(adapter: StorageAdapter): RepositoryBundl
     resources: createResourceRepository(adapter),
     syncProfiles: createSyncProfileRepository(adapter),
     syncOutbox: createSyncOutboxRepository(adapter),
+    items: createItemRepository(adapter),
+    plannedPurchases: createPlannedPurchaseRepository(adapter),
+    transactionLineItems: createTransactionLineItemRepository(adapter),
   };
 }

@@ -212,6 +212,69 @@ export type Category = {
   createdAt: string;
 };
 
+export type Item = {
+  id: string;
+  userId: string;
+  name: string;
+  normalizedName: string;
+  unit?: string;
+  defaultCategoryId?: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlannedPurchaseStatus = "planned" | "purchased" | "dropped";
+
+export type PlannedPurchase = {
+  id: string;
+  userId: string;
+  itemId: string;
+  quantity?: number;
+  estimatedUnitPrice?: number;
+  neededBy?: string;
+  note?: string;
+  status: PlannedPurchaseStatus;
+  linkedTransactionId?: string;
+  linkedLineItemId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TransactionLineItem = {
+  id: string;
+  userId: string;
+  transactionId: string;
+  itemId?: string;
+  label: string;
+  quantity?: number;
+  unitPrice?: number;
+  amount?: number;
+  categoryId?: string;
+  plannedPurchaseId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Derived, never stored: a line item joined with its transaction's context. */
+export type PriceObservation = {
+  itemId: string;
+  transactionId: string;
+  lineItemId: string;
+  merchant: string;
+  occurredOn: string;
+  unitPrice?: number;
+  amount?: number;
+  quantity?: number;
+};
+
+export type ItemPriceSummary = {
+  itemId: string;
+  lastPaid?: PriceObservation;
+  bestRecent?: PriceObservation;
+  observationCount: number;
+};
+
 export type Goal = {
   id: string;
   userId: string;

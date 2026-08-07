@@ -60,6 +60,9 @@ const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>
   imports: (entity) => ({ userId: String(entity.userId) }),
   syncProfiles: (entity) => ({ userId: String(entity.userId) }),
   syncOutbox: (entity) => ({ userId: String(entity.userId), status: String(entity.status) }),
+  items: (entity) => ({ userId: String(entity.userId) }),
+  plannedPurchases: (entity) => ({ userId: String(entity.userId) }),
+  transactionLineItems: (entity) => ({ userId: String(entity.userId) }),
 };
 
 /** Truncate an ISO date (`YYYY-MM-DD…`) to its month (`YYYY-MM`). */
