@@ -17,10 +17,15 @@ export function ShoppingWorkspace() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [isCheckOffOpen, setIsCheckOffOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   const itemsById = useMemo(
     () => new Map(workspace.items.map((item) => [item.id, item])),
     [workspace.items],
+  );
+  const transactionsById = useMemo(
+    () => new Map(workspace.transactions.map((entry) => [entry.id, entry])),
+    [workspace.transactions],
   );
   const selectedPurchases = workspace.purchases.filter((purchase) =>
     selectedIds.has(purchase.id),
@@ -63,19 +68,48 @@ export function ShoppingWorkspace() {
           </Button>
         </div>
 
-        <PlannerAddForm
-          items={workspace.items}
-          isSubmitting={workspace.isSubmitting}
-          onAdd={(input) => void workspace.addPurchase(input)}
-        />
+        {/* The list is what you came for; the form is what you occasionally
+            need. It opens on request rather than sitting above every visit. */}
+        {isAddOpen ? (
+          <div className="grid gap-2 rounded-lg border border-border/40 p-3">
+            <PlannerAddForm
+              items={workspace.items}
+              isSubmitting={workspace.isSubmitting}
+              onAdd={(input) => {
+                void workspace.addPurchase(input);
+                setIsAddOpen(false);
+              }}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              className="justify-self-start"
+              onClick={() => setIsAddOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="justify-self-start"
+            onClick={() => setIsAddOpen(true)}
+          >
+            Add an item
+          </Button>
+        )}
 
         <PlannerList
           groups={workspace.groups}
           itemsById={itemsById}
           priceSummaries={workspace.priceSummaries}
           selectedIds={selectedIds}
+          transactionsById={transactionsById}
+          isSubmitting={workspace.isSubmitting}
           onToggleSelect={toggleSelect}
           onDrop={(purchase) => void workspace.dropPurchase(purchase)}
+          onRestore={(purchase) => void workspace.restorePurchase(purchase)}
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
       </div>

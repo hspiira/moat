@@ -8,6 +8,7 @@ import {
   estimatePlannedTotal,
   fulfillPurchase,
   groupPlannerRows,
+  revertPurchase,
 } from "@/lib/domain/planned-purchases";
 import {
   derivePriceObservations,
@@ -156,6 +157,35 @@ export function useShoppingWorkspace() {
     [items, profile, refresh],
   );
 
+  /**
+   * Puts a dropped item back on the list. Only dropped ones: reverting a
+   * purchase would clear its links while the line item it created still points
+   * back at this purchase, leaving the expense referencing a plan that no
+   * longer claims it.
+   */
+  const restorePurchase = useCallback(
+    async (purchase: PlannedPurchase) => {
+      if (purchase.status !== "dropped") return;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await repositories.plannedPurchases.upsert(
+          revertPurchase(purchase, new Date().toISOString()),
+        );
+        await refresh();
+      } catch (submitError) {
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : "Couldn't put the item back on the list.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [refresh],
+  );
+
   const dropPurchase = useCallback(
     async (purchase: PlannedPurchase) => {
       setIsSubmitting(true);
@@ -244,11 +274,13 @@ export function useShoppingWorkspace() {
     observations,
     priceSummaries,
     recentExpenses,
+    transactions,
     accounts,
     categories,
     expenseCategories,
     addPurchase,
     dropPurchase,
+    restorePurchase,
     checkOff,
     refresh,
   };
