@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 
+import { requestPersistentStorage } from "@/lib/pwa/persistent-storage";
 import { Button } from "@/components/ui/button";
 
 export function PwaRegister() {
   const [updateReady, setUpdateReady] = useState(false);
+
+  useEffect(() => {
+    // Asked for on every launch, in dev too: the browser only grants this once
+    // it trusts the app, so an early refusal is not a final answer.
+    void requestPersistentStorage();
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {

@@ -19,6 +19,7 @@ import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PasskeyPanel } from "./settings/passkey-panel";
 import { PinLockPanel } from "./settings/pin-lock-panel";
+import { StorageDurabilityPanel } from "./settings/storage-durability-panel";
 import { SyncModePanel } from "./settings/sync-mode-panel";
 
 function SettingsSection({
@@ -94,6 +95,7 @@ export function SettingsWorkspace() {
         title="Storage"
         description="Where your data lives and how to move it between devices."
       >
+        <StorageDurabilityPanel />
         <SyncModePanel />
       </SettingsSection>
 
