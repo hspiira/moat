@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { formatMoney } from "@/lib/currency";
 import { pendingReviewGap } from "@/lib/domain/balance-gap";
+import { readClipboardText } from "@/lib/capture/clipboard";
 import { coerceCategoryForType } from "@/lib/domain/transaction-classification";
 import { useTextCapturePanel } from "./use-text-capture-panel";
 
@@ -109,6 +110,26 @@ export function TextCapturePanel({
   } = useTextCapturePanel({ accounts, categories, existingTransactions, initialInput });
 
   const [detailsOpen, setDetailsOpen] = useState(Boolean(fallbackFxRate));
+  const [clipboardNotice, setClipboardNotice] = useState<string | null>(null);
+
+  async function pasteFromClipboard() {
+    const result = await readClipboardText();
+    setClipboardNotice(
+      result.status === "read"
+        ? null
+        : result.status === "empty"
+          ? "Nothing copied yet."
+          : result.status === "denied"
+            ? "Paste was not allowed. Hold the box above and choose Paste."
+            : "This browser cannot read the clipboard. Paste into the box above.",
+    );
+
+    if (result.status === "read") {
+      // Appended, not replaced: several messages often arrive together and the
+      // parser reads them as a batch.
+      setInput((current) => (current.trim() ? `${current.trim()}\n\n${result.text}` : result.text));
+    }
+  }
 
   async function handleSave() {
     await onSaveCaptured(candidates);
@@ -118,16 +139,33 @@ export function TextCapturePanel({
 
   const content = (
     <div className="grid gap-4">
-        <TextareaField
-          id="capture-input"
-          label="Paste messages"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={
-            "Example:\nReceived UGX 500,000 from Employer Ltd on 27-03-2026\n\nPaid USh 45,000 to Grocery store on 06-04-2026"
-          }
-          className="min-h-32"
-        />
+        <div className="grid gap-2">
+          <TextareaField
+            id="capture-input"
+            label="Paste messages"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={
+              "Example:\nReceived UGX 500,000 from Employer Ltd on 27-03-2026\n\nPaid USh 45,000 to Grocery store on 06-04-2026"
+            }
+            className="min-h-32"
+          />
+          {/* One tap for the common case: an iOS Shortcut has already copied
+              the bank message, so the person should not retype it. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void pasteFromClipboard()}
+            >
+              Paste from clipboard
+            </Button>
+            {clipboardNotice ? (
+              <span className="text-xs text-muted-foreground">{clipboardNotice}</span>
+            ) : null}
+          </div>
+        </div>
 
         <SelectField
           id="capture-account"
@@ -168,7 +206,7 @@ export function TextCapturePanel({
         <div className="grid gap-2">
           <InputField
             id="capture-files"
-            label="Image or document"
+            label="Image, document, or messages file"
             type="file"
             accept="image/*,.pdf,text/plain,text/csv"
             multiple
