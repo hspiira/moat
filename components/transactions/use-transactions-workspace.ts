@@ -24,7 +24,6 @@ import type {
   CaptureReviewItem,
   Category,
   CategoryKind,
-  MonthClose,
   Transaction,
   TransactionLineItem,
   UserProfile,
@@ -32,18 +31,14 @@ import type {
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
 import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
-import { resolveItem } from "@/lib/domain/item-normalization";
 import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
-import { revertPurchase } from "@/lib/domain/planned-purchases";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
 } from "@/lib/domain/recurring";
 import {
-  buildMonthCloseRecord,
   evaluateMonthClose,
   getUnresolvedTransactions,
-  type MonthCloseEvaluation,
 } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
@@ -51,6 +46,8 @@ import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { countCategoryUsage } from "@/lib/domain/category-usage";
 import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
 import { useCounterparties } from "./use-counterparties";
+import { useLineItems } from "./use-line-items";
+import { useMonthClose } from "./use-month-close";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
 import {
   buildDebtPaymentTransactions,
@@ -63,7 +60,6 @@ import {
   buildFeesCategory,
   reconcileDefaultCategories,
 } from "@/lib/app-state/defaults";
-import { buildMonthCloseCsv } from "./month-close-export";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
 import { useToast } from "@/components/ui/toast";
@@ -118,15 +114,6 @@ export function useTransactionsWorkspace() {
   const { counterparties, setCounterparties, loadAndBackfill, resolveSelection } =
     useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
-  const [monthClose, setMonthClose] = useState<MonthClose | null>(null);
-  const [monthCloseEvaluation, setMonthCloseEvaluation] = useState<MonthCloseEvaluation>({
-    unresolvedTransactions: [],
-    duplicateGroups: [],
-    missingCategoryTransactions: [],
-    recurringDueCount: 0,
-    recurringMissingCount: 0,
-    isReadyToClose: false,
-  });
   const [transactionForm, setTransactionForm] =
     useState<TransactionFormState>(defaultTransactionForm);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -140,45 +127,24 @@ export function useTransactionsWorkspace() {
   const [sharedCaptureInput, setSharedCaptureInput] = useState("");
   const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
 
-  const refreshMonthCloseState = useCallback(
-    async (userId: string) => {
-      const [storedAccounts, storedTransactions, storedCategories, storedObligations, existingMonthClose] =
-        await Promise.all([
-          repositories.accounts.listByUser(userId),
-          repositories.transactions.listByUser(userId),
-          repositories.categories.listByUser(userId),
-          repositories.recurringObligations.listByUser(userId),
-          repositories.monthCloses.getByPeriod(userId, closePeriod),
-        ]);
-      const nextRecurringEvaluations = evaluateRecurringObligations(
-        [
-          ...storedObligations,
-          ...buildSuggestedRecurringObligations(
-            storedAccounts,
-            storedTransactions,
-            debtPlannerSettings.strategy,
-            debtPlannerSettings.extraMonthlyPayment,
-          ),
-        ],
-        storedTransactions,
-        closePeriod,
-      );
-      const evaluation = evaluateMonthClose(
-        storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
-        storedCategories,
-        nextRecurringEvaluations.map((entry) => ({
-          obligation: entry.obligation,
-          status:
-            entry.state === "paid" ? "paid" : entry.state === "partial" ? "partial" : "missing",
-        })),
-      );
-      const nextRecord = buildMonthCloseRecord(existingMonthClose, userId, closePeriod, evaluation);
-      await repositories.monthCloses.upsert(nextRecord);
-      setMonthClose(nextRecord);
-      setMonthCloseEvaluation(evaluation);
-    },
-    [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
-  );
+  const {
+    monthClose,
+    setMonthClose,
+    monthCloseEvaluation,
+    setMonthCloseEvaluation,
+    refreshMonthCloseState,
+    closeMonth,
+    exportMonthClose,
+  } = useMonthClose({
+    profile,
+    closePeriod,
+    transactions,
+    categories,
+    debtPlannerSettings,
+    onMutated: () => loadWorkspaceRef.current(),
+    setIsSubmitting,
+    show,
+  });
 
   const budgetPlanner = useBudgetPlanner({
     profile,
@@ -399,6 +365,8 @@ export function useTransactionsWorkspace() {
     setBudgetForm,
     setBudgets,
     setCounterparties,
+    setMonthClose,
+    setMonthCloseEvaluation,
     setRecurringObligations,
     setTransactionRules,
   ]);
@@ -778,118 +746,14 @@ export function useTransactionsWorkspace() {
     [loadWorkspace, profile, refreshMonthCloseState, sharedCaptureInput],
   );
 
-  const closeMonth = useCallback(async () => {
-    if (!profile || !monthCloseEvaluation.isReadyToClose) return;
-    setIsSubmitting(true);
-    try {
-      const timestamp = new Date().toISOString();
-      await repositories.monthCloses.upsert({
-        ...(monthClose ?? buildMonthCloseRecord(null, profile.id, closePeriod, monthCloseEvaluation)),
-        state: "closed",
-        closedAt: timestamp,
-        updatedAt: timestamp,
-      });
-      await loadWorkspace();
-      show(`${closePeriod} closed.`, "success");
-    } catch (closeError) {
-      show(errorMessage(closeError, "Couldn't close the month."), "error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [closePeriod, loadWorkspace, monthClose, monthCloseEvaluation, profile, show]);
-
-  const saveLineItem = useCallback(
-    async (input: {
-      id?: string;
-      transactionId: string;
-      label: string;
-      quantity?: number;
-      unitPrice?: number;
-      amount?: number;
-      categoryId?: string;
-    }) => {
-      if (!profile) return;
-      setIsSubmitting(true);
-      setError(null);
-      try {
-        const timestamp = new Date().toISOString();
-        const existingItems = await repositories.items.listByUser(profile.id);
-        const resolved = resolveItem({
-          existing: existingItems,
-          rawName: input.label,
-          userId: profile.id,
-          timestamp,
-        });
-        if (resolved.isNew) {
-          await repositories.items.upsert(resolved.item);
-        }
-        const existing = input.id
-          ? lineItems.find((line) => line.id === input.id)
-          : undefined;
-        await repositories.transactionLineItems.upsert({
-          id: input.id ?? `line:${crypto.randomUUID()}`,
-          userId: profile.id,
-          transactionId: input.transactionId,
-          itemId: resolved.item.id,
-          label: input.label.trim(),
-          quantity: input.quantity,
-          unitPrice: input.unitPrice,
-          amount: input.amount,
-          categoryId: input.categoryId,
-          plannedPurchaseId: existing?.plannedPurchaseId,
-          createdAt: existing?.createdAt ?? timestamp,
-          updatedAt: timestamp,
-        });
-        await loadWorkspace();
-      } catch (saveError) {
-        const message = errorMessage(saveError, "Couldn't save the item.");
-        setError(message);
-        show(message, "error");
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [lineItems, loadWorkspace, profile, show],
-  );
-
-  const deleteLineItem = useCallback(
-    async (lineItem: TransactionLineItem) => {
-      if (!profile) return;
-      setIsSubmitting(true);
-      setError(null);
-      try {
-        const timestamp = new Date().toISOString();
-        await repositories.transactionLineItems.remove(lineItem.id);
-        if (lineItem.plannedPurchaseId) {
-          const purchase = await repositories.plannedPurchases.getById(
-            lineItem.plannedPurchaseId,
-          );
-          if (purchase) {
-            await repositories.plannedPurchases.upsert(revertPurchase(purchase, timestamp));
-          }
-        }
-        await loadWorkspace();
-      } catch (deleteError) {
-        const message = errorMessage(deleteError, "Couldn't delete the item.");
-        setError(message);
-        show(message, "error");
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [loadWorkspace, profile, show],
-  );
-
-  const exportMonthClose = useCallback(() => {
-    const csv = buildMonthCloseCsv(transactions, categories, closePeriod);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `month-close-${closePeriod}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }, [categories, closePeriod, transactions]);
+  const { saveLineItem, deleteLineItem } = useLineItems({
+    profile,
+    lineItems,
+    onMutated: loadWorkspace,
+    setIsSubmitting,
+    setError,
+    show,
+  });
 
   return {
     closePeriod,
