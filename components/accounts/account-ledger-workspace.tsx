@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
 import {
@@ -149,12 +150,19 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
       {!isLoading && profile && account ? (
         <>
+          {/* The account rows carry no controls, so every action for this
+              account lives here. */}
           <div className="flex gap-2">
             <Button
               onClick={() => record.open({ accountId: account.id })}
               className="flex-1 sm:flex-none sm:px-6"
             >
               Record transaction
+            </Button>
+            <Button asChild variant="outline" className="flex-1 sm:flex-none sm:px-6">
+              <Link href={`/accounts?edit=${encodeURIComponent(account.id)}`}>
+                Edit account
+              </Link>
             </Button>
           </div>
 

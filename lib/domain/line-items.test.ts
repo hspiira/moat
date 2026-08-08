@@ -1,7 +1,11 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { lineItemAmount, summarizeItemization } from "@/lib/domain/line-items";
+import {
+  lineItemAmount,
+  resolveLineItemDraft,
+  summarizeItemization,
+} from "@/lib/domain/line-items";
 import type { TransactionLineItem } from "@/lib/types";
 
 const now = "2026-08-07T00:00:00.000Z";
@@ -65,6 +69,91 @@ describe("summarizeItemization", () => {
           expect(summary.itemizedTotal - summary.overItemizedBy + summary.unitemized).toBe(
             transactionAmount,
           );
+        },
+      ),
+    );
+  });
+});
+
+describe("resolveLineItemDraft", () => {
+  it("computes the amount from quantity and unit price", () => {
+    expect(
+      resolveLineItemDraft({ quantity: 2, unitPrice: 6000 }, ["unitPrice", "quantity"]),
+    ).toEqual({ quantity: 2, unitPrice: 6000, amount: 12000, derived: "amount" });
+  });
+
+  it("back-solves the unit price when you know the line total", () => {
+    // How a handwritten receipt usually reads: two of these, twelve thousand.
+    expect(
+      resolveLineItemDraft({ quantity: 2, amount: 12000 }, ["amount", "quantity"]),
+    ).toEqual({ quantity: 2, unitPrice: 6000, amount: 12000, derived: "unitPrice" });
+  });
+
+  it("back-solves the quantity from a unit price and a total", () => {
+    expect(
+      resolveLineItemDraft({ unitPrice: 6000, amount: 12000 }, ["amount", "unitPrice"]),
+    ).toEqual({ quantity: 2, unitPrice: 6000, amount: 12000, derived: "quantity" });
+  });
+
+  it("lets the two most recently touched fields win once all three are filled", () => {
+    // Typing a total after entering qty and unit price re-solves the unit
+    // price rather than leaving the row contradicting itself.
+    expect(
+      resolveLineItemDraft(
+        { quantity: 2, unitPrice: 9999, amount: 12000 },
+        ["amount", "quantity", "unitPrice"],
+      ),
+    ).toEqual({ quantity: 2, unitPrice: 6000, amount: 12000, derived: "unitPrice" });
+  });
+
+  it("derives nothing from a single value", () => {
+    expect(resolveLineItemDraft({ quantity: 2 }, ["quantity"])).toEqual({
+      quantity: 2,
+      unitPrice: undefined,
+      amount: undefined,
+      derived: null,
+    });
+  });
+
+  it("derives nothing from an empty draft", () => {
+    expect(resolveLineItemDraft({}, [])).toEqual({
+      quantity: undefined,
+      unitPrice: undefined,
+      amount: undefined,
+      derived: null,
+    });
+  });
+
+  it("refuses to divide by zero", () => {
+    expect(
+      resolveLineItemDraft({ quantity: 0, amount: 12000 }, ["amount", "quantity"]),
+    ).toMatchObject({ unitPrice: undefined, derived: null });
+  });
+
+  it("keeps a zero total honest rather than back-solving a zero unit price away", () => {
+    expect(
+      resolveLineItemDraft({ quantity: 2, amount: 0 }, ["amount", "quantity"]),
+    ).toMatchObject({ unitPrice: 0, derived: "unitPrice" });
+  });
+
+  it("ignores fields the user never touched", () => {
+    // A stale unit price left in state must not outrank what was just typed.
+    expect(
+      resolveLineItemDraft({ quantity: 3, unitPrice: 500, amount: 3000 }, ["amount", "quantity"]),
+    ).toMatchObject({ unitPrice: 1000, derived: "unitPrice" });
+  });
+
+  it("always returns three values that multiply out", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 500 }),
+        fc.integer({ min: 1, max: 2_000_000 }),
+        (quantity, unitPrice) => {
+          const resolved = resolveLineItemDraft({ quantity, unitPrice }, [
+            "unitPrice",
+            "quantity",
+          ]);
+          expect(resolved.quantity! * resolved.unitPrice!).toBe(resolved.amount);
         },
       ),
     );

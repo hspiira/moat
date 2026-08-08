@@ -164,7 +164,7 @@ export function TransactionList({
                         currency="UGX"
                         tone={presentation.tone}
                         signed={presentation.signed}
-                        className="text-sm font-semibold sm:text-base"
+                        className="text-sm font-semibold tabular-nums sm:text-base"
                       />
                       {pendingSyncIds?.has(transaction.id) ? (
                         <span className="sr-only">Waiting to sync</span>

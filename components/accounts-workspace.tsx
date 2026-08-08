@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IconArchive, IconArchiveOff, IconTrash } from "@tabler/icons-react";
 
 import { defaultAccountTypes } from "@/lib/app-state/defaults";
@@ -56,6 +58,8 @@ export function AccountsWorkspace() {
   } = useAccountsWorkspace();
 
   const accountTotals = getAccountTotals(accounts);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const formSheet = useFormSheet(cancelEdit);
   const editingAccount = accounts.find((account) => account.id === editingAccountId) ?? null;
@@ -72,6 +76,21 @@ export function AccountsWorkspace() {
   function openEditAccount(account: Parameters<typeof beginAccountEdit>[0]) {
     formSheet.openForEdit(() => beginAccountEdit(account));
   }
+
+  // Editing moved off the account rows and onto each account's own page, which
+  // is a separate route. It links back here with ?edit=<id> rather than
+  // mounting a second copy of the form sheet.
+  const requestedEditId = searchParams.get("edit");
+  useEffect(() => {
+    if (!requestedEditId || editingAccountId) return;
+    const target = accounts.find((account) => account.id === requestedEditId);
+    if (target) {
+      openEditAccount(target);
+    }
+    // Consume the parameter so closing the sheet does not immediately reopen it.
+    router.replace("/accounts");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedEditId, accounts, editingAccountId]);
 
   return (
     <div className="grid gap-5">
@@ -133,7 +152,6 @@ export function AccountsWorkspace() {
           <AccountList
             accounts={accounts}
             transactions={transactions}
-            onEdit={openEditAccount}
             onAdd={openAddAccount}
             onArchive={(accountId, isArchived) => void handleArchiveAccount(accountId, isArchived)}
             onDelete={(accountId) =>

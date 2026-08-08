@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconArchiveOff, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconArchiveOff, IconTrash } from "@tabler/icons-react";
 
 import type { Account, AccountType, Transaction } from "@/lib/types";
 import { canDeleteAccount } from "@/lib/domain/account-cleanup";
@@ -27,19 +27,17 @@ const GROUP_LABELS: Record<AccountType, string> = {
 type Props = {
   accounts: Account[];
   transactions: Transaction[];
-  onEdit: (account: Account) => void;
   onAdd?: () => void;
   onArchive?: (accountId: string, isArchived: boolean) => void;
   onDelete?: (accountId: string) => void;
 };
 
-function AccountRow({ account, onEdit }: { account: Account; onEdit: (a: Account) => void }) {
+function AccountRow({ account }: { account: Account }) {
   return (
     <div className="group relative -mx-2 rounded-lg px-2 py-3 transition-colors hover:bg-muted/25">
-      {/* The whole row links to the ledger (::after overlay); edit is lifted
-          above the overlay so it stays independently clickable. Archive and
-          delete moved into the edit sheet — rare actions were spending the
-          right edge of every row, and the balances could never line up. */}
+      {/* The row is one target: name, balance, and nothing to miss. Every
+          action — edit, archive, delete — lives on the account's own page, so
+          the balances line up down the column with nothing between them. */}
       <div className="flex items-center gap-3">
         <Link
           href={`/accounts/${encodeURIComponent(account.id)}`}
@@ -56,16 +54,8 @@ function AccountRow({ account, onEdit }: { account: Account; onEdit: (a: Account
         <Money
           amount={account.balance}
           tone={account.balance < 0 ? "negative" : "neutral"}
-          className="shrink-0 text-right text-base font-semibold"
+          className="shrink-0 text-right text-base font-semibold tabular-nums"
         />
-        <button
-          type="button"
-          aria-label={`Edit ${account.name}`}
-          onClick={() => onEdit(account)}
-          className="relative z-10 grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <IconPencil className="size-4" />
-        </button>
       </div>
     </div>
   );
@@ -74,7 +64,6 @@ function AccountRow({ account, onEdit }: { account: Account; onEdit: (a: Account
 export function AccountList({
   accounts,
   transactions,
-  onEdit,
   onAdd,
   onArchive,
   onDelete,
@@ -135,7 +124,7 @@ export function AccountList({
                   ) : null}
                 </div>
                 {group.accounts.map((account) => (
-                  <AccountRow key={account.id} account={account} onEdit={onEdit} />
+                  <AccountRow key={account.id} account={account} />
                 ))}
               </div>
             );
@@ -145,7 +134,7 @@ export function AccountList({
             <div>
               <h2 className="pb-1 text-xs font-medium text-muted-foreground">Tracking</h2>
               {activeClaims.map((account) => (
-                <AccountRow key={account.id} account={account} onEdit={onEdit} />
+                <AccountRow key={account.id} account={account} />
               ))}
             </div>
           ) : null}
