@@ -103,3 +103,38 @@ describe("service worker precache manifest", () => {
     }
   });
 });
+
+/**
+ * Offline is only a promise the build can keep if every precached route was
+ * actually emitted. These run against `out/`, so they are skipped in a clean
+ * checkout and enforced once a build exists.
+ */
+describe("static export covers every precached route", () => {
+  const outDir = join(projectRoot, "out");
+  const hasBuild = existsSync(outDir);
+  const appShellUrls = extractAppShellUrls(serviceWorkerSource);
+  const routeUrls = appShellUrls.filter((url) => !url.includes("."));
+
+  it.skipIf(!hasBuild)("emits an HTML file for every precached route", () => {
+    expect(routeUrls.length).toBeGreaterThan(0);
+
+    for (const url of routeUrls) {
+      const file = url === "/" ? "index.html" : `${url.replace(/^\//, "")}.html`;
+      expect(existsSync(join(outDir, file)), `${url} has no exported file`).toBe(true);
+    }
+  });
+
+  it.skipIf(!hasBuild)("precaches every route the export produced", () => {
+    // The other direction: a new route that nobody added to the precache list
+    // would work online and quietly fail offline.
+    const exported = readdirSync(outDir, { recursive: true, encoding: "utf8" })
+      .filter((entry) => entry.endsWith(".html"))
+      .map((entry) => "/" + entry.replace(/\.html$/, "").replace(/^index$/, ""))
+      // 404 and _not-found are framework fallbacks, never navigated to directly.
+      .filter((route) => !["/404", "/_not-found"].includes(route));
+
+    for (const route of exported) {
+      expect(appShellUrls, `${route} is not precached by public/sw.js`).toContain(route);
+    }
+  });
+});

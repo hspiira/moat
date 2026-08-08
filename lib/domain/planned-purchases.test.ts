@@ -7,6 +7,7 @@ import {
   fulfillPurchase,
   groupPlannerRows,
   revertPurchase,
+  sumFulfillmentCost,
 } from "@/lib/domain/planned-purchases";
 import type { Item, PlannedPurchase } from "@/lib/types";
 
@@ -69,18 +70,51 @@ describe("groupPlannerRows", () => {
 });
 
 describe("fulfillment", () => {
-  it("builds a line item carrying the plan's estimates and back-link", () => {
+  it("records what was paid, not what was estimated", () => {
+    // The price memory is derived from these line items. Writing the estimate
+    // here made "what it cost last time" echo back your own guess.
     const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
-    const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now);
+    const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {
+      unitPrice: 4200,
+    });
+
     expect(lineItem).toMatchObject({
       transactionId: "transaction:t1",
       itemId: "item:sugar",
       label: "Sugar (1kg)",
       quantity: 2,
-      unitPrice: 3500,
+      unitPrice: 4200,
       plannedPurchaseId: planned.id,
     });
     expect(lineItem.id.startsWith("line:")).toBe(true);
+  });
+
+  it("leaves the price unknown rather than falling back to the estimate", () => {
+    const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
+    const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {});
+
+    expect(lineItem.unitPrice).toBeUndefined();
+  });
+
+  it("takes the quantity actually bought when it differs from the plan", () => {
+    const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
+    const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {
+      quantity: 5,
+      unitPrice: 4200,
+    });
+
+    expect(lineItem.quantity).toBe(5);
+  });
+
+  it("keeps the planned quantity when none is given", () => {
+    // Quantity may be inherited; price may not. An unstated quantity is still
+    // the plan, but an unstated price is genuinely unknown.
+    const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
+    const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {
+      unitPrice: 4200,
+    });
+
+    expect(lineItem.quantity).toBe(2);
   });
 
   it("fulfill then revert round-trips the purchase state", () => {
@@ -90,7 +124,7 @@ describe("fulfillment", () => {
         fc.option(fc.nat({ max: 1_000_000 }), { nil: undefined }),
         (quantity, estimatedUnitPrice) => {
           const planned = purchase({ quantity, estimatedUnitPrice });
-          const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now);
+          const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {});
           const fulfilled = fulfillPurchase(planned, lineItem, now);
           expect(fulfilled.status).toBe("purchased");
           expect(fulfilled.linkedTransactionId).toBe("transaction:t1");
@@ -104,5 +138,30 @@ describe("fulfillment", () => {
         },
       ),
     );
+  });
+});
+
+describe("sumFulfillmentCost", () => {
+  it("totals quantity × unit price across entries", () => {
+    expect(
+      sumFulfillmentCost([
+        { quantity: 2, unitPrice: 4500 },
+        { quantity: 1, unitPrice: 2500 },
+      ]),
+    ).toBe(11500);
+  });
+
+  it("treats a missing quantity as one", () => {
+    expect(sumFulfillmentCost([{ unitPrice: 4500 }])).toBe(4500);
+  });
+
+  it("skips entries with no price rather than counting them as free", () => {
+    // Counting an unpriced row as zero would understate the expense; it is
+    // simply not known yet, and the sheet says so.
+    expect(sumFulfillmentCost([{ quantity: 2, unitPrice: 4500 }, { quantity: 3 }])).toBe(9000);
+  });
+
+  it("is zero for nothing selected", () => {
+    expect(sumFulfillmentCost([])).toBe(0);
   });
 });

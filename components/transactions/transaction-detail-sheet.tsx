@@ -93,7 +93,7 @@ export function TransactionDetailSheet({
                 currency="UGX"
                 tone={isOutflow ? "negative" : "positive"}
                 signed
-                className="text-2xl"
+                className="text-xl"
               />
               <div className="text-sm text-muted-foreground">
                 {formatDate(subject.occurredOn, { alwaysYear: true })} ·{" "}

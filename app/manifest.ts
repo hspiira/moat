@@ -1,5 +1,12 @@
 import type { MetadataRoute } from "next";
 
+/**
+ * The manifest is generated as a route, and a static export has no server to
+ * run it on — so it has to be emitted as a file at build time like every other
+ * route. The service worker precaches it by name.
+ */
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Moat",

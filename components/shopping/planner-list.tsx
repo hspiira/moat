@@ -6,7 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
-import type { Item, ItemPriceSummary, PlannedPurchase } from "@/lib/types";
+import Link from "next/link";
+
+import type { Item, ItemPriceSummary, PlannedPurchase, Transaction } from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
@@ -34,6 +36,7 @@ function PlannerSection({
   selectedIds,
   onToggleSelect,
   onDrop,
+  onEdit,
   onOpenHistory,
 }: {
   title: string;
@@ -43,12 +46,13 @@ function PlannerSection({
   selectedIds: Set<string>;
   onToggleSelect: (purchase: PlannedPurchase) => void;
   onDrop: (purchase: PlannedPurchase) => void;
+  onEdit: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
 }) {
   if (purchases.length === 0) return null;
   return (
     <section className="grid gap-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <h3 className="text-xs font-medium text-muted-foreground">
         {title}
       </h3>
       <ul className="grid gap-2">
@@ -75,6 +79,11 @@ function PlannerSection({
                       needed by {formatDate(purchase.neededBy)}
                     </span>
                   ) : null}
+                  {purchase.note ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {purchase.note}
+                    </span>
+                  ) : null}
                   {memory ? (
                     <button
                       type="button"
@@ -95,6 +104,9 @@ function PlannerSection({
                 ) : (
                   <Badge variant="outline">no estimate</Badge>
                 )}
+                <Button size="sm" variant="ghost" onClick={() => onEdit(purchase)}>
+                  Edit
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => onDrop(purchase)}>
                   Drop
                 </Button>
@@ -114,7 +126,12 @@ export function PlannerList(props: {
   selectedIds: Set<string>;
   onToggleSelect: (purchase: PlannedPurchase) => void;
   onDrop: (purchase: PlannedPurchase) => void;
+  onEdit: (purchase: PlannedPurchase) => void;
+  onRestore: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
+  /** For showing a bought item's expense rather than just labelling it. */
+  transactionsById: Map<string, Transaction>;
+  isSubmitting: boolean;
 }) {
   const shared = props;
   return (
@@ -124,21 +141,49 @@ export function PlannerList(props: {
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
       {props.groups.history.length > 0 ? (
         <details className="grid gap-2">
-          <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
             History ({props.groups.history.length})
           </summary>
           <ul className="mt-2 grid gap-2">
             {props.groups.history.map((purchase) => {
               const item = props.itemsById.get(purchase.itemId);
+              const isPurchased = purchase.status === "purchased";
+              const expense = purchase.linkedTransactionId
+                ? props.transactionsById.get(purchase.linkedTransactionId)
+                : undefined;
+
               return (
                 <li
                   key={purchase.id}
                   className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
                 >
-                  <span className="min-w-0 truncate">{item?.name ?? "Unknown item"}</span>
-                  <Badge variant="outline">
-                    {purchase.status === "purchased" ? "Bought" : "Dropped"}
-                  </Badge>
+                  <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
+
+                  {/* A bought item became a real expense; the plan stored the
+                      link but never showed it, so the trail stopped here. */}
+                  {isPurchased && expense ? (
+                    <Link
+                      href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}
+                      className="shrink-0 text-xs underline underline-offset-2 hover:text-foreground"
+                    >
+                      Bought {formatDate(expense.occurredOn)} ·{" "}
+                      {formatMoney(Math.abs(expense.amount))}
+                    </Link>
+                  ) : (
+                    <Badge variant="outline">{isPurchased ? "Bought" : "Dropped"}</Badge>
+                  )}
+
+                  {purchase.status === "dropped" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="shrink-0"
+                      disabled={props.isSubmitting}
+                      onClick={() => props.onRestore(purchase)}
+                    >
+                      Put back
+                    </Button>
+                  ) : null}
                 </li>
               );
             })}
