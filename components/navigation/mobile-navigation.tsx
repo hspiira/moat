@@ -20,9 +20,11 @@ import {
 export function MobileNavigation({
   pathname,
   onToggleTheme,
+  hasProfile,
 }: {
   pathname: string;
   onToggleTheme: () => void;
+  hasProfile: boolean;
 }) {
   const { hasPinLock, lockState, lock } = usePinLock();
 
@@ -61,46 +63,54 @@ export function MobileNavigation({
 
   return (
     <>
+      {/* The brand bar stays whether or not a profile exists — it is the only
+          thing telling a first-time visitor whose app this is. The menu trigger
+          beside it is suppressed pre-profile, since everything it opens is a
+          setup-required screen. */}
       <div className="sticky top-0 z-40 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-1 py-1.5">
           <MoatMark className="h-9 w-9 shrink-0" />
 
-          <div className="flex shrink-0 items-center gap-1">
-            {hasPinLock && lockState.status === "unlocked" ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Lock Moat now"
-                className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                onClick={lock}
-              >
-                <IconLock className="h-4.5 w-4.5" />
-              </Button>
-            ) : null}
-            <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
-          </div>
+          {hasProfile ? (
+            <div className="flex shrink-0 items-center gap-1">
+              {hasPinLock && lockState.status === "unlocked" ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Lock Moat now"
+                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                  onClick={lock}
+                >
+                  <IconLock className="h-4.5 w-4.5" />
+                </Button>
+              ) : null}
+              <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
+            </div>
+          ) : null}
         </div>
 
       </div>
 
       {/* pointer-events-none on the positioning layer keeps the gutters either
           side of the capsule tappable by the page beneath. */}
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 lg:hidden"
-        // The home-indicator inset is already a gap. Adding a full rem on top
-        // of it floated the capsule halfway up the screen on iOS.
-        style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}
-      >
-        <nav
-          aria-label="Primary"
-          className="pointer-events-auto flex items-center gap-1 rounded-full bg-card/80 p-1.5 shadow-lg shadow-black/25 backdrop-blur-xl"
+      {hasProfile ? (
+        <div
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 lg:hidden"
+          // The home-indicator inset is already a gap. Adding a full rem on top
+          // of it floated the capsule halfway up the screen on iOS.
+          style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}
         >
-          {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
-          <MobileCaptureSheet />
-          {mobilePrimaryNav.slice(2).map(renderNavButton)}
-          <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
-        </nav>
-      </div>
+          <nav
+            aria-label="Primary"
+            className="pointer-events-auto flex items-center gap-1 rounded-full bg-card/80 p-1.5 shadow-lg shadow-black/25 backdrop-blur-xl"
+          >
+            {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
+            <MobileCaptureSheet />
+            {mobilePrimaryNav.slice(2).map(renderNavButton)}
+            <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
+          </nav>
+        </div>
+      ) : null}
     </>
   );
 }
