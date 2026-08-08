@@ -113,6 +113,8 @@ export function TransactionsCaptureWorkspace() {
             bare
             accounts={workspace.accounts}
             categories={workspace.categories}
+            categoryUsage={workspace.categoryUsage}
+            onCreateCategory={(name, kind) => void workspace.createCategory(name, kind)}
             counterparties={workspace.counterparties}
             form={workspace.transactionForm}
             editingId={workspace.editingTransactionId}

@@ -6,6 +6,7 @@ import {
   IconDatabaseExport,
   IconLockSquareRounded,
   IconRss,
+  IconTags,
   IconShieldLock,
   type Icon,
 } from "@tabler/icons-react";
@@ -13,6 +14,7 @@ import {
 import { useHasNativeBridge } from "@/components/hooks/use-native-bridge";
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
+import { CategoriesPanel } from "./settings/categories-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PasskeyPanel } from "./settings/passkey-panel";
@@ -67,6 +69,14 @@ export function SettingsWorkspace() {
       >
         <PinLockPanel />
         <PasskeyPanel />
+      </SettingsSection>
+
+      <SettingsSection
+        icon={IconTags}
+        title="Categories"
+        description="Hide the ones you never use. Nothing is deleted, so past transactions keep their category."
+      >
+        <CategoriesPanel />
       </SettingsSection>
 
       {hasNativeBridge ? (

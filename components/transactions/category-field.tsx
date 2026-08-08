@@ -11,7 +11,8 @@ import {
   categoryKindLabels,
   categoryKindOrder,
 } from "@/lib/domain/transaction-classification";
-import type { Category, TransactionType } from "@/lib/types";
+import { orderCategoriesForPicker } from "@/lib/domain/category-usage";
+import type { Category, CategoryKind, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,7 +30,9 @@ export function CategoryField({
   categories,
   value,
   type,
+  usage,
   onSelect,
+  onCreate,
   error,
 }: {
   id?: string;
@@ -38,7 +41,11 @@ export function CategoryField({
   value: string;
   /** The movement in play. Its categories are offered first. */
   type: TransactionType;
+  /** Transactions per categoryId. The ones you use most are listed first. */
+  usage?: Map<string, number>;
   onSelect: (category: Category) => void;
+  /** Omit to hide the create row, as in a review screen. */
+  onCreate?: (name: string, kind: CategoryKind) => void;
   error?: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -49,11 +56,17 @@ export function CategoryField({
   const selected = categories.find((category) => category.id === value);
   const preferredKinds = useMemo(() => allowedCategoryKinds[type] ?? [], [type]);
 
+  // Most used first, and hidden categories left out unless still in use.
+  const ranked = useMemo(
+    () => orderCategoriesForPicker(categories, usage ?? new Map()),
+    [categories, usage],
+  );
+
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const matches = needle
-      ? categories.filter((category) => category.name.toLowerCase().includes(needle))
-      : categories;
+      ? ranked.filter((category) => category.name.toLowerCase().includes(needle))
+      : ranked;
 
     // Searching means the user knows what they want; scoping the results to
     // one movement would just hide it.
@@ -66,12 +79,23 @@ export function CategoryField({
         options: matches.filter((category) => category.kind === kind),
       }))
       .filter((group) => group.options.length > 0);
-  }, [categories, query, showAll, preferredKinds]);
+  }, [ranked, query, showAll, preferredKinds]);
 
   const hiddenCount = useMemo(() => {
     if (showAll || query.trim()) return 0;
-    return categories.filter((category) => !preferredKinds.includes(category.kind)).length;
-  }, [categories, showAll, query, preferredKinds]);
+    return ranked.filter((category) => !preferredKinds.includes(category.kind)).length;
+  }, [ranked, showAll, query, preferredKinds]);
+
+  // A new category takes the kind of the movement in play, so it is valid for
+  // this transaction the moment it is made.
+  const newCategoryKind: CategoryKind = preferredKinds[0] ?? "expense";
+  const trimmedQuery = query.trim();
+  const canCreate =
+    Boolean(onCreate) &&
+    trimmedQuery.length > 0 &&
+    !categories.some(
+      (category) => category.name.toLowerCase() === trimmedQuery.toLowerCase(),
+    );
 
   const errorId = `${id}-error`;
 
@@ -135,7 +159,7 @@ export function CategoryField({
           {/* Capped so the list can never grow past the viewport, however many
               categories a user adds. */}
           <div className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain px-1.5 pb-1.5">
-            {groups.length === 0 ? (
+            {groups.length === 0 && !canCreate ? (
               <p className="px-2 py-6 text-center text-sm text-muted-foreground">
                 No category matches “{query.trim()}”.
               </p>
@@ -175,6 +199,24 @@ export function CategoryField({
                 className="w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
               >
                 Something else… ({hiddenCount} more)
+              </button>
+            ) : null}
+
+            {/* Type a name nobody has used yet and make it here. The kind comes
+                from the movement in play, so the user is never asked what a
+                category "kind" is. */}
+            {canCreate ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onCreate?.(query.trim(), newCategoryKind);
+                  setOpen(false);
+                  setQuery("");
+                  setShowAll(false);
+                }}
+                className="w-full rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
+              >
+                Create “{query.trim()}” in {categoryKindLabels[newCategoryKind]}
               </button>
             ) : null}
           </div>

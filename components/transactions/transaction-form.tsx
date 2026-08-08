@@ -6,6 +6,7 @@ import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type {
   Account,
   Category,
+  CategoryKind,
   Counterparty,
   SupportedCurrency,
   TransactionType,
@@ -72,6 +73,8 @@ export const defaultTransactionForm: TransactionFormState = {
 type Props = {
   accounts: Account[];
   categories: Category[];
+  categoryUsage?: Map<string, number>;
+  onCreateCategory?: (name: string, kind: CategoryKind) => void;
   counterparties: Counterparty[];
   form: TransactionFormState;
   editingId: string | null;
@@ -82,15 +85,15 @@ type Props = {
   onFormChange: (updater: (prev: TransactionFormState) => TransactionFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
-  /** When true, render just the form for use inside a sheet (no card chrome). */
   embedded?: boolean;
-  /** When true, render with no chrome at all — the page header carries the context. */
   bare?: boolean;
 };
 
 export function TransactionForm({
   accounts,
   categories,
+  categoryUsage,
+  onCreateCategory,
   counterparties,
   form,
   editingId,
@@ -182,6 +185,8 @@ export function TransactionForm({
             categories={categories}
             value={form.categoryId}
             type={form.type}
+            usage={categoryUsage}
+            onCreate={onCreateCategory}
             onSelect={(picked) =>
               onFormChange((c) => ({
                 ...c,

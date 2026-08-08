@@ -209,6 +209,7 @@ export type Category = {
   name: string;
   kind: CategoryKind;
   isDefault: boolean;
+  isArchived?: boolean;
   createdAt: string;
 };
 

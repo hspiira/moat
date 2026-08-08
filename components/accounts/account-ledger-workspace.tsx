@@ -50,6 +50,13 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const ledgerRows = account ? getLedgerRows(account, transactions) : [];
+  const historyTotals = ledgerRows.reduce(
+    (totals, row) => ({
+      credit: totals.credit + row.credit,
+      debit: totals.debit + row.debit,
+    }),
+    { credit: 0, debit: 0 },
+  );
 
   useEffect(() => {
     startTransition(() => {
@@ -114,8 +121,11 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   }, [accountId]);
 
   return (
-    <div className="grid gap-5">
-      <header className="space-y-1">
+    // Grid items use min-width:auto, so any wide child pushes the whole page
+    // wider and the document scrolls sideways. min-w-0 lets the items shrink,
+    // which is what allows truncate to work on the rows below.
+    <div className="grid min-w-0 gap-5">
+      <header className="min-w-0 space-y-1">
         <h1 className="text-sm text-muted-foreground">
           {account?.name ?? "Account"}
           {account ? (
@@ -172,9 +182,23 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
             <DebtSummary account={account} transactions={transactions} />
           ) : null}
 
-          <section className="grid gap-2">
-            <h2 className="text-xs font-medium text-muted-foreground">History</h2>
-            <div>
+          <section className="grid min-w-0 gap-2">
+            <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 className="text-xs font-medium text-muted-foreground">History</h2>
+              {/* Money in and money out for this account. Each figure carries a
+                  sign and a word, so the meaning does not rest on colour. */}
+              <p className="flex flex-wrap items-baseline gap-x-3 text-xs">
+                <span>
+                  <span className="text-muted-foreground">In </span>
+                  <Money amount={historyTotals.credit} tone="positive" signed />
+                </span>
+                <span>
+                  <span className="text-muted-foreground">Out </span>
+                  <Money amount={historyTotals.debit} tone="negative" signed />
+                </span>
+              </p>
+            </div>
+            <div className="min-w-0">
               {ledgerRows.length === 0 ? (
                 <EmptyState>
                   No transactions recorded for this account.
@@ -183,7 +207,11 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 <>
                   {/* Mobile: who or what leads each row in the foreground; the
                       date is metadata and reads second. */}
-                  <ul className="flex flex-col divide-y divide-border/50 md:hidden">
+                  {/* min-w-0 is what makes the rows truncate. This list is a
+                      grid item, so its default min-width:auto sized it to the
+                      longest note, pushed the page past the viewport, and made
+                      the whole account page scroll sideways. */}
+                  <ul className="flex min-w-0 flex-col divide-y divide-border/50 md:hidden">
                     {ledgerRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
@@ -200,9 +228,9 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                       return (
                         <li
                           key={row.id}
-                          className="py-2.5 transition-colors hover:bg-muted/25"
+                          className="min-w-0 py-2.5 transition-colors hover:bg-muted/25"
                         >
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-foreground">{title}</p>
                               <p className="truncate text-xs text-muted-foreground">{meta}</p>

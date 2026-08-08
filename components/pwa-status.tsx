@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { IconShare, IconSquareRoundedPlus } from "@tabler/icons-react";
 
 import { getLocalSaveEventName, type LocalSaveDetail } from "@/lib/local-save";
+import { useHasProfile } from "@/components/hooks/use-has-profile";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export function PwaStatus() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [hasBackup, setHasBackup] = useState(true);
+  const profilePresence = useHasProfile();
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
@@ -127,7 +129,10 @@ export function PwaStatus() {
   // iOS aggressively evicts PWA storage under disk pressure, so an unbacked-up
   // device risks silent data loss in a way Android doesn't. Surface this
   // everywhere, not just in settings.
-  const shouldShowBackupNudge = isIos && !hasBackup;
+  // Nothing to lose yet, so nothing to warn about. Telling a prospect their
+  // records could be cleared before they have any reads as a broken app.
+  const hasProfile = profilePresence === "present";
+  const shouldShowBackupNudge = isIos && !hasBackup && hasProfile;
   const shouldShowStatus =
     !isOnline ||
     !isInstalled ||
@@ -144,7 +149,7 @@ export function PwaStatus() {
     <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
       <div className="flex flex-wrap items-center gap-2">
         {!isOnline ? <Badge variant="secondary">Offline mode</Badge> : null}
-        {!isInstalled ? <Badge variant="outline">Saved locally</Badge> : null}
+        {!isInstalled && hasProfile ? <Badge variant="outline">Saved locally</Badge> : null}
         {lastLocalSave ? (
           <span className="text-xs text-muted-foreground">{lastLocalSave.message}</span>
         ) : null}
