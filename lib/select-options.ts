@@ -22,6 +22,7 @@ import {
   categoryKindLabels,
   categoryKindOrder,
 } from "@/lib/domain/transaction-classification";
+import { orderCategoriesForPicker } from "@/lib/domain/category-usage";
 
 export const accountTypeLabels: Record<AccountType, string> = {
   cash: "Cash",
@@ -121,11 +122,16 @@ export function accountOptions(accounts: Account[]): SelectFieldOption[] {
  * well — so the headings have to carry the meaning the type used to.
  * Empty groups are dropped rather than rendered as bare headings.
  */
-export function categoryOptionGroups(categories: Category[]): SelectFieldOptionGroup[] {
+export function categoryOptionGroups(
+  categories: Category[],
+  usage: Map<string, number> = new Map(),
+): SelectFieldOptionGroup[] {
+  const ordered = orderCategoriesForPicker(categories, usage);
+
   return categoryKindOrder
     .map((kind) => ({
       label: categoryKindLabels[kind],
-      options: categoryOptions(categories.filter((category) => category.kind === kind)),
+      options: categoryOptions(ordered.filter((category) => category.kind === kind)),
     }))
     .filter((group) => group.options.length > 0);
 }

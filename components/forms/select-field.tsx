@@ -63,7 +63,9 @@ export function SelectField({
           {groups
             ? groups.map((group) => (
                 <SelectGroup key={group.label}>
-                  <SelectLabel>{group.label}</SelectLabel>
+                  <SelectLabel className="px-1.5 pt-2 pb-0 text-[11px] tracking-wide uppercase first:pt-0">
+                    {group.label}
+                  </SelectLabel>
                   {group.options.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}

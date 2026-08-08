@@ -23,6 +23,7 @@ import type {
   Account,
   CaptureReviewItem,
   Category,
+  CategoryKind,
   MonthClose,
   Transaction,
   TransactionLineItem,
@@ -47,6 +48,7 @@ import {
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import { countCategoryUsage } from "@/lib/domain/category-usage";
 import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
 import { useCounterparties } from "./use-counterparties";
 export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
@@ -614,6 +616,41 @@ export function useTransactionsWorkspace() {
     ],
   );
 
+  /**
+   * Makes a category the user asked for while recording. The kind comes from
+   * the movement in play, so the new category is valid for this transaction at
+   * once. Selecting it is left to the caller, which knows the form.
+   */
+  const createCategory = useCallback(
+    async (name: string, kind: CategoryKind): Promise<Category | null> => {
+      if (!profile) return null;
+      const trimmed = name.trim();
+      if (!trimmed) return null;
+
+      const existing = categories.find(
+        (category) => category.name.toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (existing) return existing;
+
+      const category: Category = {
+        id: `category:${crypto.randomUUID()}`,
+        userId: profile.id,
+        name: trimmed,
+        kind,
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      await repositories.categories.upsert(category);
+      setCategories((current) => [...current, category]);
+      return category;
+    },
+    [categories, profile],
+  );
+
+  /** Transactions per categoryId, so the picker lists common ones first. */
+  const categoryUsage = useMemo(() => countCategoryUsage(transactions), [transactions]);
+
   const beginTransactionEdit = useCallback(
     (transaction: Transaction) => {
       if (transaction.type === "transfer") return;
@@ -892,6 +929,8 @@ export function useTransactionsWorkspace() {
     loadWorkspace,
     refreshMonthCloseState,
     handleTransactionSubmit,
+    createCategory,
+    categoryUsage,
     beginTransactionEdit,
     handleDeleteTransaction,
     saveCapturedTransactions,
