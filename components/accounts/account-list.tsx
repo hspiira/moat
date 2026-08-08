@@ -40,7 +40,7 @@ function AccountRow({ account }: { account: Account }) {
           the balances line up down the column with nothing between them. */}
       <div className="flex items-center gap-3">
         <Link
-          href={`/accounts/${encodeURIComponent(account.id)}`}
+          href={`/accounts/detail?id=${encodeURIComponent(account.id)}`}
           aria-label={`Open ${account.name} ledger`}
           className="min-w-0 flex-1 after:absolute after:inset-0 after:content-['']"
         >

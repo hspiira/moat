@@ -9,12 +9,15 @@ const OFFLINE_URL = "/offline";
 // visit. Offline support is advertised on the landing page, and a route that
 // has never been opened while online previously fell through to /offline —
 // which reads as "the app is broken" rather than "you're offline".
-// Dynamic routes (/accounts/[accountId]) cannot be precached and still rely on
-// the runtime cache below.
+// There are no dynamic routes left to miss: the account ledger reads its id
+// from ?id= on one static page, so every route in the app is a file listed
+// here. Offline is what the build guarantees, not what browsing happened to
+// leave in the cache.
 const APP_SHELL_URLS = [
   OFFLINE_URL,
   "/",
   "/accounts",
+  "/accounts/detail",
   "/budgets",
   "/debt",
   "/goals",
