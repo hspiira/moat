@@ -36,6 +36,7 @@ function PlannerSection({
   selectedIds,
   onToggleSelect,
   onDrop,
+  onEdit,
   onOpenHistory,
 }: {
   title: string;
@@ -45,12 +46,13 @@ function PlannerSection({
   selectedIds: Set<string>;
   onToggleSelect: (purchase: PlannedPurchase) => void;
   onDrop: (purchase: PlannedPurchase) => void;
+  onEdit: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
 }) {
   if (purchases.length === 0) return null;
   return (
     <section className="grid gap-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <h3 className="text-xs font-medium text-muted-foreground">
         {title}
       </h3>
       <ul className="grid gap-2">
@@ -77,6 +79,11 @@ function PlannerSection({
                       needed by {formatDate(purchase.neededBy)}
                     </span>
                   ) : null}
+                  {purchase.note ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {purchase.note}
+                    </span>
+                  ) : null}
                   {memory ? (
                     <button
                       type="button"
@@ -97,6 +104,9 @@ function PlannerSection({
                 ) : (
                   <Badge variant="outline">no estimate</Badge>
                 )}
+                <Button size="sm" variant="ghost" onClick={() => onEdit(purchase)}>
+                  Edit
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => onDrop(purchase)}>
                   Drop
                 </Button>
@@ -116,6 +126,7 @@ export function PlannerList(props: {
   selectedIds: Set<string>;
   onToggleSelect: (purchase: PlannedPurchase) => void;
   onDrop: (purchase: PlannedPurchase) => void;
+  onEdit: (purchase: PlannedPurchase) => void;
   onRestore: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
   /** For showing a bought item's expense rather than just labelling it. */
@@ -130,7 +141,7 @@ export function PlannerList(props: {
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
       {props.groups.history.length > 0 ? (
         <details className="grid gap-2">
-          <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
             History ({props.groups.history.length})
           </summary>
           <ul className="mt-2 grid gap-2">

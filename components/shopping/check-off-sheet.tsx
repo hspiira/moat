@@ -22,12 +22,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { estimatePlannedTotal } from "@/lib/domain/planned-purchases";
+import { sumFulfillmentCost } from "@/lib/domain/planned-purchases";
 import { formatDate } from "@/lib/format-date";
 import { parseAmountInput } from "@/lib/parse-amount";
-import type { Account, Category, PlannedPurchase, Transaction } from "@/lib/types";
+import type { Account, Category, Item, PlannedPurchase, Transaction } from "@/lib/types";
 
-import type { CheckOffTarget } from "./use-shopping-workspace";
+import type { CheckOffTarget, FulfillmentActual } from "./use-shopping-workspace";
 
 function emptyForm() {
   return {
@@ -42,6 +42,7 @@ function emptyForm() {
 export function CheckOffSheet({
   open,
   selected,
+  items,
   recentExpenses,
   accounts,
   expenseCategories,
@@ -51,11 +52,12 @@ export function CheckOffSheet({
 }: {
   open: boolean;
   selected: PlannedPurchase[];
+  items: Item[];
   recentExpenses: Transaction[];
   accounts: Account[];
   expenseCategories: Category[];
   isSubmitting: boolean;
-  onConfirm: (target: CheckOffTarget) => void;
+  onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   // The sheet content stays mounted across opens (Radix animates it out
@@ -86,6 +88,7 @@ export function CheckOffSheet({
         <CheckOffSheetForm
           key={sessionKey}
           selected={selected}
+          items={items}
           recentExpenses={recentExpenses}
           accounts={accounts}
           expenseCategories={expenseCategories}
@@ -99,6 +102,7 @@ export function CheckOffSheet({
 
 function CheckOffSheetForm({
   selected,
+  items,
   recentExpenses,
   accounts,
   expenseCategories,
@@ -106,18 +110,43 @@ function CheckOffSheetForm({
   onConfirm,
 }: {
   selected: PlannedPurchase[];
+  items: Item[];
   recentExpenses: Transaction[];
   accounts: Account[];
   expenseCategories: Category[];
   isSubmitting: boolean;
-  onConfirm: (target: CheckOffTarget) => void;
+  onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
 }) {
   const [mode, setMode] = useState<"attach" | "create">("attach");
   const [transactionId, setTransactionId] = useState("");
-  const estimate = estimatePlannedTotal(selected);
   const [form, setForm] = useState(emptyForm);
+  const itemsById = new Map(items.map((item) => [item.id, item]));
 
-  const createAmount = parseAmountInput(form.amount) ?? estimate.total;
+  // Prefilled with the estimate so an accurate guess is one tap, but shown and
+  // editable — the price that reaches the history is one you confirmed, not one
+  // the app assumed on your behalf.
+  const [actuals, setActuals] = useState<Record<string, { quantity: string; unitPrice: string }>>(
+    () =>
+      Object.fromEntries(
+        selected.map((purchase) => [
+          purchase.id,
+          {
+            quantity: String(purchase.quantity ?? 1),
+            unitPrice:
+              purchase.estimatedUnitPrice != null ? String(purchase.estimatedUnitPrice) : "",
+          },
+        ]),
+      ),
+  );
+
+  const resolvedActuals = selected.map((purchase) => ({
+    purchaseId: purchase.id,
+    quantity: parseAmountInput(actuals[purchase.id]?.quantity ?? "") ?? undefined,
+    unitPrice: parseAmountInput(actuals[purchase.id]?.unitPrice ?? "") ?? undefined,
+  }));
+  const createAmount = sumFulfillmentCost(resolvedActuals);
+  const unpricedCount = resolvedActuals.filter((entry) => entry.unitPrice == null).length;
+
   const canConfirm =
     mode === "attach"
       ? transactionId !== ""
@@ -135,11 +164,65 @@ function CheckOffSheetForm({
             occurredOn: form.occurredOn,
             amount: createAmount,
           },
+      resolvedActuals,
     );
   };
 
   return (
     <div className="grid gap-4 p-4">
+      {/* What each item actually cost. This is what the price history is built
+          from, so it is asked for rather than assumed. */}
+      <div className="grid gap-2">
+        <p className="text-xs font-medium text-muted-foreground">What did they cost?</p>
+        <ul className="grid gap-2">
+          {selected.map((purchase) => {
+            const draft = actuals[purchase.id] ?? { quantity: "1", unitPrice: "" };
+            const update = (patch: Partial<typeof draft>) =>
+              setActuals((current) => ({
+                ...current,
+                [purchase.id]: { ...draft, ...patch },
+              }));
+
+            return (
+              <li key={purchase.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
+                <span className="min-w-0 truncate text-sm">
+                  {itemsById.get(purchase.itemId)?.name ?? "Item"}
+                </span>
+                <Input
+                  aria-label="Quantity"
+                  inputMode="decimal"
+                  className="w-14 text-right"
+                  value={draft.quantity}
+                  onChange={(event) => update({ quantity: event.target.value })}
+                />
+                <Input
+                  aria-label="Unit price"
+                  inputMode="decimal"
+                  className="w-24 text-right"
+                  placeholder={
+                    purchase.estimatedUnitPrice != null
+                      ? `est ${purchase.estimatedUnitPrice}`
+                      : "price"
+                  }
+                  value={draft.unitPrice}
+                  onChange={(event) => update({ unitPrice: event.target.value })}
+                />
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex items-baseline justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">Total</span>
+          <Money amount={createAmount} tone="neutral" className="font-semibold" />
+        </div>
+        {unpricedCount > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {unpricedCount} item{unpricedCount === 1 ? "" : "s"} without a price — recorded
+            as bought, but left out of the total and the price history.
+          </p>
+        ) : null}
+      </div>
+
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -231,20 +314,10 @@ function CheckOffSheetForm({
               onChange={(occurredOn) => setForm({ ...form, occurredOn })}
             />
           </div>
-          <div className="grid gap-1">
-            <Label htmlFor="check-off-amount">Total amount</Label>
-            <Input
-              id="check-off-amount"
-              inputMode="numeric"
-              value={form.amount}
-              placeholder={formatMoney(estimate.total)}
-              onChange={(event) => setForm({ ...form, amount: event.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Estimated <Money amount={estimate.total} tone="neutral" /> from the selected
-              items; adjust to the real receipt total.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Total comes from the prices above, so the expense and its items always
+            agree.
+          </p>
         </div>
       )}
 

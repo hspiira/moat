@@ -26,6 +26,13 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
+/** What an item really cost, gathered at check-off. */
+export type FulfillmentActual = {
+  purchaseId: string;
+  quantity?: number;
+  unitPrice?: number;
+};
+
 export type CheckOffTarget =
   | { mode: "attach"; transactionId: string }
   | {
@@ -158,6 +165,43 @@ export function useShoppingWorkspace() {
   );
 
   /**
+   * Changes a plan that has not been bought yet. Quantity, estimate, date and
+   * note only — never the item it points at, since the price history is keyed
+   * on that; renaming would silently move one item's history onto another.
+   * A purchased plan is history and is left alone.
+   */
+  const editPurchase = useCallback(
+    async (
+      purchase: PlannedPurchase,
+      patch: {
+        quantity?: number;
+        estimatedUnitPrice?: number;
+        neededBy?: string;
+        note?: string;
+      },
+    ) => {
+      if (purchase.status === "purchased") return;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await repositories.plannedPurchases.upsert({
+          ...purchase,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        });
+        await refresh();
+      } catch (submitError) {
+        setError(
+          submitError instanceof Error ? submitError.message : "Couldn't update the item.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [refresh],
+  );
+
+  /**
    * Puts a dropped item back on the list. Only dropped ones: reverting a
    * purchase would clear its links while the line item it created still points
    * back at this purchase, leaving the expense referencing a plan that no
@@ -209,8 +253,13 @@ export function useShoppingWorkspace() {
   );
 
   const checkOff = useCallback(
-    async (selected: PlannedPurchase[], target: CheckOffTarget): Promise<boolean> => {
+    async (
+      selected: PlannedPurchase[],
+      target: CheckOffTarget,
+      actuals: FulfillmentActual[] = [],
+    ): Promise<boolean> => {
       if (!profile || selected.length === 0) return false;
+      const actualsByPurchaseId = new Map(actuals.map((entry) => [entry.purchaseId, entry]));
       setIsSubmitting(true);
       setError(null);
       try {
@@ -242,7 +291,14 @@ export function useShoppingWorkspace() {
         for (const purchase of selected) {
           const item = itemsById.get(purchase.itemId);
           if (!item) continue;
-          const lineItem = buildFulfillmentLineItem(purchase, item, transactionId, timestamp);
+          const actual = actualsByPurchaseId.get(purchase.id) ?? {};
+          const lineItem = buildFulfillmentLineItem(
+            purchase,
+            item,
+            transactionId,
+            timestamp,
+            actual,
+          );
           await repositories.transactionLineItems.upsert(lineItem);
           await repositories.plannedPurchases.upsert(
             fulfillPurchase(purchase, lineItem, timestamp),
@@ -279,6 +335,7 @@ export function useShoppingWorkspace() {
     categories,
     expenseCategories,
     addPurchase,
+    editPurchase,
     dropPurchase,
     restorePurchase,
     checkOff,

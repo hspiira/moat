@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Item } from "@/lib/types";
 
-const emptyDraft = { name: "", quantity: "", estimatedUnitPrice: "", neededBy: "" };
+const emptyDraft = { name: "", quantity: "", estimatedUnitPrice: "", neededBy: "", note: "" };
 
 export function PlannerAddForm({
   items,
@@ -23,6 +23,7 @@ export function PlannerAddForm({
     quantity?: number;
     estimatedUnitPrice?: number;
     neededBy?: string;
+    note?: string;
   }) => void;
 }) {
   const [draft, setDraft] = useState(emptyDraft);
@@ -34,12 +35,14 @@ export function PlannerAddForm({
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       estimatedUnitPrice: parseAmountInput(draft.estimatedUnitPrice) ?? undefined,
       neededBy: draft.neededBy || undefined,
+      note: draft.note.trim() || undefined,
     });
     setDraft(emptyDraft);
   };
 
   return (
-    <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end">
+    <div className="grid gap-2">
+      <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end">
       <div className="grid gap-1">
         <Label htmlFor="planner-name">Item</Label>
         <Input
@@ -83,9 +86,19 @@ export function PlannerAddForm({
           onChange={(value) => setDraft({ ...draft, neededBy: value })}
         />
       </div>
-      <Button disabled={isSubmitting || !draft.name.trim()} onClick={submit}>
-        Add to list
-      </Button>
+        <Button disabled={isSubmitting || !draft.name.trim()} onClick={submit}>
+          Add to list
+        </Button>
+      </div>
+      <div className="grid gap-1">
+        <Label htmlFor="planner-note">Note (optional)</Label>
+        <Input
+          id="planner-note"
+          value={draft.note}
+          placeholder="Brand, size, or where to buy it"
+          onChange={(event) => setDraft({ ...draft, note: event.target.value })}
+        />
+      </div>
     </div>
   );
 }

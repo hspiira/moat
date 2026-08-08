@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 
+import type { PlannedPurchase } from "@/lib/types";
+
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 
 import { CheckOffSheet } from "./shopping/check-off-sheet";
+import { PlannerEditSheet } from "./shopping/planner-edit-sheet";
 import { ItemHistorySheet } from "./shopping/item-history-sheet";
 import { PlannerAddForm } from "./shopping/planner-add-form";
 import { PlannerList } from "./shopping/planner-list";
@@ -18,6 +21,7 @@ export function ShoppingWorkspace() {
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [isCheckOffOpen, setIsCheckOffOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<PlannedPurchase | null>(null);
 
   const itemsById = useMemo(
     () => new Map(workspace.items.map((item) => [item.id, item])),
@@ -109,19 +113,30 @@ export function ShoppingWorkspace() {
           isSubmitting={workspace.isSubmitting}
           onToggleSelect={toggleSelect}
           onDrop={(purchase) => void workspace.dropPurchase(purchase)}
+          onEdit={(purchase) => setEditingPurchase(purchase)}
           onRestore={(purchase) => void workspace.restorePurchase(purchase)}
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
       </div>
+      <PlannerEditSheet
+        purchase={editingPurchase}
+        item={editingPurchase ? workspace.items.find((i) => i.id === editingPurchase.itemId) : undefined}
+        isSubmitting={workspace.isSubmitting}
+        onSave={(purchase, patch) => {
+          void workspace.editPurchase(purchase, patch).then(() => setEditingPurchase(null));
+        }}
+        onOpenChange={(open) => (open ? undefined : setEditingPurchase(null))}
+      />
       <CheckOffSheet
         open={isCheckOffOpen}
         selected={selectedPurchases}
+        items={workspace.items}
         recentExpenses={workspace.recentExpenses}
         accounts={workspace.accounts}
         expenseCategories={workspace.expenseCategories}
         isSubmitting={workspace.isSubmitting}
-        onConfirm={(target) => {
-          void workspace.checkOff(selectedPurchases, target).then((succeeded) => {
+        onConfirm={(target, actuals) => {
+          void workspace.checkOff(selectedPurchases, target, actuals).then((succeeded) => {
             if (!succeeded) return;
             setSelectedIds(new Set());
             setIsCheckOffOpen(false);
