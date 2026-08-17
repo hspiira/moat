@@ -11,14 +11,15 @@ const repoRoot = path.resolve(here, "..");
 // does not support TypeScript path mappings, so bundling is what makes the
 // shared code deployable there at all.
 //
-// Output lands at the package root because Vercel captures a `server.js` that
-// calls listen() on module load and turns it into a function.
+// Output lands in dist/ because Vercel checks the entrypoint exists before it
+// installs or builds anything, so the entrypoint has to be a committed file.
+// server.js and migrate.js are those files; they import what lands here.
 const options = {
   entryPoints: [
     path.join(here, "src/server.ts"),
     path.join(here, "src/migrate.ts"),
   ],
-  outdir: here,
+  outdir: path.join(here, "dist"),
   bundle: true,
   platform: "node",
   target: "node22",
