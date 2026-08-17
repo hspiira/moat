@@ -1,0 +1,9 @@
+packages:
+  - server
+
+allowBuilds:
+  esbuild: true
+  msw: true
+  sharp: true
+  tesseract.js: true
+  unrs-resolver: true

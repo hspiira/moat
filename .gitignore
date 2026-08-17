@@ -21,3 +21,9 @@ pnpm-debug.log*
 
 # Static export output
 /out/
+
+# Sync server build output
+server/dist/
+
+# Dev-only file-backed sync store
+.moat-sync/
