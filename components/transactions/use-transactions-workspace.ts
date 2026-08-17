@@ -6,18 +6,13 @@
 // and the month-close CSV are pure modules with their own tests.
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { persistReviewedCaptureCandidates } from "@/lib/capture/persistence";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { getOpenCaptureReviewItems } from "@/lib/capture/review-queue";
-import {
-  getRememberedFxDefault,
-  normalizePayeeKey,
-  saveFxMemory,
-} from "@/lib/preferences/fx-memory";
+import { normalizePayeeKey, saveFxMemory } from "@/lib/preferences/fx-memory";
 import { readDebtPlannerSettings } from "@/lib/preferences/debt-planner";
 import type {
   Account,
@@ -28,53 +23,39 @@ import type {
   TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
-import { reconcileAccountBalances } from "@/lib/domain/accounts";
-import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
-import { findTransactionTypeDrift } from "@/lib/domain/transaction-type-drift";
 import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
-import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
 import {
   buildSuggestedRecurringObligations,
   evaluateRecurringObligations,
 } from "@/lib/domain/recurring";
-import {
-  evaluateMonthClose,
-  getUnresolvedTransactions,
-} from "@/lib/domain/reconciliation";
+import { getUnresolvedTransactions } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { countCategoryUsage } from "@/lib/domain/category-usage";
-import { currentMonthIso, todayIso } from "@/lib/today";
+import { currentMonthIso } from "@/lib/today";
 import { isReservedAccount } from "@/lib/domain/reserved-accounts";
+import { buildTransactionEdit } from "./transaction-edit-form";
+import { useTransactionFormSync } from "./use-transaction-form-sync";
 import { createDefaultTransactionForm, type TransactionFormState } from "./transaction-form";
 import { useCounterparties } from "./use-counterparties";
 import { useLineItems } from "./use-line-items";
 import { useMonthClose } from "./use-month-close";
-export type CaptureIntent = "expense" | "income" | "transfer" | "import" | "text" | null;
+import { evaluateMonth } from "@/lib/domain/month-evaluation";
+import { planTransactionWrite } from "@/lib/domain/transaction-write-plan";
+import { persistReconciledBalances } from "@/lib/repositories/account-balances";
+import { loadWorkspaceSnapshot } from "@/lib/repositories/workspace-snapshot";
 import {
-  buildDebtPaymentTransactions,
-  buildFeeTransaction,
-  buildManualTransaction,
-  buildTransferPair,
-} from "./transaction-builder";
-import {
-  feesCategoryId,
-  ensureFeesCategory,
-  reconcileDefaultCategories,
-} from "@/lib/app-state/defaults";
+  applyTransactionDelete,
+  applyTransactionWrite,
+} from "@/lib/repositories/transaction-write";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
 import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
 import { createId } from "@/lib/ids";
-import {
-  isEditableTransaction,
-  planTransactionCascade,
-  transactionGroup,
-  transferLegs,
-} from "@/lib/domain/transaction-cascade";
 
+export type { CaptureIntent } from "./capture-intent";
 export type { BudgetFormState };
 
 function useLatest<T>(value: T) {
@@ -99,11 +80,6 @@ function sortTransactions(transactions: Transaction[]) {
  * user's own accounts, so defaulting to one files ordinary spending against the
  * lending or borrowing ledger. They stay selectable, just never preselected.
  */
-/** The fee recorded against a payment, if there is one. */
-function findFeeFor(transactions: Transaction[], parentId: string): Transaction | undefined {
-  return transactions.find((entry) => entry.feeParentId === parentId);
-}
-
 function selectableAccounts(accounts: Account[]): Account[] {
   const spendable = accounts.filter(
     (account) => !isReservedAccount(account) && !account.isArchived,
@@ -116,9 +92,6 @@ function getResetTransactionForm(
   categories: Category[],
 ): TransactionFormState {
   const base = createDefaultTransactionForm();
-  // Skip the party-ledger pools: they are seeded for everyone and sort ahead of
-  // the user's own accounts, so defaulting to one files ordinary spending
-  // against the lending or borrowing ledger.
   const selectable = selectableAccounts(accounts);
 
   return {
@@ -134,7 +107,6 @@ function getResetTransactionForm(
 }
 
 export function useTransactionsWorkspace() {
-  const searchParams = useSearchParams();
   const { show } = useToast();
   const closePeriod = currentMonthIso();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -156,9 +128,6 @@ export function useTransactionsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [rememberedFxHint, setRememberedFxHint] = useState<string | null>(null);
-  const [captureIntent, setCaptureIntent] = useState<CaptureIntent>(null);
-  const [sharedCaptureInput, setSharedCaptureInput] = useState("");
   const debtPlannerSettings = useMemo(() => readDebtPlannerSettings(), []);
 
   const {
@@ -267,147 +236,51 @@ export function useTransactionsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedCategories, storedTransactions, storedLineItems] =
-        await Promise.all([
-          repositories.accounts.listByUser(nextProfile.id),
-          repositories.categories.listByUser(nextProfile.id),
-          repositories.transactions.listByUser(nextProfile.id),
-          repositories.transactionLineItems.listByUser(nextProfile.id),
-        ]);
-      const [
-        storedCaptureReviewItems,
-        storedRules,
-        storedObligations,
-        storedMonthClose,
-        storedBudgets,
-        storedSyncProfile,
-        storedOutbox,
-      ] = await Promise.all([
-        repositories.captureReviewItems.listByUser(nextProfile.id),
-        repositories.transactionRules.listByUser(nextProfile.id),
-        repositories.recurringObligations.listByUser(nextProfile.id),
-        repositories.monthCloses.getByPeriod(nextProfile.id, closePeriod),
-        repositories.budgets.listByMonth(nextProfile.id, closePeriod),
-        repositories.syncProfiles.getByUser(nextProfile.id),
-        repositories.syncOutbox.listByUser(nextProfile.id),
-      ]);
-
-      // Only meaningful when hosted sync is on; otherwise nothing is "waiting".
-      const syncEnabled =
-        storedSyncProfile?.hostedSyncEnabled && storedSyncProfile.mode === "hosted_opt_in";
-      setPendingSyncTransactionIds(
-        syncEnabled
-          ? new Set(
-              storedOutbox
-                .filter(
-                  (item) =>
-                    item.entityType === "transaction" &&
-                    (item.status === "pending" || item.status === "failed"),
-                )
-                .map((item) => item.entityId),
-            )
-          : new Set(),
-      );
-
-      const accountSeeds = reconcileDefaultAccounts(
-        storedAccounts,
-        nextProfile.id,
-        new Date().toISOString(),
-      );
-      if (accountSeeds.length > 0) {
-        await Promise.all(accountSeeds.map((account) => repositories.accounts.upsert(account)));
-      }
-
-      // Reconcile in memory for display only. Loading is a read — persisting
-      // balances here would churn storage and the sync outbox on every view.
-      const reconciledAccounts = reconcileAccountBalances(
-        [...storedAccounts, ...accountSeeds],
-        storedTransactions,
-      );
-
-      // Seeded categories do get written, because a stale kind is not cosmetic:
-      // "Debt repayment" seeded as an expense leaves a debt payment with no
-      // valid category at all. Returns nothing once a device is current, so
-      // this is a one-off write rather than churn on every load.
-      const categoryFixes = reconcileDefaultCategories(storedCategories, nextProfile.id);
-      if (categoryFixes.length > 0) {
-        await Promise.all(categoryFixes.map((category) => repositories.categories.upsert(category)));
-      }
-      const currentCategories =
-        categoryFixes.length > 0
-          ? await repositories.categories.listByUser(nextProfile.id)
-          : storedCategories;
-
-      const backfilled = await loadAndBackfill(nextProfile.id, storedTransactions);
-
-      // Repairs rows left carrying a type their category no longer permits,
-      // which assertCategoryMatchesType rejects on save.
-      const drift = findTransactionTypeDrift(
-        backfilled,
-        currentCategories,
-        new Date().toISOString(),
-      );
-      if (drift.repaired.length > 0) {
-        await Promise.all(
-          drift.repaired.map((entry) => repositories.transactions.upsert(entry)),
-        );
-      }
-      if (drift.needsReview.length > 0) {
-        console.warn(
-          `Moat: ${drift.needsReview.length} transaction(s) have a category their type cannot use and need a manual fix.`,
-          drift.needsReview.map((entry) => entry.id),
-        );
-      }
-      const repairedById = new Map(drift.repaired.map((entry) => [entry.id, entry]));
-      const currentTransactions = backfilled.map((entry) => repairedById.get(entry.id) ?? entry);
-
-      setAccounts(reconciledAccounts);
-      setCategories(currentCategories);
-      setTransactions(sortTransactions(currentTransactions));
-      setLineItems(storedLineItems);
-      setBudgets(storedBudgets);
-      setCaptureReviewItems(storedCaptureReviewItems);
-      setTransactionRules(storedRules);
-      setRecurringObligations(storedObligations);
-      setMonthClose(storedMonthClose);
-
-      const nextRecurringEvaluations = evaluateRecurringObligations(
-        storedObligations,
-        storedTransactions,
+      const snapshot = await loadWorkspaceSnapshot({
+        userId: nextProfile.id,
         closePeriod,
-      );
+        timestamp: new Date().toISOString(),
+        backfillCounterparties: loadAndBackfill,
+      });
+
+      setAccounts(snapshot.accounts);
+      setCategories(snapshot.categories);
+      setTransactions(sortTransactions(snapshot.transactions));
+      setLineItems(snapshot.lineItems);
+      setBudgets(snapshot.budgets);
+      setCaptureReviewItems(snapshot.captureReviewItems);
+      setTransactionRules(snapshot.transactionRules);
+      setRecurringObligations(snapshot.recurringObligations);
+      setMonthClose(snapshot.monthClose);
+      setPendingSyncTransactionIds(snapshot.pendingSyncTransactionIds);
+
       setMonthCloseEvaluation(
-        evaluateMonthClose(
-          storedTransactions.filter((transaction) => transaction.occurredOn.startsWith(closePeriod)),
-          storedCategories,
-          nextRecurringEvaluations.map((evaluation) => ({
-            obligation: evaluation.obligation,
-            status:
-              evaluation.state === "paid"
-                ? "paid"
-                : evaluation.state === "partial"
-                  ? "partial"
-                  : "missing",
-          })),
-        ),
+        evaluateMonth({
+          accounts: snapshot.accounts,
+          transactions: snapshot.transactions,
+          categories: snapshot.categories,
+          obligations: snapshot.recurringObligations,
+          closePeriod,
+          debtPlannerSettings,
+        }),
       );
 
-      const defaultAccounts = selectableAccounts(reconciledAccounts);
+      const defaultAccounts = selectableAccounts(snapshot.accounts);
       setTransactionForm((current) => ({
-        ...getResetTransactionForm(reconciledAccounts, storedCategories),
+        ...getResetTransactionForm(snapshot.accounts, snapshot.categories),
         ...current,
         accountId: current.accountId || defaultAccounts[0]?.id || "",
         destinationAccountId: current.destinationAccountId || defaultAccounts[1]?.id || "",
         categoryId:
           current.categoryId ||
-          storedCategories.find((category) => categoryMatchesType(category, current.type))?.id ||
+          snapshot.categories.find((category) => categoryMatchesType(category, current.type))?.id ||
           "",
       }));
       setBudgetForm((current) => ({
         ...current,
         categoryId:
           current.categoryId ||
-          storedCategories.find((category) => category.kind === "expense")?.id ||
+          snapshot.categories.find((category) => category.kind === "expense")?.id ||
           "",
       }));
     } catch (loadError) {
@@ -417,6 +290,7 @@ export function useTransactionsWorkspace() {
     }
   }, [
     closePeriod,
+    debtPlannerSettings,
     loadAndBackfill,
     setBudgetForm,
     setBudgets,
@@ -437,119 +311,12 @@ export function useTransactionsWorkspace() {
     });
   }, [loadWorkspace]);
 
-  useEffect(() => {
-    const capture = searchParams.get("capture");
-    const type = searchParams.get("type");
-    const accountId = searchParams.get("accountId");
-    const amount = searchParams.get("amount");
-    const payee = searchParams.get("payee");
-    const sharedTitle = searchParams.get("title");
-    const sharedText = searchParams.get("text");
-    const sharedUrl = searchParams.get("url");
-    const nextSharedInput = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join("\n");
-    const nextCaptureIntent: CaptureIntent =
-      capture === "expense" ||
-      capture === "income" ||
-      capture === "transfer" ||
-      capture === "import" ||
-      capture === "text"
-        ? capture
-        : nextSharedInput
-          ? "text"
-          : null;
-
-    setCaptureIntent(nextCaptureIntent);
-    setSharedCaptureInput(nextSharedInput);
-
-    if (!capture && !type && !accountId && !amount && !payee && !nextSharedInput) return;
-
-    setTransactionForm((current) => ({
-      ...current,
-      type: (type as TransactionFormState["type"]) || current.type,
-      accountId: accountId || current.accountId,
-      amount: amount || current.amount,
-      payee: payee || current.payee,
-      categoryId:
-        categories.find((category) =>
-          categoryMatchesType(category, (type as TransactionFormState["type"]) || current.type),
-        )?.id ?? current.categoryId,
-    }));
-  }, [categories, searchParams]);
-
-  /**
-   * Keep the default date on today while the app stays open.
-   *
-   * The form can sit on screen for days — an installed PWA is rarely closed —
-   * and the date it was created with would otherwise still be offered after
-   * midnight. Only a date the app stamped itself is moved; once the user picks
-   * one it is left alone, so recording yesterday's spending still works.
-   */
-  const autoStampedDate = useRef(todayIso());
-  useEffect(() => {
-    const refresh = () => {
-      const today = todayIso();
-      if (autoStampedDate.current === today) return;
-      const previous = autoStampedDate.current;
-      autoStampedDate.current = today;
-      if (editingTransactionId) return;
-      setTransactionForm((current) =>
-        current.occurredOn === previous ? { ...current, occurredOn: today } : current,
-      );
-    };
-
-    refresh();
-    const timer = setInterval(refresh, 60_000);
-    document.addEventListener("visibilitychange", refresh);
-    window.addEventListener("focus", refresh);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", refresh);
-      window.removeEventListener("focus", refresh);
-    };
-  }, [editingTransactionId]);
-
-  useEffect(() => {
-    if (transactionForm.currency === "UGX") {
-      setRememberedFxHint(null);
-      return;
-    }
-
-    const payee = transactionForm.payee.trim();
-    if (!payee) {
-      setRememberedFxHint(null);
-      return;
-    }
-
-    const memory = getRememberedFxDefault(payee, transactionForm.currency);
-    if (!memory) {
-      setRememberedFxHint(null);
-      return;
-    }
-
-    setRememberedFxHint(memory.hint);
-    setTransactionForm((current) => {
-      if (current.fxRateToUgx) return current;
-      if (current.currency !== memory.currency) return current;
-      if (normalizePayeeKey(current.payee) !== memory.payeeKey) return current;
-      return { ...current, fxRateToUgx: String(memory.rateToUgx) };
-    });
-  }, [transactionForm.currency, transactionForm.payee]);
-
-  /**
-   * Persists reconciled balances after a ledger mutation. Only accounts
-   * whose stored balance actually changed are written, so the sync outbox
-   * is not flooded with no-op upserts.
-   */
-  const persistReconciledBalances = useCallback(async (userId: string) => {
-    const storedAccounts = await repositories.accounts.listByUser(userId);
-    const storedTransactions = await repositories.transactions.listByUser(userId);
-    const reconciled = reconcileAccountBalances(storedAccounts, storedTransactions);
-    const storedBalances = new Map(storedAccounts.map((account) => [account.id, account.balance]));
-    const changed = reconciled.filter(
-      (account) => storedBalances.get(account.id) !== account.balance,
-    );
-    await Promise.all(changed.map((account) => repositories.accounts.upsert(account)));
-  }, []);
+  const { captureIntent, sharedCaptureInput, rememberedFxHint } = useTransactionFormSync({
+    form: transactionForm,
+    setForm: setTransactionForm,
+    categories,
+    editingTransactionId,
+  });
 
   const resolveFormCounterparty = useCallback(
     (userId: string, timestamp: string) =>
@@ -577,85 +344,25 @@ export function useTransactionsWorkspace() {
       try {
         const timestamp = new Date().toISOString();
         const wasEditing = Boolean(editingTransactionId);
-        const buildInput = {
-          form: transactionForm,
-          userId: profile.id,
-          timestamp,
-          editingTransactionId,
-          existingTransactions: transactions,
-        };
+        const isTransfer = transactionForm.type === "transfer";
+        const isManual = !isTransfer && transactionForm.type !== "debt_payment";
 
-        // The rows the previous shape wrote. A category can change the type, so
-        // an edit may produce a different set of rows than it started with: an
-        // expense becoming a transfer, or a transfer becoming an expense. What
-        // the old shape wrote and the new one does not has to go, or the ledger
-        // keeps a row nothing points at.
-        const editedRow = editingTransactionId
-          ? transactions.find((entry) => entry.id === editingTransactionId)
-          : undefined;
-        const previousRowIds = new Set(
-          editedRow ? transactionGroup(editedRow, transactions).map((entry) => entry.id) : [],
-        );
-        // A fee hangs off one of those rows, whichever it was.
-        const previousFee = transactions.find(
-          (entry) => entry.feeParentId && previousRowIds.has(entry.feeParentId),
-        );
+        // Validated before the first write, so a bad form leaves storage untouched.
+        const plan = planTransactionWrite({
+          build: {
+            form: transactionForm,
+            userId: profile.id,
+            timestamp,
+            editingTransactionId,
+            existingTransactions: transactions,
+          },
+          accounts,
+          categories,
+          rules: isManual ? await repositories.transactionRules.listByUser(profile.id) : [],
+          counterparty: isTransfer ? await resolveFormCounterparty(profile.id, timestamp) : null,
+        });
 
-        let rows: Transaction[];
-        if (transactionForm.type === "transfer") {
-          const party = await resolveFormCounterparty(profile.id, timestamp);
-          const stamp = (row: Transaction): Transaction =>
-            party ? { ...row, counterpartyId: party.id, payee: party.name } : row;
-          rows = buildTransferPair(buildInput).map(stamp);
-        } else if (transactionForm.type === "debt_payment") {
-          // Split into an interest expense and a principal transfer. The user
-          // enters one payment and taps nothing extra; the rate and balance on
-          // the loan supply the rest.
-          const loan = accounts.find(
-            (account) => account.id === transactionForm.destinationAccountId,
-          );
-          if (!loan) {
-            throw new Error("Choose which loan you are paying.");
-          }
-          rows = buildDebtPaymentTransactions(buildInput, loan);
-        } else {
-          const rules = await repositories.transactionRules.listByUser(profile.id);
-          // Passing the catalogue makes the type/category pair a write-time
-          // check, not just something the picker happens to hide.
-          rows = [buildManualTransaction(buildInput, rules, categories)];
-        }
-
-        // A fee is a separate linked expense on the same account (the transfer
-        // source, for transfers), tied to its payment by feeParentId. Reusing
-        // the previous fee's id repoints it at the new parent instead of
-        // leaving it behind pointing at a row that no longer exists.
-        const feeParent = rows[0];
-        const fee = buildFeeTransaction(
-          feeParent,
-          transactionForm.feeAmount,
-          feesCategoryId(feeParent.userId),
-          previousFee,
-        );
-
-        // Everything is built and validated before the first write, so a bad
-        // form leaves storage untouched.
-        await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
-        if (fee) {
-          const feesCategory = ensureFeesCategory(categories, profile.id);
-          if (feesCategory) {
-            await repositories.categories.upsert(feesCategory);
-          }
-          await repositories.transactions.upsert(fee);
-        }
-
-        // Prune after writing, never before: an interruption then leaves a
-        // visible duplicate rather than a hole where the money was.
-        const writtenIds = new Set([...rows.map((row) => row.id), ...(fee ? [fee.id] : [])]);
-        const stale = [...previousRowIds].filter((id) => !writtenIds.has(id));
-        if (previousFee && !fee) {
-          stale.push(previousFee.id);
-        }
-        await Promise.all(stale.map((id) => repositories.transactions.remove(id)));
+        await applyTransactionWrite(plan, categories, profile.id);
 
         await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
@@ -689,8 +396,7 @@ export function useTransactionsWorkspace() {
       categories,
       editingTransactionId,
       loadWorkspace,
-      persistReconciledBalances,
-      profile,
+        profile,
       refreshMonthCloseState,
       resolveFormCounterparty,
       show,
@@ -736,59 +442,10 @@ export function useTransactionsWorkspace() {
 
   const beginTransactionEdit = useCallback(
     (transaction: Transaction) => {
-      // A loan repayment carries an interest leg whose split cannot be
-      // recomputed against a balance that has since moved.
-      if (!isEditableTransaction(transaction, transactions)) {
-        return;
-      }
-
-      if (transaction.type === "transfer") {
-        const legs = transferLegs(transaction, transactions);
-        if (!legs) return;
-        const { source, destination } = legs;
-        // Edit through the source leg: its id is what the fee hangs off, and
-        // rebuilding reuses the group so both legs are overwritten in place.
-        const feeOnSource = findFeeFor(transactions, source.id);
-        setEditingTransactionId(source.id);
-        setTransactionForm({
-          type: "transfer",
-          accountId: source.accountId,
-          destinationAccountId: destination.accountId,
-          categoryId: source.categoryId,
-          currency: source.currency,
-          payee: source.payee ?? source.rawPayee ?? "",
-          counterpartyId: source.counterpartyId ?? destination.counterpartyId ?? "",
-          counterpartyName: "",
-          amount: String(Math.abs(source.originalAmount)),
-          fxRateToUgx: source.fxRateToUgx ? String(source.fxRateToUgx) : "",
-          feeAmount: feeOnSource ? String(feeOnSource.originalAmount) : "",
-          occurredOn: source.occurredOn,
-          expectedRepaymentDate:
-            source.expectedRepaymentDate ?? destination.expectedRepaymentDate ?? "",
-          note: source.note ?? "",
-        });
-        return;
-      }
-
-      const feeChild = findFeeFor(transactions, transaction.id);
-      setEditingTransactionId(transaction.id);
-      setTransactionForm({
-        type: transaction.type,
-        accountId: transaction.accountId,
-        destinationAccountId: "",
-        categoryId: transaction.categoryId,
-        currency: transaction.currency,
-        payee: transaction.payee ?? transaction.rawPayee ?? "",
-        counterpartyId: transaction.counterpartyId ?? "",
-        counterpartyName: "",
-        amount: String(transaction.originalAmount),
-        fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
-        feeAmount: feeChild ? String(feeChild.originalAmount) : "",
-        occurredOn: transaction.occurredOn,
-        // Only a transfer leg carries a due date, and that path returns above.
-        expectedRepaymentDate: "",
-        note: transaction.note ?? "",
-      });
+      const edit = buildTransactionEdit(transaction, transactions);
+      if (!edit) return;
+      setEditingTransactionId(edit.editingId);
+      setTransactionForm(edit.form);
     },
     [transactions],
   );
@@ -800,33 +457,19 @@ export function useTransactionsWorkspace() {
       setError(null);
 
       try {
-        const idsToRemove = planTransactionCascade(transaction, transactions);
-        const [lineItems, plannedPurchases] = await Promise.all([
-          repositories.transactionLineItems.listByUser(profile.id),
-          repositories.plannedPurchases.listByUser(profile.id),
-        ]);
-        const cascade = planLineItemCascade({
-          deletedTransactionIds: idsToRemove,
-          lineItems,
-          plannedPurchases,
-          timestamp: new Date().toISOString(),
-        });
-        await Promise.all([
-          ...[...idsToRemove].map((id) => repositories.transactions.remove(id)),
-          ...cascade.lineItemIdsToDelete.map((id) =>
-            repositories.transactionLineItems.remove(id),
-          ),
-          ...cascade.purchasesToRevert.map((purchase) =>
-            repositories.plannedPurchases.upsert(purchase),
-          ),
-        ]);
+        const timestamp = new Date().toISOString();
+        const removed = await applyTransactionDelete(
+          transaction,
+          transactions,
+          profile.id,
+          timestamp,
+        );
 
-        if (editingTransactionId === transaction.id) {
+        if (editingTransactionId && removed.has(editingTransactionId)) {
           setEditingTransactionId(null);
           setTransactionForm(createDefaultTransactionForm());
         }
 
-        const timestamp = new Date().toISOString();
         const message = "Transaction deleted locally";
         setLastSavedAt(timestamp);
         setSuccessMessage(message);
@@ -846,8 +489,7 @@ export function useTransactionsWorkspace() {
     [
       editingTransactionId,
       loadWorkspace,
-      persistReconciledBalances,
-      profile,
+        profile,
       refreshMonthCloseState,
       show,
       transactions,

@@ -3,13 +3,9 @@
 import { useCallback, useState } from "react";
 
 import { readDebtPlannerSettings } from "@/lib/preferences/debt-planner";
-import {
-  buildSuggestedRecurringObligations,
-  evaluateRecurringObligations,
-} from "@/lib/domain/recurring";
+import { evaluateMonth } from "@/lib/domain/month-evaluation";
 import {
   buildMonthCloseRecord,
-  evaluateMonthClose,
   type MonthCloseEvaluation,
 } from "@/lib/domain/reconciliation";
 import { errorMessage } from "@/lib/errors";
@@ -72,30 +68,14 @@ export function useMonthClose({
         repositories.recurringObligations.listByUser(userId),
         repositories.monthCloses.getByPeriod(userId, closePeriod),
       ]);
-      const nextRecurringEvaluations = evaluateRecurringObligations(
-        [
-          ...storedObligations,
-          ...buildSuggestedRecurringObligations(
-            storedAccounts,
-            storedTransactions,
-            debtPlannerSettings.strategy,
-            debtPlannerSettings.extraMonthlyPayment,
-          ),
-        ],
-        storedTransactions,
+      const evaluation = evaluateMonth({
+        accounts: storedAccounts,
+        transactions: storedTransactions,
+        categories: storedCategories,
+        obligations: storedObligations,
         closePeriod,
-      );
-      const evaluation = evaluateMonthClose(
-        storedTransactions.filter((transaction) =>
-          transaction.occurredOn.startsWith(closePeriod),
-        ),
-        storedCategories,
-        nextRecurringEvaluations.map((entry) => ({
-          obligation: entry.obligation,
-          status:
-            entry.state === "paid" ? "paid" : entry.state === "partial" ? "partial" : "missing",
-        })),
-      );
+        debtPlannerSettings,
+      });
       const nextRecord = buildMonthCloseRecord(
         existingMonthClose,
         userId,
@@ -106,7 +86,7 @@ export function useMonthClose({
       setMonthClose(nextRecord);
       setMonthCloseEvaluation(evaluation);
     },
-    [closePeriod, debtPlannerSettings.extraMonthlyPayment, debtPlannerSettings.strategy],
+    [closePeriod, debtPlannerSettings],
   );
 
   const closeMonth = useCallback(async () => {
