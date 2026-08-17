@@ -251,7 +251,7 @@ export function useCaptureReviewWorkspace() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [loadWorkspace, profile, transactionRules]);
+  }, [categories, loadWorkspace, profile, transactionRules]);
 
   const rejectItem = useCallback(async (item: CaptureReviewItem) => {
     if (item.status === "approved" || item.approvedTransactionId) {
