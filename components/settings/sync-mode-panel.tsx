@@ -7,6 +7,7 @@ import { repositories } from "@/lib/repositories/instance";
 import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/types";
 import { runHostedSync } from "@/lib/sync/engine";
 import { backfillSyncOutbox, hasBackfilled } from "@/lib/sync/backfill";
+import { migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
 import { isHostedSyncEnabled } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,12 +110,26 @@ export function SyncModePanel() {
       setSyncProfile(next);
       setSuccess("Sync preference saved locally.");
 
-      // Records written before opt-in have no outbox entry, so queue them once.
       if (next.hostedSyncEnabled && next.mode === "hosted_opt_in" && !hasBackfilled(next)) {
-        setBackfillStatus("Preparing your existing records...");
+        // Renumber to cuid2 first. This is the only safe window: nothing has
+        // been pushed yet, so no server record can be orphaned by it.
+        setBackfillStatus("Preparing your records...");
+        await migrateIdsToCuid2({ repositories, userId: next.userId });
+
+        // The migration may have changed the user id, so re-read rather than
+        // backfilling against the profile captured before it ran.
+        const migratedUser = await repositories.userProfile.get();
+        const activeProfile = migratedUser
+          ? ((await repositories.syncProfiles.getByUser(migratedUser.id)) ?? {
+              ...next,
+              userId: migratedUser.id,
+            })
+          : next;
+
+        // Records written before opt-in have no outbox entry, so queue them once.
         const summary = await backfillSyncOutbox({
           repositories,
-          profile: next,
+          profile: activeProfile,
           onProgress: (progress) =>
             setBackfillStatus(
               `Preparing your existing records... ${progress.queued} queued (${progress.storesDone}/${progress.storesTotal})`,
