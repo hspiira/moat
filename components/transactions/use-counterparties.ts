@@ -8,6 +8,7 @@ import {
   newCounterpartyId,
   resolveCounterparty,
 } from "@/lib/domain/counterparties";
+import { planCounterpartyMerge } from "@/lib/domain/counterparty-merge";
 import { poolCounterpartyKinds } from "@/lib/domain/reserved-accounts";
 import {
   NEW_COUNTERPARTY,
@@ -49,13 +50,48 @@ export function useCounterparties() {
         ]);
       }
 
-      setCounterparties([...stored, ...backfill.counterparties]);
-
-      if (backfill.transactions.length === 0) {
-        return transactions;
-      }
       const stamped = new Map(backfill.transactions.map((row) => [row.id, row]));
-      return transactions.map((row) => stamped.get(row.id) ?? row);
+      const afterBackfill = transactions.map((row) => stamped.get(row.id) ?? row);
+      const afterBackfillParties = [...stored, ...backfill.counterparties];
+
+      // Collapse records that name the same person. Dedupe on write only ever
+      // covered one path, so duplicates could reach the store and split a
+      // party's balance across them.
+      const merge = planCounterpartyMerge(
+        afterBackfillParties,
+        afterBackfill,
+        new Date().toISOString(),
+      );
+
+      if (merge.removedIds.length === 0) {
+        setCounterparties(afterBackfillParties);
+        return afterBackfill;
+      }
+
+      // Repointed rows and survivors land before the duplicates go, so an
+      // interruption leaves an unused record rather than an orphaned reference.
+      await Promise.all([
+        ...merge.counterparties.map((entry) => repositories.counterparties.upsert(entry)),
+        ...merge.transactions.map((row) => repositories.transactions.upsert(row)),
+      ]);
+      await Promise.all(
+        merge.removedIds.map((id) => repositories.counterparties.remove(id)),
+      );
+      console.warn(
+        `Moat: merged ${merge.removedIds.length} duplicate counterparty record(s).`,
+        merge.removedIds,
+      );
+
+      const removed = new Set(merge.removedIds);
+      const survivors = new Map(merge.counterparties.map((entry) => [entry.id, entry]));
+      setCounterparties(
+        afterBackfillParties
+          .filter((entry) => !removed.has(entry.id))
+          .map((entry) => survivors.get(entry.id) ?? entry),
+      );
+
+      const repointed = new Map(merge.transactions.map((row) => [row.id, row]));
+      return afterBackfill.map((row) => repointed.get(row.id) ?? row);
     },
     [],
   );
