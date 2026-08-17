@@ -26,7 +26,7 @@ A consolidation pass reconciled the docs with the code and closed several review
 - **Goal progress is now derived**: goal progress = manual starting amount + savings contributions on the linked account (`deriveGoalCurrentAmount`), resolving the contradiction between the pilot checklist and the old stored-only `currentAmount`. `MonthSummary.net` now means inflow − outflow − allocated savings (previously a duplicate of `savings`).
 - **Service worker fixed**: precache now covers the icons the manifest actually uses, installs resiliently, and caches visited pages so previously opened routes work offline.
 - **Transactions workspace refactored**: balance reconciliation moved off the read path (loads no longer write to storage; only changed balances persist after mutations). Transaction construction and the month-close CSV are pure, tested modules; budgets and rules/obligations live in their own hooks.
-- **Sync backend loudly marked dev-only**: routes refuse to run the hosted file-backed store without a bearer token, and code/docs state that per-user auth and a real database are prerequisites for real hosted sync.
+- **Sync server runs on Postgres**: `server/` is a standalone Node service with keyset-paged pull, transactional pushes under row locks, and row-level tenancy. Authentication is still one shared bearer token, so per-user auth remains a prerequisite before hosted sync is offered to anyone.
 
 ---
 
@@ -53,12 +53,16 @@ A consolidation pass reconciled the docs with the code and closed several review
 - PIN lock with at-rest record encryption — onboarding default, min 6 digits, throttled unlock
 - Encrypted backup and restore — local `.enc` file and Google Drive (appdata scope)
 - PWA install, offline shell, and share-target intake; hand-rolled Android WebView host shell with share-to-app capture implemented in code (not device-verified)
-- Client-side sync engine, outbox, and per-entity conflict rules with a manual-review queue at `/settings/sync-conflicts` (server side is a dev-only stub)
+- Client-side sync engine, outbox, and per-entity conflict rules with a manual-review queue at `/settings/sync-conflicts`
+- First-sync backfill: opting in queues records created before opt-in, which previously never reached the server
+- Sync server (`server/`) on Postgres, deployed separately from the static-export web app
 - CI: typecheck, lint, test, build on every push/PR
 
 ### What is not yet built
 
-- Hosted multi-device sync backend (per-user auth + real database; current server is a dev-only file stub)
+- Per-user authentication for hosted sync (the server still trusts `userId` from the request body behind one shared token)
+- End-to-end encryption of sync payloads (they are currently plaintext on the wire)
+- Client-side `baseVersionToken` persistence, without which editing an already-synced record is reported as a conflict
 - PDF statement parsing (MTN, Stanbic, DFCU)
 - Android notification listener rollout — service code exists but there is no permission-grant UX and it is not device-verified
 - Correction logging and parser refinement workflow
@@ -101,7 +105,8 @@ Reference: `docs/testing/pilot-readiness.md`
 |----------|---------|--------|
 | Data backup / restore | JSON export/import, server sync, none | **Resolved** — encrypted `.enc` backup/restore to file and Google Drive (plaintext JSON export also exists) |
 | Encryption posture | Opt-in PIN, default PIN, mandatory PIN | **Resolved (2026-07-19)** — PIN + encryption is the onboarding default, ≥6 digits, throttled unlock; explicit opt-out with warning |
-| Auth model | Local-only forever, optional account, required account | Unresolved — blocks hosted sync; current sync server is dev-only |
+| Auth model | Local-only forever, optional account, required account | **Decided (2026-08-17)** — optional account; local-only stays the default and an account unlocks hosted sync. Not yet implemented |
+| Sync encryption posture | Server-readable, end-to-end encrypted, hybrid | **Decided (2026-08-17)** — end-to-end encrypted blobs; the server never holds readable financial data. Not yet implemented |
 | Goal–account linking in UI | Required, optional, not shown | Optional (implemented) |
 | Reminders | In-app only, push/email, none in v1 | None in v1 |
 | CSV parser scope | Current column-mapping approach | Decided — keep |
@@ -206,6 +211,9 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 | 2026-07-19 | Balance reconciliation off the read path | Loads were writing reconciled balances back on every view, churning storage and the sync outbox |
 | 2026-07-19 | Goal progress derived from linked-account savings contributions | Stored-only `currentAmount` went stale and contradicted the pilot checklist |
 | 2026-07-19 | Sync server stays dev-only until per-user auth + real database exist | Shared-token file store has no tenancy; routes now fail closed without a token |
+| 2026-08-17 | Hosted sync will be end-to-end encrypted, with optional accounts | Custodial plaintext financial data for Ugandan users carries breach and compliance exposure the product does not need to take on |
+| 2026-08-17 | Sync server moved to Postgres in `server/`, deployed separately | The web app is a static export and cannot host route handlers, so the previous handlers shipped nowhere |
+| 2026-08-17 | Pull paged with a composite keyset cursor | A bare timestamp cursor drops or replays records written in the same millisecond |
 | 2026-07-19 | Docs restructured under `docs/{product,architecture,plans,research,testing}` | Two doc generations had drifted; tracker is now the single status source |
 
 ---
