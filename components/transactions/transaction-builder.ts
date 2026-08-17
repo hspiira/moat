@@ -50,7 +50,8 @@ function sharedTransactionFields(input: TransactionBuildInput, originalAmount: n
   return {
     currency: form.currency,
     originalAmount: Math.abs(originalAmount),
-    fxRateToUgx: form.currency === "UGX" ? undefined : Number(form.fxRateToUgx),
+    fxRateToUgx:
+      form.currency === "UGX" ? undefined : (parseAmountInput(form.fxRateToUgx) ?? undefined),
     occurredOn: form.occurredOn,
     categoryId: form.categoryId,
     payee: form.payee.trim() || undefined,
