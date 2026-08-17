@@ -279,6 +279,12 @@ export function buildFeeTransaction(
   parent: Transaction,
   feeAmountRaw: string,
   feesCategoryId: string,
+  /**
+   * The fee already recorded against this payment, found by `feeParentId`.
+   * Reusing its id is what makes saving an edit overwrite the fee instead of
+   * adding a second one.
+   */
+  existingFee?: Transaction,
 ): Transaction | null {
   const value = parseAmountInput(feeAmountRaw) ?? Number.NaN;
   if (!Number.isFinite(value) || value <= 0) {
@@ -286,7 +292,7 @@ export function buildFeeTransaction(
   }
 
   return {
-    id: `${parent.id}:fee`,
+    id: existingFee?.id ?? createId(),
     userId: parent.userId,
     accountId: parent.accountId,
     type: "expense",

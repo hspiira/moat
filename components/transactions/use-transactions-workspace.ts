@@ -92,6 +92,11 @@ function sortTransactions(transactions: Transaction[]) {
  * user's own accounts, so defaulting to one files ordinary spending against the
  * lending or borrowing ledger. They stay selectable, just never preselected.
  */
+/** The fee recorded against a payment, if there is one. */
+function findFeeFor(transactions: Transaction[], parentId: string): Transaction | undefined {
+  return transactions.find((entry) => entry.feeParentId === parentId);
+}
+
 function selectableAccounts(accounts: Account[]): Account[] {
   const spendable = accounts.filter(
     (account) => !isReservedAccount(account) && !account.isArchived,
@@ -587,14 +592,22 @@ export function useTransactionsWorkspace() {
         }
 
         // A fee is a separate linked expense on the same account (the transfer
-        // source, for transfers). Editing that clears the fee removes the orphan.
-        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, feesCategoryId(feeParent.userId));
-        const feeId = `${feeParent.id}:fee`;
+        // source, for transfers), tied to its payment by feeParentId. Match on
+        // that rather than on a derived id: a fee written before the cuid2
+        // migration carries an unrelated id, and guessing one would overwrite
+        // nothing and add a duplicate expense instead.
+        const existingFee = findFeeFor(transactions, feeParent.id);
+        const fee = buildFeeTransaction(
+          feeParent,
+          transactionForm.feeAmount,
+          feesCategoryId(feeParent.userId),
+          existingFee,
+        );
         if (fee) {
           await repositories.categories.upsert(buildFeesCategory(profile.id));
           await repositories.transactions.upsert(fee);
-        } else if (transactions.some((entry) => entry.id === feeId)) {
-          await repositories.transactions.remove(feeId);
+        } else if (existingFee) {
+          await repositories.transactions.remove(existingFee.id);
         }
 
         await persistReconciledBalances(profile.id);
@@ -677,7 +690,7 @@ export function useTransactionsWorkspace() {
   const beginTransactionEdit = useCallback(
     (transaction: Transaction) => {
       if (transaction.type === "transfer") return;
-      const feeChild = transactions.find((entry) => entry.id === `${transaction.id}:fee`);
+      const feeChild = findFeeFor(transactions, transaction.id);
       setEditingTransactionId(transaction.id);
       setTransactionForm({
         type: transaction.type,

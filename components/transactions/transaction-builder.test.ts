@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
 import { feesCategoryId, loanInterestCategoryId } from "@/lib/app-state/defaults";
-import { deriveSeededId } from "@/lib/ids";
+import { deriveSeededId, isValidId } from "@/lib/ids";
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { isSpendingTransaction } from "@/lib/domain/transfers";
 import type { Account } from "@/lib/types";
@@ -399,10 +399,10 @@ const parentPayment: Transaction = {
 };
 
 describe("buildFeeTransaction", () => {
-  it("builds a UGX fee expense linked to its parent with a deterministic id", () => {
+  it("builds a UGX fee expense linked to its parent", () => {
     const fee = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"));
     expect(fee).not.toBeNull();
-    expect(fee!.id).toBe("transaction:abc:fee");
+    expect(isValidId(fee!.id)).toBe(true);
     expect(fee!.feeParentId).toBe("transaction:abc");
     expect(fee!.type).toBe("expense");
     expect(fee!.categoryId).toBe(feesCategoryId("user:default"));
@@ -421,6 +421,33 @@ describe("buildFeeTransaction", () => {
     expect(buildFeeTransaction(parentPayment, "0", feesCategoryId("user:default"))).toBeNull();
     expect(buildFeeTransaction(parentPayment, "-5", feesCategoryId("user:default"))).toBeNull();
     expect(buildFeeTransaction(parentPayment, "abc", feesCategoryId("user:default"))).toBeNull();
+  });
+
+  /**
+   * The fee used to take the id `${parent.id}:fee`, so an edit found it by
+   * guessing that string. After the cuid2 migration a stored fee carries an
+   * unrelated id, the guess missed, and saving added a second fee expense
+   * against the same payment — the outflow was counted twice.
+   */
+  it("reuses the id of the fee already recorded against the payment", () => {
+    const stored = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"))!;
+    const migrated = { ...stored, id: "kf83nd0s7a2mqp1xhs9wztlb" };
+
+    const updated = buildFeeTransaction(
+      parentPayment,
+      "3000",
+      feesCategoryId("user:default"),
+      migrated,
+    );
+
+    expect(updated!.id).toBe("kf83nd0s7a2mqp1xhs9wztlb");
+    expect(updated!.amount).toBe(3000);
+  });
+
+  it("gives a first fee its own id rather than deriving one from the payment", () => {
+    const fee = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"))!;
+    expect(fee.id).not.toContain(parentPayment.id);
+    expect(fee.id).not.toContain(":");
   });
 
   it("reads a grouped fee amount", () => {
