@@ -89,14 +89,27 @@ The at-rest envelope in [lib/security/record-crypto.ts](../../lib/security/recor
 
 `dekId` matters for the same reason envelope versioning matters at rest. If a DEK is ever rotated or a second one is introduced, the server will hold a mix, and a client needs to know which key a blob wants without trial decryption.
 
+### 3a. Record ids (settled 2026-08-17)
+
+Ids are bare cuid2. Records the app seeds for every user derive theirs from
+the user id and a fixed slug, listed in
+[lib/domain/seeded-ids.ts](../../lib/domain/seeded-ids.ts), so two devices
+compute the same id and sync merges the defaults instead of duplicating them.
+Existing records are renumbered by
+[lib/app-state/id-migration.ts](../../lib/app-state/id-migration.ts) at opt-in,
+before anything is pushed.
+
+The derivation is written out rather than taken from a dependency, and its
+outputs are pinned in a test, because a derived id that shifts creates a
+duplicate of a record the device already has.
+
 ### 4. Audit what stays in plaintext
 
 Under this design the server sees `userId` (or its account equivalent), `entityType`, `entityId`, timestamps, and blob sizes. It should see nothing else.
 
 Entity ids are overwhelmingly `crypto.randomUUID()` based and leak nothing. Two exceptions need checking before launch:
 
-- Default categories use `category:${slug-of-name}`. These are identical seed values for every user, so the leak is nil, but it should be a conscious decision rather than an accident.
-- Verify how `budgets` and `monthCloses` ids are constructed. If either embeds a period or month, the server learns activity timing from ids alone.
+Both of the concerns originally listed here are now resolved: ids are cuid2, so none of them carries a name, a slug, or a period. Seeded ids are derived per user, so the same default has a different id for every user and reveals nothing by comparison across accounts.
 
 Timing and volume metadata remain visible regardless. That is inherent to the model and should be stated in the privacy copy rather than papered over.
 

@@ -55,6 +55,7 @@ A consolidation pass reconciled the docs with the code and closed several review
 - PWA install, offline shell, and share-target intake; hand-rolled Android WebView host shell with share-to-app capture implemented in code (not device-verified)
 - Client-side sync engine, outbox, and per-entity conflict rules with a manual-review queue at `/settings/sync-conflicts`
 - First-sync backfill: opting in queues records created before opt-in, which previously never reached the server
+- cuid2 record ids, with a one-time local migration at sync opt-in that repoints every reference
 - Sync server (`server/`) on Postgres, deployed separately from the static-export web app
 - CI: typecheck, lint, test, build on every push/PR
 
@@ -211,6 +212,7 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 | 2026-07-19 | Balance reconciliation off the read path | Loads were writing reconciled balances back on every view, churning storage and the sync outbox |
 | 2026-07-19 | Goal progress derived from linked-account savings contributions | Stored-only `currentAmount` went stale and contradicted the pilot checklist |
 | 2026-07-19 | Sync server stays dev-only until per-user auth + real database exist | Shared-token file store has no tenancy; routes now fail closed without a token |
+| 2026-08-17 | Record ids are cuid2; seeded records derive theirs from the user id | One id space reaching the server. Seeded records cannot use random ids: their old deterministic ids were what let two devices converge on one copy of each default, so random ones would duplicate the pool accounts and their balances on first sync |
 | 2026-08-17 | Hosted sync will be end-to-end encrypted, with optional accounts | Custodial plaintext financial data for Ugandan users carries breach and compliance exposure the product does not need to take on |
 | 2026-08-17 | Sync server moved to Postgres in `server/`, deployed separately | The web app is a static export and cannot host route handlers, so the previous handlers shipped nowhere |
 | 2026-08-17 | Pull paged with a composite keyset cursor | A bare timestamp cursor drops or replays records written in the same millisecond |
