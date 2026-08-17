@@ -1,4 +1,4 @@
-import { buildPoolAccount } from "@/lib/domain/party-ledger";
+import { buildPoolAccount, poolAccountIdFor } from "@/lib/domain/party-ledger";
 import { PARTY_LEDGERS } from "@/lib/domain/reserved-accounts";
 import type { Account } from "@/lib/types";
 
@@ -18,7 +18,11 @@ export function reconcileDefaultAccounts(
 ): Account[] {
   const existingIds = new Set(stored.map((account) => account.id));
 
-  return buildDefaultAccounts(userId, timestamp).filter(
-    (account) => !existingIds.has(account.id),
-  );
+  // Matches the derived id and the slug it used to be stored under, so a
+  // device set up before ids were derived does not gain a second pool.
+  return PARTY_LEDGERS.filter(
+    (ledger) =>
+      !existingIds.has(poolAccountIdFor(ledger, userId)) &&
+      !existingIds.has(ledger.poolAccountSlug),
+  ).map((ledger) => buildPoolAccount(ledger, userId, timestamp));
 }

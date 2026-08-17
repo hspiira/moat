@@ -1,5 +1,5 @@
 import type { AccountType, Category, GoalType, ResourceLink } from "@/lib/types";
-import { feesCategoryId, seededCategoryId } from "@/lib/domain/seeded-ids";
+import { categorySlug, feesCategoryId, seededCategoryId } from "@/lib/domain/seeded-ids";
 
 const DEFAULT_DATE = "2026-01-01T00:00:00.000Z";
 
@@ -81,6 +81,17 @@ export function buildFeesCategory(userId: string): Category {
   };
 }
 
+/** The fees category to write, or null when one already exists. */
+export function ensureFeesCategory(
+  stored: Category[],
+  userId: string,
+): Category | null {
+  const wanted = buildFeesCategory(userId);
+  const slug = categorySlug(wanted.name);
+  const exists = stored.some((category) => category.id === wanted.id || category.id === slug);
+  return exists ? null : wanted;
+}
+
 export function buildDefaultCategories(userId: string): Category[] {
   return defaultCategorySeeds.map((seed) => ({
     id: seededCategoryId(userId, seed.name),
@@ -112,7 +123,10 @@ export function reconcileDefaultCategories(
   const byId = new Map(stored.map((category) => [category.id, category]));
 
   return buildDefaultCategories(userId).flatMap((seed) => {
-    const existing = byId.get(seed.id);
+    // Seeded ids became derived from the user id. A device set up before that
+    // holds the same category under its slug, so match both or every default
+    // is seeded a second time.
+    const existing = byId.get(seed.id) ?? byId.get(categorySlug(seed.name));
 
     if (!existing) {
       return [seed];

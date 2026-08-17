@@ -191,6 +191,16 @@ function createUserProfileRepository(adapter: StorageAdapter): UserProfileReposi
       );
       return profiles[0] ?? null;
     },
+    async replaceAll(profile) {
+      await adapter.replaceAll("userProfiles", [profile]);
+      await enqueueSyncMutation(adapter, {
+        entity: { id: profile.id, userId: profile.id },
+        entityType: "userProfiles",
+        operation: "upsert",
+        payload: profile,
+      });
+      return profile;
+    },
     async save(profile) {
       const saved = await adapter.upsert("userProfiles", profile);
       await enqueueSyncMutation(adapter, {

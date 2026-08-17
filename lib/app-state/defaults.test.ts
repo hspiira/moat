@@ -138,3 +138,32 @@ describe("lending and giving seeds", () => {
     expect(categories.some((c) => c.id === deriveSeededId("user:1", "category:gifts-family"))).toBe(false);
   });
 });
+
+// Seeded ids became derived from the user id. A device set up before that holds
+// each default under its slug, and matching on the derived id alone seeded a
+// second copy of every category on the next load.
+describe("legacy seeded ids", () => {
+  it("does not re-seed a default already stored under its slug", () => {
+    const legacy = buildDefaultCategories("user:1").map((category) => ({
+      ...category,
+      id: `category:${category.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+    }));
+
+    expect(reconcileDefaultCategories(legacy, "user:1")).toEqual([]);
+  });
+
+  it("still corrects a kind on a legacy record without duplicating it", () => {
+    const legacy = buildDefaultCategories("user:1").map((category) => ({
+      ...category,
+      id: `category:${category.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+      kind: category.id === deriveSeededId("user:1", "category:debt-repayment")
+        ? ("expense" as const)
+        : category.kind,
+    }));
+
+    const fixes = reconcileDefaultCategories(legacy, "user:1");
+    expect(fixes).toHaveLength(1);
+    expect(fixes[0].id).toBe("category:debt-repayment");
+    expect(fixes[0].kind).toBe("debt_repayment");
+  });
+});

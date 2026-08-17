@@ -61,3 +61,12 @@ describe("default accounts", () => {
     expect(isReservedAccountName("Loan to Sarah")).toBe(false);
   });
 });
+
+it("does not seed a second pool when one is stored under its slug", () => {
+  const legacy = buildDefaultAccounts("user:default", TIMESTAMP).map((account, index) => ({
+    ...account,
+    id: index === 0 ? "account:money-lent-out" : "account:money-borrowed",
+  }));
+
+  expect(reconcileDefaultAccounts(legacy, "user:default", TIMESTAMP)).toEqual([]);
+});

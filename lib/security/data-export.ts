@@ -132,8 +132,12 @@ export async function collectFullExport(): Promise<FullExport> {
  * Restore a FullExport into IndexedDB, overwriting any existing records with the same id.
  */
 export async function restoreFullExport(data: FullExport): Promise<void> {
+  // Replaces rather than adds. Restoring onto a device that already had a
+  // profile used to leave two, and userProfile.get() returns whichever comes
+  // first, so every restored record was scoped to a user the app was not
+  // reading as. The data was all there and none of it appeared.
   if (data.userProfile) {
-    await repositories.userProfile.save(data.userProfile);
+    await repositories.userProfile.replaceAll(data.userProfile);
   }
 
   await Promise.all([

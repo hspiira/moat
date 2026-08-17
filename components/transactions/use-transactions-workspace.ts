@@ -60,7 +60,7 @@ import {
 } from "./transaction-builder";
 import {
   feesCategoryId,
-  buildFeesCategory,
+  ensureFeesCategory,
   reconcileDefaultCategories,
 } from "@/lib/app-state/defaults";
 import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
@@ -641,7 +641,10 @@ export function useTransactionsWorkspace() {
         // form leaves storage untouched.
         await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
         if (fee) {
-          await repositories.categories.upsert(buildFeesCategory(profile.id));
+          const feesCategory = ensureFeesCategory(categories, profile.id);
+          if (feesCategory) {
+            await repositories.categories.upsert(feesCategory);
+          }
           await repositories.transactions.upsert(fee);
         }
 
