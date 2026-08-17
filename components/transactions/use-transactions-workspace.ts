@@ -67,6 +67,11 @@ import { useRulesAndObligations } from "./use-rules-and-obligations";
 import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
 import { createId } from "@/lib/ids";
+import {
+  isEditableTransfer,
+  planTransactionCascade,
+  transferLegs,
+} from "@/lib/domain/transaction-cascade";
 
 export type { BudgetFormState };
 
@@ -689,7 +694,40 @@ export function useTransactionsWorkspace() {
 
   const beginTransactionEdit = useCallback(
     (transaction: Transaction) => {
-      if (transaction.type === "transfer") return;
+      // A loan repayment carries an interest leg whose split cannot be
+      // recomputed against a balance that has since moved.
+      if (transaction.type === "transfer" && !isEditableTransfer(transaction, transactions)) {
+        return;
+      }
+
+      if (transaction.type === "transfer") {
+        const legs = transferLegs(transaction, transactions);
+        if (!legs) return;
+        const { source, destination } = legs;
+        // Edit through the source leg: its id is what the fee hangs off, and
+        // rebuilding reuses the group so both legs are overwritten in place.
+        const feeOnSource = findFeeFor(transactions, source.id);
+        setEditingTransactionId(source.id);
+        setTransactionForm({
+          type: "transfer",
+          accountId: source.accountId,
+          destinationAccountId: destination.accountId,
+          categoryId: source.categoryId,
+          currency: source.currency,
+          payee: source.payee ?? source.rawPayee ?? "",
+          counterpartyId: source.counterpartyId ?? destination.counterpartyId ?? "",
+          counterpartyName: "",
+          amount: String(Math.abs(source.originalAmount)),
+          fxRateToUgx: source.fxRateToUgx ? String(source.fxRateToUgx) : "",
+          feeAmount: feeOnSource ? String(feeOnSource.originalAmount) : "",
+          occurredOn: source.occurredOn,
+          expectedRepaymentDate:
+            source.expectedRepaymentDate ?? destination.expectedRepaymentDate ?? "",
+          note: source.note ?? "",
+        });
+        return;
+      }
+
       const feeChild = findFeeFor(transactions, transaction.id);
       setEditingTransactionId(transaction.id);
       setTransactionForm({
@@ -705,8 +743,7 @@ export function useTransactionsWorkspace() {
         fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
         feeAmount: feeChild ? String(feeChild.originalAmount) : "",
         occurredOn: transaction.occurredOn,
-        // Transfers cannot be edited in place, so a loan's due date is never
-        // repopulated here — only the receivable leg of a transfer carries one.
+        // Only a transfer leg carries a due date, and that path returns above.
         expectedRepaymentDate: "",
         note: transaction.note ?? "",
       });
@@ -721,16 +758,7 @@ export function useTransactionsWorkspace() {
       setError(null);
 
       try {
-        const idsToRemove = new Set<string>([transaction.id]);
-        if (transaction.transferGroupId) {
-          transactions
-            .filter((entry) => entry.transferGroupId === transaction.transferGroupId)
-            .forEach((entry) => idsToRemove.add(entry.id));
-        }
-        // Cascade to any linked fee (of the payment or the transfer source).
-        transactions
-          .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
-          .forEach((entry) => idsToRemove.add(entry.id));
+        const idsToRemove = planTransactionCascade(transaction, transactions);
         const [lineItems, plannedPurchases] = await Promise.all([
           repositories.transactionLineItems.listByUser(profile.id),
           repositories.plannedPurchases.listByUser(profile.id),

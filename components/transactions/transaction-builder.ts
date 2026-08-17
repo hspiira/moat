@@ -84,10 +84,16 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
     throw new Error("Source and destination must be different accounts.");
   }
 
-  // Transfers always get a fresh group id: transfer pairs cannot be edited
-  // in place (beginTransactionEdit blocks transfers), so reusing the id of
-  // an edited non-transfer transaction would collide across edits.
-  const transferGroupId = createId();
+  // Editing an existing transfer reuses its group, which makes the two leg ids
+  // come out identical to the stored ones so the save overwrites them. A fresh
+  // group here would write a second balanced pair and leave the first behind,
+  // doubling the money that moved.
+  const edited = input.editingTransactionId
+    ? input.existingTransactions.find(
+        (transaction) => transaction.id === input.editingTransactionId,
+      )
+    : undefined;
+  const transferGroupId = edited?.transferGroupId ?? createId();
   const sourceId = deriveSeededId(transferGroupId, "source");
   const destinationId = deriveSeededId(transferGroupId, "destination");
   const shared = sharedTransactionFields(input, originalAmount);
@@ -257,6 +263,10 @@ export function buildDebtPaymentTransactions(
       userId,
       accountId: form.accountId,
       type: "expense",
+      // Shares the payment's group so deleting the repayment takes the
+      // interest with it. It stays type "expense", so it is still counted as
+      // spending and is never treated as a transfer leg.
+      transferGroupId: groupId,
       amount: split.interest,
       createdAt: preservedCreatedAt(input, deriveSeededId(groupId, "interest")),
       ...shared,

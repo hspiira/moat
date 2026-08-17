@@ -139,6 +139,64 @@ describe("buildTransferPair", () => {
     expect(destination.id).toBe(deriveSeededId(destination.transferGroupId!, "destination"));
   });
 
+  /**
+   * Editing used to be impossible for transfers, and the group id was always
+   * fresh because of it. Now that the form can reopen one, a fresh group would
+   * write a second balanced pair and orphan the first: the money would appear
+   * to have moved twice.
+   */
+  it("overwrites both legs in place when editing an existing transfer", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer" } }),
+    );
+    const stored = [source, destination];
+
+    const [editedSource, editedDestination] = buildTransferPair(
+      buildInput({
+        form: { ...baseForm, type: "transfer", amount: "75000" },
+        editingTransactionId: source.id,
+        existingTransactions: stored,
+      }),
+    );
+
+    expect(editedSource.id).toBe(source.id);
+    expect(editedDestination.id).toBe(destination.id);
+    expect(editedSource.transferGroupId).toBe(source.transferGroupId);
+    expect(editedSource.amount + editedDestination.amount).toBe(0);
+    expect(Math.abs(editedSource.amount)).toBe(75000);
+  });
+
+  it("still balances after the accounts are swapped in an edit", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer" } }),
+    );
+
+    const [editedSource, editedDestination] = buildTransferPair(
+      buildInput({
+        form: {
+          ...baseForm,
+          type: "transfer",
+          accountId: "account:destination",
+          destinationAccountId: "account:source",
+        },
+        editingTransactionId: source.id,
+        existingTransactions: [source, destination],
+      }),
+    );
+
+    expect(editedSource.accountId).toBe("account:destination");
+    expect(editedDestination.accountId).toBe("account:source");
+    expect(editedSource.amount + editedDestination.amount).toBe(0);
+    expect([editedSource.id, editedDestination.id].sort()).toEqual([source.id, destination.id].sort());
+  });
+
+  it("gives a brand new transfer its own group", () => {
+    const [firstSource] = buildTransferPair(buildInput({ form: { ...baseForm, type: "transfer" } }));
+    const [secondSource] = buildTransferPair(buildInput({ form: { ...baseForm, type: "transfer" } }));
+    expect(firstSource.transferGroupId).not.toBe(secondSource.transferGroupId);
+    expect(firstSource.id).not.toBe(secondSource.id);
+  });
+
   it("rejects transfers without two distinct accounts", () => {
     expect(() =>
       buildTransferPair(
