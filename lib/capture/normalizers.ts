@@ -1,3 +1,4 @@
+import { cleanCapturePayee } from "@/lib/capture/providers/shared";
 import type { SupportedCurrency, TransactionType } from "@/lib/types";
 
 const supportedCurrencies = ["UGX", "USD", "KES", "TZS", "RWF", "EUR", "GBP"] as const;
@@ -106,11 +107,7 @@ export function inferCapturePayee(text: string) {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match?.[1]) {
-      return match[1]
-        .replace(/\s+on\s+\d{2}[-/]\d{2}[-/]\d{4}.*/i, "")
-        .replace(/\s+on\s+20\d{2}[-/]\d{2}[-/]\d{2}.*/i, "")
-        .trim()
-        .replace(/[.]+$/, "");
+      return cleanCapturePayee(match[1]);
     }
   }
 

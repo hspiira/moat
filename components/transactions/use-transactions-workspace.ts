@@ -30,6 +30,7 @@ import type {
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
+import { findTransactionTypeDrift } from "@/lib/domain/transaction-type-drift";
 import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
 import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
 import {
@@ -337,7 +338,28 @@ export function useTransactionsWorkspace() {
           ? await repositories.categories.listByUser(nextProfile.id)
           : storedCategories;
 
-      const currentTransactions = await loadAndBackfill(nextProfile.id, storedTransactions);
+      const backfilled = await loadAndBackfill(nextProfile.id, storedTransactions);
+
+      // Repairs rows left carrying a type their category no longer permits,
+      // which assertCategoryMatchesType rejects on save.
+      const drift = findTransactionTypeDrift(
+        backfilled,
+        currentCategories,
+        new Date().toISOString(),
+      );
+      if (drift.repaired.length > 0) {
+        await Promise.all(
+          drift.repaired.map((entry) => repositories.transactions.upsert(entry)),
+        );
+      }
+      if (drift.needsReview.length > 0) {
+        console.warn(
+          `Moat: ${drift.needsReview.length} transaction(s) have a category their type cannot use and need a manual fix.`,
+          drift.needsReview.map((entry) => entry.id),
+        );
+      }
+      const repairedById = new Map(drift.repaired.map((entry) => [entry.id, entry]));
+      const currentTransactions = backfilled.map((entry) => repairedById.get(entry.id) ?? entry);
 
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
