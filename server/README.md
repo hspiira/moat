@@ -56,11 +56,29 @@ Tenancy is enforced by row-level security on `moat.user_id`, set per
 transaction, so a query that loses its `user_id` predicate returns nothing
 rather than another user's rows.
 
+## Local setup
+
+```bash
+createdb moat_dev
+export DATABASE_URL=postgres://localhost/moat_dev DATABASE_SSL=disable
+export MOAT_SYNC_BEARER_TOKEN=dev-token
+pnpm --filter @moat/sync-server build
+pnpm --filter @moat/sync-server migrate
+pnpm --filter @moat/sync-server start
+```
+
+`GET /health` reports what is missing if either variable is unset.
+
 ## Tests
 
 The store tests need a throwaway database and are skipped without one. They
 drop and recreate their tables, so do not point them at anything real.
 
 ```bash
+createdb moat_test
 DATABASE_SSL=disable DATABASE_URL=postgres://localhost/moat_test pnpm test
 ```
+
+One of them creates a temporary unprivileged role to check row-level security
+actually enforces tenancy. The role that runs the suite is usually a superuser,
+and superusers bypass RLS, so without that the policies would go untested.

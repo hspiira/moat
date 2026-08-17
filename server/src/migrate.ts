@@ -1,5 +1,5 @@
-import { closePool, getPool } from "./pool.js";
-import { SCHEMA_SQL } from "./schema.js";
+import { closePool, getPool } from "./db/pool.js";
+import { SCHEMA_SQL } from "./db/schema.js";
 
 async function migrate() {
   await getPool().query(SCHEMA_SQL);

@@ -11,7 +11,7 @@ const repoRoot = path.resolve(here, "..");
 const options = {
   entryPoints: [
     path.join(here, "src/index.ts"),
-    path.join(here, "src/db/migrate.ts"),
+    path.join(here, "src/migrate.ts"),
   ],
   outdir: path.join(here, "dist"),
   bundle: true,
