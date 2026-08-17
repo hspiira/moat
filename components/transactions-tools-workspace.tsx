@@ -12,7 +12,7 @@ export function TransactionsToolsWorkspace() {
     <TransactionsWorkspaceFrame
       currentRoute="tools"
       title="Rules & corrections"
-      description="Auto-fill rules and the parser correction log."
+      description="Rules that fill in details for you, and a record of the corrections you have made."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

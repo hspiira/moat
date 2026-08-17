@@ -48,8 +48,8 @@ export function getMonthCloseBlockers({
   if (evaluation.unresolvedTransactions.length > 0) {
     groups.push({
       kind: "unresolved",
-      label: "Not yet posted",
-      hint: "Captured or imported but never confirmed.",
+      label: "Not confirmed yet",
+      hint: "Read from a message or import. You have not checked them.",
       count: evaluation.unresolvedTransactions.length,
       entries: evaluation.unresolvedTransactions.map((transaction) => ({
         id: transaction.id,
@@ -61,8 +61,8 @@ export function getMonthCloseBlockers({
   if (evaluation.duplicateGroups.length > 0) {
     groups.push({
       kind: "duplicate",
-      label: "Possibly duplicated",
-      hint: "Records that look like the same money twice.",
+      label: "Might be recorded twice",
+      hint: "These look like the same money entered more than once.",
       count: evaluation.duplicateGroups.length,
       entries: evaluation.duplicateGroups.map((group) => ({
         id: group.key,
@@ -75,8 +75,8 @@ export function getMonthCloseBlockers({
   if (unpaid.length > 0) {
     groups.push({
       kind: "obligation",
-      label: "Bills not seen",
-      hint: "Expected this month, no matching payment found.",
+      label: "Bills with no payment",
+      hint: "You expected these this month. Nothing matching was found.",
       count: unpaid.length,
       entries: unpaid.map((entry) => ({
         id: entry.obligation.id,

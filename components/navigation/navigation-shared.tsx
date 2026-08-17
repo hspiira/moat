@@ -379,16 +379,16 @@ export function MobileUtilitySheet({
               />
               <DrawerNavRow
                 href="/transactions/tools"
-                // The label must name budgets: 145 lines of budget logic once
-                // hid behind a row that named neither of its contents.
-                label="Budgets & rules"
+                // Budgets moved to /budgets. This screen is rules and the
+                // correction log, so the label names those.
+                label="Rules & corrections"
                 icon={IconAdjustmentsHorizontal}
                 active={isActiveRoute(pathname, "/transactions/tools")}
                 onNavigate={close}
               />
               <DrawerNavRow
                 href="/transactions/review/month-close"
-                label="Month close"
+                label="Month check"
                 icon={IconCalendarCheck}
                 active={isActiveRoute(pathname, "/transactions/review/month-close")}
                 onNavigate={close}

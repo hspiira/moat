@@ -95,7 +95,7 @@ export function TransactionsLedgerWorkspace() {
                 in this month.
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/transactions/review/month-close">Month close</Link>
+                <Link href="/transactions/review/month-close">Month check</Link>
               </Button>
             </CardContent>
           </Card>

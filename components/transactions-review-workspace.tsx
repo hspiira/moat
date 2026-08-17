@@ -20,8 +20,8 @@ export function TransactionsReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       currentRoute="review"
-      title="Month close"
-      description="Clear what is outstanding, then close the period."
+      title="Month check"
+      description="Make sure this month is complete, so its totals can be trusted."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

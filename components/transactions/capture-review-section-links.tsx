@@ -10,7 +10,7 @@ type CaptureReviewSection = "month-close" | "capture";
 // queue that accumulates work, so it is what "review" should mean by default.
 const sectionConfig: Record<CaptureReviewSection, { href: string; label: string }> = {
   capture: { href: "/transactions/review", label: "Captured items" },
-  "month-close": { href: "/transactions/review/month-close", label: "Month close" },
+  "month-close": { href: "/transactions/review/month-close", label: "Month check" },
 };
 
 export function CaptureReviewSectionLinks({
