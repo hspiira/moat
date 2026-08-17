@@ -13,7 +13,11 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_PASSWORD: postgres
+          # No password: the container is ephemeral, reachable only from this
+          # job on localhost, and holds nothing but throwaway test tables.
+          # A placeholder credential here is a secret-scanner finding for no
+          # security gain.
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: moat_test
         ports:
           - 5432:5432
@@ -24,7 +28,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/moat_test
+      DATABASE_URL: postgres://postgres@localhost:5432/moat_test
       DATABASE_SSL: disable
 
     steps:

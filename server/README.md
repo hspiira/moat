@@ -61,7 +61,7 @@ rather than another user's rows.
 ```bash
 createdb moat_dev
 export DATABASE_URL=postgres://localhost/moat_dev DATABASE_SSL=disable
-export MOAT_SYNC_BEARER_TOKEN=dev-token
+export MOAT_SYNC_BEARER_TOKEN=<generate one, e.g. openssl rand -hex 32>
 pnpm --filter @moat/sync-server build
 pnpm --filter @moat/sync-server migrate
 pnpm --filter @moat/sync-server start

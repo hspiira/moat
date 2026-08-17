@@ -202,7 +202,7 @@ describeDb("postgres sync store", () => {
   it("enforces tenancy in the database, not just in the query", async () => {
     await getPool().query(`
       drop role if exists moat_rls_test;
-      create role moat_rls_test login password 'test';
+      create role moat_rls_test login;
       grant usage on schema public to moat_rls_test;
       grant select, insert, update, delete on all tables in schema public to moat_rls_test;
     `);
@@ -212,7 +212,7 @@ describeDb("postgres sync store", () => {
 
     const url = new URL(process.env.DATABASE_URL as string);
     url.username = "moat_rls_test";
-    url.password = "test";
+    url.password = "";
     const scoped = new pg.Pool({ connectionString: url.toString(), ssl: undefined });
 
     try {
