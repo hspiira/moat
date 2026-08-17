@@ -37,6 +37,7 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
     const operation = item.operation;
     const payload = item.payload;
     const queuedAt = item.queuedAt;
+    const baseVersionToken = item.baseVersionToken;
 
     if (
       typeof outboxId !== "string" ||
@@ -49,6 +50,10 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
       throw new Error("Sync item is missing required fields.");
     }
 
+    if (baseVersionToken !== undefined && typeof baseVersionToken !== "string") {
+      throw new Error("Sync item baseVersionToken must be a string when provided.");
+    }
+
     return {
       outboxId,
       entityType,
@@ -56,6 +61,7 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
       operation: operation as SyncOutboxOperation,
       payload,
       queuedAt,
+      baseVersionToken,
     };
   });
 

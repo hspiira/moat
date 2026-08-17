@@ -2,9 +2,19 @@ import type { RepositoryBundle } from "@/lib/repositories/types";
 import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
 import type { SyncPullRecord, SyncPushResult, SyncRunSummary } from "@/lib/sync/types";
 
+import {
+  DEFAULT_PULL_PAGE_SIZE,
+  compareByCursorOrder,
+  serializeCursor,
+  toEntityKey,
+} from "@/lib/sync/cursor";
 import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
+
+// Stops the loop if a server keeps returning hasMore without advancing.
+const MAX_PULL_PAGES = 1000;
+const PUSH_BATCH_SIZE = 200;
 
 function withOutboxUpdate(
   item: SyncOutboxItem,
@@ -39,6 +49,63 @@ function mapResultForItem(item: SyncOutboxItem, result?: SyncPushResult): SyncOu
     lastError: result.error,
     conflictPayload: undefined,
   });
+}
+
+function lastCursorOf(records: SyncPullRecord[]): string | undefined {
+  const positions = records.map((record) => ({
+    updatedAt: record.updatedAt,
+    entityKey: toEntityKey(record.entityType, record.entityId),
+  }));
+  const last = positions.sort(compareByCursorOrder).at(-1);
+  return last ? serializeCursor(last) : undefined;
+}
+
+// Pulls page by page, saving the cursor after each one so an interrupted run
+// picks up where it stopped instead of starting over.
+async function pullAllPages(params: {
+  repositories: RepositoryBundle;
+  profile: SyncProfile;
+  conflictedEntityKeys: Set<string>;
+}): Promise<{ profile: SyncProfile; syncedAt?: string; pulled: number }> {
+  let profile = params.profile;
+  let since = profile.lastPulledAt ?? profile.lastSyncedAt;
+  let syncedAt: string | undefined;
+  let pulled = 0;
+
+  for (let page = 0; page < MAX_PULL_PAGES; page += 1) {
+    const response = await pullSyncBatch({
+      endpoint: profile.postgresSyncUrl as string,
+      authToken: profile.syncAuthToken,
+      request: { userId: profile.userId, since, limit: DEFAULT_PULL_PAGE_SIZE },
+    });
+
+    await applyPulledRecords({
+      repositories: params.repositories,
+      records: response.records,
+      conflictedEntityKeys: params.conflictedEntityKeys,
+    });
+
+    pulled += response.records.length;
+    syncedAt = response.syncedAt;
+
+    const nextSince = response.nextSince ?? lastCursorOf(response.records) ?? since;
+    const cursorMoved = nextSince !== since;
+    since = nextSince;
+
+    if (cursorMoved) {
+      profile = await params.repositories.syncProfiles.save({
+        ...profile,
+        lastPulledAt: since,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (!response.hasMore || !cursorMoved) {
+      break;
+    }
+  }
+
+  return { profile, syncedAt, pulled };
 }
 
 async function applyPulledRecords(params: {
@@ -80,15 +147,6 @@ export async function runHostedSync(params: {
   }
 
   const pendingItems = await params.repositories.syncOutbox.listPendingByUser(params.profile.userId);
-  if (pendingItems.length === 0) {
-    return {
-      attempted: 0,
-      synced: 0,
-      failed: 0,
-      conflicts: 0,
-      syncedAt: params.profile.lastSyncedAt,
-    };
-  }
 
   await Promise.all(
     pendingItems.map((item) =>
@@ -101,55 +159,60 @@ export async function runHostedSync(params: {
   );
 
   try {
-    const response = await pushSyncBatch({
-      endpoint: params.profile.postgresSyncUrl,
-      request: createSyncPushRequest({
-        userId: params.profile.userId,
-        items: pendingItems,
-        platform: params.platform,
-        deviceId: params.profile.deviceId,
-      }),
-      authToken: params.profile.syncAuthToken,
-    });
+    let syncedCount = 0;
+    let failedCount = 0;
+    let conflictCount = 0;
+    let pushedAt: string | undefined;
+    const conflictedEntityKeys = new Set<string>();
 
-    const nextItems = pendingItems.map((item) =>
-      mapResultForItem(
-        item,
-        response.results.find((result) => result.outboxId === item.id),
-      ),
-    );
+    // A first backfill can queue thousands of items, so send them in batches
+    // rather than one request body.
+    for (let start = 0; start < pendingItems.length; start += PUSH_BATCH_SIZE) {
+      const batch = pendingItems.slice(start, start + PUSH_BATCH_SIZE);
 
-    await Promise.all(nextItems.map((item) => params.repositories.syncOutbox.upsert(item)));
+      const response = await pushSyncBatch({
+        endpoint: params.profile.postgresSyncUrl,
+        request: createSyncPushRequest({
+          userId: params.profile.userId,
+          items: batch,
+          platform: params.platform,
+          deviceId: params.profile.deviceId,
+        }),
+        authToken: params.profile.syncAuthToken,
+      });
 
-    const syncedCount = nextItems.filter((item) => item.status === "synced").length;
-    const failedCount = nextItems.filter((item) => item.status === "failed").length;
-    const conflictCount = nextItems.filter((item) => item.status === "conflict").length;
+      const nextItems = batch.map((item) =>
+        mapResultForItem(
+          item,
+          response.results.find((result) => result.outboxId === item.id),
+        ),
+      );
 
-    const conflictedEntityKeys = new Set(
-      nextItems
-        .filter((item) => item.status === "conflict")
-        .map((item) => `${item.entityType}:${item.entityId}`),
-    );
+      await Promise.all(nextItems.map((item) => params.repositories.syncOutbox.upsert(item)));
 
-    const pullResponse = await pullSyncBatch({
-      endpoint: params.profile.postgresSyncUrl,
-      authToken: params.profile.syncAuthToken,
-      request: {
-        userId: params.profile.userId,
-        since: params.profile.lastPulledAt ?? params.profile.lastSyncedAt,
-      },
-    });
+      syncedCount += nextItems.filter((item) => item.status === "synced").length;
+      failedCount += nextItems.filter((item) => item.status === "failed").length;
+      conflictCount += nextItems.filter((item) => item.status === "conflict").length;
+      pushedAt = response.syncedAt;
 
-    await applyPulledRecords({
+      for (const item of nextItems) {
+        if (item.status === "conflict") {
+          conflictedEntityKeys.add(toEntityKey(item.entityType, item.entityId));
+        }
+      }
+    }
+
+    const pull = await pullAllPages({
       repositories: params.repositories,
-      records: pullResponse.records,
+      profile: params.profile,
       conflictedEntityKeys,
     });
 
+    const syncedAt = pushedAt ?? pull.syncedAt ?? params.profile.lastSyncedAt;
+
     await params.repositories.syncProfiles.save({
-      ...params.profile,
-      lastSyncedAt: response.syncedAt,
-      lastPulledAt: pullResponse.syncedAt,
+      ...pull.profile,
+      lastSyncedAt: syncedAt,
       updatedAt: new Date().toISOString(),
     });
 
@@ -158,7 +221,8 @@ export async function runHostedSync(params: {
       synced: syncedCount,
       failed: failedCount,
       conflicts: conflictCount,
-      syncedAt: response.syncedAt,
+      pulled: pull.pulled,
+      syncedAt,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed.";

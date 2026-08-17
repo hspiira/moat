@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { repositories } from "@/lib/repositories/instance";
 import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/types";
 import { runHostedSync } from "@/lib/sync/engine";
+import { backfillSyncOutbox, hasBackfilled } from "@/lib/sync/backfill";
 import { isHostedSyncEnabled } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +52,7 @@ export function SyncModePanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
 
   const loadState = useCallback(async () => {
     const user = await repositories.userProfile.get();
@@ -104,8 +106,28 @@ export function SyncModePanel() {
       await repositories.syncProfiles.save(next);
       setSyncProfile(next);
       setSuccess("Sync preference saved locally.");
+
+      // Records written before opt-in have no outbox entry, so queue them once.
+      if (next.hostedSyncEnabled && next.mode === "hosted_opt_in" && !hasBackfilled(next)) {
+        setBackfillStatus("Preparing your existing records...");
+        const summary = await backfillSyncOutbox({
+          repositories,
+          profile: next,
+          onProgress: (progress) =>
+            setBackfillStatus(
+              `Preparing your existing records... ${progress.queued} queued (${progress.storesDone}/${progress.storesTotal})`,
+            ),
+        });
+        setBackfillStatus(
+          summary.queued > 0
+            ? `${summary.queued} existing record${summary.queued === 1 ? "" : "s"} queued to upload.`
+            : null,
+        );
+      }
+
       await loadState();
     } catch (saveError) {
+      setBackfillStatus(null);
       setError(saveError instanceof Error ? saveError.message : "Unable to save sync preference.");
     } finally {
       setIsSaving(false);
@@ -300,6 +322,9 @@ export function SyncModePanel() {
           </div>
         )}
 
+        {backfillStatus ? (
+          <div className="text-xs text-muted-foreground">{backfillStatus}</div>
+        ) : null}
         {success ? <div className="text-xs text-muted-foreground">{success}</div> : null}
         {error ? <div className="text-xs text-destructive">{error}</div> : null}
       </CardContent>

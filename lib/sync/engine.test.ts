@@ -290,3 +290,168 @@ describe("runHostedSync", () => {
     });
   });
 });
+
+function hostedProfile(): SyncProfile {
+  return {
+    id: "sync-profile:u1",
+    userId: "u1",
+    mode: "hosted_opt_in",
+    hostedSyncEnabled: true,
+    postgresSyncUrl: "https://sync.example.com",
+    createdAt: "2026-04-06T00:00:00.000Z",
+    updatedAt: "2026-04-06T00:00:00.000Z",
+  };
+}
+
+function pendingItem(index: number): SyncOutboxItem {
+  return {
+    id: `sync-outbox:${index}`,
+    userId: "u1",
+    entityType: "categories",
+    entityId: `category:${index}`,
+    operation: "upsert",
+    payload: JSON.stringify({ id: `category:${index}` }),
+    status: "pending",
+    attempts: 0,
+    queuedAt: "2026-04-06T00:00:00.000Z",
+    updatedAt: "2026-04-06T00:00:00.000Z",
+  };
+}
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), { status: 200 });
+}
+
+function pullPage(params: { ids: string[]; nextSince?: string; hasMore: boolean }) {
+  return jsonResponse({
+    syncedAt: "2026-04-06T12:00:00.000Z",
+    records: params.ids.map((id, index) => ({
+      entityType: "categories",
+      entityId: id,
+      payload: JSON.stringify({ id }),
+      deleted: false,
+      updatedAt: `2026-04-06T12:00:0${index}.000Z`,
+      serverVersionToken: `sv:${id}`,
+    })),
+    nextSince: params.nextSince,
+    hasMore: params.hasMore,
+  });
+}
+
+function urlsFrom(fetchMock: ReturnType<typeof vi.fn>): string[] {
+  return fetchMock.mock.calls.map((call) => String(call[0]));
+}
+
+describe("runHostedSync pull paging", () => {
+  it("pulls even when there is nothing queued to push", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(pullPage({ ids: ["category:remote"], hasMore: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runHostedSync({
+      repositories,
+      profile: hostedProfile(),
+      isOnline: true,
+    });
+
+    expect(urlsFrom(fetchMock)).toEqual(["https://sync.example.com/v1/sync/pull"]);
+    expect(result.pulled).toBe(1);
+    expect(repositories.categories.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows pages until the server stops reporting more", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
+      .mockResolvedValueOnce(pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: true }))
+      .mockResolvedValueOnce(pullPage({ ids: ["category:3"], nextSince: "c3", hasMore: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runHostedSync({
+      repositories,
+      profile: hostedProfile(),
+      isOnline: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.pulled).toBe(3);
+    expect(repositories.categories.upsert).toHaveBeenCalledTimes(3);
+  });
+
+  it("sends each page the cursor from the one before", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
+      .mockResolvedValueOnce(pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    expect(secondBody.since).toBe("c1");
+  });
+
+  it("stores the cursor rather than the server clock", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: false })),
+    );
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const saved = await repositories.syncProfiles.getByUser("u1");
+    expect(saved?.lastPulledAt).toBe("c1");
+  });
+
+  it("stops instead of looping when a server reports more but does not advance", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(pullPage({ ids: [], nextSince: undefined, hasMore: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runHostedSync push batching", () => {
+  it("splits a large outbox across several requests", async () => {
+    const items = Array.from({ length: 250 }, (_, index) => pendingItem(index));
+    const repositories = createRepositories(items, hostedProfile());
+
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
+      if (String(url).endsWith("/v1/sync/pull")) {
+        return pullPage({ ids: [], hasMore: false });
+      }
+      const body = JSON.parse(String(init.body)) as { items: { outboxId: string }[] };
+      return jsonResponse({
+        syncedAt: "2026-04-06T12:00:00.000Z",
+        results: body.items.map((item) => ({ outboxId: item.outboxId, status: "synced" })),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runHostedSync({
+      repositories,
+      profile: hostedProfile(),
+      isOnline: true,
+    });
+
+    const pushUrls = urlsFrom(fetchMock).filter((url) => url.endsWith("/v1/sync/push"));
+    expect(pushUrls).toHaveLength(2);
+    expect(result.attempted).toBe(250);
+    expect(result.synced).toBe(250);
+  });
+});
