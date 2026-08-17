@@ -42,17 +42,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Test
-        run: pnpm test
-
-      - name: Build
-        run: pnpm build
-
-      - name: Build sync server
-        run: pnpm --filter @moat/sync-server build
+      # Same command developers run locally, so CI cannot check something
+      # different from what a pre-push check does.
+      - name: Verify
+        run: pnpm verify
