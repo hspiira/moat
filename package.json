@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build:server": "pnpm --filter @moat/sync-server build",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm build:server"
+    "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test"
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.3.0",

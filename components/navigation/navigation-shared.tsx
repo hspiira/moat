@@ -10,6 +10,7 @@ import {
   IconChalkboard,
   IconChartHistogram,
   IconFileImport,
+  IconInbox,
   IconHome2,
   IconLock,
   IconMenu2,
@@ -52,6 +53,10 @@ export const navIcons: Record<string, Icon> = {
   "/report": IconChartHistogram,
   "/settings": IconSettings,
   "/privacy": IconLock,
+  "/inbox": IconInbox,
+  "/month": IconCalendarCheck,
+  "/import": IconFileImport,
+  "/settings/rules": IconAdjustmentsHorizontal,
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
@@ -119,6 +124,37 @@ const mobileContextNav = [
     label: "Privacy",
     description: "How Moat stores and protects your financial records.",
   },
+  {
+    href: "/inbox",
+    label: "Capture review",
+    description: "Transactions read from messages, waiting on your decision.",
+  },
+  {
+    href: "/month",
+    label: "Month check",
+    description: "One pass over the month before you put it to bed.",
+  },
+  {
+    href: "/import",
+    label: "CSV import",
+    description: "Bring in statement rows from CSV.",
+  },
+  {
+    href: "/settings/rules",
+    label: "Rules & corrections",
+    description: "Rules that fill in details for you, and the corrections you have made.",
+  },
+] as const;
+
+/**
+ * The More sheet, grouped by how often you do the thing. A monthly job used to
+ * sit three levels under the daily ledger; cadence says more about where to
+ * look for something than which entity it touches.
+ */
+export const mobileCadenceNav = [
+  { title: "As things arrive", hrefs: ["/inbox"] },
+  { title: "Every month", hrefs: ["/month", "/import"] },
+  { title: "Set up once", hrefs: ["/settings/rules"] },
 ] as const;
 export const mobileCaptureActions = [
   {
@@ -141,11 +177,6 @@ export const mobileCaptureActions = [
     label: "Paste text",
     description: "Read a transaction from an SMS or notification.",
   },
-  {
-    href: "/transactions/import",
-    label: "Import",
-    description: "Bring in statement rows from CSV.",
-  },
 ] as const;
 
 export function isActiveRoute(pathname: string, href: string) {
@@ -157,8 +188,17 @@ export function isActiveRoute(pathname: string, href: string) {
 }
 
 
+/** Names the page you are on, so nested paths match their parent entry. */
 export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
+}
+
+/**
+ * The entry for exactly this href. Prefix matching is wrong for a lookup:
+ * /settings/rules would find the /settings entry and render as "Settings".
+ */
+export function getNavEntry(href: string) {
+  return mobileContextNav.find((item) => item.href === href);
 }
 
 export function MoatMark({ className }: { className?: string }) {
@@ -293,12 +333,7 @@ export function MobileCaptureSheet() {
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
           {mobileCaptureActions.map((action) => {
-            const IconComponent =
-              action.label === "Import"
-                ? IconFileImport
-                : action.label === "Paste text"
-                  ? IconMessage2
-                  : IconPlus;
+            const IconComponent = action.label === "Paste text" ? IconMessage2 : IconPlus;
 
             return (
               <Button
@@ -345,7 +380,7 @@ export function MobileUtilitySheet({
         <SheetHeader className="px-6 pb-2">
           <SheetTitle>More</SheetTitle>
           <SheetDescription className="sr-only">
-            The rest of Moat: destinations, data tools, theme and settings.
+            The rest of Moat, grouped by how often you need it.
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-5 overflow-y-auto overscroll-contain px-6 pb-2">
@@ -368,33 +403,26 @@ export function MobileUtilitySheet({
             })}
           </div>
 
-          <DrawerSection title="Data tools">
-            <div className="grid">
-              <DrawerNavRow
-                href="/transactions/import"
-                label="CSV import"
-                icon={IconFileImport}
-                active={isActiveRoute(pathname, "/transactions/import")}
-                onNavigate={close}
-              />
-              <DrawerNavRow
-                href="/transactions/tools"
-                // Budgets moved to /budgets. This screen is rules and the
-                // correction log, so the label names those.
-                label="Rules & corrections"
-                icon={IconAdjustmentsHorizontal}
-                active={isActiveRoute(pathname, "/transactions/tools")}
-                onNavigate={close}
-              />
-              <DrawerNavRow
-                href="/transactions/review/month-close"
-                label="Month check"
-                icon={IconCalendarCheck}
-                active={isActiveRoute(pathname, "/transactions/review/month-close")}
-                onNavigate={close}
-              />
-            </div>
-          </DrawerSection>
+          {mobileCadenceNav.map((group) => (
+            <DrawerSection key={group.title} title={group.title}>
+              <div className="grid">
+                {group.hrefs.map((href) => {
+                  const item = getNavEntry(href);
+                  if (!item) return null;
+                  return (
+                    <DrawerNavRow
+                      key={href}
+                      href={href}
+                      label={item.label}
+                      icon={navIcons[href]}
+                      active={isActiveRoute(pathname, href)}
+                      onNavigate={close}
+                    />
+                  );
+                })}
+              </div>
+            </DrawerSection>
+          ))}
 
           <div className="grid">
             <DrawerNavRow

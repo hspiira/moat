@@ -74,17 +74,10 @@ export function TransactionsCaptureWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="capture"
       title="Capture"
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
-      captureInboxCount={workspace.captureReviewCount}
-      duplicateCount={workspace.duplicateCount}
-      periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-4">
         {/* Method switcher — swaps the form in place, no extra navigation. */}

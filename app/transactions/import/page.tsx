@@ -1,14 +1,6 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { TransactionsImportWorkspace } from "@/components/transactions-import-workspace";
-
-export default function TransactionsImportPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <TransactionsImportWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+// Grouped by cadence: importing a statement is its own periodic job.
+export default function TransactionsImportRedirect() {
+  redirect("/import");
 }

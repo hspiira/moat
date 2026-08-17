@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
@@ -8,43 +8,30 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
-import type { MonthSummary, UserProfile } from "@/lib/types";
+import type { UserProfile } from "@/lib/types";
 
 import { TransactionsSummaryStrip } from "./transactions-summary-strip";
 
-type TransactionsRoute = "ledger" | "capture" | "import" | "review" | "tools";
-
 type Props = {
-  currentRoute: TransactionsRoute;
   title: string;
   description?: string;
   srOnlyTitle?: boolean;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-  transactionCount: number;
-  periodTransactionCount: number;
-  reviewCount: number;
-  captureInboxCount: number;
-  duplicateCount: number;
-  periodSummary: MonthSummary;
+  /** Only the ledger leads with the month's totals. */
+  summary?: ComponentProps<typeof TransactionsSummaryStrip>;
   children: ReactNode;
 };
 
 export function TransactionsWorkspaceFrame({
-  currentRoute,
   title,
   description,
   srOnlyTitle,
   profile,
   isLoading,
   error,
-  transactionCount,
-  periodTransactionCount,
-  reviewCount,
-  captureInboxCount,
-  duplicateCount,
-  periodSummary,
+  summary,
   children,
 }: Props) {
   return (
@@ -63,22 +50,7 @@ export function TransactionsWorkspaceFrame({
 
       {!isLoading && profile ? (
         <div className="grid gap-5">
-          {currentRoute === "ledger" ? (
-            <TransactionsSummaryStrip
-              recordedCount={transactionCount}
-              transactionCount={periodTransactionCount}
-              reviewCount={reviewCount}
-              captureInboxCount={captureInboxCount}
-              duplicateCount={duplicateCount}
-              summary={periodSummary}
-            />
-          ) : null}
-          {/* The route tab row that used to sit here was a second navigation
-              system competing with the bottom bar, and it framed capture,
-              review, import and tools as things that live *inside*
-              Transactions rather than as their own destinations. They are
-              reachable from the bottom nav's capture button and the More
-              sheet; this page now shows the ledger, not a directory. */}
+          {summary ? <TransactionsSummaryStrip {...summary} /> : null}
           {children}
         </div>
       ) : null}

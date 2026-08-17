@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
-// The capture inbox moved up to /transactions/review. Kept so existing links
-// and any installed-PWA shortcuts still land somewhere correct.
+// Grouped by cadence: the capture inbox is its own destination.
 export default function TransactionsCaptureReviewRedirect() {
-  redirect("/transactions/review");
+  redirect("/inbox");
 }
