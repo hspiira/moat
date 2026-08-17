@@ -17,6 +17,7 @@ import type {
   Transaction,
   UserProfile,
 } from "@/lib/types";
+import { currentMonthIso } from "@/lib/today";
 
 
 export type InvestmentProfileFormState = {
@@ -40,7 +41,7 @@ function buildTimestamp() {
 }
 
 function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return currentMonthIso();
 }
 
 function buildProfileForm(profile: InvestmentProfile): InvestmentProfileFormState {

@@ -27,6 +27,7 @@ import type {
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
+import { currentMonthIso } from "@/lib/today";
 
 
 function sortByUpdatedAt(items: CaptureReviewItem[]) {
@@ -58,7 +59,7 @@ export function useCaptureReviewWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentPeriod = new Date().toISOString().slice(0, 7);
+  const currentPeriod = currentMonthIso();
 
   const openCaptureReviewItems = useMemo(
     () => getOpenCaptureReviewItems(captureReviewItems),

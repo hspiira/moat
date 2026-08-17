@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { todayIso } from "@/lib/today";
 
 export function DataExportPanel() {
   const [isExporting, setIsExporting] = useState(false);
@@ -25,7 +26,7 @@ export function DataExportPanel() {
 
     try {
       const data = await collectFullExport();
-      const date = new Date().toISOString().slice(0, 10);
+      const date = todayIso();
       downloadJson(data, `moat-export-${date}.json`);
       setDone(true);
     } catch (err) {

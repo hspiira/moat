@@ -6,6 +6,7 @@ import type {
   DebtLenderType,
   DebtRepaymentFrequency,
 } from "@/lib/types";
+import { todayIso } from "@/lib/today";
 import { FormCardShell } from "@/components/forms/form-card-shell";
 import { InputField } from "@/components/forms/input-field";
 import { DatePickerField } from "@/components/forms/date-picker-field";
@@ -37,20 +38,23 @@ export type AccountFormState = {
   notes: string;
 };
 
-export const defaultAccountForm: AccountFormState = {
-  name: "",
-  type: "cash",
-  institutionName: "",
-  openingBalance: "0",
-  debtPrincipal: "",
-  debtInterestRate: "",
-  debtInterestModel: "reducing_balance",
-  debtLenderType: "bank",
-  debtStartDate: new Date().toISOString().slice(0, 10),
-  debtTermMonths: "",
-  debtRepaymentFrequency: "monthly",
-  notes: "",
-};
+/** A function, not a constant: a constant freezes today's date at bundle load. */
+export function createDefaultAccountForm(): AccountFormState {
+  return {
+    name: "",
+    type: "cash",
+    institutionName: "",
+    openingBalance: "0",
+    debtPrincipal: "",
+    debtInterestRate: "",
+    debtInterestModel: "reducing_balance",
+    debtLenderType: "bank",
+    debtStartDate: todayIso(),
+    debtTermMonths: "",
+    debtRepaymentFrequency: "monthly",
+    notes: "",
+  };
+}
 
 type Props = {
   accountTypes: AccountType[];

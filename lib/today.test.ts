@@ -1,13 +1,16 @@
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 import { currentMonthIso, todayIso } from "@/lib/today";
 
 describe("todayIso", () => {
-  it("reads the local calendar day, not the UTC one", () => {
-    // 01:30 local. East of UTC this instant is still the previous day in UTC,
-    // which is what toISOString().slice(0, 10) used to return.
-    const justAfterMidnight = new Date(2026, 7, 17, 1, 30);
-    expect(todayIso(justAfterMidnight)).toBe("2026-08-17");
+  it("reads the device's date, not UTC's", () => {
+    // 01:30 in Kampala on the 17th is still the 16th in UTC. toISOString would
+    // stamp yesterday, which is how a 1am transaction landed on the wrong day.
+    const localMidnightish = new Date(2026, 7, 17, 1, 30);
+    expect(todayIso(localMidnightish)).toBe("2026-08-17");
+    expect(localMidnightish.toISOString().slice(0, 10)).not.toBe("2026-08-17");
   });
 
   it("reads the local day late at night too", () => {
@@ -29,8 +32,27 @@ describe("currentMonthIso", () => {
     expect(currentMonthIso(new Date(2026, 7, 1, 0, 30))).toBe("2026-08");
   });
 
-  it("does not roll into the previous month just after midnight", () => {
-    // The first of the month at 00:30 local is the previous month in UTC+3.
-    expect(currentMonthIso(new Date(2026, 8, 1, 0, 30))).toBe("2026-09");
+  it("gives the month the same way at year end", () => {
+    expect(currentMonthIso(new Date(2026, 11, 31, 23, 59))).toBe("2026-12");
+  });
+});
+
+describe("date handling across the app", () => {
+  // Six screens had their own new Date().toISOString().slice(0, 10), each
+  // wrong before 03:00 in Kampala, and one frozen at bundle load besides.
+  it("has no other UTC date stamps", () => {
+    const files = execFileSync(
+      "git",
+      ["ls-files", "app", "components", "lib", "scripts"],
+      { encoding: "utf8" },
+    )
+      .split("\n")
+      .filter((file) => /\.(ts|tsx)$/.test(file) && !file.endsWith(".test.ts") && file !== "lib/today.ts");
+
+    const offenders = files.filter((file) =>
+      /toISOString\(\)\s*\.\s*(slice\(0,\s*(10|7)\)|split\("T"\))/.test(readFileSync(file, "utf8")),
+    );
+
+    expect(offenders, "use todayIso()/currentMonthIso() from lib/today").toEqual([]);
   });
 });

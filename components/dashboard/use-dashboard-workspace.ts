@@ -21,6 +21,7 @@ import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summarie
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, BudgetTarget, Category, RecurringObligation, Transaction, UserProfile } from "@/lib/types";
+import { currentMonthIso } from "@/lib/today";
 
 const TARGET_COVER_MONTHS = 3;
 
@@ -45,7 +46,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     setError(null);
 
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentMonth = currentMonthIso();
       const [
         storedAccounts,
         storedCategories,
@@ -111,7 +112,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
     () => buildDashboardChartSeries(transactions, categories, period, new Date()),
     [categories, period, transactions],
   );
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = currentMonthIso();
   const monthTransactions = useMemo(
     () => transactions.filter((transaction) => transaction.occurredOn.startsWith(currentMonth)),
     [currentMonth, transactions],

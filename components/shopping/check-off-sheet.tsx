@@ -28,13 +28,14 @@ import { parseAmountInput } from "@/lib/parse-amount";
 import type { Account, Category, Item, PlannedPurchase, Transaction } from "@/lib/types";
 
 import type { CheckOffTarget, FulfillmentActual } from "./use-shopping-workspace";
+import { todayIso } from "@/lib/today";
 
 function emptyForm() {
   return {
     accountId: "",
     categoryId: "",
     payee: "",
-    occurredOn: new Date().toISOString().slice(0, 10),
+    occurredOn: todayIso(),
     amount: "",
   };
 }

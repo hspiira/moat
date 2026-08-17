@@ -21,6 +21,7 @@ import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
 import { createId } from "@/lib/ids";
+import { currentMonthIso } from "@/lib/today";
 
 
 function sortGoals(goals: Goal[]) {
@@ -86,7 +87,7 @@ export function useGoalsWorkspace() {
     });
   }, []);
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = currentMonthIso();
   const monthlySummary = useMemo(
     () => getMonthSummary(transactions, [], currentMonth),
     [currentMonth, transactions],
