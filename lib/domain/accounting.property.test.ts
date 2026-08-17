@@ -19,7 +19,7 @@ import {
   getBorrowingPortfolio,
 } from "@/lib/domain/borrowing";
 import { buildTransferPair } from "@/components/transactions/transaction-builder";
-import { defaultTransactionForm } from "@/components/transactions/transaction-form";
+import { createDefaultTransactionForm } from "@/components/transactions/transaction-form";
 import { parseCsvText } from "@/lib/import/csv";
 import type { Account, Transaction, TransactionType } from "@/lib/types";
 
@@ -54,7 +54,7 @@ const receivable: Account = {
 function buildLendingPair(amount: number, occurredOn: string): [Transaction, Transaction] {
   return buildTransferPair({
     form: {
-      ...defaultTransactionForm,
+      ...createDefaultTransactionForm(),
       type: "transfer",
       accountId: account.id,
       destinationAccountId: receivable.id,

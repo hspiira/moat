@@ -26,6 +26,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { createId } from "@/lib/ids";
+import { todayIso } from "@/lib/today";
 
 /** What an item really cost, gathered at check-off. */
 export type FulfillmentActual = {
@@ -95,7 +96,7 @@ export function useShoppingWorkspace() {
     void refresh();
   }, [refresh]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const groups = useMemo(() => groupPlannerRows(purchases, today), [purchases, today]);
   const estimate = useMemo(() => estimatePlannedTotal(purchases), [purchases]);
   const observations = useMemo(

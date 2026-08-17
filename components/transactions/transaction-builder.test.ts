@@ -16,10 +16,10 @@ import {
   validateTransactionAmounts,
   type TransactionBuildInput,
 } from "./transaction-builder";
-import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { createDefaultTransactionForm, type TransactionFormState } from "./transaction-form";
 
 const baseForm: TransactionFormState = {
-  ...defaultTransactionForm,
+  ...createDefaultTransactionForm(),
   type: "expense",
   accountId: "account:source",
   destinationAccountId: "account:destination",

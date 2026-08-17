@@ -44,7 +44,9 @@ import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { countCategoryUsage } from "@/lib/domain/category-usage";
-import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { currentMonthIso, todayIso } from "@/lib/today";
+import { isReservedAccount } from "@/lib/domain/reserved-accounts";
+import { createDefaultTransactionForm, type TransactionFormState } from "./transaction-form";
 import { useCounterparties } from "./use-counterparties";
 import { useLineItems } from "./use-line-items";
 import { useMonthClose } from "./use-month-close";
@@ -83,17 +85,36 @@ function sortTransactions(transactions: Transaction[]) {
   });
 }
 
+/**
+ * Accounts an ordinary transaction may default to.
+ *
+ * The party-ledger pools are seeded for everyone and can sort ahead of the
+ * user's own accounts, so defaulting to one files ordinary spending against the
+ * lending or borrowing ledger. They stay selectable, just never preselected.
+ */
+function selectableAccounts(accounts: Account[]): Account[] {
+  const spendable = accounts.filter(
+    (account) => !isReservedAccount(account) && !account.isArchived,
+  );
+  return spendable.length > 0 ? spendable : accounts;
+}
+
 function getResetTransactionForm(
   accounts: Account[],
   categories: Category[],
 ): TransactionFormState {
+  const base = createDefaultTransactionForm();
+  // Skip the party-ledger pools: they are seeded for everyone and sort ahead of
+  // the user's own accounts, so defaulting to one files ordinary spending
+  // against the lending or borrowing ledger.
+  const selectable = selectableAccounts(accounts);
+
   return {
-    ...defaultTransactionForm,
-    accountId: accounts[0]?.id ?? "",
-    destinationAccountId: accounts[1]?.id ?? "",
+    ...base,
+    accountId: selectable[0]?.id ?? "",
+    destinationAccountId: selectable[1]?.id ?? selectable[0]?.id ?? "",
     categoryId:
-      categories.find((category) => categoryMatchesType(category, defaultTransactionForm.type))
-        ?.id ?? "",
+      categories.find((category) => categoryMatchesType(category, base.type))?.id ?? "",
     currency: "UGX",
     payee: "",
     fxRateToUgx: "",
@@ -103,7 +124,7 @@ function getResetTransactionForm(
 export function useTransactionsWorkspace() {
   const searchParams = useSearchParams();
   const { show } = useToast();
-  const closePeriod = new Date().toISOString().slice(0, 7);
+  const closePeriod = currentMonthIso();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -116,7 +137,7 @@ export function useTransactionsWorkspace() {
     useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [transactionForm, setTransactionForm] =
-    useState<TransactionFormState>(defaultTransactionForm);
+    useState<TransactionFormState>(createDefaultTransactionForm);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -338,11 +359,12 @@ export function useTransactionsWorkspace() {
         ),
       );
 
+      const defaultAccounts = selectableAccounts(reconciledAccounts);
       setTransactionForm((current) => ({
         ...getResetTransactionForm(reconciledAccounts, storedCategories),
         ...current,
-        accountId: current.accountId || reconciledAccounts[0]?.id || "",
-        destinationAccountId: current.destinationAccountId || reconciledAccounts[1]?.id || "",
+        accountId: current.accountId || defaultAccounts[0]?.id || "",
+        destinationAccountId: current.destinationAccountId || defaultAccounts[1]?.id || "",
         categoryId:
           current.categoryId ||
           storedCategories.find((category) => categoryMatchesType(category, current.type))?.id ||
@@ -420,6 +442,38 @@ export function useTransactionsWorkspace() {
         )?.id ?? current.categoryId,
     }));
   }, [categories, searchParams]);
+
+  /**
+   * Keep the default date on today while the app stays open.
+   *
+   * The form can sit on screen for days — an installed PWA is rarely closed —
+   * and the date it was created with would otherwise still be offered after
+   * midnight. Only a date the app stamped itself is moved; once the user picks
+   * one it is left alone, so recording yesterday's spending still works.
+   */
+  const autoStampedDate = useRef(todayIso());
+  useEffect(() => {
+    const refresh = () => {
+      const today = todayIso();
+      if (autoStampedDate.current === today) return;
+      const previous = autoStampedDate.current;
+      autoStampedDate.current = today;
+      if (editingTransactionId) return;
+      setTransactionForm((current) =>
+        current.occurredOn === previous ? { ...current, occurredOn: today } : current,
+      );
+    };
+
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [editingTransactionId]);
 
   useEffect(() => {
     if (transactionForm.currency === "UGX") {
@@ -686,7 +740,7 @@ export function useTransactionsWorkspace() {
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);
-          setTransactionForm(defaultTransactionForm);
+          setTransactionForm(createDefaultTransactionForm());
         }
 
         const timestamp = new Date().toISOString();

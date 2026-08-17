@@ -103,7 +103,11 @@ export function TransactionList({
         ) : (
           <div className="grid gap-4">
             {groupByDay(transactions).map(([day, dayTransactions]) => (
-              <section key={day}>
+              /* min-w-0: a grid item defaults to min-width:auto, so without it
+                 this section refuses to shrink below the row's min-content
+                 width. On a phone that pushed the amount and the actions menu
+                 past the card's edge, where overflow-hidden cut them off. */
+              <section key={day} className="min-w-0">
                 <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
                   {formatDate(day)}
                 </h3>

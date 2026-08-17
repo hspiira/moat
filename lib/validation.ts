@@ -1,3 +1,5 @@
+import { todayIso } from "@/lib/today";
+
 /**
  * Small, shared form validators. Each returns a user-facing error string, or
  * null when the value is acceptable — so callers can drive field-level errors.
@@ -60,6 +62,6 @@ export function validateInteger(
 /** True when an ISO date string (YYYY-MM-DD) is strictly before today. */
 export function isPastDate(iso: string): boolean {
   if (!iso) return false;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   return iso < today;
 }
