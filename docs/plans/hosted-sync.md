@@ -198,11 +198,141 @@ Landed on 2026-08-17:
 - Phase 2, Postgres. Schema, migration, transactional push with `for update` row locks in entity-key order, and row-level tenancy on `moat.user_id`.
 - Phase 4, backfill and pull paging, plus push batching and pull-without-push.
 
-Still open, in the order that matters:
+Also landed: the sync server deploys to Vercel by way of the `server.js`
+entrypoint it captures, and fees are matched by `feeParentId` rather than a
+guessed id.
 
-1. **Client-side version tokens.** The server accepts `baseVersionToken` and the schema has the column, so the server half of Phase 0 is done. The client does not yet persist the token per record, so it still falls back to payload comparison, which means editing an already-synced record is reported as a conflict. This is the single highest-value remaining fix.
-2. **Per-user authentication.** Phase 3. One shared bearer token is not identity, and `userId` is still trusted from the request body.
-3. **End-to-end encryption.** The decision is made but no code implements it. Payloads are plaintext on the wire today.
-4. **Recovery phrase and key transport.** Nothing built.
+## Remaining work
 
-Note that the Postgres schema was written before client-side version tokens exist. That was a deliberate call: `server_version_token` is already in the contract and the column is in place, so adding the client half later needs no migration.
+The ordering below is not preference. Each step removes a constraint the next
+one needs, and shipping out of order buys a data migration.
+
+**Nothing has synced yet, and that is an asset.** The feature flag
+(`NEXT_PUBLIC_ENABLE_HOSTED_SYNC`) is off, no real user has pushed a record, and
+the server holds nothing. Every awkward migration below is avoidable purely by
+finishing the sequence before turning the flag on for anybody. If sync opens
+early, two of them become real:
+
+- Records pushed while `userId` is trusted from the request body are owned by
+  nobody. Binding them to a real account afterwards is a manual reconciliation.
+- Records pushed in plaintext stay plaintext. Turning on encryption later means
+  re-uploading everything and purging the server copy, and the old rows sat
+  readable in a backup in the meantime.
+
+So the release gate is the end of step 4, not the end of step 1.
+
+### 1. Client-side version tokens
+
+The one that makes sync usable. Today the client sends no `baseVersionToken`,
+the server falls back to comparing payloads, and a payload that differs because
+it is *newer* is indistinguishable from one that differs because it *diverged*.
+Every edit to an already-synced ledger record therefore lands in the manual
+review queue.
+
+It is also a hard prerequisite for step 3, not merely a nicety: AES-GCM uses a
+random IV, so under encryption two encryptions of identical plaintext never
+match and the fallback comparison fails one hundred percent of the time.
+
+Store the token in its own local store rather than on the record. It is sync
+metadata, not domain data: putting it on `Transaction` would push it through
+`lib/domain`, into exports and backups, and into the payload that gets hashed
+and compared. A `syncVersions` store keyed by `entityType:entityId`, added to
+`unsyncedStoreNames`, keeps it out of all of that.
+
+Write the token in the two places the server hands one back: a `synced` push
+result, and each record applied from a pull. Read it in
+`createSyncPushRequest`.
+
+Done when a single device can edit a synced transaction repeatedly without
+producing a conflict, and two devices editing the same record from the same
+base still produce exactly one.
+
+### 2. Accounts and per-user authentication
+
+Decided on 2026-08-17: optional account, local-only stays the default.
+
+The server-side change is small and mechanical. The RLS predicate moves from
+`current_setting('moat.user_id')`, set from a field the client sent, to the
+subject of a verified credential. `withUserTransaction` is the only place that
+sets it, so there is one line to change and the tenancy tests already prove the
+policy bites.
+
+The design question worth care is how an account binds to the tenancy key.
+Devices already carry a cuid2 `userId`, and seeded ids are derived from it, so
+changing it means re-deriving every seeded record. Do not do that. Let the
+account own the existing `userId` as its tenant id, established when the first
+device links. A second device adopts that tenant id during restore, which is
+the same moment it receives the key in step 4. Those two flows are one flow.
+
+Because keys never reach the server (step 3), the choice of auth provider is
+unconstrained: it authenticates a person, it never holds anything that decrypts
+data. That is worth stating explicitly so nobody reaches for a provider feature
+that would need the plaintext.
+
+Also in this step, because they are all "before a stranger can reach it":
+rate limiting, device registration and revocation, request size caps already
+in place, and the threat-model review the tracker calls for.
+
+### 3. End-to-end encryption
+
+The key hierarchy already does the hard part. One DEK encrypts everything and is
+wrapped per unlock method, so encrypting sync payloads is a new use of an
+existing key, not a new crypto design.
+
+Encrypt at push time rather than at enqueue. The outbox is already encrypted at
+rest by `record-crypto`, so enqueueing ciphertext buys no additional protection,
+and it would make the conflict queue unreadable: `/settings/sync-conflicts`
+shows the user what diverged, which it cannot do if both sides are opaque.
+
+The envelope needs its own version and a `dekId`. Without the latter, a future
+key rotation leaves the server holding a mix of blobs with no way to tell which
+key opens which, and the only recovery is trial decryption.
+
+Server side, delete the payload-id validation. It parses the JSON to check the
+embedded id matches `entityId`, which ciphertext cannot satisfy. That invariant
+moves client-side, before encryption.
+
+What the server still sees, and should be stated in the privacy copy rather than
+glossed: tenant id, entity type, entity id, timestamps, and blob sizes. Ids are
+cuid2 and carry no meaning, and seeded ids are derived per user, so the same
+default category has a different id for every user. Volume and timing remain
+visible and cannot be hidden by this design.
+
+### 4. Recovery phrase and key transport
+
+The genuinely hard step, and the one with a consequence that has to be said out
+loud to the user rather than buried.
+
+Generate a high-entropy phrase, show it once, confirm it, derive a KEK from it
+with Argon2id, and store only the wrapped DEK server-side. A new device signs
+in, pulls the wrap, takes the phrase, unwraps locally, adopts the tenant id, and
+pulls. The server never holds the phrase or the key.
+
+**Never store the PIN-wrapped DEK server-side.** Six digits is at most a million
+candidates, and the Argon2id cost is tuned so unlock feels instant on a mid-range
+phone, which is exactly what makes it useless against an offline search once
+someone holds the blob. The PIN is a fine local unlock because the blob never
+leaves the device. It is not a transport secret.
+
+Device pairing by QR is a nicer experience and worth adding later, but it cannot
+be the foundation: it needs both devices working, and the case that actually
+matters is the phone that was lost, stolen or drowned.
+
+Lose the phrase and every device and the cloud copy is unrecoverable. That is
+what end-to-end encryption means, and support cannot undo it. Say so in the
+opt-in flow, in plain words, before the user commits.
+
+## Smaller items, not on the critical path
+
+- **Sync endpoint is a free-text settings field.** Should come from build
+  configuration once a deployment exists, with the free-text field kept only if
+  self-hosting is ever supported.
+- **Transfers cannot be edited.** `beginTransactionEdit` returns early for them
+  and the row menu hides Edit, so a transfer, a loan repayment and either leg of
+  a debt payment offer only Delete. Editing one means rebuilding a balanced
+  pair, which is why it was blocked. This is a product decision before it is an
+  engineering one.
+- **No UI test coverage.** Both mobile faults fixed on 2026-08-17, a row
+  overflowing its card and a date frozen at bundle load, were invisible to a
+  fully green suite. They were found by driving a browser. A small set of
+  journeys under Playwright would have caught both.

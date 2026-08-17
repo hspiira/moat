@@ -64,13 +64,16 @@ A consolidation pass reconciled the docs with the code and closed several review
 - Per-user authentication for hosted sync (the server still trusts `userId` from the request body behind one shared token)
 - End-to-end encryption of sync payloads (they are currently plaintext on the wire)
 - Client-side `baseVersionToken` persistence, without which editing an already-synced record is reported as a conflict
+
+Hosted sync stays behind `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until all four sync items above are done. Opening it earlier means records owned by nobody and plaintext already on the server, both of which cost a migration to undo. Sequencing is in [plans/hosted-sync.md](plans/hosted-sync.md).
 - PDF statement parsing (MTN, Stanbic, DFCU)
 - Android notification listener rollout — service code exists but there is no permission-grant UX and it is not device-verified
 - Correction logging and parser refinement workflow
 - Provider-grade parser packs with broad MTN, Airtel, and bank fixture coverage
 - Push notifications / reminders
 - Institution verification workflows
-- Component/E2E test coverage of the interactive UI layer
+- Component/E2E test coverage of the interactive UI layer (the two mobile faults fixed on 2026-08-17 were invisible to a green suite)
+- Editing a transfer, a loan repayment, or either leg of a debt payment (blocked by design; needs a product decision, see [plans/hosted-sync.md](plans/hosted-sync.md))
 
 ---
 
