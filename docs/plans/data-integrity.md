@@ -143,25 +143,54 @@ money is invisible in net worth.
 A transfer is a balanced pair. A savings contribution is a single row. That is
 the inconsistency.
 
-Two coherent models, and this is a product decision before an engineering one:
+### Decided 2026-08-17
 
-- **It is spending.** A protection premium buys cover, not an asset. Then it is
-  an expense with a category, and `savings_contribution` disappears.
-- **It is a transfer to an asset.** Then it needs a destination account, and
-  every existing row needs one assigned.
+Savings here means a voluntary allocation out of monthly income. That is money
+moving into something the user still owns, which is a transfer, not spending.
+So a savings contribution requires a destination: either an account already
+modelled, or a new one standing for whatever holds the money.
 
-Recommend supporting both, because both occur: term life is an expense, an
-endowment or a SACCO deposit is a transfer. Which one applies is a property of
-the destination, so requiring a destination answers it.
+`savings_contribution` therefore becomes a transfer carrying a savings category
+rather than its own single-row type. The savings figure on screen stays — it
+reads the category, not the type — and the pair balances like every other
+transfer.
+
+Anything with no destination is not savings. It is spending, and should carry an
+expense category.
+
+### Insurance premiums
+
+Not the same question, and it turns on one property of the policy: whether it
+has a **cash surrender value**.
+
+- **No surrender value** (term life, health, motor). The premium buys cover for
+  a period and builds nothing. It is an expense
+  ([AccountingTools](https://www.accountingtools.com/podcast-blog/341)).
+- **Has a surrender value** (endowment, whole life). That value is an asset on a
+  personal balance sheet, and the expense for a period is the premium paid minus
+  the increase in surrender value
+  ([PwC Viewpoint](https://viewpoint.pwc.com/content/pwc-madison/ditaroot/us/en/pwc/accounting_guides/loans_and_investment/loans_and_investment_US/chapter_5_other_rece_US/51_investments_in_li_US.html),
+  [Guardian](https://www.guardianlife.com/life-insurance/surrender)).
+
+The second case needs no per-premium split from the user. Model the policy as an
+account, pay premiums into it as transfers, and periodically set its balance to
+the surrender value the insurer states. The shortfall posts as an expense, which
+is the protection cost. That is the same pattern the ledger already uses for the
+Binance account, held at a value the user maintains.
+
+Which case applies is a fact about the policy document, not something the app
+can infer.
 
 ### Terrible scenarios
 
 | Scenario | Handling |
 | --- | --- |
-| Migration invents a destination account | Never. Ask, or leave as expense |
-| Reclassifying changes historical net worth | Show the before and after and require confirmation |
+| Migration invents a destination account | Never. Ask per row, or leave as expense |
+| Reclassifying changes historical net worth | Show before and after, require confirmation |
 | Goal progress changes retroactively | Expected; state it plainly |
-| A row is converted to a transfer with no partner | Build both legs or do not convert |
+| A row is converted with no partner leg | Build both legs or do not convert |
+| A premium bundles its charge | Split it. The 254,000 row is a 250,000 premium and a 4,000 fee |
+| Policy account marked to a stale surrender value | Prompt on a cadence; an unreconciled asset overstates net worth |
 
 ## 4. Party identity
 
