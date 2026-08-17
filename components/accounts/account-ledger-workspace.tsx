@@ -56,7 +56,14 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
     [account, transactions],
   );
   const newestFirst = useMemo(() => [...ledgerRows].reverse(), [ledgerRows]);
-  const history = useIncrementalList(newestFirst, { resetKey: accountId });
+  const {
+    visible: historyRows,
+    hasMore: hasOlder,
+    shownCount,
+    totalCount,
+    sentinelRef,
+    showMore,
+  } = useIncrementalList(newestFirst, { resetKey: accountId });
   const historyTotals = ledgerRows.reduce(
     (totals, row) => ({
       credit: totals.credit + row.credit,
@@ -219,7 +226,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                       longest note, pushed the page past the viewport, and made
                       the whole account page scroll sideways. */}
                   <ul className="flex min-w-0 flex-col divide-y divide-border/50 md:hidden">
-                    {history.visible.map((row) => {
+                    {historyRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
                       const title =
@@ -277,7 +284,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {history.visible.map((row) => {
+                        {historyRows.map((row) => {
                           const category = categories.find((entry) => entry.id === row.categoryId);
                           const primary = row.payee?.trim() || transactionTypeLabels[row.type];
                           const secondary = [
@@ -329,17 +336,17 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                     </Table>
                   </div>
 
-                  <div ref={history.sentinelRef} aria-hidden className="h-px" />
-                  {history.hasMore ? (
+                  {hasOlder ? (
                     <div className="grid justify-items-center gap-1 pt-3">
-                      <Button variant="ghost" size="sm" onClick={history.showMore}>
+                      <Button variant="ghost" size="sm" onClick={showMore}>
                         Show older
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        {history.shownCount} of {history.totalCount}
+                        {shownCount} of {totalCount}
                       </p>
                     </div>
                   ) : null}
+                  <div ref={sentinelRef} aria-hidden className="h-px" />
                 </>
               )}
             </div>
