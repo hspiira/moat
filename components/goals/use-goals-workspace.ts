@@ -20,6 +20,7 @@ type GoalFieldErrors = {
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 
 function sortGoals(goals: Goal[]) {
@@ -140,7 +141,7 @@ export function useGoalsWorkspace() {
 
     try {
       const timestamp = new Date().toISOString();
-      const goalId = editingGoalId ?? `goal:${crypto.randomUUID()}`;
+      const goalId = editingGoalId ?? createId();
       const wasEditing = Boolean(editingGoalId);
 
       await repositories.goals.upsert({

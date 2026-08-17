@@ -7,6 +7,7 @@ import { revertPurchase } from "@/lib/domain/planned-purchases";
 import { errorMessage } from "@/lib/errors";
 import { repositories } from "@/lib/repositories/instance";
 import type { TransactionLineItem, UserProfile } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export type LineItemInput = {
   id?: string;
@@ -61,7 +62,7 @@ export function useLineItems({
           ? lineItems.find((line) => line.id === input.id)
           : undefined;
         await repositories.transactionLineItems.upsert({
-          id: input.id ?? `line:${crypto.randomUUID()}`,
+          id: input.id ?? createId(),
           userId: profile.id,
           transactionId: input.transactionId,
           itemId: resolved.item.id,

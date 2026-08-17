@@ -4,9 +4,9 @@ import {
   buildDefaultAccounts,
   reconcileDefaultAccounts,
 } from "@/lib/app-state/default-accounts";
-import { isReservedAccountId, isReservedAccountName } from "@/lib/domain/reserved-accounts";
-import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { isReservedAccount, isReservedAccountName } from "@/lib/domain/reserved-accounts";
+import { borrowingPoolAccountId } from "@/lib/domain/borrowing";
+import { lendingPoolAccountId } from "@/lib/domain/lending";
 import type { Account } from "@/lib/types";
 
 const TIMESTAMP = "2026-08-06T00:00:00.000Z";
@@ -16,8 +16,8 @@ describe("default accounts", () => {
     const seeded = buildDefaultAccounts("user:default", TIMESTAMP);
 
     expect(seeded.map((account) => account.id)).toEqual([
-      LENDING_POOL_ACCOUNT_ID,
-      BORROWING_POOL_ACCOUNT_ID,
+      lendingPoolAccountId("user:default"),
+      borrowingPoolAccountId("user:default"),
     ]);
     expect(seeded.every((account) => account.openingBalance === 0)).toBe(true);
     expect(seeded.every((account) => account.balance === 0)).toBe(true);
@@ -36,7 +36,7 @@ describe("default accounts", () => {
     const missing = reconcileDefaultAccounts([lendingPool], "user:default", TIMESTAMP);
 
     expect(missing).toHaveLength(1);
-    expect(missing[0].id).toBe(BORROWING_POOL_ACCOUNT_ID);
+    expect(missing[0].id).toBe(borrowingPoolAccountId("user:default"));
   });
 
   it("leaves an archived pool archived instead of resurrecting it", () => {
@@ -48,9 +48,12 @@ describe("default accounts", () => {
   });
 
   it("recognises reserved ids and names however they are typed", () => {
-    expect(isReservedAccountId(LENDING_POOL_ACCOUNT_ID)).toBe(true);
-    expect(isReservedAccountId(BORROWING_POOL_ACCOUNT_ID)).toBe(true);
-    expect(isReservedAccountId("account:some-uuid")).toBe(false);
+    const [lendingPool, borrowingPool] = buildDefaultAccounts("user:default", TIMESTAMP);
+    expect(isReservedAccount(lendingPool)).toBe(true);
+    expect(isReservedAccount(borrowingPool)).toBe(true);
+    expect(isReservedAccount({ ...lendingPool, id: "not-a-pool" })).toBe(false);
+    // The same slug under a different user is not this user's pool.
+    expect(isReservedAccount({ ...lendingPool, userId: "user:other" })).toBe(false);
 
     expect(isReservedAccountName("Money lent out")).toBe(true);
     expect(isReservedAccountName("  money LENT out ")).toBe(true);

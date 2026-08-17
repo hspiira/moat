@@ -11,6 +11,8 @@ import { isHostedSyncEnabled } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
+import { createId } from "@/lib/ids";
+import { syncProfileId } from "@/lib/domain/seeded-ids";
 
 
 const syncModeOptions: { value: SyncMode; label: string; body: string }[] = [
@@ -29,11 +31,11 @@ const syncModeOptions: { value: SyncMode; label: string; body: string }[] = [
 function createDefaultSyncProfile(user: UserProfile): SyncProfile {
   const timestamp = new Date().toISOString();
   return {
-    id: `sync-profile:${user.id}`,
+    id: syncProfileId(user.id),
     userId: user.id,
     mode: "local_only",
     hostedSyncEnabled: false,
-    deviceId: `device:${crypto.randomUUID()}`,
+    deviceId: createId(),
     createdAt: timestamp,
     updatedAt: timestamp,
   };

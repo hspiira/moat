@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";
 import type { RecurringObligation, TransactionRule, UserProfile } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export function useRulesAndObligations(params: {
   profile: UserProfile | null;
@@ -25,7 +26,7 @@ export function useRulesAndObligations(params: {
       try {
         const timestamp = new Date().toISOString();
         await repositories.transactionRules.upsert({
-          id: `rule:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -63,7 +64,7 @@ export function useRulesAndObligations(params: {
       try {
         const timestamp = new Date().toISOString();
         await repositories.recurringObligations.upsert({
-          id: `obligation:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           createdAt: timestamp,
           updatedAt: timestamp,

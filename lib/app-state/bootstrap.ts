@@ -7,6 +7,7 @@ import type {
   ResourceLink,
   UserProfile,
 } from "@/lib/types";
+import { investmentProfileId } from "@/lib/domain/seeded-ids";
 
 export type BootstrapState = {
   profile: UserProfile;
@@ -23,7 +24,7 @@ export function createBootstrapState(profile: UserProfile): BootstrapState {
     categories: buildDefaultCategories(profile.id),
     resources: defaultResourceLinks,
     investmentProfile: {
-      id: `investment-profile:${profile.id}`,
+      id: investmentProfileId(profile.id),
       userId: profile.id,
       timeHorizonMonths: profile.investmentHorizonMonths,
       liquidityNeed: "near_term",

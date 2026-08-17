@@ -9,12 +9,12 @@ import {
 } from "@/lib/domain/accounts";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import {
-  LENDING_POOL_ACCOUNT_ID,
+  lendingPoolAccountId,
   buildLendingPoolAccount,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
 import {
-  BORROWING_POOL_ACCOUNT_ID,
+  borrowingPoolAccountId,
   buildBorrowingPoolAccount,
   getBorrowingPortfolio,
 } from "@/lib/domain/borrowing";
@@ -101,7 +101,7 @@ function borrowingLeg(
   return {
     id: `transaction:borrowing-pool:${payee}:${suffix}`,
     userId: "user:default",
-    accountId: BORROWING_POOL_ACCOUNT_ID,
+    accountId: borrowingPoolAccountId("user:default"),
     type: "transfer",
     amount,
     currency: "UGX",
@@ -126,7 +126,7 @@ function poolLeg(
   return {
     id: `transaction:pool:${payee}:${suffix}`,
     userId: "user:default",
-    accountId: LENDING_POOL_ACCOUNT_ID,
+    accountId: lendingPoolAccountId("user:default"),
     type: "transfer",
     amount,
     currency: "UGX",

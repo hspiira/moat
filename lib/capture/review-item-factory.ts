@@ -5,6 +5,7 @@ import type {
 } from "@/lib/types";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import { buildCaptureFieldWarnings } from "@/lib/capture/confidence";
+import { createId } from "@/lib/ids";
 
 function resolveReviewStatus(candidate: ParsedCaptureCandidate): CaptureReviewItem["status"] {
   if (candidate.duplicate) return "duplicate";
@@ -68,7 +69,7 @@ export function createCaptureReviewItem(params: {
   };
 
   return {
-    id: `capture-review:${crypto.randomUUID()}`,
+    id: createId(),
     userId: params.userId,
     envelopeId: params.envelopeId,
     source: params.candidate.source,

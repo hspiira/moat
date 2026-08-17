@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
-import { FEES_CATEGORY_ID, LOAN_INTEREST_CATEGORY_ID } from "@/lib/app-state/defaults";
+import { feesCategoryId, loanInterestCategoryId } from "@/lib/app-state/defaults";
+import { deriveSeededId } from "@/lib/ids";
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { isSpendingTransaction } from "@/lib/domain/transfers";
 import type { Account } from "@/lib/types";
@@ -134,8 +135,8 @@ describe("buildTransferPair", () => {
     expect(source.transferGroupId).toBe(destination.transferGroupId);
     expect(source.accountId).toBe("account:source");
     expect(destination.accountId).toBe("account:destination");
-    expect(source.id).toBe(`${source.transferGroupId}:source`);
-    expect(destination.id).toBe(`${destination.transferGroupId}:destination`);
+    expect(source.id).toBe(deriveSeededId(source.transferGroupId!, "source"));
+    expect(destination.id).toBe(deriveSeededId(destination.transferGroupId!, "destination"));
   });
 
   it("rejects transfers without two distinct accounts", () => {
@@ -230,7 +231,7 @@ describe("buildDebtPaymentTransactions", () => {
     const spending = written.filter(isSpendingTransaction);
 
     expect(spending).toHaveLength(1);
-    expect(spending[0].categoryId).toBe(LOAN_INTEREST_CATEGORY_ID);
+    expect(spending[0].categoryId).toBe(loanInterestCategoryId("user:default"));
   });
 
   it("links the principal legs as one balanced transfer", () => {
@@ -399,12 +400,12 @@ const parentPayment: Transaction = {
 
 describe("buildFeeTransaction", () => {
   it("builds a UGX fee expense linked to its parent with a deterministic id", () => {
-    const fee = buildFeeTransaction(parentPayment, "1250", FEES_CATEGORY_ID);
+    const fee = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"));
     expect(fee).not.toBeNull();
     expect(fee!.id).toBe("transaction:abc:fee");
     expect(fee!.feeParentId).toBe("transaction:abc");
     expect(fee!.type).toBe("expense");
-    expect(fee!.categoryId).toBe(FEES_CATEGORY_ID);
+    expect(fee!.categoryId).toBe(feesCategoryId("user:default"));
     expect(fee!.accountId).toBe("account:momo");
     expect(fee!.currency).toBe("UGX");
     expect(fee!.fxRateToUgx).toBeUndefined();
@@ -415,15 +416,15 @@ describe("buildFeeTransaction", () => {
   });
 
   it("returns null for blank, zero, negative, or non-numeric fees", () => {
-    expect(buildFeeTransaction(parentPayment, "", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "   ", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "0", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "-5", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "abc", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "   ", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "0", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "-5", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "abc", feesCategoryId("user:default"))).toBeNull();
   });
 
   it("reads a grouped fee amount", () => {
-    expect(buildFeeTransaction(parentPayment, "2,875", FEES_CATEGORY_ID)).toMatchObject({
+    expect(buildFeeTransaction(parentPayment, "2,875", feesCategoryId("user:default"))).toMatchObject({
       amount: 2875,
     });
   });

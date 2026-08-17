@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import {
-  BORROWING_POOL_ACCOUNT_ID,
+  borrowingPoolAccountId,
   buildBorrowingPoolAccount,
   getBorrowingPortfolio,
   isInformalDebt,
@@ -38,7 +38,7 @@ type LegOptions = {
 function leg(
   amount: number,
   occurredOn: string,
-  { accountId = BORROWING_POOL_ACCOUNT_ID, payee, expectedRepaymentDate }: LegOptions = {},
+  { accountId = borrowingPoolAccountId("user:default"), payee, expectedRepaymentDate }: LegOptions = {},
 ): Transaction {
   return {
     id: `transaction:${accountId}:${payee ?? "none"}:${occurredOn}:${amount}`,

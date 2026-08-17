@@ -25,6 +25,7 @@ import type {
   TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 /** What an item really cost, gathered at check-off. */
 export type FulfillmentActual = {
@@ -141,7 +142,7 @@ export function useShoppingWorkspace() {
           await repositories.items.upsert(resolved.item);
         }
         await repositories.plannedPurchases.upsert({
-          id: `planned:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           itemId: resolved.item.id,
           quantity: input.quantity,
@@ -268,7 +269,7 @@ export function useShoppingWorkspace() {
         if (target.mode === "attach") {
           transactionId = target.transactionId;
         } else {
-          transactionId = `transaction:${crypto.randomUUID()}`;
+          transactionId = createId();
           await repositories.transactions.upsert({
             id: transactionId,
             userId: profile.id,

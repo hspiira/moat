@@ -56,7 +56,7 @@ import {
   buildTransferPair,
 } from "./transaction-builder";
 import {
-  FEES_CATEGORY_ID,
+  feesCategoryId,
   buildFeesCategory,
   reconcileDefaultCategories,
 } from "@/lib/app-state/defaults";
@@ -64,6 +64,7 @@ import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
 import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
+import { createId } from "@/lib/ids";
 
 export type { BudgetFormState };
 
@@ -533,7 +534,7 @@ export function useTransactionsWorkspace() {
 
         // A fee is a separate linked expense on the same account (the transfer
         // source, for transfers). Editing that clears the fee removes the orphan.
-        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, FEES_CATEGORY_ID);
+        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, feesCategoryId(feeParent.userId));
         const feeId = `${feeParent.id}:fee`;
         if (fee) {
           await repositories.categories.upsert(buildFeesCategory(profile.id));
@@ -601,7 +602,7 @@ export function useTransactionsWorkspace() {
       if (existing) return existing;
 
       const category: Category = {
-        id: `category:${crypto.randomUUID()}`,
+        id: createId(),
         userId: profile.id,
         name: trimmed,
         kind,

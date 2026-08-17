@@ -1,7 +1,11 @@
+import { transfersCategoryId } from "@/lib/domain/seeded-ids";
 import type { Transaction } from "@/lib/types";
 
 export function isTransferTransaction(transaction: Transaction): boolean {
-  return transaction.type === "transfer" || transaction.categoryId === "category:transfers";
+  return (
+    transaction.type === "transfer" ||
+    transaction.categoryId === transfersCategoryId(transaction.userId)
+  );
 }
 
 export function isSpendingTransaction(transaction: Transaction): boolean {

@@ -8,17 +8,13 @@ import {
   newCounterpartyId,
   resolveCounterparty,
 } from "@/lib/domain/counterparties";
-import { PARTY_LEDGERS } from "@/lib/domain/reserved-accounts";
+import { poolCounterpartyKinds } from "@/lib/domain/reserved-accounts";
 import {
   NEW_COUNTERPARTY,
   counterpartyKindForDirection,
   type TransferDirection,
 } from "@/lib/domain/transfer-counterparty";
-import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
-
-const POOL_COUNTERPARTY_KINDS = new Map<string, CounterpartyKind>(
-  PARTY_LEDGERS.map((ledger) => [ledger.poolAccountId, ledger.counterpartyKind]),
-);
+import type { Counterparty, Transaction } from "@/lib/types";
 
 export type CounterpartySelection = {
   counterpartyId: string;
@@ -40,7 +36,7 @@ export function useCounterparties() {
       const backfill = backfillCounterparties({
         transactions,
         existing: stored,
-        poolKinds: POOL_COUNTERPARTY_KINDS,
+        poolKinds: poolCounterpartyKinds(userId),
         userId,
         timestamp: new Date().toISOString(),
         nextId: newCounterpartyId,

@@ -16,6 +16,7 @@ import {
   type SyncableEntityType,
 } from "@/lib/sync/entity-sync";
 import { toEntityKey } from "@/lib/sync/cursor";
+import { createId } from "@/lib/ids";
 
 export type SyncBackfillProgress = {
   entityType: SyncableEntityType;
@@ -72,7 +73,7 @@ export async function backfillSyncOutbox(params: {
 
       const timestamp = new Date().toISOString();
       const item: SyncOutboxItem = {
-        id: `sync-outbox:${crypto.randomUUID()}`,
+        id: createId(),
         userId: profile.userId,
         entityType,
         entityId: record.id,

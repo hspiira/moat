@@ -6,10 +6,11 @@ import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { splitDebtPayment } from "@/lib/domain/debt-payment";
 import { assertCategoryMatchesType } from "@/lib/domain/transaction-classification";
-import { LOAN_INTEREST_CATEGORY_ID } from "@/lib/app-state/defaults";
+import { loanInterestCategoryId } from "@/lib/app-state/defaults";
 import type { Account, Category, Transaction, TransactionRule } from "@/lib/types";
 
 import type { TransactionFormState } from "./transaction-form";
+import { createId, deriveSeededId } from "@/lib/ids";
 
 export type TransactionBuildInput = {
   form: TransactionFormState;
@@ -86,9 +87,9 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
   // Transfers always get a fresh group id: transfer pairs cannot be edited
   // in place (beginTransactionEdit blocks transfers), so reusing the id of
   // an edited non-transfer transaction would collide across edits.
-  const transferGroupId = `transfer:${crypto.randomUUID()}`;
-  const sourceId = `${transferGroupId}:source`;
-  const destinationId = `${transferGroupId}:destination`;
+  const transferGroupId = createId();
+  const sourceId = deriveSeededId(transferGroupId, "source");
+  const destinationId = deriveSeededId(transferGroupId, "destination");
   const shared = sharedTransactionFields(input, originalAmount);
 
   return [
@@ -146,7 +147,7 @@ export function buildManualTransaction(
     assertCategoryMatchesType(categories, form.type, form.categoryId);
   }
 
-  const transactionId = input.editingTransactionId ?? `transaction:${crypto.randomUUID()}`;
+  const transactionId = input.editingTransactionId ?? createId();
 
   const baseTransaction: Transaction = {
     id: transactionId,
@@ -216,7 +217,7 @@ export function buildDebtPaymentTransactions(
     throw new Error(`${loan.name} is not a debt account.`);
   }
 
-  const groupId = `transfer:${crypto.randomUUID()}`;
+  const groupId = createId();
   const shared = sharedTransactionFields(input, originalAmount);
   // Anything paid beyond the balance still moves into the loan, so the pair
   // stays balanced and the account can go positive rather than money vanishing.
@@ -226,24 +227,24 @@ export function buildDebtPaymentTransactions(
   if (towardsLoan > 0) {
     rows.push(
       {
-        id: `${groupId}:source`,
+        id: deriveSeededId(groupId, "source"),
         userId,
         accountId: form.accountId,
         type: "transfer",
         amount: -towardsLoan,
         transferGroupId: groupId,
-        createdAt: preservedCreatedAt(input, `${groupId}:source`),
+        createdAt: preservedCreatedAt(input, deriveSeededId(groupId, "source")),
         ...shared,
         originalAmount: towardsLoan,
       },
       {
-        id: `${groupId}:destination`,
+        id: deriveSeededId(groupId, "destination"),
         userId,
         accountId: loan.id,
         type: "transfer",
         amount: towardsLoan,
         transferGroupId: groupId,
-        createdAt: preservedCreatedAt(input, `${groupId}:destination`),
+        createdAt: preservedCreatedAt(input, deriveSeededId(groupId, "destination")),
         ...shared,
         originalAmount: towardsLoan,
       },
@@ -252,15 +253,15 @@ export function buildDebtPaymentTransactions(
 
   if (split.interest > 0) {
     rows.push({
-      id: `${groupId}:interest`,
+      id: deriveSeededId(groupId, "interest"),
       userId,
       accountId: form.accountId,
       type: "expense",
       amount: split.interest,
-      createdAt: preservedCreatedAt(input, `${groupId}:interest`),
+      createdAt: preservedCreatedAt(input, deriveSeededId(groupId, "interest")),
       ...shared,
       originalAmount: split.interest,
-      categoryId: LOAN_INTEREST_CATEGORY_ID,
+      categoryId: loanInterestCategoryId(userId),
       note: form.note.trim() || `Interest on ${loan.name}`,
     });
   }

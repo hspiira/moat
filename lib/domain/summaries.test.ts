@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { getMonthSummary, getSavingsRate } from "@/lib/domain/summaries";
 import type { Category, Transaction } from "@/lib/types";
+import { transfersCategoryId } from "@/lib/domain/seeded-ids";
 
 function buildTransaction(
   values: Partial<Transaction> & Pick<Transaction, "id" | "accountId" | "type" | "amount" | "occurredOn" | "categoryId">,
@@ -44,7 +45,7 @@ const categories: Category[] = [
     createdAt: "2026-04-01T00:00:00.000Z",
   },
   {
-    id: "category:transfers",
+    id: transfersCategoryId("user:default"),
     userId: "user:default",
     name: "Transfers",
     kind: "transfer",
@@ -84,7 +85,7 @@ const transactions: Transaction[] = [
     type: "transfer",
     amount: -100_000,
     occurredOn: "2026-04-05",
-    categoryId: "category:transfers",
+    categoryId: transfersCategoryId("user:default"),
     transferGroupId: "transfer:1",
   }),
   buildTransaction({
@@ -93,7 +94,7 @@ const transactions: Transaction[] = [
     type: "transfer",
     amount: 100_000,
     occurredOn: "2026-04-05",
-    categoryId: "category:transfers",
+    categoryId: transfersCategoryId("user:default"),
     transferGroupId: "transfer:1",
   }),
 ];
@@ -177,7 +178,7 @@ describe("getMonthSummary", () => {
           type: "expense",
           amount: 50_000,
           occurredOn: "2026-04-06",
-          categoryId: "category:transfers",
+          categoryId: transfersCategoryId("user:default"),
         }),
       ],
       categories,

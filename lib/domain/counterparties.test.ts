@@ -9,8 +9,8 @@ import {
   resolveCounterparty,
   widenKind,
 } from "@/lib/domain/counterparties";
-import { BORROWING_POOL_ACCOUNT_ID } from "@/lib/domain/borrowing";
-import { LENDING_POOL_ACCOUNT_ID } from "@/lib/domain/lending";
+import { borrowingPoolAccountId } from "@/lib/domain/borrowing";
+import { lendingPoolAccountId } from "@/lib/domain/lending";
 import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
 
 const TIMESTAMP = "2026-08-06T00:00:00.000Z";
@@ -23,7 +23,7 @@ function transaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
     id: "tx:1",
     userId: "user:default",
-    accountId: LENDING_POOL_ACCOUNT_ID,
+    accountId: lendingPoolAccountId("user:default"),
     type: "transfer",
     amount: 100_000,
     currency: "UGX",
@@ -39,8 +39,8 @@ function transaction(overrides: Partial<Transaction> = {}): Transaction {
 }
 
 const poolKinds = new Map<string, CounterpartyKind>([
-  [LENDING_POOL_ACCOUNT_ID, "borrower"],
-  [BORROWING_POOL_ACCOUNT_ID, "lender"],
+  [lendingPoolAccountId("user:default"), "borrower"],
+  [borrowingPoolAccountId("user:default"), "lender"],
 ]);
 
 describe("counterparty names", () => {
@@ -141,7 +141,7 @@ describe("backfillCounterparties", () => {
   it("assigns the role from which pool the record sits in", () => {
     const result = run([
       transaction({ id: "tx:1", payee: "Sarah" }),
-      transaction({ id: "tx:2", accountId: BORROWING_POOL_ACCOUNT_ID, payee: "Grace" }),
+      transaction({ id: "tx:2", accountId: borrowingPoolAccountId("user:default"), payee: "Grace" }),
     ]);
 
     expect(result.counterparties.find((entry) => entry.name === "Sarah")?.kind).toBe("borrower");
@@ -151,7 +151,7 @@ describe("backfillCounterparties", () => {
   it("gives one person both roles rather than two records", () => {
     const result = run([
       transaction({ id: "tx:1", payee: "Musa" }),
-      transaction({ id: "tx:2", accountId: BORROWING_POOL_ACCOUNT_ID, payee: "Musa" }),
+      transaction({ id: "tx:2", accountId: borrowingPoolAccountId("user:default"), payee: "Musa" }),
     ]);
 
     expect(result.counterparties).toHaveLength(1);

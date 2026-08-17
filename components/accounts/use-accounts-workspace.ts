@@ -4,7 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { normalizeOpeningBalance, reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
-import { isReservedAccountId, isReservedAccountName } from "@/lib/domain/reserved-accounts";
+import { isReservedAccount, isReservedAccountName } from "@/lib/domain/reserved-accounts";
 import { canDeleteAccount, planAccountMerge } from "@/lib/domain/account-cleanup";
 import { newCounterpartyId } from "@/lib/domain/counterparties";
 import { announceLocalSave } from "@/lib/local-save";
@@ -15,6 +15,7 @@ import { validateAmount } from "@/lib/validation";
 import type { Account, AccountType, Transaction } from "@/lib/types";
 
 import { defaultAccountForm, type AccountFormState } from "./account-form";
+import { createId } from "@/lib/ids";
 
 
 function toInstitutionType(type: AccountType): Account["institutionType"] {
@@ -91,7 +92,9 @@ export function useAccountsWorkspace() {
       nextFieldErrors.name = "Give this account a name.";
     } else if (
       isReservedAccountName(accountForm.name) &&
-      !isReservedAccountId(editingAccountId ?? "")
+      !accounts.some(
+        (account) => account.id === editingAccountId && isReservedAccount(account),
+      )
     ) {
       nextFieldErrors.name = `Moat already created "${accountForm.name.trim()}" for you. Name this one after the person instead, or record the loan against the existing account.`;
     }
@@ -113,7 +116,7 @@ export function useAccountsWorkspace() {
 
     try {
       const timestamp = new Date().toISOString();
-      const accountId = editingAccountId ?? `account:${crypto.randomUUID()}`;
+      const accountId = editingAccountId ?? createId();
       const openingBalance = normalizeOpeningBalance(
         accountForm.type,
         Number(accountForm.openingBalance),

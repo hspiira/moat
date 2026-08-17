@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeItemName, resolveItem } from "@/lib/domain/item-normalization";
 import type { Item } from "@/lib/types";
+import { isValidId } from "@/lib/ids";
 
 const now = "2026-08-07T00:00:00.000Z";
 
@@ -48,7 +49,7 @@ describe("resolveItem", () => {
     expect(resolved.isNew).toBe(true);
     expect(resolved.item.name).toBe("Cooking Oil");
     expect(resolved.item.normalizedName).toBe("cooking oil");
-    expect(resolved.item.id.startsWith("item:")).toBe(true);
+    expect(isValidId(resolved.item.id)).toBe(true);
     expect(resolved.item.isArchived).toBe(false);
   });
 

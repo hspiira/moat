@@ -1,6 +1,6 @@
 import { BORROWING_LEDGER, isInformalDebt } from "@/lib/domain/borrowing";
 import { LENDING_LEDGER } from "@/lib/domain/lending";
-import { isReservedAccountId } from "@/lib/domain/reserved-accounts";
+import { isReservedAccount } from "@/lib/domain/reserved-accounts";
 import type { Account, Counterparty, CounterpartyKind } from "@/lib/types";
 
 /**
@@ -25,7 +25,7 @@ function isLoanLeg(account: Account | undefined): boolean {
 }
 
 function isPool(account: Account | undefined): boolean {
-  return account !== undefined && isReservedAccountId(account.id);
+  return account !== undefined && isReservedAccount(account);
 }
 
 /** The single place a transfer direction becomes a counterparty role. */
