@@ -19,18 +19,11 @@ export function TransactionsReviewWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="review"
-      title="Month close"
-      description="Clear what is outstanding, then close the period."
+      title="Month check"
+      description="Make sure this month is complete, so its totals can be trusted."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
-      captureInboxCount={workspace.captureReviewCount}
-      duplicateCount={workspace.duplicateCount}
-      periodSummary={workspace.periodSummary}
     >
       {/* A fragment, not another grid: the frame already wraps children in a
           gap-5 grid, so nesting an identical one only added a DOM layer. */}

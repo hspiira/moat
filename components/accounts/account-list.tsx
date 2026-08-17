@@ -10,19 +10,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 
-/** Holdings, largest groups first by convention of use; claims tracked apart. */
-const HOLDING_ORDER: AccountType[] = ["bank", "mobile_money", "cash", "sacco", "investment"];
 const CLAIM_TYPES: AccountType[] = ["debt", "receivable"];
-
-const GROUP_LABELS: Record<AccountType, string> = {
-  bank: "Banks",
-  mobile_money: "Mobile money",
-  cash: "Cash",
-  sacco: "SACCOs",
-  investment: "Investments",
-  debt: "Tracking",
-  receivable: "Tracking",
-};
 
 type Props = {
   accounts: Account[];
@@ -32,31 +20,22 @@ type Props = {
   onDelete?: (accountId: string) => void;
 };
 
+// Every action lives on the account's own page, so the balances line up in one column.
 function AccountRow({ account }: { account: Account }) {
   return (
-    <div className="group relative -mx-2 rounded-lg px-2 py-3 transition-colors hover:bg-muted/25">
-      {/* The row is one target: name, balance, and nothing to miss. Every
-          action — edit, archive, delete — lives on the account's own page, so
-          the balances line up down the column with nothing between them. */}
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/accounts/detail?id=${encodeURIComponent(account.id)}`}
-          aria-label={`Open ${account.name} ledger`}
-          className="min-w-0 flex-1 after:absolute after:inset-0 after:content-['']"
-        >
-          <div className="truncate text-base font-medium text-foreground">{account.name}</div>
-          {account.institutionName ? (
-            <div className="truncate text-xs text-muted-foreground">
-              {account.institutionName}
-            </div>
-          ) : null}
-        </Link>
-        <Money
-          amount={account.balance}
-          tone={account.balance < 0 ? "negative" : "neutral"}
-          className="shrink-0 text-right text-base font-semibold tabular-nums"
-        />
-      </div>
+    <div className="group relative -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/25">
+      <Link
+        href={`/accounts/detail?id=${encodeURIComponent(account.id)}`}
+        aria-label={`Open ${account.name} ledger`}
+        className="min-w-0 flex-1 truncate text-base text-foreground after:absolute after:inset-0 after:content-['']"
+      >
+        {account.name}
+      </Link>
+      <Money
+        amount={account.balance}
+        tone={account.balance < 0 ? "negative" : "neutral"}
+        className="shrink-0 text-right text-base font-semibold tabular-nums"
+      />
     </div>
   );
 }
@@ -84,17 +63,14 @@ export function AccountList({
     );
   }, [accounts, transactions]);
 
-  const holdingGroups = HOLDING_ORDER.map((type) => ({
-    type,
-    label: GROUP_LABELS[type],
-    accounts: active.filter((account) => account.type === type),
-  })).filter((group) => group.accounts.length > 0);
+  // Claims are excluded: including them would stop this column matching the total.
+  const holdings = active
+    .filter((account) => !CLAIM_TYPES.includes(account.type))
+    .sort((left, right) => right.balance - left.balance || left.name.localeCompare(right.name));
 
-  // Control accounts for lending and borrowing. Kept apart and quiet: they are
-  // bookkeeping, not money you can spend, and at zero they are pure noise
-  // among real balances.
-  const claims = active.filter((account) => CLAIM_TYPES.includes(account.type));
-  const activeClaims = claims.filter((account) => account.balance !== 0);
+  const activeClaims = active.filter(
+    (account) => CLAIM_TYPES.includes(account.type) && account.balance !== 0,
+  );
 
   return (
     <section className="grid gap-5">
@@ -109,26 +85,11 @@ export function AccountList({
         </EmptyState>
       ) : (
         <>
-          {holdingGroups.map((group) => {
-            const subtotal = group.accounts.reduce((sum, account) => sum + account.balance, 0);
-            return (
-              <div key={group.type}>
-                <div className="flex items-baseline justify-between gap-4 pb-1">
-                  <h2 className="text-xs font-medium text-muted-foreground">{group.label}</h2>
-                  {group.accounts.length > 1 ? (
-                    <Money
-                      amount={subtotal}
-                      tone="muted"
-                      className="text-xs font-medium"
-                    />
-                  ) : null}
-                </div>
-                {group.accounts.map((account) => (
-                  <AccountRow key={account.id} account={account} />
-                ))}
-              </div>
-            );
-          })}
+          <div>
+            {holdings.map((account) => (
+              <AccountRow key={account.id} account={account} />
+            ))}
+          </div>
 
           {activeClaims.length > 0 ? (
             <div>

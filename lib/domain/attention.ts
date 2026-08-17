@@ -151,7 +151,7 @@ export function getAttentionItems({
             id: "capture-review",
             title: reviewCount === 1 ? "1 capture to review" : `${reviewCount} captures to review`,
             body: "Read from your messages and waiting for you to confirm.",
-            href: "/transactions/review",
+            href: "/inbox",
           },
         ]
       : [];

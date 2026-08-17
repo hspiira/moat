@@ -74,7 +74,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconTags}
         title="Categories"
-        description="Hide the ones you never use. Nothing is deleted, so past transactions keep their category."
+        description="What each one has cost you. Rename, add, or hide the ones you never use."
       >
         <CategoriesPanel />
       </SettingsSection>

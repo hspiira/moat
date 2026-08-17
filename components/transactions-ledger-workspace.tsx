@@ -49,18 +49,19 @@ export function TransactionsLedgerWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="ledger"
       title="Transactions"
       srOnlyTitle
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
-      captureInboxCount={workspace.captureReviewCount}
-      duplicateCount={workspace.duplicateCount}
-      periodSummary={workspace.periodSummary}
+      summary={{
+        recordedCount: workspace.transactions.length,
+        transactionCount: workspace.periodTransactions.length,
+        reviewCount: workspace.reviewCount,
+        captureInboxCount: workspace.captureReviewCount,
+        duplicateCount: workspace.duplicateCount,
+        summary: workspace.periodSummary,
+      }}
     >
       <div className="grid gap-5">
         {/* Two separate queues, so one sentence each rather than three counts
@@ -74,7 +75,7 @@ export function TransactionsLedgerWorkspace() {
                 {workspace.captureReviewCount === 1 ? "item is" : "items are"} waiting for review.
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/transactions/review">Open inbox</Link>
+                <Link href="/inbox">Open inbox</Link>
               </Button>
             </CardContent>
           </Card>
@@ -95,7 +96,7 @@ export function TransactionsLedgerWorkspace() {
                 in this month.
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/transactions/review/month-close">Month close</Link>
+                <Link href="/month">Month check</Link>
               </Button>
             </CardContent>
           </Card>

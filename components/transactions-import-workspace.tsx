@@ -9,18 +9,11 @@ export function TransactionsImportWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="import"
       title="Import"
       description="Bring in transactions from a bank or mobile-money statement (CSV)."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
-      captureInboxCount={workspace.captureReviewCount}
-      duplicateCount={workspace.duplicateCount}
-      periodSummary={workspace.periodSummary}
     >
       <CsvImportPanel
         accounts={workspace.accounts}

@@ -4,6 +4,9 @@ import { navItems } from "@/lib/data";
 
 import {
   getMobileContextNavItem,
+  getNavEntry,
+  mobileCadenceNav,
+  mobileCaptureActions,
   mobilePrimaryNav,
   mobileSecondaryNav,
   navIcons,
@@ -33,11 +36,42 @@ describe("navigation reachability", () => {
     }
   });
 
+  // The cadence sections used to be written straight into the drawer's JSX,
+  // where none of these checks could see them.
+  const cadenceHrefs = mobileCadenceNav.flatMap((group) => [...group.hrefs]);
+
   it("lets the More pill name every route it opens", () => {
     // The heading defers to the nav, so a route the pill cannot name has no
     // wayfinding at all once you are on it.
-    for (const href of mobileSecondaryNav) {
+    for (const href of [...mobileSecondaryNav, ...cadenceHrefs]) {
       expect(getMobileContextNavItem(href), `${href} is missing from mobileContextNav`).toBeDefined();
+    }
+  });
+
+  it("gives each cadence row its own entry, not a parent's", () => {
+    // getMobileContextNavItem matches by prefix, so /settings/rules found the
+    // /settings entry and the drawer drew a second row labelled "Settings".
+    for (const href of cadenceHrefs) {
+      expect(getNavEntry(href)?.href, `${href} has no entry of its own`).toBe(href);
+    }
+  });
+
+  it("gives every cadence destination an icon", () => {
+    for (const href of cadenceHrefs) {
+      expect(navIcons[href], `${href} has no icon in navIcons`).toBeDefined();
+    }
+  });
+
+  it("files each cadence destination under exactly one heading", () => {
+    expect(new Set(cadenceHrefs).size).toBe(cadenceHrefs.length);
+  });
+
+  it("keeps the capture actions off the cadence sections", () => {
+    // Capture is the plus button, not a More-sheet entry. Listing it twice
+    // gave the same action two homes with different labels.
+    const capturePaths = mobileCaptureActions.map((action) => action.href.split("?")[0]);
+    for (const href of cadenceHrefs) {
+      expect(capturePaths, `${href} is already a capture action`).not.toContain(href);
     }
   });
 

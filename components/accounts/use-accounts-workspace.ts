@@ -14,8 +14,9 @@ import { errorMessage } from "@/lib/errors";
 import { validateAmount } from "@/lib/validation";
 import type { Account, AccountType, Transaction } from "@/lib/types";
 
-import { defaultAccountForm, type AccountFormState } from "./account-form";
+import { createDefaultAccountForm, type AccountFormState } from "./account-form";
 import { createId } from "@/lib/ids";
+import { todayIso } from "@/lib/today";
 
 
 function toInstitutionType(type: AccountType): Account["institutionType"] {
@@ -30,7 +31,7 @@ export function useAccountsWorkspace() {
   const [profile, setProfile] = useState<{ id: string } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accountForm, setAccountForm] = useState<AccountFormState>(defaultAccountForm);
+  const [accountForm, setAccountForm] = useState<AccountFormState>(createDefaultAccountForm);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +165,7 @@ export function useAccountsWorkspace() {
       setSuccessMessage(message);
       announceLocalSave({ entity: "accounts", savedAt: timestamp, message });
       show(wasEditing ? "Account updated." : "Account added.", "success");
-      setAccountForm(defaultAccountForm);
+      setAccountForm(createDefaultAccountForm());
       setEditingAccountId(null);
       await loadWorkspace();
       return true;
@@ -306,7 +307,7 @@ export function useAccountsWorkspace() {
       debtInterestRate: account.debtInterestRate ? String(account.debtInterestRate) : "",
       debtInterestModel: account.debtInterestModel ?? "reducing_balance",
       debtLenderType: account.debtLenderType ?? "bank",
-      debtStartDate: account.debtStartDate ?? new Date().toISOString().slice(0, 10),
+      debtStartDate: account.debtStartDate ?? todayIso(),
       debtTermMonths: account.debtTermMonths ? String(account.debtTermMonths) : "",
       debtRepaymentFrequency: account.debtRepaymentFrequency ?? "monthly",
       notes: account.notes ?? "",
@@ -315,7 +316,7 @@ export function useAccountsWorkspace() {
 
   function cancelEdit() {
     setEditingAccountId(null);
-    setAccountForm(defaultAccountForm);
+    setAccountForm(createDefaultAccountForm());
   }
 
   return {

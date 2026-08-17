@@ -103,8 +103,7 @@ function BlockerRow({
 }
 
 /**
- * Month close: what stands between this period and being closed, and a way into
- * each of those things.
+ * What is unfinished in a month, and a way into each of those things.
  *
  * The previous panel laid three lists out in `lg:grid-cols-3` on a mobile-first
  * app, printed unresolved records as a raw ISO date and an unformatted number
@@ -125,18 +124,21 @@ export function MonthClosePanel({
   const monthLabel = formatMonthLabel(period);
   const { groups, total } = getMonthCloseBlockers({ evaluation, recurringEvaluations });
   const isClosed = monthClose?.state === "closed";
+  const checkedOn = monthClose?.closedAt ? formatDate(monthClose.closedAt) : null;
   const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name ?? "—";
 
   return (
     <div className="grid min-w-0 gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div className="grid gap-1">
         <h2 className="font-heading text-base leading-snug font-medium">{monthLabel}</h2>
         <p className="text-sm text-muted-foreground">
           {isClosed
-            ? "Closed."
+            ? `You checked this month${checkedOn ? ` on ${checkedOn}` : ""}.`
             : total === 0
-              ? "Nothing left to clear."
-              : `${total} to clear before closing.`}
+              ? "Everything here looks complete."
+              : total === 1
+                ? "1 thing to sort out. Until it is, this month's totals may be wrong."
+                : `${total} things to sort out. Until they are, this month's totals may be wrong.`}
         </p>
       </div>
 
@@ -166,7 +168,7 @@ export function MonthClosePanel({
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="truncate text-xs text-muted-foreground">
-                              {entry.transaction.payee ?? entry.transaction.rawPayee ?? "Unlabeled"}
+                              {entry.transaction.payee ?? entry.transaction.rawPayee ?? "No payee"}
                             </span>
                             <Money
                               amount={entry.transaction.amount}
@@ -194,7 +196,7 @@ export function MonthClosePanel({
                             <span className="truncate text-xs text-muted-foreground">
                               {entry.transactions[0].payee ??
                                 entry.transactions[0].rawPayee ??
-                                "Unlabeled"}
+                                "No payee"}
                             </span>
                             <Money
                               amount={entry.transactions[0].amount}
@@ -242,25 +244,27 @@ export function MonthClosePanel({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 pt-1">
-        <Button type="button" size="sm" variant="outline" onClick={onExport}>
-          Export CSV
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={isSubmitting || isClosed || !evaluation.isReadyToClose}
-          title={
-            isClosed
-              ? "This month is already closed."
-              : evaluation.isReadyToClose
-                ? undefined
-                : "Clear the items above before closing."
-          }
-          onClick={onClose}
-        >
-          Close month
-        </Button>
+      <div className="grid gap-2 pt-1">
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={onExport}>
+            Download as spreadsheet
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSubmitting || isClosed || !evaluation.isReadyToClose}
+            onClick={onClose}
+          >
+            Mark month as checked
+          </Button>
+        </div>
+        {/* Stated in the page, not a title attribute: a tooltip never appears
+            on a phone, so the reason a button is disabled was invisible. */}
+        {!isClosed && !evaluation.isReadyToClose ? (
+          <p className="text-xs text-muted-foreground">
+            Sort out the items above first.
+          </p>
+        ) : null}
       </div>
     </div>
   );

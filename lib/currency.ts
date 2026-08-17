@@ -32,5 +32,6 @@ export function normalizeAmountToUgx(
     return Number.NaN;
   }
 
-  return Math.abs(originalAmount) * rate;
+  // UGX has no subdivision.
+  return Math.round(Math.abs(originalAmount) * rate);
 }

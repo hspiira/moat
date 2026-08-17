@@ -224,3 +224,11 @@ costing.
 **No UI test coverage.** Both mobile faults fixed on 2026-08-17 were invisible
 to a green suite. Every item here changes numbers a user reads. A small set of
 Playwright journeys should land before the money migration, not after.
+
+**One unreproduced property-test failure.** A `pnpm verify` on 2026-08-18
+failed inside fast-check's `throwIfFailed` and printed nothing else useful. It
+has not recurred: the same suite passed eight times, and the accounting
+properties passed 200,000 further cases. Those properties are UGX-only, so the
+FX rounding landing in the same commit cannot be the cause. The counterexample
+was lost because the run's output was filtered. If it returns, capture the full
+output and the printed seed before anything else — fast-check replays it.

@@ -7,7 +7,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { buildFeeTransaction } from "@/components/transactions/transaction-builder";
-import { feesCategoryId, buildFeesCategory } from "@/lib/app-state/defaults";
+import { feesCategoryId, ensureFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
@@ -27,6 +27,7 @@ import type {
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
+import { currentMonthIso } from "@/lib/today";
 
 
 function sortByUpdatedAt(items: CaptureReviewItem[]) {
@@ -58,7 +59,7 @@ export function useCaptureReviewWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currentPeriod = new Date().toISOString().slice(0, 7);
+  const currentPeriod = currentMonthIso();
 
   const openCaptureReviewItems = useMemo(
     () => getOpenCaptureReviewItems(captureReviewItems),
@@ -221,7 +222,10 @@ export function useCaptureReviewWorkspace() {
       if (typeof item.feeAmount === "number" && item.feeAmount > 0) {
         const fee = buildFeeTransaction(proposed, String(item.feeAmount), feesCategoryId(proposed.userId));
         if (fee) {
-          await repositories.categories.upsert(buildFeesCategory(profile.id));
+          const feesCategory = ensureFeesCategory(categories, profile.id);
+          if (feesCategory) {
+            await repositories.categories.upsert(feesCategory);
+          }
           await repositories.transactions.upsert(fee);
         }
       }
@@ -248,7 +252,7 @@ export function useCaptureReviewWorkspace() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [loadWorkspace, profile, transactionRules]);
+  }, [categories, loadWorkspace, profile, transactionRules]);
 
   const rejectItem = useCallback(async (item: CaptureReviewItem) => {
     if (item.status === "approved" || item.approvedTransactionId) {

@@ -22,12 +22,9 @@ pnpm-debug.log*
 # Static export output
 /out/
 
-# Sync server build output (bundled at the package root for Vercel capture)
+# Sync server build output. server.js and migrate.js are committed entrypoints
+# that import from here; Vercel validates the entrypoint path before building.
 server/dist/
-server/server.js
-server/server.js.map
-server/migrate.js
-server/migrate.js.map
 
 # Dev-only file-backed sync store
 .moat-sync/

@@ -1,14 +1,6 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { TransactionsReviewWorkspace } from "@/components/transactions-review-workspace";
-
-export default function TransactionsMonthClosePage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <TransactionsReviewWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+// Grouped by cadence: a monthly job no longer sits under the daily ledger.
+export default function TransactionsMonthCloseRedirect() {
+  redirect("/month");
 }

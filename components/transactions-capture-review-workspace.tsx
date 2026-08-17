@@ -10,18 +10,11 @@ export function TransactionsCaptureReviewWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="review"
       title="Capture review"
       description="Resolve captured items before they reach the ledger."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={0}
-      captureInboxCount={workspace.openCaptureReviewItems.length}
-      duplicateCount={workspace.captureReviewItems.filter((item) => item.status === "duplicate").length}
-      periodSummary={workspace.periodSummary}
     >
       {/* A fragment, not another grid: the frame already wraps children in a
           gap-5 grid, so nesting an identical one only added a DOM layer. */}

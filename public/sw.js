@@ -2,7 +2,7 @@
 // a cache it has not seen, so an installed app would otherwise keep serving the
 // old shell and never fetch a newly added route. The activate handler below
 // drops superseded caches, so this upgrades in place with no user action.
-const CACHE_NAME = "moat-v9";
+const CACHE_NAME = "moat-v10";
 const OFFLINE_URL = "/offline";
 
 // Every statically-rendered route is precached at install, not just on first
@@ -30,8 +30,13 @@ const APP_SHELL_URLS = [
   "/settings",
   "/settings/sync-conflicts",
   "/shopping",
+  "/import",
+  "/inbox",
+  "/month",
+  "/settings/rules",
   "/transactions",
   "/transactions/capture",
+  // Old paths, kept as redirects so bookmarks and installed shortcuts still work.
   "/transactions/import",
   "/transactions/review",
   "/transactions/review/capture",

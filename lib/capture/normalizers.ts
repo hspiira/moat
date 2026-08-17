@@ -1,5 +1,6 @@
 import { cleanCapturePayee } from "@/lib/capture/providers/shared";
 import type { SupportedCurrency, TransactionType } from "@/lib/types";
+import { todayIso } from "@/lib/today";
 
 const supportedCurrencies = ["UGX", "USD", "KES", "TZS", "RWF", "EUR", "GBP"] as const;
 
@@ -94,7 +95,7 @@ export function parseCaptureDate(text: string) {
     if (month) return `${named[3]}-${month}-${named[1].padStart(2, "0")}`;
   }
 
-  return new Date().toISOString().slice(0, 10);
+  return todayIso();
 }
 
 export function inferCapturePayee(text: string) {

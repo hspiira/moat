@@ -63,7 +63,7 @@ describe("getMonthCloseBlockers", () => {
     });
 
     expect(result.groups).toHaveLength(1);
-    expect(result.groups[0]).toMatchObject({ kind: "unresolved", label: "Not yet posted", count: 1 });
+    expect(result.groups[0]).toMatchObject({ kind: "unresolved", label: "Not confirmed yet", count: 1 });
     expect(result.groups[0].entries[0]).toMatchObject({
       id: "t1",
       transaction: unposted,

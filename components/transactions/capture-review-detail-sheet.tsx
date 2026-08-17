@@ -23,7 +23,7 @@ import { transactionTypeLabels } from "@/lib/select-options";
 import type { Account, CaptureReviewItem, Category, Transaction } from "@/lib/types";
 
 import { CaptureReviewFields } from "./capture-review-fields";
-import { DetailRow, DetailSection } from "./detail-row";
+import { DetailFact, DetailFacts, DetailNote, DetailRow, DetailSection } from "./detail-row";
 
 const inflowTypes = new Set(["income"]);
 
@@ -216,14 +216,13 @@ export function CaptureReviewDetailSheet({
                 />
               ) : (
                 <>
-                  <DetailSection title="Record">
-                    <DetailRow label="Type">{transactionTypeLabels[subject.type]}</DetailRow>
+                  <DetailSection>
                     {subject.currency !== "UGX" ? (
                       <>
                         <DetailRow label={`Original (${subject.currency})`}>
                           <Money amount={subject.originalAmount} currency={subject.currency} />
                         </DetailRow>
-                        <DetailRow label="FX rate">
+                        <DetailRow label="Exchange rate">
                           {subject.fxRateToUgx
                             ? `1 ${subject.currency} = ${subject.fxRateToUgx} UGX`
                             : "—"}
@@ -231,59 +230,67 @@ export function CaptureReviewDetailSheet({
                       </>
                     ) : null}
                     {subject.feeAmount ? (
-                      <DetailRow label="Fee — charges & tax">
+                      <DetailRow label="Fee / charges">
                         <Money amount={subject.feeAmount} currency="UGX" tone="negative" signed />
                       </DetailRow>
                     ) : null}
-                    {subject.note ? <DetailRow label="Note">{subject.note}</DetailRow> : null}
                     {typeof subject.statedBalance === "number" ? (
-                      <DetailRow label="Stated balance">
+                      <DetailRow label="Balance stated by sender">
                         <Money amount={subject.statedBalance} currency="UGX" />
                       </DetailRow>
                     ) : null}
                   </DetailSection>
 
-                  <DetailSection title="Origin">
-                    <DetailRow label="Captured from">
-                      <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
-                        {subject.source}
-                        {subject.parserLabel ? (
-                          <Badge variant="outline">{subject.parserLabel}</Badge>
-                        ) : null}
-                        <Badge variant="secondary">
-                          {Math.round(subject.confidenceScore * 100)}%
-                        </Badge>
-                      </span>
-                    </DetailRow>
-                    <DetailRow label="Captured">
-                      {formatDate(subject.createdAt, { alwaysYear: true })}
-                    </DetailRow>
-                    {item.resolvedAt ? (
-                      <DetailRow label={item.status === "approved" ? "Approved" : "Rejected"}>
-                        {formatDate(item.resolvedAt, { alwaysYear: true })}
-                      </DetailRow>
+                  {subject.note ? <DetailNote label="Note">{subject.note}</DetailNote> : null}
+
+                  <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-muted-foreground">
+                    <span>{transactionTypeLabels[subject.type]}</span>
+                    <span aria-hidden>·</span>
+                    <span>Captured from {subject.source}</span>
+                    {subject.parserLabel ? (
+                      <Badge variant="outline">{subject.parserLabel}</Badge>
                     ) : null}
-                  </DetailSection>
+                    <Badge variant="secondary">
+                      {Math.round(subject.confidenceScore * 100)}%
+                    </Badge>
+                    <span aria-hidden>·</span>
+                    <span>{formatDate(subject.createdAt, { alwaysYear: true })}</span>
+                    {item.resolvedAt ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <span>
+                          {item.status === "approved" ? "Approved" : "Rejected"}{" "}
+                          {formatDate(item.resolvedAt, { alwaysYear: true })}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
 
                   {changes.length > 0 ? (
                     <DetailSection title="Your corrections">
-                      {changes.map((change) => (
-                        <DetailRow key={change.field} label={change.label}>
-                          <span className="text-muted-foreground line-through">
-                            {labelFor(change.field, change.from, accounts, categories)}
-                          </span>{" "}
-                          → {labelFor(change.field, change.to, accounts, categories)}
-                        </DetailRow>
-                      ))}
+                      <DetailFacts>
+                        {changes.map((change) => (
+                          <DetailFact key={change.field} label={change.label}>
+                            <span className="text-muted-foreground line-through">
+                              {labelFor(change.field, change.from, accounts, categories)}
+                            </span>{" "}
+                            → {labelFor(change.field, change.to, accounts, categories)}
+                          </DetailFact>
+                        ))}
+                      </DetailFacts>
                     </DetailSection>
                   ) : null}
 
                   {item.status === "approved" ? (
                     <DetailSection title="In the ledger">
                       {ledgerTransaction ? (
-                        <DetailRow label="Transaction">
-                          <span className="font-mono text-xs">{ledgerTransaction.id}</span>
-                        </DetailRow>
+                        <DetailFacts>
+                          <DetailFact label="Transaction">
+                            <span className="font-mono text-xs wrap-anywhere">
+                              {ledgerTransaction.id}
+                            </span>
+                          </DetailFact>
+                        </DetailFacts>
                       ) : (
                         <p className="py-1.5 text-sm text-muted-foreground">
                           The transaction this created has since been deleted.

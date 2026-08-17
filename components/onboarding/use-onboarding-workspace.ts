@@ -19,6 +19,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { createId } from "@/lib/ids";
+import { todayIso } from "@/lib/today";
 
 const ONBOARDING_DRAFT_KEY = "moat:onboarding-draft";
 
@@ -112,7 +113,7 @@ function buildTimestamp() {
 function defaultGoalDate() {
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
-  return nextYear.toISOString().slice(0, 10);
+  return todayIso(nextYear);
 }
 
 function toInstitutionType(type: Account["type"]): Account["institutionType"] {

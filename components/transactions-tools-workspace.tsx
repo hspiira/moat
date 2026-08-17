@@ -10,18 +10,11 @@ export function TransactionsToolsWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      currentRoute="tools"
       title="Rules & corrections"
-      description="Auto-fill rules and the parser correction log."
+      description="Rules that fill in details for you, and a record of the corrections you have made."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
-      transactionCount={workspace.transactions.length}
-      periodTransactionCount={workspace.periodTransactions.length}
-      reviewCount={workspace.reviewCount}
-      captureInboxCount={workspace.captureReviewCount}
-      duplicateCount={workspace.duplicateCount}
-      periodSummary={workspace.periodSummary}
     >
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <TransactionRulesPanel

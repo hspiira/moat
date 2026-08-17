@@ -1,14 +1,6 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { TransactionsToolsWorkspace } from "@/components/transactions-tools-workspace";
-
-export default function TransactionsToolsPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <TransactionsToolsWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+// Grouped by cadence: rules are set once, so they live in settings.
+export default function TransactionsToolsRedirect() {
+  redirect("/settings/rules");
 }

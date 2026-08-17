@@ -129,7 +129,7 @@ export function TransactionRulesPanel({
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
         title="Transaction rules"
-        description="Tidy up payees and prefill fields automatically — rules never post on their own."
+        description="Tidy up payees and fill in details automatically. A rule never records anything on its own."
       />
       <CardContent className="grid gap-4 p-5">
         <div>
@@ -147,7 +147,7 @@ export function TransactionRulesPanel({
             <FormCardShell
               embedded
               title="Add rule"
-              description="Tidy up payees and prefill fields automatically — rules never post on their own."
+              description="Tidy up payees and fill in details automatically. A rule never records anything on its own."
               footer={
                 <Button
                   type="submit"
@@ -202,7 +202,7 @@ export function TransactionRulesPanel({
           </div>
           <div className="grid gap-2">
             <SelectField
-              label="Auto mark reviewed"
+              label="Confirm automatically"
               value={form.autoMarkReviewed}
               options={reviewOptions}
               onValueChange={(value) =>

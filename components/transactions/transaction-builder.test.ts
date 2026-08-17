@@ -71,6 +71,22 @@ describe("validateTransactionAmounts", () => {
     expect(normalizedAmount).toBe(370_000);
   });
 
+  it("stores the same rate the validation accepted", () => {
+    // Validation read the rate with parseAmountInput and the row stored it with
+    // Number(), so "3,700" passed the check and saved NaN.
+    const [row] = [
+      buildManualTransaction(
+        buildInput({
+          form: { ...baseForm, currency: "USD", amount: "100", fxRateToUgx: "3,700" },
+        }),
+        [],
+        [{ id: "category:food", userId: "user:default", name: "Food", kind: "expense", isDefault: true, createdAt: "x" }],
+      ),
+    ];
+    expect(row.fxRateToUgx).toBe(3700);
+    expect(row.amount).toBe(370_000);
+  });
+
   it("requires an FX rate for non-UGX currencies", () => {
     expect(() =>
       validateTransactionAmounts({ ...baseForm, currency: "USD", fxRateToUgx: "" }),
