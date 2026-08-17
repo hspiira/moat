@@ -17,7 +17,7 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
-type SyncableEntityType =
+export type SyncableEntityType =
   | "userProfiles"
   | "accounts"
   | "transactions"
@@ -35,15 +35,26 @@ type SyncableEntityType =
 
 type ConflictStrategy = "client_wins" | "server_wins" | "manual_review";
 
+type SyncableEntity = { id: string };
+
 type EntityDefinition = {
   strategy: ConflictStrategy;
   // Resolved values are intentionally discarded by the callers below; the
   // repository methods return the persisted entity, hence the wide return type.
   upsert: (repositories: RepositoryBundle, payload: Record<string, unknown>) => Promise<unknown>;
   remove: (repositories: RepositoryBundle, entityId: string) => Promise<unknown>;
+  // Only backfill uses this; normal sync reads the outbox.
+  list: (repositories: RepositoryBundle, userId: string) => Promise<SyncableEntity[]>;
 };
 
 const noop = async () => {};
+
+async function listSingleton<T extends SyncableEntity>(
+  read: Promise<T | null>,
+): Promise<SyncableEntity[]> {
+  const record = await read;
+  return record ? [record] : [];
+}
 
 // Single source of truth for every syncable entity: its conflict strategy plus
 // how a pulled record is applied (upsert) or removed. Adding a new syncable
@@ -53,78 +64,109 @@ const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
     strategy: "client_wins",
     upsert: (repositories, payload) => repositories.userProfile.save(payload as UserProfile),
     remove: noop,
+    // A profile's id is its userId.
+    list: async (repositories, userId) => {
+      const profile = await repositories.userProfile.get();
+      return profile && profile.id === userId ? [profile] : [];
+    },
   },
   accounts: {
     strategy: "manual_review",
     upsert: (repositories, payload) => repositories.accounts.upsert(payload as Account),
     remove: (repositories, entityId) => repositories.accounts.remove(entityId),
+    list: (repositories, userId) => repositories.accounts.listByUser(userId),
   },
   transactions: {
     strategy: "manual_review",
     upsert: (repositories, payload) => repositories.transactions.upsert(payload as Transaction),
     remove: (repositories, entityId) => repositories.transactions.remove(entityId),
+    list: (repositories, userId) => repositories.transactions.listByUser(userId),
   },
   transactionRules: {
     strategy: "client_wins",
     upsert: (repositories, payload) =>
       repositories.transactionRules.upsert(payload as TransactionRule),
     remove: (repositories, entityId) => repositories.transactionRules.remove(entityId),
+    list: (repositories, userId) => repositories.transactionRules.listByUser(userId),
   },
   recurringObligations: {
     strategy: "manual_review",
     upsert: (repositories, payload) =>
       repositories.recurringObligations.upsert(payload as RecurringObligation),
     remove: (repositories, entityId) => repositories.recurringObligations.remove(entityId),
+    list: (repositories, userId) => repositories.recurringObligations.listByUser(userId),
   },
   monthCloses: {
     strategy: "server_wins",
     upsert: (repositories, payload) => repositories.monthCloses.upsert(payload as MonthClose),
     remove: (repositories, entityId) => repositories.monthCloses.remove(entityId),
+    list: (repositories, userId) => repositories.monthCloses.listByUser(userId),
   },
   categories: {
     strategy: "client_wins",
     upsert: (repositories, payload) => repositories.categories.upsert(payload as Category),
     remove: (repositories, entityId) => repositories.categories.remove(entityId),
+    list: (repositories, userId) => repositories.categories.listByUser(userId),
   },
   counterparties: {
     strategy: "client_wins",
     upsert: (repositories, payload) => repositories.counterparties.upsert(payload as Counterparty),
     remove: (repositories, entityId) => repositories.counterparties.remove(entityId),
+    list: (repositories, userId) => repositories.counterparties.listByUser(userId),
   },
   goals: {
     strategy: "manual_review",
     upsert: (repositories, payload) => repositories.goals.upsert(payload as Goal),
     remove: (repositories, entityId) => repositories.goals.remove(entityId),
+    list: (repositories, userId) => repositories.goals.listByUser(userId),
   },
   budgets: {
     strategy: "manual_review",
     upsert: (repositories, payload) => repositories.budgets.upsert(payload as BudgetTarget),
     remove: (repositories, entityId) => repositories.budgets.remove(entityId),
+    list: (repositories, userId) => repositories.budgets.listByUser(userId),
   },
   investmentProfiles: {
     strategy: "client_wins",
     upsert: (repositories, payload) =>
       repositories.investmentProfiles.save(payload as InvestmentProfile),
     remove: noop,
+    list: (repositories, userId) =>
+      listSingleton(repositories.investmentProfiles.getByUser(userId)),
   },
   items: {
     strategy: "manual_review",
     upsert: (repositories, payload) => repositories.items.upsert(payload as Item),
     remove: (repositories, entityId) => repositories.items.remove(entityId),
+    list: (repositories, userId) => repositories.items.listByUser(userId),
   },
   plannedPurchases: {
     strategy: "manual_review",
     upsert: (repositories, payload) =>
       repositories.plannedPurchases.upsert(payload as PlannedPurchase),
     remove: (repositories, entityId) => repositories.plannedPurchases.remove(entityId),
+    list: (repositories, userId) => repositories.plannedPurchases.listByUser(userId),
   },
   transactionLineItems: {
     strategy: "manual_review",
     upsert: (repositories, payload) =>
       repositories.transactionLineItems.upsert(payload as TransactionLineItem),
     remove: (repositories, entityId) => repositories.transactionLineItems.remove(entityId),
+    list: (repositories, userId) => repositories.transactionLineItems.listByUser(userId),
   },
 };
+
+// Declaration order puts the profile and reference data ahead of the ledger
+// records that point at them, which is the order backfill should queue them in.
+export const syncableEntityTypes = Object.keys(entityDefinitions) as SyncableEntityType[];
+
+export function listSyncableEntities(
+  repositories: RepositoryBundle,
+  entityType: SyncableEntityType,
+  userId: string,
+): Promise<SyncableEntity[]> {
+  return entityDefinitions[entityType].list(repositories, userId);
+}
 
 export function getConflictStrategy(entityType: string): ConflictStrategy {
   return entityDefinitions[entityType as SyncableEntityType]?.strategy ?? "manual_review";

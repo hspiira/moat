@@ -27,6 +27,7 @@ import {
   categoryMatchesType,
   coerceCategoryForType,
 } from "@/lib/domain/transaction-classification";
+import { createId } from "@/lib/ids";
 
 
 function guessHeader(headers: string[], matcher: (normalizedHeader: string) => boolean) {
@@ -164,7 +165,7 @@ export function useCsvImportPanel({
 
       const now = new Date().toISOString();
       const importBatch: ImportBatch = {
-        id: `import:${crypto.randomUUID()}`,
+        id: createId(),
         userId: profile.id,
         sourceName: importName || "CSV import",
         importedAt: now,
@@ -173,7 +174,7 @@ export function useCsvImportPanel({
 
       const nextTransactions: Transaction[] = validRows.map((row) => {
         const baseTransaction: Transaction = {
-          id: `transaction:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           accountId: row.accountId,
           type: row.type as Exclude<TransactionType, "transfer">,

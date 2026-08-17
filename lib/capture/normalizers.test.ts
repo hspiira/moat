@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStatedBalance } from "./normalizers";
+import { inferCapturePayee, parseStatedBalance } from "./normalizers";
 
 describe("parseStatedBalance", () => {
   it("reads the balance MTN/Airtel/Centenary print", () => {
@@ -15,5 +15,29 @@ describe("parseStatedBalance", () => {
     expect(
       parseStatedBalance("Absa confirms an ATM cash Withdrawal of UGX 100,000.00 on Acc. ending ***15"),
     ).toBeUndefined();
+  });
+});
+
+describe("inferCapturePayee", () => {
+  // These strings are from a real ledger, where the whole SMS tail ended up in
+  // the payee because the no-provider fallback did not bound the capture.
+  it("stops at the phone number rather than swallowing the tail", () => {
+    expect(
+      inferCapturePayee(
+        "SENT.TID 153524294394. UGX 7,000 to STEVEN MUWANGUZI  0705366804. Fee UGX 500. Bal UGX 114,465. Date 08-August-2026 21:17.",
+      ),
+    ).toBe("STEVEN MUWANGUZI  0705366804");
+  });
+
+  it("drops a trailing fee and balance", () => {
+    expect(
+      inferCapturePayee(
+        "SENT.TID 152542550739. UGX 500 to MARIAM NANFUKA  0750407189. Fee UGX 100. Bal UGX 63,732. Date 26-July-2026 14:37.",
+      ),
+    ).toBe("MARIAM NANFUKA  0750407189");
+  });
+
+  it("returns nothing when no party is named", () => {
+    expect(inferCapturePayee("Your balance is UGX 4,243")).toBe("");
   });
 });

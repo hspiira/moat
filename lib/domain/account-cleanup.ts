@@ -1,6 +1,6 @@
 import { resolveCounterparty } from "@/lib/domain/counterparties";
 import {
-  isReservedAccountId,
+  isReservedAccount,
   isReservedAccountName,
   ledgerForAccountType,
 } from "@/lib/domain/reserved-accounts";
@@ -26,7 +26,7 @@ export function canDeleteAccount(
   account: Account,
   transactions: Transaction[],
 ): DeleteVerdict {
-  if (isReservedAccountId(account.id)) {
+  if (isReservedAccount(account)) {
     return {
       allowed: false,
       reason: `${account.name} is created for everyone and cannot be deleted. Archive it instead to hide it.`,
@@ -81,7 +81,7 @@ export function planAccountMerge(request: MergeRequest): MergePlan {
   if (source.id === target.id) {
     return { blocked: "An account cannot be merged into itself." };
   }
-  if (isReservedAccountId(source.id)) {
+  if (isReservedAccount(source)) {
     return { blocked: `${source.name} is created for everyone and cannot be merged away.` };
   }
   if (source.type !== target.type) {
@@ -139,7 +139,7 @@ export function findDuplicatePoolAccounts(accounts: Account[]): Account[] {
   return accounts.filter(
     (account) =>
       !account.isArchived &&
-      !isReservedAccountId(account.id) &&
+      !isReservedAccount(account) &&
       isReservedAccountName(account.name),
   );
 }

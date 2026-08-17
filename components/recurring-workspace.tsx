@@ -4,6 +4,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 
 import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
+import { todayIso } from "@/lib/today";
 
 export function RecurringWorkspace() {
   const workspace = useTransactionsWorkspace();
@@ -24,7 +25,7 @@ export function RecurringWorkspace() {
         categories={workspace.categories}
         evaluations={workspace.recurringEvaluations}
         obligations={workspace.recurringObligations}
-        today={new Date().toISOString().slice(0, 10)}
+        today={todayIso()}
         isSubmitting={workspace.isSubmitting}
         onSaveObligation={(obligation) => void workspace.saveObligation(obligation)}
         onToggleObligation={(obligation) => void workspace.toggleObligation(obligation)}

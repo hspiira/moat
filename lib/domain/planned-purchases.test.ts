@@ -10,6 +10,7 @@ import {
   sumFulfillmentCost,
 } from "@/lib/domain/planned-purchases";
 import type { Item, PlannedPurchase } from "@/lib/types";
+import { isValidId } from "@/lib/ids";
 
 const now = "2026-08-07T00:00:00.000Z";
 
@@ -86,7 +87,7 @@ describe("fulfillment", () => {
       unitPrice: 4200,
       plannedPurchaseId: planned.id,
     });
-    expect(lineItem.id.startsWith("line:")).toBe(true);
+    expect(isValidId(lineItem.id)).toBe(true);
   });
 
   it("leaves the price unknown rather than falling back to the estimate", () => {

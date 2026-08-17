@@ -9,17 +9,17 @@ import {
 } from "@/lib/domain/accounts";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import {
-  LENDING_POOL_ACCOUNT_ID,
+  lendingPoolAccountId,
   buildLendingPoolAccount,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
 import {
-  BORROWING_POOL_ACCOUNT_ID,
+  borrowingPoolAccountId,
   buildBorrowingPoolAccount,
   getBorrowingPortfolio,
 } from "@/lib/domain/borrowing";
 import { buildTransferPair } from "@/components/transactions/transaction-builder";
-import { defaultTransactionForm } from "@/components/transactions/transaction-form";
+import { createDefaultTransactionForm } from "@/components/transactions/transaction-form";
 import { parseCsvText } from "@/lib/import/csv";
 import type { Account, Transaction, TransactionType } from "@/lib/types";
 
@@ -54,7 +54,7 @@ const receivable: Account = {
 function buildLendingPair(amount: number, occurredOn: string): [Transaction, Transaction] {
   return buildTransferPair({
     form: {
-      ...defaultTransactionForm,
+      ...createDefaultTransactionForm(),
       type: "transfer",
       accountId: account.id,
       destinationAccountId: receivable.id,
@@ -101,7 +101,7 @@ function borrowingLeg(
   return {
     id: `transaction:borrowing-pool:${payee}:${suffix}`,
     userId: "user:default",
-    accountId: BORROWING_POOL_ACCOUNT_ID,
+    accountId: borrowingPoolAccountId("user:default"),
     type: "transfer",
     amount,
     currency: "UGX",
@@ -126,7 +126,7 @@ function poolLeg(
   return {
     id: `transaction:pool:${payee}:${suffix}`,
     userId: "user:default",
-    accountId: LENDING_POOL_ACCOUNT_ID,
+    accountId: lendingPoolAccountId("user:default"),
     type: "transfer",
     amount,
     currency: "UGX",

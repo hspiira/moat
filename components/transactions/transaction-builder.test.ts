@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Category, Transaction, TransactionRule } from "@/lib/types";
 
-import { FEES_CATEGORY_ID, LOAN_INTEREST_CATEGORY_ID } from "@/lib/app-state/defaults";
+import { feesCategoryId, loanInterestCategoryId } from "@/lib/app-state/defaults";
+import { deriveSeededId, isValidId } from "@/lib/ids";
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import { isSpendingTransaction } from "@/lib/domain/transfers";
 import type { Account } from "@/lib/types";
@@ -15,10 +16,10 @@ import {
   validateTransactionAmounts,
   type TransactionBuildInput,
 } from "./transaction-builder";
-import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { createDefaultTransactionForm, type TransactionFormState } from "./transaction-form";
 
 const baseForm: TransactionFormState = {
-  ...defaultTransactionForm,
+  ...createDefaultTransactionForm(),
   type: "expense",
   accountId: "account:source",
   destinationAccountId: "account:destination",
@@ -134,8 +135,66 @@ describe("buildTransferPair", () => {
     expect(source.transferGroupId).toBe(destination.transferGroupId);
     expect(source.accountId).toBe("account:source");
     expect(destination.accountId).toBe("account:destination");
-    expect(source.id).toBe(`${source.transferGroupId}:source`);
-    expect(destination.id).toBe(`${destination.transferGroupId}:destination`);
+    expect(source.id).toBe(deriveSeededId(source.transferGroupId!, "source"));
+    expect(destination.id).toBe(deriveSeededId(destination.transferGroupId!, "destination"));
+  });
+
+  /**
+   * Editing used to be impossible for transfers, and the group id was always
+   * fresh because of it. Now that the form can reopen one, a fresh group would
+   * write a second balanced pair and orphan the first: the money would appear
+   * to have moved twice.
+   */
+  it("overwrites both legs in place when editing an existing transfer", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer" } }),
+    );
+    const stored = [source, destination];
+
+    const [editedSource, editedDestination] = buildTransferPair(
+      buildInput({
+        form: { ...baseForm, type: "transfer", amount: "75000" },
+        editingTransactionId: source.id,
+        existingTransactions: stored,
+      }),
+    );
+
+    expect(editedSource.id).toBe(source.id);
+    expect(editedDestination.id).toBe(destination.id);
+    expect(editedSource.transferGroupId).toBe(source.transferGroupId);
+    expect(editedSource.amount + editedDestination.amount).toBe(0);
+    expect(Math.abs(editedSource.amount)).toBe(75000);
+  });
+
+  it("still balances after the accounts are swapped in an edit", () => {
+    const [source, destination] = buildTransferPair(
+      buildInput({ form: { ...baseForm, type: "transfer" } }),
+    );
+
+    const [editedSource, editedDestination] = buildTransferPair(
+      buildInput({
+        form: {
+          ...baseForm,
+          type: "transfer",
+          accountId: "account:destination",
+          destinationAccountId: "account:source",
+        },
+        editingTransactionId: source.id,
+        existingTransactions: [source, destination],
+      }),
+    );
+
+    expect(editedSource.accountId).toBe("account:destination");
+    expect(editedDestination.accountId).toBe("account:source");
+    expect(editedSource.amount + editedDestination.amount).toBe(0);
+    expect([editedSource.id, editedDestination.id].sort()).toEqual([source.id, destination.id].sort());
+  });
+
+  it("gives a brand new transfer its own group", () => {
+    const [firstSource] = buildTransferPair(buildInput({ form: { ...baseForm, type: "transfer" } }));
+    const [secondSource] = buildTransferPair(buildInput({ form: { ...baseForm, type: "transfer" } }));
+    expect(firstSource.transferGroupId).not.toBe(secondSource.transferGroupId);
+    expect(firstSource.id).not.toBe(secondSource.id);
   });
 
   it("rejects transfers without two distinct accounts", () => {
@@ -230,7 +289,7 @@ describe("buildDebtPaymentTransactions", () => {
     const spending = written.filter(isSpendingTransaction);
 
     expect(spending).toHaveLength(1);
-    expect(spending[0].categoryId).toBe(LOAN_INTEREST_CATEGORY_ID);
+    expect(spending[0].categoryId).toBe(loanInterestCategoryId("user:default"));
   });
 
   it("links the principal legs as one balanced transfer", () => {
@@ -398,13 +457,13 @@ const parentPayment: Transaction = {
 };
 
 describe("buildFeeTransaction", () => {
-  it("builds a UGX fee expense linked to its parent with a deterministic id", () => {
-    const fee = buildFeeTransaction(parentPayment, "1250", FEES_CATEGORY_ID);
+  it("builds a UGX fee expense linked to its parent", () => {
+    const fee = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"));
     expect(fee).not.toBeNull();
-    expect(fee!.id).toBe("transaction:abc:fee");
+    expect(isValidId(fee!.id)).toBe(true);
     expect(fee!.feeParentId).toBe("transaction:abc");
     expect(fee!.type).toBe("expense");
-    expect(fee!.categoryId).toBe(FEES_CATEGORY_ID);
+    expect(fee!.categoryId).toBe(feesCategoryId("user:default"));
     expect(fee!.accountId).toBe("account:momo");
     expect(fee!.currency).toBe("UGX");
     expect(fee!.fxRateToUgx).toBeUndefined();
@@ -415,15 +474,42 @@ describe("buildFeeTransaction", () => {
   });
 
   it("returns null for blank, zero, negative, or non-numeric fees", () => {
-    expect(buildFeeTransaction(parentPayment, "", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "   ", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "0", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "-5", FEES_CATEGORY_ID)).toBeNull();
-    expect(buildFeeTransaction(parentPayment, "abc", FEES_CATEGORY_ID)).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "   ", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "0", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "-5", feesCategoryId("user:default"))).toBeNull();
+    expect(buildFeeTransaction(parentPayment, "abc", feesCategoryId("user:default"))).toBeNull();
+  });
+
+  /**
+   * The fee used to take the id `${parent.id}:fee`, so an edit found it by
+   * guessing that string. After the cuid2 migration a stored fee carries an
+   * unrelated id, the guess missed, and saving added a second fee expense
+   * against the same payment — the outflow was counted twice.
+   */
+  it("reuses the id of the fee already recorded against the payment", () => {
+    const stored = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"))!;
+    const migrated = { ...stored, id: "kf83nd0s7a2mqp1xhs9wztlb" };
+
+    const updated = buildFeeTransaction(
+      parentPayment,
+      "3000",
+      feesCategoryId("user:default"),
+      migrated,
+    );
+
+    expect(updated!.id).toBe("kf83nd0s7a2mqp1xhs9wztlb");
+    expect(updated!.amount).toBe(3000);
+  });
+
+  it("gives a first fee its own id rather than deriving one from the payment", () => {
+    const fee = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"))!;
+    expect(fee.id).not.toContain(parentPayment.id);
+    expect(fee.id).not.toContain(":");
   });
 
   it("reads a grouped fee amount", () => {
-    expect(buildFeeTransaction(parentPayment, "2,875", FEES_CATEGORY_ID)).toMatchObject({
+    expect(buildFeeTransaction(parentPayment, "2,875", feesCategoryId("user:default"))).toMatchObject({
       amount: 2875,
     });
   });

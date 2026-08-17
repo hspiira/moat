@@ -25,6 +25,8 @@ import type {
   TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
+import { createId } from "@/lib/ids";
+import { todayIso } from "@/lib/today";
 
 /** What an item really cost, gathered at check-off. */
 export type FulfillmentActual = {
@@ -94,7 +96,7 @@ export function useShoppingWorkspace() {
     void refresh();
   }, [refresh]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const groups = useMemo(() => groupPlannerRows(purchases, today), [purchases, today]);
   const estimate = useMemo(() => estimatePlannedTotal(purchases), [purchases]);
   const observations = useMemo(
@@ -141,7 +143,7 @@ export function useShoppingWorkspace() {
           await repositories.items.upsert(resolved.item);
         }
         await repositories.plannedPurchases.upsert({
-          id: `planned:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           itemId: resolved.item.id,
           quantity: input.quantity,
@@ -268,7 +270,7 @@ export function useShoppingWorkspace() {
         if (target.mode === "attach") {
           transactionId = target.transactionId;
         } else {
-          transactionId = `transaction:${crypto.randomUUID()}`;
+          transactionId = createId();
           await repositories.transactions.upsert({
             id: transactionId,
             userId: profile.id,

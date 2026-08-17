@@ -1,11 +1,14 @@
 import {
   buildPartyPortfolio,
   buildPoolAccount,
+  poolAccountIdFor,
   type PartyLedgerConfig,
   type PartyLedgerEntry,
   type PartyPortfolio,
 } from "@/lib/domain/party-ledger";
 import type { Account, Counterparty, Transaction } from "@/lib/types";
+import { deriveSeededId } from "@/lib/ids";
+import { SEEDED_SLUGS } from "@/lib/domain/seeded-ids";
 
 /**
  * Informal borrowing — money the user owes people rather than institutions.
@@ -19,7 +22,7 @@ import type { Account, Counterparty, Transaction } from "@/lib/types";
  * being an expense on a receivable.
  */
 
-export const BORROWING_POOL_ACCOUNT_ID = "account:money-borrowed";
+export const BORROWING_POOL_SLUG = SEEDED_SLUGS.borrowingPool;
 export const BORROWING_POOL_ACCOUNT_NAME = "Money borrowed";
 
 /**
@@ -31,7 +34,7 @@ export function isInformalDebt(account: Account): boolean {
   if (account.type !== "debt") {
     return false;
   }
-  if (account.id === BORROWING_POOL_ACCOUNT_ID) {
+  if (account.id === deriveSeededId(account.userId, BORROWING_POOL_SLUG)) {
     return true;
   }
 
@@ -39,7 +42,7 @@ export function isInformalDebt(account: Account): boolean {
 }
 
 export const BORROWING_LEDGER: PartyLedgerConfig = {
-  poolAccountId: BORROWING_POOL_ACCOUNT_ID,
+  poolAccountSlug: BORROWING_POOL_SLUG,
   poolAccountName: BORROWING_POOL_ACCOUNT_NAME,
   poolAccountType: "debt",
   sign: -1,
@@ -48,6 +51,9 @@ export const BORROWING_LEDGER: PartyLedgerConfig = {
   cancelType: "income",
   ownsAccount: isInformalDebt,
 };
+
+export const borrowingPoolAccountId = (userId: string) =>
+  poolAccountIdFor(BORROWING_LEDGER, userId);
 
 export type LenderLoans = PartyLedgerEntry;
 export type BorrowingPortfolio = PartyPortfolio;

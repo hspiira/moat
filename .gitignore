@@ -21,3 +21,13 @@ pnpm-debug.log*
 
 # Static export output
 /out/
+
+# Sync server build output (bundled at the package root for Vercel capture)
+server/dist/
+server/server.js
+server/server.js.map
+server/migrate.js
+server/migrate.js.map
+
+# Dev-only file-backed sync store
+.moat-sync/

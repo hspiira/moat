@@ -3,6 +3,7 @@ import type {
   CaptureReviewSnapshot,
   CorrectionLog,
 } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export function createCorrectionLog(params: {
   userId: string;
@@ -11,7 +12,7 @@ export function createCorrectionLog(params: {
   createdAt?: string;
 }): CorrectionLog {
   return {
-    id: `correction-log:${crypto.randomUUID()}`,
+    id: createId(),
     userId: params.userId,
     reviewItemId: params.item.id,
     envelopeId: params.item.envelopeId,

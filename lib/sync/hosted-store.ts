@@ -7,6 +7,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  compareByCursorOrder,
+  isAfterCursor,
+  parseCursor,
+  resolvePageSize,
+  serializeCursor,
+  toEntityKey,
+} from "@/lib/sync/cursor";
 import { getConflictStrategy, isSyncableEntityType } from "@/lib/sync/entity-sync";
 import type {
   SyncPullRecord,
@@ -33,8 +41,9 @@ type HostedSyncState = {
   users: Record<string, HostedSyncUserState>;
 };
 
-const STORE_DIR = path.join(process.cwd(), ".moat-sync");
-const STORE_PATH = path.join(STORE_DIR, "hosted-sync.json");
+function getStorePath() {
+  return process.env.MOAT_SYNC_STORE_PATH ?? path.join(process.cwd(), ".moat-sync", "hosted-sync.json");
+}
 
 function getEntityKey(entityType: string, entityId: string) {
   return `${entityType}:${entityId}`;
@@ -46,7 +55,7 @@ function createEmptyState(): HostedSyncState {
 
 async function readState(): Promise<HostedSyncState> {
   try {
-    const raw = await readFile(STORE_PATH, "utf8");
+    const raw = await readFile(getStorePath(), "utf8");
     return JSON.parse(raw) as HostedSyncState;
   } catch {
     return createEmptyState();
@@ -54,8 +63,9 @@ async function readState(): Promise<HostedSyncState> {
 }
 
 async function writeState(state: HostedSyncState) {
-  await mkdir(STORE_DIR, { recursive: true });
-  await writeFile(STORE_PATH, JSON.stringify(state, null, 2));
+  const storePath = getStorePath();
+  await mkdir(path.dirname(storePath), { recursive: true });
+  await writeFile(storePath, JSON.stringify(state, null, 2));
 }
 
 function getUserState(state: HostedSyncState, userId: string): HostedSyncUserState {
@@ -170,9 +180,17 @@ export function validateSyncPullRequest(input: unknown): SyncPullRequest {
     throw new Error("Sync pull since token must be a string when provided.");
   }
 
+  if (
+    request.limit !== undefined &&
+    (typeof request.limit !== "number" || !Number.isFinite(request.limit))
+  ) {
+    throw new Error("Sync pull limit must be a finite number when provided.");
+  }
+
   return {
     userId: request.userId,
     since: request.since as string | undefined,
+    limit: request.limit as number | undefined,
   };
 }
 
@@ -281,20 +299,30 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
 export async function pullHostedSyncChanges(request: SyncPullRequest): Promise<SyncPullResponse> {
   const state = await readState();
   const userState = getUserState(state, request.userId);
-  const records = Object.values(userState.records)
-    .filter((record) => !request.since || record.updatedAt > request.since)
-    .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+
+  const cursor = parseCursor(request.since);
+  const pageSize = resolvePageSize(request.limit);
+
+  const ordered = Object.values(userState.records)
     .map((record) => ({
-      entityType: record.entityType,
-      entityId: record.entityId,
-      payload: record.payload,
-      deleted: record.deleted,
-      updatedAt: record.updatedAt,
-      serverVersionToken: record.serverVersionToken,
-    }));
+      record,
+      position: {
+        updatedAt: record.updatedAt,
+        entityKey: toEntityKey(record.entityType, record.entityId),
+      },
+    }))
+    .filter((entry) => isAfterCursor(entry.position, cursor))
+    .sort((left, right) => compareByCursorOrder(left.position, right.position));
+
+  const page = ordered.slice(0, pageSize);
+  const last = page.at(-1);
 
   return {
     syncedAt: new Date().toISOString(),
-    records,
+    records: page.map((entry) => toPullRecord(entry.record)),
+    // Advances only past records actually returned, never to the server clock,
+    // so a write landing mid-page is not skipped.
+    nextSince: last ? serializeCursor(last.position) : request.since,
+    hasMore: ordered.length > pageSize,
   };
 }

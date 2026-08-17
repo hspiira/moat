@@ -7,7 +7,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { buildFeeTransaction } from "@/components/transactions/transaction-builder";
-import { FEES_CATEGORY_ID, buildFeesCategory } from "@/lib/app-state/defaults";
+import { feesCategoryId, buildFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
@@ -219,7 +219,7 @@ export function useCaptureReviewWorkspace() {
 
       await repositories.transactions.upsert(proposed);
       if (typeof item.feeAmount === "number" && item.feeAmount > 0) {
-        const fee = buildFeeTransaction(proposed, String(item.feeAmount), FEES_CATEGORY_ID);
+        const fee = buildFeeTransaction(proposed, String(item.feeAmount), feesCategoryId(proposed.userId));
         if (fee) {
           await repositories.categories.upsert(buildFeesCategory(profile.id));
           await repositories.transactions.upsert(fee);

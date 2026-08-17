@@ -1,4 +1,5 @@
 import type { CaptureReviewItem, Transaction } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export function mapReviewItemToTransactionFields(
   item: CaptureReviewItem,
@@ -38,7 +39,7 @@ export function buildTransactionFromCaptureReviewItem(params: {
   const timestamp = params.createdAt ?? new Date().toISOString();
 
   return {
-    id: `transaction:${crypto.randomUUID()}`,
+    id: createId(),
     ...mapReviewItemToTransactionFields(params.item, params.userId, timestamp),
     captureEnvelopeId: params.item.envelopeId,
     captureReviewItemId: params.item.id,

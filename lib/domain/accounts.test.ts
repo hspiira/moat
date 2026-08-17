@@ -7,6 +7,7 @@ import {
   reconcileAccountBalances,
 } from "@/lib/domain/accounts";
 import type { Account, Transaction } from "@/lib/types";
+import { transfersCategoryId } from "@/lib/domain/seeded-ids";
 
 const account: Account = {
   id: "account:wallet",
@@ -69,7 +70,7 @@ describe("reconcileAccountBalances", () => {
         type: "transfer",
         amount: -25_000,
         occurredOn: "2026-04-07",
-        categoryId: "category:transfers",
+        categoryId: transfersCategoryId("user:default"),
         transferGroupId: "transfer:1",
       }),
     ];
@@ -125,7 +126,7 @@ describe("reconcileAccountBalances", () => {
         type: "transfer",
         amount: -5_000,
         occurredOn: "2026-04-07",
-        categoryId: "category:transfers",
+        categoryId: transfersCategoryId("user:default"),
         transferGroupId: "transfer:1",
       }),
     ];
@@ -157,7 +158,7 @@ describe("reconcileAccountBalances", () => {
         type: "expense",
         amount: 5_000,
         occurredOn: "2026-04-07",
-        categoryId: "category:transfers",
+        categoryId: transfersCategoryId("user:default"),
       }),
     ];
 

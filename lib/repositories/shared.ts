@@ -44,6 +44,7 @@ import type {
   TransactionRule,
   UserProfile,
 } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 type SyncableRecord = { id: string; userId: string };
 
@@ -129,7 +130,7 @@ async function enqueueSyncMutation(
 
   const timestamp = new Date().toISOString();
   const outboxItem: SyncOutboxItem = {
-    id: `sync-outbox:${crypto.randomUUID()}`,
+    id: createId(),
     userId: params.entity.userId,
     entityType: params.entityType,
     entityId: params.entity.id,

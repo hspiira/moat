@@ -18,6 +18,7 @@ import type {
   SalaryCycle,
   UserProfile,
 } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 const ONBOARDING_DRAFT_KEY = "moat:onboarding-draft";
 
@@ -382,7 +383,7 @@ export function useOnboardingWorkspace() {
         form.investmentHorizonUnit,
       );
       const profile: UserProfile = {
-        id: "user:default",
+        id: createId(),
         displayName: form.displayName.trim(),
         currency: "UGX",
         salaryCycle: form.salaryCycle,
@@ -394,7 +395,7 @@ export function useOnboardingWorkspace() {
       };
 
       const bootstrapState = createBootstrapState(profile);
-      const accountId = `account:${crypto.randomUUID()}`;
+      const accountId = createId();
       const openingBalance = normalizeOpeningBalance(account.type, Number(account.openingBalance));
 
       await Promise.all(bootstrapState.categories.map((c) => repositories.categories.upsert(c)));
@@ -417,7 +418,7 @@ export function useOnboardingWorkspace() {
 
       if (goal.enabled) {
         await repositories.goals.upsert({
-          id: `goal:${crypto.randomUUID()}`,
+          id: createId(),
           userId: profile.id,
           name: goal.name.trim(),
           goalType: goal.goalType,

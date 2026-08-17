@@ -1,3 +1,4 @@
+import { parseCaptureFee } from "@/lib/capture/providers/shared";
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { buildStableHash } from "@/lib/hash";
 import { buildCaptureFieldWarnings, deriveCaptureConfidence } from "@/lib/capture/confidence";
@@ -82,7 +83,7 @@ export function parseCaptureEnvelope(input: CapturePipelineInput & { existingRev
       originalAmount,
       currency,
       fxRateToUgx,
-      feeAmount: providerResult?.feeAmount,
+      feeAmount: providerResult?.feeAmount ?? parseCaptureFee(rawText),
       statedBalance: parseStatedBalance(rawText),
       normalizedAmount,
       type,

@@ -1,4 +1,5 @@
 import type { Item } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export function normalizeItemName(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").toLowerCase();
@@ -24,7 +25,7 @@ export function resolveItem(params: {
   return {
     isNew: true,
     item: {
-      id: `item:${crypto.randomUUID()}`,
+      id: createId(),
       userId: params.userId,
       name: params.rawName.trim().replace(/\s+/g, " "),
       normalizedName,

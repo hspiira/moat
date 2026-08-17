@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { buildCounterparty } from "@/lib/domain/counterparties";
 import {
-  LENDING_POOL_ACCOUNT_ID,
+  lendingPoolAccountId,
   buildLendingPoolAccount,
   getLendingPortfolio,
 } from "@/lib/domain/lending";
@@ -38,7 +38,7 @@ type LegOptions = {
 function leg(
   amount: number,
   occurredOn: string,
-  { accountId = LENDING_POOL_ACCOUNT_ID, payee, expectedRepaymentDate }: LegOptions = {},
+  { accountId = lendingPoolAccountId("user:default"), payee, expectedRepaymentDate }: LegOptions = {},
 ): Transaction {
   return {
     id: `transaction:${accountId}:${payee ?? "none"}:${occurredOn}:${amount}`,
@@ -85,7 +85,7 @@ function borrowerNamed(
 
 describe("the lending pool", () => {
   it("is a receivable account with a stable id", () => {
-    expect(pool.id).toBe(LENDING_POOL_ACCOUNT_ID);
+    expect(pool.id).toBe(lendingPoolAccountId("user:default"));
     expect(pool.type).toBe("receivable");
     expect(pool.openingBalance).toBe(0);
   });

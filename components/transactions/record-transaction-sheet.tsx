@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 
 import type { TransactionFormState } from "@/components/transactions/transaction-form";
+import { todayIso } from "@/lib/today";
 
 import {
   Sheet,
@@ -41,8 +42,14 @@ export function RecordTransactionSheet({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open && initialForm) {
-      workspace.setTransactionForm((current) => ({ ...current, ...initialForm }));
+    if (open) {
+      // Restamp the date on open for the same reason: a long-lived session
+      // would otherwise keep offering the day it started on.
+      workspace.setTransactionForm((current) => ({
+        ...current,
+        occurredOn: todayIso(),
+        ...initialForm,
+      }));
     }
   }
 

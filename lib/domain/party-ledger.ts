@@ -1,3 +1,4 @@
+import { deriveSeededId } from "@/lib/ids";
 import { isTransferTransaction } from "@/lib/domain/transfers";
 import type {
   Account,
@@ -23,7 +24,8 @@ const MILLISECONDS_PER_DAY = 86_400_000;
 export type PartyStatus = "outstanding" | "settled" | "cancelled" | "overpaid";
 
 export type PartyLedgerConfig = {
-  poolAccountId: string;
+  /** Derivation input for the pool account's id. Part of the data format. */
+  poolAccountSlug: string;
   poolAccountName: string;
   poolAccountType: Account["type"];
   /** +1 when the pool holds an asset, -1 when it holds a liability. */
@@ -66,13 +68,21 @@ export type PartyPortfolio = {
   parties: PartyLedgerEntry[];
 };
 
+export function poolAccountIdFor(config: PartyLedgerConfig, userId: string): string {
+  return deriveSeededId(userId, config.poolAccountSlug);
+}
+
+export function isPoolAccount(config: PartyLedgerConfig, account: Account): boolean {
+  return account.id === poolAccountIdFor(config, account.userId);
+}
+
 export function buildPoolAccount(
   config: PartyLedgerConfig,
   userId: string,
   timestamp: string,
 ): Account {
   return {
-    id: config.poolAccountId,
+    id: poolAccountIdFor(config, userId),
     userId,
     name: config.poolAccountName,
     type: config.poolAccountType,
@@ -120,7 +130,7 @@ function bucketFor(
   transaction: Transaction,
   counterparties: Map<string, Counterparty>,
 ): { key: string; name: string; counterpartyId?: string } {
-  if (account.id !== config.poolAccountId) {
+  if (!isPoolAccount(config, account)) {
     return { key: `account:${account.id}`, name: account.name };
   }
 
@@ -228,7 +238,7 @@ export function buildPartyPortfolio(
   // Money owed before Moat was in use, attributed to the person rather than
   // sitting unattributable on the pool. The pool's own opening balance holds
   // the same total, so the two still agree.
-  if (owned.has(config.poolAccountId)) {
+  if ([...owned.values()].some((account) => isPoolAccount(config, account))) {
     for (const counterparty of counterparties) {
       if (!counterparty.openingBalance || counterparty.isArchived) {
         continue;
@@ -246,7 +256,7 @@ export function buildPartyPortfolio(
   // A dedicated account carries its opening balance even with no transactions.
   for (const account of owned.values()) {
     const opening = account.openingBalance * config.sign;
-    if (account.id === config.poolAccountId || opening <= 0) {
+    if (isPoolAccount(config, account) || opening <= 0) {
       continue;
     }
     buckets.set(`account:${account.id}`, {
@@ -279,9 +289,10 @@ export function buildPartyPortfolio(
       partyKey: key,
       partyName: name,
       counterpartyId,
-      accountId: account.id === config.poolAccountId ? undefined : account.id,
-      openingBalance:
-        account.id === config.poolAccountId ? 0 : account.openingBalance * config.sign,
+      accountId: isPoolAccount(config, account) ? undefined : account.id,
+      openingBalance: isPoolAccount(config, account)
+        ? 0
+        : account.openingBalance * config.sign,
       transactions: [transaction],
     });
   }

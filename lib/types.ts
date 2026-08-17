@@ -434,6 +434,7 @@ export type SyncProfile = {
   syncAuthToken?: string;
   lastSyncedAt?: string;
   lastPulledAt?: string;
+  backfilledAt?: string;
   createdAt: string;
   updatedAt: string;
 };

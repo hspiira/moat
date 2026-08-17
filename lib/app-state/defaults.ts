@@ -1,4 +1,5 @@
 import type { AccountType, Category, GoalType, ResourceLink } from "@/lib/types";
+import { feesCategoryId, seededCategoryId } from "@/lib/domain/seeded-ids";
 
 const DEFAULT_DATE = "2026-01-01T00:00:00.000Z";
 
@@ -62,14 +63,16 @@ export const defaultGoalTypes: GoalType[] = [
   "house_construction",
 ];
 
-export const FEES_CATEGORY_ID = "category:fees-charges";
-export const WRITE_OFF_CATEGORY_ID = "category:money-written-off";
-export const LOAN_INTEREST_CATEGORY_ID = "category:loan-interest";
-export const DEBT_REPAYMENT_CATEGORY_ID = "category:debt-repayment";
+export {
+  feesCategoryId,
+  writeOffCategoryId,
+  loanInterestCategoryId,
+  debtRepaymentCategoryId,
+} from "@/lib/domain/seeded-ids";
 
 export function buildFeesCategory(userId: string): Category {
   return {
-    id: FEES_CATEGORY_ID,
+    id: feesCategoryId(userId),
     userId,
     name: "Fees & charges",
     kind: "expense",
@@ -80,7 +83,7 @@ export function buildFeesCategory(userId: string): Category {
 
 export function buildDefaultCategories(userId: string): Category[] {
   return defaultCategorySeeds.map((seed) => ({
-    id: `category:${seed.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+    id: seededCategoryId(userId, seed.name),
     userId,
     name: seed.name,
     kind: seed.kind,

@@ -3,15 +3,29 @@ import { repositories } from "@/lib/repositories/instance";
 import type {
   Account,
   BudgetTarget,
+  CaptureEnvelope,
+  CaptureReviewItem,
   Category,
+  CorrectionLog,
+  Counterparty,
   Goal,
   ImportBatch,
   InvestmentProfile,
+  Item,
+  MonthClose,
+  PlannedPurchase,
+  RecurringObligation,
   SyncOutboxItem,
   SyncProfile,
   Transaction,
+  TransactionLineItem,
+  TransactionRule,
   UserProfile,
 } from "@/lib/types";
+
+// Schema 2 covered 8 of 19 stores. Fields added in 3 are optional so a
+// schema 2 backup still restores.
+export const EXPORT_SCHEMA_VERSION = 3;
 
 export type FullExport = {
   exportedAt: string;
@@ -26,33 +40,71 @@ export type FullExport = {
   imports: ImportBatch[];
   syncProfiles: SyncProfile[];
   syncOutbox: SyncOutboxItem[];
+  counterparties?: Counterparty[];
+  transactionRules?: TransactionRule[];
+  recurringObligations?: RecurringObligation[];
+  monthCloses?: MonthClose[];
+  items?: Item[];
+  plannedPurchases?: PlannedPurchase[];
+  transactionLineItems?: TransactionLineItem[];
+  captureEnvelopes?: CaptureEnvelope[];
+  captureReviewItems?: CaptureReviewItem[];
+  correctionLogs?: CorrectionLog[];
 };
 
-/**
- * Collect all user data from IndexedDB and return as a structured export object.
- */
+// resources is excluded: seeded reference data, recreated on load.
 export async function collectFullExport(): Promise<FullExport> {
   const userProfile = await repositories.userProfile.get();
   const userId = userProfile?.id ?? "";
+  const forUser = <T>(read: (id: string) => Promise<T[]>): Promise<T[]> =>
+    userId ? read(userId) : Promise.resolve([]);
 
-  const [accounts, transactions, categories, goals, budgets, imports, syncProfile, syncOutbox] = await Promise.all([
-    userId ? repositories.accounts.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.transactions.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.categories.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.goals.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.budgets.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.imports.listByUser(userId) : Promise.resolve([]),
-    userId ? repositories.syncProfiles.getByUser(userId) : Promise.resolve(null),
-    userId ? repositories.syncOutbox.listByUser(userId) : Promise.resolve([]),
+  const [
+    accounts,
+    transactions,
+    categories,
+    goals,
+    budgets,
+    imports,
+    syncOutbox,
+    counterparties,
+    transactionRules,
+    recurringObligations,
+    monthCloses,
+    items,
+    plannedPurchases,
+    transactionLineItems,
+    captureEnvelopes,
+    captureReviewItems,
+    correctionLogs,
+  ] = await Promise.all([
+    forUser((id) => repositories.accounts.listByUser(id)),
+    forUser((id) => repositories.transactions.listByUser(id)),
+    forUser((id) => repositories.categories.listByUser(id)),
+    forUser((id) => repositories.goals.listByUser(id)),
+    forUser((id) => repositories.budgets.listByUser(id)),
+    forUser((id) => repositories.imports.listByUser(id)),
+    forUser((id) => repositories.syncOutbox.listByUser(id)),
+    forUser((id) => repositories.counterparties.listByUser(id)),
+    forUser((id) => repositories.transactionRules.listByUser(id)),
+    forUser((id) => repositories.recurringObligations.listByUser(id)),
+    forUser((id) => repositories.monthCloses.listByUser(id)),
+    forUser((id) => repositories.items.listByUser(id)),
+    forUser((id) => repositories.plannedPurchases.listByUser(id)),
+    forUser((id) => repositories.transactionLineItems.listByUser(id)),
+    forUser((id) => repositories.captureEnvelopes.listByUser(id)),
+    forUser((id) => repositories.captureReviewItems.listByUser(id)),
+    forUser((id) => repositories.correctionLogs.listByUser(id)),
   ]);
 
-  const investmentProfile = userId
-    ? await repositories.investmentProfiles.getByUser(userId)
-    : null;
+  const [syncProfile, investmentProfile] = await Promise.all([
+    userId ? repositories.syncProfiles.getByUser(userId) : Promise.resolve(null),
+    userId ? repositories.investmentProfiles.getByUser(userId) : Promise.resolve(null),
+  ]);
 
   return {
     exportedAt: new Date().toISOString(),
-    schemaVersion: 2,
+    schemaVersion: EXPORT_SCHEMA_VERSION,
     userProfile,
     accounts,
     transactions,
@@ -63,6 +115,16 @@ export async function collectFullExport(): Promise<FullExport> {
     imports,
     syncProfiles: syncProfile ? [syncProfile] : [],
     syncOutbox,
+    counterparties,
+    transactionRules,
+    recurringObligations,
+    monthCloses,
+    items,
+    plannedPurchases,
+    transactionLineItems,
+    captureEnvelopes,
+    captureReviewItems,
+    correctionLogs,
   };
 }
 
@@ -83,6 +145,20 @@ export async function restoreFullExport(data: FullExport): Promise<void> {
     ...data.imports.map((r) => repositories.imports.upsert(r)),
     ...data.syncProfiles.map((r) => repositories.syncProfiles.save(r)),
     ...data.syncOutbox.map((r) => repositories.syncOutbox.upsert(r)),
+    ...(data.counterparties ?? []).map((r) => repositories.counterparties.upsert(r)),
+    ...(data.transactionRules ?? []).map((r) => repositories.transactionRules.upsert(r)),
+    ...(data.recurringObligations ?? []).map((r) =>
+      repositories.recurringObligations.upsert(r),
+    ),
+    ...(data.monthCloses ?? []).map((r) => repositories.monthCloses.upsert(r)),
+    ...(data.items ?? []).map((r) => repositories.items.upsert(r)),
+    ...(data.plannedPurchases ?? []).map((r) => repositories.plannedPurchases.upsert(r)),
+    ...(data.transactionLineItems ?? []).map((r) =>
+      repositories.transactionLineItems.upsert(r),
+    ),
+    ...(data.captureEnvelopes ?? []).map((r) => repositories.captureEnvelopes.upsert(r)),
+    ...(data.captureReviewItems ?? []).map((r) => repositories.captureReviewItems.upsert(r)),
+    ...(data.correctionLogs ?? []).map((r) => repositories.correctionLogs.upsert(r)),
     ...(data.investmentProfiles.length > 0
       ? [repositories.investmentProfiles.save(data.investmentProfiles[0])]
       : []),

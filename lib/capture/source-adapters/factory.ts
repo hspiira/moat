@@ -1,5 +1,6 @@
 import { buildStableHash } from "@/lib/hash";
 import type { CaptureEnvelope, CaptureEnvelopeSource } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export type CaptureEnvelopeParams = {
   userId: string;
@@ -22,7 +23,7 @@ export function createEnvelopeFactory<TParams extends CaptureEnvelopeParams>(
     const timestamp = params.capturedAt ?? new Date().toISOString();
 
     return {
-      id: `capture-envelope:${crypto.randomUUID()}`,
+      id: createId(),
       userId: params.userId,
       source,
       rawContent: params.rawContent,

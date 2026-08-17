@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { todayIso } from "@/lib/today";
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import type { TransactionType } from "@/lib/types";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
@@ -55,6 +56,9 @@ export function TransactionsCaptureWorkspace() {
       workspace.setTransactionForm((current) => ({
         ...current,
         type: intent,
+        // Restamp on every fresh capture: the session may have been open since
+        // before midnight, and the form would still offer that day.
+        occurredOn: todayIso(),
         categoryId: categoryMatchesType(
           workspace.categories.find((category) => category.id === current.categoryId) ?? {
             id: "",

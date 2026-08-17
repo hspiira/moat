@@ -5,6 +5,7 @@ import type { SyncOutboxItem } from "@/lib/types";
 
 import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
+import { createId } from "@/lib/ids";
 
 export type SyncConflictRecord = {
   item: SyncOutboxItem;
@@ -80,7 +81,7 @@ export async function resolveSyncConflictKeepLocal(
   const timestamp = new Date().toISOString();
   await bundle.syncOutbox.upsert({
     ...item,
-    id: `sync-outbox:${crypto.randomUUID()}`,
+    id: createId(),
     status: "pending",
     attempts: 0,
     queuedAt: timestamp,

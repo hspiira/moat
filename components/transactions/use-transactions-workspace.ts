@@ -30,6 +30,7 @@ import type {
 } from "@/lib/types";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
+import { findTransactionTypeDrift } from "@/lib/domain/transaction-type-drift";
 import { describeTransferCounterparty } from "@/lib/domain/transfer-counterparty";
 import { planLineItemCascade } from "@/lib/domain/line-item-cascade";
 import {
@@ -44,7 +45,9 @@ import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import { countCategoryUsage } from "@/lib/domain/category-usage";
-import { defaultTransactionForm, type TransactionFormState } from "./transaction-form";
+import { currentMonthIso, todayIso } from "@/lib/today";
+import { isReservedAccount } from "@/lib/domain/reserved-accounts";
+import { createDefaultTransactionForm, type TransactionFormState } from "./transaction-form";
 import { useCounterparties } from "./use-counterparties";
 import { useLineItems } from "./use-line-items";
 import { useMonthClose } from "./use-month-close";
@@ -56,7 +59,7 @@ import {
   buildTransferPair,
 } from "./transaction-builder";
 import {
-  FEES_CATEGORY_ID,
+  feesCategoryId,
   buildFeesCategory,
   reconcileDefaultCategories,
 } from "@/lib/app-state/defaults";
@@ -64,6 +67,13 @@ import { useBudgetPlanner, type BudgetFormState } from "./use-budget-planner";
 import { useRulesAndObligations } from "./use-rules-and-obligations";
 import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
+import { createId } from "@/lib/ids";
+import {
+  isEditableTransaction,
+  planTransactionCascade,
+  transactionGroup,
+  transferLegs,
+} from "@/lib/domain/transaction-cascade";
 
 export type { BudgetFormState };
 
@@ -82,17 +92,41 @@ function sortTransactions(transactions: Transaction[]) {
   });
 }
 
+/**
+ * Accounts an ordinary transaction may default to.
+ *
+ * The party-ledger pools are seeded for everyone and can sort ahead of the
+ * user's own accounts, so defaulting to one files ordinary spending against the
+ * lending or borrowing ledger. They stay selectable, just never preselected.
+ */
+/** The fee recorded against a payment, if there is one. */
+function findFeeFor(transactions: Transaction[], parentId: string): Transaction | undefined {
+  return transactions.find((entry) => entry.feeParentId === parentId);
+}
+
+function selectableAccounts(accounts: Account[]): Account[] {
+  const spendable = accounts.filter(
+    (account) => !isReservedAccount(account) && !account.isArchived,
+  );
+  return spendable.length > 0 ? spendable : accounts;
+}
+
 function getResetTransactionForm(
   accounts: Account[],
   categories: Category[],
 ): TransactionFormState {
+  const base = createDefaultTransactionForm();
+  // Skip the party-ledger pools: they are seeded for everyone and sort ahead of
+  // the user's own accounts, so defaulting to one files ordinary spending
+  // against the lending or borrowing ledger.
+  const selectable = selectableAccounts(accounts);
+
   return {
-    ...defaultTransactionForm,
-    accountId: accounts[0]?.id ?? "",
-    destinationAccountId: accounts[1]?.id ?? "",
+    ...base,
+    accountId: selectable[0]?.id ?? "",
+    destinationAccountId: selectable[1]?.id ?? selectable[0]?.id ?? "",
     categoryId:
-      categories.find((category) => categoryMatchesType(category, defaultTransactionForm.type))
-        ?.id ?? "",
+      categories.find((category) => categoryMatchesType(category, base.type))?.id ?? "",
     currency: "UGX",
     payee: "",
     fxRateToUgx: "",
@@ -102,7 +136,7 @@ function getResetTransactionForm(
 export function useTransactionsWorkspace() {
   const searchParams = useSearchParams();
   const { show } = useToast();
-  const closePeriod = new Date().toISOString().slice(0, 7);
+  const closePeriod = currentMonthIso();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -115,7 +149,7 @@ export function useTransactionsWorkspace() {
     useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
   const [transactionForm, setTransactionForm] =
-    useState<TransactionFormState>(defaultTransactionForm);
+    useState<TransactionFormState>(createDefaultTransactionForm);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -304,7 +338,28 @@ export function useTransactionsWorkspace() {
           ? await repositories.categories.listByUser(nextProfile.id)
           : storedCategories;
 
-      const currentTransactions = await loadAndBackfill(nextProfile.id, storedTransactions);
+      const backfilled = await loadAndBackfill(nextProfile.id, storedTransactions);
+
+      // Repairs rows left carrying a type their category no longer permits,
+      // which assertCategoryMatchesType rejects on save.
+      const drift = findTransactionTypeDrift(
+        backfilled,
+        currentCategories,
+        new Date().toISOString(),
+      );
+      if (drift.repaired.length > 0) {
+        await Promise.all(
+          drift.repaired.map((entry) => repositories.transactions.upsert(entry)),
+        );
+      }
+      if (drift.needsReview.length > 0) {
+        console.warn(
+          `Moat: ${drift.needsReview.length} transaction(s) have a category their type cannot use and need a manual fix.`,
+          drift.needsReview.map((entry) => entry.id),
+        );
+      }
+      const repairedById = new Map(drift.repaired.map((entry) => [entry.id, entry]));
+      const currentTransactions = backfilled.map((entry) => repairedById.get(entry.id) ?? entry);
 
       setAccounts(reconciledAccounts);
       setCategories(currentCategories);
@@ -337,11 +392,12 @@ export function useTransactionsWorkspace() {
         ),
       );
 
+      const defaultAccounts = selectableAccounts(reconciledAccounts);
       setTransactionForm((current) => ({
         ...getResetTransactionForm(reconciledAccounts, storedCategories),
         ...current,
-        accountId: current.accountId || reconciledAccounts[0]?.id || "",
-        destinationAccountId: current.destinationAccountId || reconciledAccounts[1]?.id || "",
+        accountId: current.accountId || defaultAccounts[0]?.id || "",
+        destinationAccountId: current.destinationAccountId || defaultAccounts[1]?.id || "",
         categoryId:
           current.categoryId ||
           storedCategories.find((category) => categoryMatchesType(category, current.type))?.id ||
@@ -420,6 +476,38 @@ export function useTransactionsWorkspace() {
     }));
   }, [categories, searchParams]);
 
+  /**
+   * Keep the default date on today while the app stays open.
+   *
+   * The form can sit on screen for days — an installed PWA is rarely closed —
+   * and the date it was created with would otherwise still be offered after
+   * midnight. Only a date the app stamped itself is moved; once the user picks
+   * one it is left alone, so recording yesterday's spending still works.
+   */
+  const autoStampedDate = useRef(todayIso());
+  useEffect(() => {
+    const refresh = () => {
+      const today = todayIso();
+      if (autoStampedDate.current === today) return;
+      const previous = autoStampedDate.current;
+      autoStampedDate.current = today;
+      if (editingTransactionId) return;
+      setTransactionForm((current) =>
+        current.occurredOn === previous ? { ...current, occurredOn: today } : current,
+      );
+    };
+
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [editingTransactionId]);
+
   useEffect(() => {
     if (transactionForm.currency === "UGX") {
       setRememberedFxHint(null);
@@ -497,17 +585,28 @@ export function useTransactionsWorkspace() {
           existingTransactions: transactions,
         };
 
-        let feeParent: Transaction;
+        // The rows the previous shape wrote. A category can change the type, so
+        // an edit may produce a different set of rows than it started with: an
+        // expense becoming a transfer, or a transfer becoming an expense. What
+        // the old shape wrote and the new one does not has to go, or the ledger
+        // keeps a row nothing points at.
+        const editedRow = editingTransactionId
+          ? transactions.find((entry) => entry.id === editingTransactionId)
+          : undefined;
+        const previousRowIds = new Set(
+          editedRow ? transactionGroup(editedRow, transactions).map((entry) => entry.id) : [],
+        );
+        // A fee hangs off one of those rows, whichever it was.
+        const previousFee = transactions.find(
+          (entry) => entry.feeParentId && previousRowIds.has(entry.feeParentId),
+        );
+
+        let rows: Transaction[];
         if (transactionForm.type === "transfer") {
           const party = await resolveFormCounterparty(profile.id, timestamp);
-          const [source, destination] = buildTransferPair(buildInput);
-          feeParent = source;
           const stamp = (row: Transaction): Transaction =>
             party ? { ...row, counterpartyId: party.id, payee: party.name } : row;
-          await Promise.all([
-            repositories.transactions.upsert(stamp(source)),
-            repositories.transactions.upsert(stamp(destination)),
-          ]);
+          rows = buildTransferPair(buildInput).map(stamp);
         } else if (transactionForm.type === "debt_payment") {
           // Split into an interest expense and a principal transfer. The user
           // enters one payment and taps nothing extra; the rate and balance on
@@ -518,29 +617,42 @@ export function useTransactionsWorkspace() {
           if (!loan) {
             throw new Error("Choose which loan you are paying.");
           }
-
-          const rows = buildDebtPaymentTransactions(buildInput, loan);
-          feeParent = rows[0];
-          await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
+          rows = buildDebtPaymentTransactions(buildInput, loan);
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
           // Passing the catalogue makes the type/category pair a write-time
           // check, not just something the picker happens to hide.
-          const payment = buildManualTransaction(buildInput, rules, categories);
-          feeParent = payment;
-          await repositories.transactions.upsert(payment);
+          rows = [buildManualTransaction(buildInput, rules, categories)];
         }
 
         // A fee is a separate linked expense on the same account (the transfer
-        // source, for transfers). Editing that clears the fee removes the orphan.
-        const fee = buildFeeTransaction(feeParent, transactionForm.feeAmount, FEES_CATEGORY_ID);
-        const feeId = `${feeParent.id}:fee`;
+        // source, for transfers), tied to its payment by feeParentId. Reusing
+        // the previous fee's id repoints it at the new parent instead of
+        // leaving it behind pointing at a row that no longer exists.
+        const feeParent = rows[0];
+        const fee = buildFeeTransaction(
+          feeParent,
+          transactionForm.feeAmount,
+          feesCategoryId(feeParent.userId),
+          previousFee,
+        );
+
+        // Everything is built and validated before the first write, so a bad
+        // form leaves storage untouched.
+        await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
         if (fee) {
           await repositories.categories.upsert(buildFeesCategory(profile.id));
           await repositories.transactions.upsert(fee);
-        } else if (transactions.some((entry) => entry.id === feeId)) {
-          await repositories.transactions.remove(feeId);
         }
+
+        // Prune after writing, never before: an interruption then leaves a
+        // visible duplicate rather than a hole where the money was.
+        const writtenIds = new Set([...rows.map((row) => row.id), ...(fee ? [fee.id] : [])]);
+        const stale = [...previousRowIds].filter((id) => !writtenIds.has(id));
+        if (previousFee && !fee) {
+          stale.push(previousFee.id);
+        }
+        await Promise.all(stale.map((id) => repositories.transactions.remove(id)));
 
         await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
@@ -601,7 +713,7 @@ export function useTransactionsWorkspace() {
       if (existing) return existing;
 
       const category: Category = {
-        id: `category:${crypto.randomUUID()}`,
+        id: createId(),
         userId: profile.id,
         name: trimmed,
         kind,
@@ -621,8 +733,41 @@ export function useTransactionsWorkspace() {
 
   const beginTransactionEdit = useCallback(
     (transaction: Transaction) => {
-      if (transaction.type === "transfer") return;
-      const feeChild = transactions.find((entry) => entry.id === `${transaction.id}:fee`);
+      // A loan repayment carries an interest leg whose split cannot be
+      // recomputed against a balance that has since moved.
+      if (!isEditableTransaction(transaction, transactions)) {
+        return;
+      }
+
+      if (transaction.type === "transfer") {
+        const legs = transferLegs(transaction, transactions);
+        if (!legs) return;
+        const { source, destination } = legs;
+        // Edit through the source leg: its id is what the fee hangs off, and
+        // rebuilding reuses the group so both legs are overwritten in place.
+        const feeOnSource = findFeeFor(transactions, source.id);
+        setEditingTransactionId(source.id);
+        setTransactionForm({
+          type: "transfer",
+          accountId: source.accountId,
+          destinationAccountId: destination.accountId,
+          categoryId: source.categoryId,
+          currency: source.currency,
+          payee: source.payee ?? source.rawPayee ?? "",
+          counterpartyId: source.counterpartyId ?? destination.counterpartyId ?? "",
+          counterpartyName: "",
+          amount: String(Math.abs(source.originalAmount)),
+          fxRateToUgx: source.fxRateToUgx ? String(source.fxRateToUgx) : "",
+          feeAmount: feeOnSource ? String(feeOnSource.originalAmount) : "",
+          occurredOn: source.occurredOn,
+          expectedRepaymentDate:
+            source.expectedRepaymentDate ?? destination.expectedRepaymentDate ?? "",
+          note: source.note ?? "",
+        });
+        return;
+      }
+
+      const feeChild = findFeeFor(transactions, transaction.id);
       setEditingTransactionId(transaction.id);
       setTransactionForm({
         type: transaction.type,
@@ -637,8 +782,7 @@ export function useTransactionsWorkspace() {
         fxRateToUgx: transaction.fxRateToUgx ? String(transaction.fxRateToUgx) : "",
         feeAmount: feeChild ? String(feeChild.originalAmount) : "",
         occurredOn: transaction.occurredOn,
-        // Transfers cannot be edited in place, so a loan's due date is never
-        // repopulated here — only the receivable leg of a transfer carries one.
+        // Only a transfer leg carries a due date, and that path returns above.
         expectedRepaymentDate: "",
         note: transaction.note ?? "",
       });
@@ -653,16 +797,7 @@ export function useTransactionsWorkspace() {
       setError(null);
 
       try {
-        const idsToRemove = new Set<string>([transaction.id]);
-        if (transaction.transferGroupId) {
-          transactions
-            .filter((entry) => entry.transferGroupId === transaction.transferGroupId)
-            .forEach((entry) => idsToRemove.add(entry.id));
-        }
-        // Cascade to any linked fee (of the payment or the transfer source).
-        transactions
-          .filter((entry) => entry.feeParentId && idsToRemove.has(entry.feeParentId))
-          .forEach((entry) => idsToRemove.add(entry.id));
+        const idsToRemove = planTransactionCascade(transaction, transactions);
         const [lineItems, plannedPurchases] = await Promise.all([
           repositories.transactionLineItems.listByUser(profile.id),
           repositories.plannedPurchases.listByUser(profile.id),
@@ -685,7 +820,7 @@ export function useTransactionsWorkspace() {
 
         if (editingTransactionId === transaction.id) {
           setEditingTransactionId(null);
-          setTransactionForm(defaultTransactionForm);
+          setTransactionForm(createDefaultTransactionForm());
         }
 
         const timestamp = new Date().toISOString();

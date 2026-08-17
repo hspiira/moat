@@ -1,4 +1,5 @@
 import type { Item, PlannedPurchase, TransactionLineItem } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 export function estimatePlannedTotal(purchases: PlannedPurchase[]): {
   total: number;
@@ -58,7 +59,7 @@ export function buildFulfillmentLineItem(
   actual: { quantity?: number; unitPrice?: number },
 ): TransactionLineItem {
   return {
-    id: `line:${crypto.randomUUID()}`,
+    id: createId(),
     userId: purchase.userId,
     transactionId,
     itemId: purchase.itemId,

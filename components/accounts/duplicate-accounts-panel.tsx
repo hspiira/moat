@@ -6,7 +6,7 @@ import { AccentCardHeader } from "@/components/accent-card-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatMoney } from "@/lib/currency";
-import { PARTY_LEDGERS } from "@/lib/domain/reserved-accounts";
+import { isReservedAccount } from "@/lib/domain/reserved-accounts";
 import {
   countAccountTransactions,
   findDuplicatePoolAccounts,
@@ -31,7 +31,7 @@ export function DuplicateAccountsPanel({
   const targetFor = (duplicate: Account) =>
     accounts.find(
       (account) =>
-        PARTY_LEDGERS.some((ledger) => ledger.poolAccountId === account.id) &&
+        isReservedAccount(account) &&
         account.type === duplicate.type,
     );
 

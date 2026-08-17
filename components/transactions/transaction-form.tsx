@@ -30,6 +30,7 @@ import {
   supportedCurrencyOptionLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
+import { todayIso } from "@/lib/today";
 
 export { transactionTypeLabels } from "@/lib/select-options";
 
@@ -52,7 +53,15 @@ export type TransactionFormState = {
   note: string;
 };
 
-export const defaultTransactionForm: TransactionFormState = {
+/**
+ * A function, not a constant. As a constant the date was fixed when the bundle
+ * loaded, so an installed PWA left open overnight kept offering yesterday.
+ */
+export function createDefaultTransactionForm(): TransactionFormState {
+  return { ...defaultTransactionFormShape, occurredOn: todayIso() };
+}
+
+const defaultTransactionFormShape: TransactionFormState = {
   type: "expense",
   accountId: "",
   destinationAccountId: "",
@@ -64,7 +73,7 @@ export const defaultTransactionForm: TransactionFormState = {
   amount: "",
   fxRateToUgx: "",
   feeAmount: "",
-  occurredOn: new Date().toISOString().slice(0, 10),
+  occurredOn: "",
   expectedRepaymentDate: "",
   note: "",
 };

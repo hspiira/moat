@@ -28,6 +28,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
+import { isEditableTransaction } from "@/lib/domain/transaction-cascade";
 
 type Props = {
   accounts: Account[];
@@ -103,7 +104,11 @@ export function TransactionList({
         ) : (
           <div className="grid gap-4">
             {groupByDay(transactions).map(([day, dayTransactions]) => (
-              <section key={day}>
+              /* min-w-0: a grid item defaults to min-width:auto, so without it
+                 this section refuses to shrink below the row's min-content
+                 width. On a phone that pushed the amount and the actions menu
+                 past the card's edge, where overflow-hidden cut them off. */
+              <section key={day} className="min-w-0">
                 <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
                   {formatDate(day)}
                 </h3>
@@ -113,6 +118,9 @@ export function TransactionList({
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
               const isLinkedFee = Boolean(transaction.feeParentId);
+              // A fee is edited through its payment, and a loan repayment's
+              // interest split cannot be rebuilt, so neither offers Edit.
+              const canEdit = isEditableTransaction(transaction, transactions);
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
               const title =
@@ -185,7 +193,7 @@ export function TransactionList({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-40 p-1">
-                      {!isTransfer && !isLinkedFee ? (
+                      {canEdit ? (
                         <PopoverClose asChild>
                           <button
                             type="button"

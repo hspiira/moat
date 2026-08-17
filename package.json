@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:server": "pnpm --filter @moat/sync-server build",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm build:server"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^3.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tabler/icons-react": "^3.41.1",
     "class-variance-authority": "^0.7.1",

@@ -1,4 +1,5 @@
 import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
+import { createId } from "@/lib/ids";
 
 /**
  * The subsidiary ledger behind the two pool control accounts.
@@ -9,7 +10,7 @@ import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
  */
 
 export function newCounterpartyId(): string {
-  return `counterparty:${crypto.randomUUID()}`;
+  return createId();
 }
 
 export function normalizeCounterpartyName(name: string): string {
