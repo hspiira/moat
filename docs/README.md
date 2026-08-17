@@ -15,6 +15,7 @@ The documentation is organized by purpose. When docs disagree, [tracker.md](trac
 | [architecture/sync.md](architecture/sync.md) | Sync API contract and conflict rules (server side is dev-only) |
 | [plans/phase-2-capture.md](plans/phase-2-capture.md) | Capture platform implementation plan |
 | [plans/hosted-sync.md](plans/hosted-sync.md) | Hosted sync implementation plan (end-to-end encrypted, optional account) |
+| [plans/data-integrity.md](plans/data-integrity.md) | Money representation, unbalanced savings, party identity, migration safety |
 | [research/roadmap-and-opportunities.md](research/roadmap-and-opportunities.md) | Market, regulatory, and SMS/capture research compendium |
 | [testing/pilot-readiness.md](testing/pilot-readiness.md) | Pilot release gate and QA script |
 | [testing/pwa-install-test-plan.md](testing/pwa-install-test-plan.md) | PWA install and offline test plan |

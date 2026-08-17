@@ -72,6 +72,9 @@ Hosted sync stays behind `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until all four sync it
 - Provider-grade parser packs with broad MTN, Airtel, and bank fixture coverage
 - Push notifications / reminders
 - Institution verification workflows
+- Integer money. Amounts are floats; the ledger holds 69056.189999836 and an opening balance of 1110.19 in a currency with no fractional unit. See [plans/data-integrity.md](plans/data-integrity.md)
+- A destination for savings contributions, which currently reduce an account and are gained by nothing
+- One party identity. payee, rawPayee and counterpartyId all express who, and only the third is a record
 - Component/E2E test coverage of the interactive UI layer (the two mobile faults fixed on 2026-08-17 were invisible to a green suite)
 - Editing a transfer, a loan repayment, or either leg of a debt payment (blocked by design; needs a product decision, see [plans/hosted-sync.md](plans/hosted-sync.md))
 
