@@ -7,13 +7,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..");
 
 // The handlers share lib/sync with the web app, which imports through the "@/"
-// alias, so the bundle resolves it the same way the Next build does.
+// alias, so the bundle resolves it the same way the Next build does. Vercel
+// does not support TypeScript path mappings, so bundling is what makes the
+// shared code deployable there at all.
+//
+// Output lands at the package root because Vercel captures a `server.js` that
+// calls listen() on module load and turns it into a function.
 const options = {
   entryPoints: [
-    path.join(here, "src/index.ts"),
+    path.join(here, "src/server.ts"),
     path.join(here, "src/migrate.ts"),
   ],
-  outdir: path.join(here, "dist"),
+  outdir: here,
   bundle: true,
   platform: "node",
   target: "node22",
