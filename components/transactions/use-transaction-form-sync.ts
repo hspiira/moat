@@ -13,7 +13,6 @@ import type { TransactionFormState } from "./transaction-form";
 
 type SetForm = (update: (current: TransactionFormState) => TransactionFormState) => void;
 
-/** Keeps the form in step with the URL, the clock, and remembered FX rates. */
 export function useTransactionFormSync({
   form,
   setForm,
@@ -74,11 +73,7 @@ export function useTransactionFormSync({
   };
 }
 
-/**
- * An installed PWA is rarely closed, so a form can sit on screen past midnight
- * and still offer yesterday. Only a date the app stamped itself moves; once the
- * user picks one it is left alone, so recording yesterday's spending works.
- */
+// Only a date the app stamped itself moves; a date the user picked is left alone.
 function useDateRollover({
   setForm,
   editingTransactionId,

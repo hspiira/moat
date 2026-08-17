@@ -20,10 +20,6 @@ export type MonthEvaluationInput = {
   debtPlannerSettings: ReturnType<typeof readDebtPlannerSettings>;
 };
 
-/**
- * Shared by the load path and the after-save path. They used to compute this
- * separately and disagree, so the readiness banner changed on an unrelated save.
- */
 export function evaluateMonth(input: MonthEvaluationInput): MonthCloseEvaluation {
   const { accounts, transactions, categories, obligations, closePeriod, debtPlannerSettings } =
     input;

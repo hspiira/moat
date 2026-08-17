@@ -3,15 +3,11 @@ import type { Transaction } from "@/lib/types";
 import type { TransactionFormState } from "./transaction-form";
 
 export type TransactionEdit = {
-  /** For a transfer this is the source leg, which is what a save rebuilds from. */
+  /** For a transfer, the source leg. */
   editingId: string;
   form: TransactionFormState;
 };
 
-/**
- * Fills the form from a stored transaction, or null if it cannot be edited: a
- * loan repayment's interest split cannot be recomputed against a moved balance.
- */
 export function buildTransactionEdit(
   transaction: Transaction,
   transactions: Transaction[],

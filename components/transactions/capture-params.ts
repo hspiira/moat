@@ -2,7 +2,6 @@ import type { CaptureIntent } from "./capture-intent";
 
 export type CaptureParams = {
   intent: CaptureIntent;
-  /** Text handed over by the OS share sheet. */
   sharedInput: string;
   prefill: {
     type: string | null;
@@ -15,7 +14,6 @@ export type CaptureParams = {
 
 const INTENTS = ["expense", "income", "transfer", "import", "text"] as const;
 
-/** Reads the query string the launcher shortcuts and share target arrive with. */
 export function readCaptureParams(params: URLSearchParams): CaptureParams {
   const capture = params.get("capture");
   const sharedInput = [params.get("title"), params.get("text"), params.get("url")]

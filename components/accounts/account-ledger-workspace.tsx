@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   ErrorStateCard,
@@ -25,6 +25,7 @@ import { formatDate } from "@/lib/format-date";
 import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
+import { useIncrementalList } from "@/components/hooks/use-incremental-list";
 import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
@@ -49,7 +50,13 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const ledgerRows = account ? getLedgerRows(account, transactions) : [];
+  // getLedgerRows must stay oldest-first; the running balance depends on it.
+  const ledgerRows = useMemo(
+    () => (account ? getLedgerRows(account, transactions) : []),
+    [account, transactions],
+  );
+  const newestFirst = useMemo(() => [...ledgerRows].reverse(), [ledgerRows]);
+  const history = useIncrementalList(newestFirst, { resetKey: accountId });
   const historyTotals = ledgerRows.reduce(
     (totals, row) => ({
       credit: totals.credit + row.credit,
@@ -212,7 +219,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                       longest note, pushed the page past the viewport, and made
                       the whole account page scroll sideways. */}
                   <ul className="flex min-w-0 flex-col divide-y divide-border/50 md:hidden">
-                    {ledgerRows.map((row) => {
+                    {history.visible.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
                       const isCredit = row.credit > 0;
                       const title =
@@ -270,7 +277,7 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {ledgerRows.map((row) => {
+                        {history.visible.map((row) => {
                           const category = categories.find((entry) => entry.id === row.categoryId);
                           const primary = row.payee?.trim() || transactionTypeLabels[row.type];
                           const secondary = [
@@ -321,6 +328,18 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                       </TableBody>
                     </Table>
                   </div>
+
+                  <div ref={history.sentinelRef} aria-hidden className="h-px" />
+                  {history.hasMore ? (
+                    <div className="grid justify-items-center gap-1 pt-3">
+                      <Button variant="ghost" size="sm" onClick={history.showMore}>
+                        Show older
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        {history.shownCount} of {history.totalCount}
+                      </p>
+                    </div>
+                  ) : null}
                 </>
               )}
             </div>

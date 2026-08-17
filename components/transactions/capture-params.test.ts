@@ -45,7 +45,6 @@ describe("readCaptureParams", () => {
     expect(result.hasPrefill).toBe(true);
   });
 
-  // An unrelated query param must not clear a half-typed form.
   it("does not report a prefill for foreign params", () => {
     expect(read("utm_source=whatsapp").hasPrefill).toBe(false);
   });

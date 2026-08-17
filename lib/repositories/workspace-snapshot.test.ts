@@ -46,7 +46,6 @@ describe("pendingSyncTransactionIds", () => {
     expect(ids.size).toBe(0);
   });
 
-  // Nothing is "waiting to sync" when sync was never turned on.
   it("returns nothing when hosted sync is off", () => {
     expect(
       pendingSyncTransactionIds(profile({ hostedSyncEnabled: false }), [item("t1", "pending")]).size,

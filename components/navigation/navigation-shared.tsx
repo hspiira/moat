@@ -146,11 +146,6 @@ const mobileContextNav = [
   },
 ] as const;
 
-/**
- * The More sheet, grouped by how often you do the thing. A monthly job used to
- * sit three levels under the daily ledger; cadence says more about where to
- * look for something than which entity it touches.
- */
 export const mobileCadenceNav = [
   { title: "As things arrive", hrefs: ["/inbox"] },
   { title: "Every month", hrefs: ["/month", "/import"] },
@@ -188,15 +183,11 @@ export function isActiveRoute(pathname: string, href: string) {
 }
 
 
-/** Names the page you are on, so nested paths match their parent entry. */
 export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
 }
 
-/**
- * The entry for exactly this href. Prefix matching is wrong for a lookup:
- * /settings/rules would find the /settings entry and render as "Settings".
- */
+/** Exact match. getMobileContextNavItem's prefix match would find /settings. */
 export function getNavEntry(href: string) {
   return mobileContextNav.find((item) => item.href === href);
 }

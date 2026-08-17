@@ -32,7 +32,6 @@ export function normalizeAmountToUgx(
     return Number.NaN;
   }
 
-  // Whole shillings: UGX has no subdivision, and a fractional one drifts until
-  // sums stop matching and a converted transfer pair stops cancelling.
+  // UGX has no subdivision.
   return Math.round(Math.abs(originalAmount) * rate);
 }

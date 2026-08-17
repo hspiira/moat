@@ -1,6 +1,5 @@
-// Loads a Moat export straight into a browser's IndexedDB so the real screens
-// can be driven against real data. Records are stored as-is, which the app
-// only accepts while no PIN is set — this is a test account, never a real one.
+// Loads a Moat export into a browser's IndexedDB for testing. Plaintext, so it
+// only works before a PIN is set.
 //
 //   node scripts/seed-test-account.mjs <export.json> [url]
 

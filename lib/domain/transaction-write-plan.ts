@@ -12,7 +12,6 @@ import type { Account, Category, Counterparty, Transaction, TransactionRule } fr
 export type TransactionWritePlan = {
   rows: Transaction[];
   fee: Transaction | null;
-  /** Rows the previous shape wrote and this one does not. */
   staleIds: string[];
 };
 
@@ -24,7 +23,6 @@ export type TransactionWriteInput = {
   counterparty: Counterparty | null;
 };
 
-/** Everything a save will write and remove, decided before anything is stored. */
 export function planTransactionWrite(input: TransactionWriteInput): TransactionWritePlan {
   const { build, accounts, categories, rules, counterparty } = input;
   const { form, existingTransactions, editingTransactionId } = build;

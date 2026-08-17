@@ -7,8 +7,6 @@ describe("normalizeAmountToUgx", () => {
     expect(normalizeAmountToUgx(-4500, "UGX")).toBe(4500);
   });
 
-  // UGX has no subdivision, so a fractional shilling is not a real amount. It
-  // also drifts: sums stop matching and a transfer pair stops cancelling.
   it("converts to whole shillings", () => {
     expect(normalizeAmountToUgx(12.34, "USD", 3700.5)).toBe(45664);
     expect(Number.isInteger(normalizeAmountToUgx(19.99, "USD", 3712.37))).toBe(true);

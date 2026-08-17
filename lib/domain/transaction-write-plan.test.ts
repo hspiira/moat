@@ -92,8 +92,6 @@ describe("planTransactionWrite", () => {
     expect(result.fee?.feeParentId).toBe(result.rows[0].id);
   });
 
-  // An expense becoming a transfer used to leave the original row in place next
-  // to a new balanced pair, so the money read as having moved twice.
   it("removes the original row when a type change replaces it", () => {
     const original = plan(buildInput()).rows[0];
 
@@ -109,8 +107,6 @@ describe("planTransactionWrite", () => {
     expect(result.staleIds).toEqual([original.id]);
   });
 
-  // The reverse left the destination leg with no partner, so the group no
-  // longer summed to zero and money appeared out of nothing.
   it("removes the orphaned leg when a transfer becomes an expense", () => {
     const pair = plan(
       buildInput({ form: { ...buildInput().form, type: "transfer", categoryId: "cat:transfers" } }),

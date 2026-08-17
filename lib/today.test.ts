@@ -38,8 +38,6 @@ describe("currentMonthIso", () => {
 });
 
 describe("date handling across the app", () => {
-  // Six screens had their own new Date().toISOString().slice(0, 10), each
-  // wrong before 03:00 in Kampala, and one frozen at bundle load besides.
   it("has no other UTC date stamps", () => {
     const files = execFileSync(
       "git",
