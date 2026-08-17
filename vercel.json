@@ -4,7 +4,8 @@
       "root": "."
     },
     "sync": {
-      "root": "server/"
+      "root": "server/",
+      "entrypoint": "server.js"
     }
   },
   "rewrites": [
