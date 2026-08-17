@@ -4,7 +4,12 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Label-on-the-left, value-on-the-right line shared by both detail sheets. */
+/**
+ * A label and an amount, the amount right-aligned so digits line up against
+ * the rows above and below. Numbers read right to left — units, tens,
+ * hundreds — which is the whole reason that alignment exists. Text does not
+ * read that way, so it uses DetailFact instead.
+ */
 export function DetailRow({
   label,
   children,
@@ -15,9 +20,33 @@ export function DetailRow({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-baseline justify-between gap-4 py-1.5 text-sm", className)}>
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-right text-foreground">{children}</span>
+    <div className={cn("flex items-baseline justify-between gap-4 py-1 text-sm", className)}>
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-right text-foreground tabular-nums">{children}</span>
+    </div>
+  );
+}
+
+/** A label and a short text value, both left-aligned. */
+export function DetailFact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-sm text-foreground">{children}</dd>
+    </>
+  );
+}
+
+export function DetailFacts({ children }: { children: ReactNode }) {
+  return <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">{children}</dl>;
+}
+
+/** Prose gets the full width and a left edge to return to. */
+export function DetailNote({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <p className="text-sm wrap-anywhere text-foreground">{children}</p>
     </div>
   );
 }
@@ -26,14 +55,14 @@ export function DetailSection({
   title,
   children,
 }: {
-  title: string;
+  title?: string;
   children: ReactNode;
 }) {
   return (
     <section className="grid gap-0.5">
-      <h3 className="pb-1 text-xs font-medium text-muted-foreground">
-        {title}
-      </h3>
+      {title ? (
+        <h3 className="pb-1 text-xs font-medium text-muted-foreground">{title}</h3>
+      ) : null}
       {children}
     </section>
   );
