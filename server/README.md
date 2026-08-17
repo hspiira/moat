@@ -22,6 +22,8 @@ which is also what makes the package deployable to Vercel — see below.
 
 ## Environment
 
+Copy `.env.example` to `.env`. Every variable is documented there.
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string |

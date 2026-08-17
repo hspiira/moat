@@ -23,11 +23,13 @@ See [docs/tracker.md](docs/tracker.md) for the authoritative, up-to-date status.
 
 ```bash
 pnpm install
+cp .env.example .env.local   # optional; defaults are fine for local use
 pnpm dev        # run the app at http://localhost:3000
 pnpm typecheck  # TypeScript
 pnpm lint       # ESLint
 pnpm test       # Vitest (domain, sync, capture, security, PWA)
 pnpm build      # production build
+pnpm verify     # all of the above, the same command CI runs
 ```
 
 All four checks run in CI on every push and pull request.
