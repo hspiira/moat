@@ -22,7 +22,7 @@ which is also what makes the package deployable to Vercel — see below.
 
 ## Environment
 
-Copy `.env.example` to `.env`. Every variable is documented there.
+Set these in the Vercel project, or copy the repository's `.env.example` to `.env.local` for development. Every variable is documented there.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -39,23 +39,29 @@ against an interceptor.
 
 ## Deploying to Vercel with Neon
 
-This deploys as its own Vercel project, separate from the web app, because the
-web app is a static export and cannot host route handlers.
+One Vercel project, not two. `vercel.json` declares this as a service alongside
+the web app, so both build from the same repository, share one set of
+environment variables, and answer on one domain.
 
-Vercel captures a Node HTTP server: it looks for `server.js` in the project root
-(or `src/`) and turns the `listen()` call into a function. The esbuild step
-produces exactly that, which also sidesteps Vercel's lack of support for
-TypeScript path mappings — `@/lib/sync/...` is resolved at build time rather
-than at runtime.
+Vercel captures a Node HTTP server: it looks for `server.js` in the service root
+and turns the `listen()` call into a function. The esbuild step produces exactly
+that, which also sidesteps Vercel's lack of support for TypeScript path mappings
+— `@/lib/sync/...` is resolved at build time rather than at runtime.
 
-1. Create a second Vercel project from this repository with **Root Directory**
-   set to `server`.
-2. Vercel runs the `vercel-build` script, which produces `server.js`.
-3. Set the environment variables from the table above. Use Neon's **pooled**
-   connection string (the host with `-pooler`).
-4. Run the migration once against the same database:
+Routing sends `/v1/sync/*` and `/health` here and everything else to the web
+app. Because both answer on the same origin, sync requests are not cross-origin,
+no preflight happens, and `MOAT_SYNC_ALLOWED_ORIGINS` can stay unset.
+
+1. Import the repository as one Vercel project.
+2. Set the variables from `.env.example` in the project.
+3. Run the migration once against the same database:
    `DATABASE_URL=... pnpm --filter @moat/sync-server migrate`
-5. Check `GET /health`. It names whatever is missing.
+4. Check `GET /health`. It names whatever is missing.
+
+Services is a gated Vercel feature. If it is unavailable on the account, the
+fallback is a second project with **Root Directory** set to `server`, in which
+case the app and the API sit on different origins and
+`MOAT_SYNC_ALLOWED_ORIGINS` becomes required.
 
 Two things that make this work with a pooled, scale-to-zero database:
 

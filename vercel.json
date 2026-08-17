@@ -1,0 +1,15 @@
+{
+  "services": {
+    "web": {
+      "root": "."
+    },
+    "sync": {
+      "root": "server/"
+    }
+  },
+  "rewrites": [
+    { "source": "/v1/sync/(.*)", "destination": { "service": "sync" } },
+    { "source": "/health", "destination": { "service": "sync" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}
