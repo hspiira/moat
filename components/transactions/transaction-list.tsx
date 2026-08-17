@@ -28,7 +28,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
-import { isEditableTransfer } from "@/lib/domain/transaction-cascade";
+import { isEditableTransaction } from "@/lib/domain/transaction-cascade";
 
 type Props = {
   accounts: Account[];
@@ -118,11 +118,9 @@ export function TransactionList({
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
               const isLinkedFee = Boolean(transaction.feeParentId);
-              // A loan repayment's interest split cannot be rebuilt, so only a
-              // plain two-leg transfer offers Edit. A fee is edited through the
-              // payment it was charged against.
-              const canEdit =
-                !isLinkedFee && (!isTransfer || isEditableTransfer(transaction, transactions));
+              // A fee is edited through its payment, and a loan repayment's
+              // interest split cannot be rebuilt, so neither offers Edit.
+              const canEdit = isEditableTransaction(transaction, transactions);
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
               const title =

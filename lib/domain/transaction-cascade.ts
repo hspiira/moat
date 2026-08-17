@@ -81,6 +81,26 @@ export function isEditableTransfer(
   return group.length === 2 && group.every((entry) => entry.type === "transfer");
 }
 
+/**
+ * Whether this row can be opened in the edit form on its own.
+ *
+ * A fee is edited through the payment it was charged against. A row belonging
+ * to a compound movement (the interest leg of a loan repayment, or either
+ * transfer leg of one) cannot be edited alone without restating the rest.
+ */
+export function isEditableTransaction(
+  transaction: Transaction,
+  transactions: Transaction[],
+): boolean {
+  if (transaction.feeParentId) {
+    return false;
+  }
+  if (transaction.transferGroupId) {
+    return isEditableTransfer(transaction, transactions);
+  }
+  return true;
+}
+
 /** The negative and positive legs of a transfer pair, by sign. */
 export function transferLegs(
   transaction: Transaction,

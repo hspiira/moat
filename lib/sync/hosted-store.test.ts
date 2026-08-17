@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -39,6 +39,16 @@ function pushRequest(userId: string, count: number, offset = 0): SyncPushRequest
   };
 }
 
+/** Force every stored record onto one updatedAt, whatever the push produced. */
+async function writeIdenticalTimestamps(userId: string, updatedAt: string) {
+  const storePath = process.env.MOAT_SYNC_STORE_PATH as string;
+  const state = JSON.parse(await readFile(storePath, "utf8"));
+  for (const record of Object.values(state.users[userId].records) as { updatedAt: string }[]) {
+    record.updatedAt = updatedAt;
+  }
+  await writeFile(storePath, JSON.stringify(state));
+}
+
 async function pullAll(userId: string, limit: number) {
   const pages: string[][] = [];
   let since: string | undefined;
@@ -73,16 +83,21 @@ describe("pullHostedSyncChanges paging", () => {
     expect(new Set(seen).size).toBe(12);
   });
 
+  /**
+   * The reason the cursor is composite. The timestamps are written directly
+   * rather than pushed: a batch usually lands inside one millisecond, but not
+   * always, and a test for same-timestamp paging that only sometimes has one
+   * is not testing anything.
+   */
   it("does not drop records sharing a timestamp across a page boundary", async () => {
-    // A single push stamps every record with the same updatedAt, so these page
-    // boundaries land inside one timestamp group.
     await applyHostedSyncPush(pushRequest("u1", 10));
+    await writeIdenticalTimestamps("u1", "2026-04-06T00:00:00.000Z");
 
     const first = await pullHostedSyncChanges({ userId: "u1", limit: 4 });
-    const stamps = new Set(first.records.map((record) => record.updatedAt));
-    expect(stamps.size).toBe(1);
+    expect(new Set(first.records.map((record) => record.updatedAt)).size).toBe(1);
 
     const seen = (await pullAll("u1", 4)).flat();
+    expect(seen).toHaveLength(10);
     expect(new Set(seen).size).toBe(10);
   });
 

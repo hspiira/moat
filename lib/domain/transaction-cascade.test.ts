@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isEditableTransaction,
   isEditableTransfer,
   planTransactionCascade,
   transferLegs,
@@ -125,5 +126,38 @@ describe("transferLegs", () => {
   it("returns null when a leg is missing", () => {
     const lonely = make({ id: "t:src", type: "transfer", amount: -50000, transferGroupId: "g1" });
     expect(transferLegs(lonely, [lonely])).toBeNull();
+  });
+});
+
+describe("isEditableTransaction", () => {
+  it("allows a plain expense", () => {
+    const expense = make({ id: "t:1" });
+    expect(isEditableTransaction(expense, [expense])).toBe(true);
+  });
+
+  it("refuses a fee, which is edited through its payment", () => {
+    const payment = make({ id: "t:pay" });
+    const fee = make({ id: "t:fee", amount: 500, feeParentId: "t:pay" });
+    expect(isEditableTransaction(fee, [payment, fee])).toBe(false);
+  });
+
+  it("allows either leg of a plain transfer", () => {
+    const source = make({ id: "t:src", type: "transfer", amount: -5000, transferGroupId: "g1" });
+    const destination = make({ id: "t:dst", type: "transfer", amount: 5000, transferGroupId: "g1" });
+    expect(isEditableTransaction(source, [source, destination])).toBe(true);
+    expect(isEditableTransaction(destination, [source, destination])).toBe(true);
+  });
+
+  /**
+   * The interest leg is an expense, so a type-only check would have let it be
+   * opened on its own and rewritten as an ordinary expense, detaching it from
+   * the repayment it belongs to.
+   */
+  it("refuses the interest leg of a loan repayment", () => {
+    const source = make({ id: "t:src", type: "transfer", amount: -50000, transferGroupId: "g1" });
+    const destination = make({ id: "t:dst", type: "transfer", amount: 50000, transferGroupId: "g1" });
+    const interest = make({ id: "t:int", type: "expense", amount: 7000, transferGroupId: "g1" });
+
+    expect(isEditableTransaction(interest, [source, destination, interest])).toBe(false);
   });
 });

@@ -68,8 +68,9 @@ import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/errors";
 import { createId } from "@/lib/ids";
 import {
-  isEditableTransfer,
+  isEditableTransaction,
   planTransactionCascade,
+  transactionGroup,
   transferLegs,
 } from "@/lib/domain/transaction-cascade";
 
@@ -562,17 +563,28 @@ export function useTransactionsWorkspace() {
           existingTransactions: transactions,
         };
 
-        let feeParent: Transaction;
+        // The rows the previous shape wrote. A category can change the type, so
+        // an edit may produce a different set of rows than it started with: an
+        // expense becoming a transfer, or a transfer becoming an expense. What
+        // the old shape wrote and the new one does not has to go, or the ledger
+        // keeps a row nothing points at.
+        const editedRow = editingTransactionId
+          ? transactions.find((entry) => entry.id === editingTransactionId)
+          : undefined;
+        const previousRowIds = new Set(
+          editedRow ? transactionGroup(editedRow, transactions).map((entry) => entry.id) : [],
+        );
+        // A fee hangs off one of those rows, whichever it was.
+        const previousFee = transactions.find(
+          (entry) => entry.feeParentId && previousRowIds.has(entry.feeParentId),
+        );
+
+        let rows: Transaction[];
         if (transactionForm.type === "transfer") {
           const party = await resolveFormCounterparty(profile.id, timestamp);
-          const [source, destination] = buildTransferPair(buildInput);
-          feeParent = source;
           const stamp = (row: Transaction): Transaction =>
             party ? { ...row, counterpartyId: party.id, payee: party.name } : row;
-          await Promise.all([
-            repositories.transactions.upsert(stamp(source)),
-            repositories.transactions.upsert(stamp(destination)),
-          ]);
+          rows = buildTransferPair(buildInput).map(stamp);
         } else if (transactionForm.type === "debt_payment") {
           // Split into an interest expense and a principal transfer. The user
           // enters one payment and taps nothing extra; the rate and balance on
@@ -583,37 +595,42 @@ export function useTransactionsWorkspace() {
           if (!loan) {
             throw new Error("Choose which loan you are paying.");
           }
-
-          const rows = buildDebtPaymentTransactions(buildInput, loan);
-          feeParent = rows[0];
-          await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
+          rows = buildDebtPaymentTransactions(buildInput, loan);
         } else {
           const rules = await repositories.transactionRules.listByUser(profile.id);
           // Passing the catalogue makes the type/category pair a write-time
           // check, not just something the picker happens to hide.
-          const payment = buildManualTransaction(buildInput, rules, categories);
-          feeParent = payment;
-          await repositories.transactions.upsert(payment);
+          rows = [buildManualTransaction(buildInput, rules, categories)];
         }
 
         // A fee is a separate linked expense on the same account (the transfer
-        // source, for transfers), tied to its payment by feeParentId. Match on
-        // that rather than on a derived id: a fee written before the cuid2
-        // migration carries an unrelated id, and guessing one would overwrite
-        // nothing and add a duplicate expense instead.
-        const existingFee = findFeeFor(transactions, feeParent.id);
+        // source, for transfers), tied to its payment by feeParentId. Reusing
+        // the previous fee's id repoints it at the new parent instead of
+        // leaving it behind pointing at a row that no longer exists.
+        const feeParent = rows[0];
         const fee = buildFeeTransaction(
           feeParent,
           transactionForm.feeAmount,
           feesCategoryId(feeParent.userId),
-          existingFee,
+          previousFee,
         );
+
+        // Everything is built and validated before the first write, so a bad
+        // form leaves storage untouched.
+        await Promise.all(rows.map((row) => repositories.transactions.upsert(row)));
         if (fee) {
           await repositories.categories.upsert(buildFeesCategory(profile.id));
           await repositories.transactions.upsert(fee);
-        } else if (existingFee) {
-          await repositories.transactions.remove(existingFee.id);
         }
+
+        // Prune after writing, never before: an interruption then leaves a
+        // visible duplicate rather than a hole where the money was.
+        const writtenIds = new Set([...rows.map((row) => row.id), ...(fee ? [fee.id] : [])]);
+        const stale = [...previousRowIds].filter((id) => !writtenIds.has(id));
+        if (previousFee && !fee) {
+          stale.push(previousFee.id);
+        }
+        await Promise.all(stale.map((id) => repositories.transactions.remove(id)));
 
         await persistReconciledBalances(profile.id);
         await refreshMonthCloseState(profile.id);
@@ -696,7 +713,7 @@ export function useTransactionsWorkspace() {
     (transaction: Transaction) => {
       // A loan repayment carries an interest leg whose split cannot be
       // recomputed against a balance that has since moved.
-      if (transaction.type === "transfer" && !isEditableTransfer(transaction, transactions)) {
+      if (!isEditableTransaction(transaction, transactions)) {
         return;
       }
 
