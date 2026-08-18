@@ -7,6 +7,12 @@ import { IconShare, IconSquareRoundedPlus } from "@tabler/icons-react";
 import { getLocalSaveEventName, type LocalSaveDetail } from "@/lib/local-save";
 import { useHasProfile } from "@/components/hooks/use-has-profile";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
+import {
+  ensurePersistentStorage,
+  isEvictable,
+  isRunningLowOnSpace,
+  type StorageDurability,
+} from "@/lib/storage-durability";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,12 +65,16 @@ export function PwaStatus() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
   const [lastLocalSave, setLastLocalSave] = useState<LocalSaveDetail | null>(null);
+  const [durability, setDurability] = useState<StorageDurability | null>(null);
 
   useEffect(() => {
     setIsOnline(window.navigator.onLine);
     setIsInstalled(isStandaloneDisplay());
     setIsIos(isIosDevice());
     setHasBackup(Boolean(readGoogleDriveBackupPreferences().lastBackupAt));
+    // Asks the browser to exempt the ledger from eviction. Declining is normal
+    // and not an error; it only means a backup matters more.
+    void ensurePersistentStorage().then(setDurability);
 
     function handleOnline() {
       setIsOnline(true);
@@ -133,13 +143,30 @@ export function PwaStatus() {
   // records could be cleared before they have any reads as a broken app.
   const hasProfile = profilePresence === "present";
   const shouldShowBackupNudge = isIos && !hasBackup && hasProfile;
+
+  // The browser may clear an evictable origin without asking. That was already
+  // true on iOS and warned about there; it is true on Chromium and Firefox too
+  // whenever the persist request was refused.
+  const isAtRisk = Boolean(durability && isEvictable(durability)) && hasProfile && !hasBackup;
+  const isLowOnSpace = Boolean(durability && isRunningLowOnSpace(durability)) && hasProfile;
+
+  // One message, most urgent first. The iOS line is a fallback for a browser
+  // that does not report a storage state at all.
+  const storageWarning = isLowOnSpace
+    ? "Device storage is nearly full, which is when a browser starts clearing app data."
+    : isAtRisk
+      ? "This browser has not promised to keep your records, so it may clear them to free space."
+      : shouldShowBackupNudge
+        ? "No backup yet, and iOS can clear app storage under low disk space."
+        : null;
+
   const shouldShowStatus =
     !isOnline ||
     !isInstalled ||
     lastLocalSave !== null ||
     shouldShowInstall ||
     shouldShowIosInstall ||
-    shouldShowBackupNudge;
+    storageWarning !== null;
 
   if (!shouldShowStatus) {
     return null;
@@ -153,9 +180,9 @@ export function PwaStatus() {
         {lastLocalSave ? (
           <span className="text-xs text-muted-foreground">{lastLocalSave.message}</span>
         ) : null}
-        {shouldShowBackupNudge ? (
+        {storageWarning ? (
           <span className="text-xs text-muted-foreground">
-            No backup yet — iOS can clear app storage under low disk space.{" "}
+            {storageWarning}{" "}
             <Link href="/settings" className="text-foreground underline underline-offset-2">
               Back up now
             </Link>

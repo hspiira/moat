@@ -32,6 +32,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { StorageDurabilityRow } from "./storage-durability-row";
 
 type BackupMode = "idle" | "backup" | "restore" | "drive";
 
@@ -319,6 +320,7 @@ export function BackupPanel() {
         </CardDescription>
       </CardHeader>
         <CardContent className="space-y-4">
+        <StorageDurabilityRow />
         {shouldShowDriveReminder ? (
           <p className="text-xs text-muted-foreground">
             Google Drive was connected before, but no recent backup metadata is stored on this device yet. Upload a fresh encrypted backup after reconnecting.
