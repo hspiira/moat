@@ -23,7 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDate } from "@/lib/format-date";
+import { formatDayHeading } from "@/lib/format-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
@@ -103,7 +103,7 @@ export function TransactionList({
             {groupByDay(transactions).map(([day, dayTransactions]) => (
               <section key={day} className="min-w-0">
                 <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
-                  {formatDate(day)}
+                  {formatDayHeading(day)}
                 </h3>
                 <ul className="divide-y divide-border/50">
                   {dayTransactions.map((transaction) => {
