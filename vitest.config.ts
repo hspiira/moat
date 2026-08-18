@@ -11,7 +11,9 @@ export default defineConfig({
     // Agent worktrees checked out under .claude/ carry their own copies of the
     // suite; scanning them from the parent runs foreign tests against the
     // wrong tree.
-    exclude: ["**/node_modules/**", "**/.claude/worktrees/**"],
+    // e2e/ is Playwright's; its specs import @playwright/test and cannot run
+    // under vitest.
+    exclude: ["**/node_modules/**", "**/.claude/worktrees/**", "e2e/**"],
   },
   resolve: {
     alias: {

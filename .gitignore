@@ -28,3 +28,8 @@ server/dist/
 
 # Dev-only file-backed sync store
 .moat-sync/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
