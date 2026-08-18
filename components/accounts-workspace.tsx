@@ -63,7 +63,6 @@ export function AccountsWorkspace() {
 
   const formSheet = useFormSheet(cancelEdit);
   const editingAccount = accounts.find((account) => account.id === editingAccountId) ?? null;
-  // Accounts were the one thing still deleted on a single tap.
   const confirmDelete = useConfirmDelete<string>(async (accountId) => {
     const ok = await handleDeleteAccount(accountId);
     if (ok) formSheet.close();
@@ -77,9 +76,6 @@ export function AccountsWorkspace() {
     formSheet.openForEdit(() => beginAccountEdit(account));
   }
 
-  // Editing moved off the account rows and onto each account's own page, which
-  // is a separate route. It links back here with ?edit=<id> rather than
-  // mounting a second copy of the form sheet.
   const requestedEditId = searchParams.get("edit");
   useEffect(() => {
     if (!requestedEditId || editingAccountId) return;
@@ -87,7 +83,6 @@ export function AccountsWorkspace() {
     if (target) {
       openEditAccount(target);
     }
-    // Consume the parameter so closing the sheet does not immediately reopen it.
     router.replace("/accounts");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedEditId, accounts, editingAccountId]);
@@ -108,8 +103,6 @@ export function AccountsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          {/* The total sits bare on the canvas — the number is the hero, and a
-              box around it only shrinks it. Actions ride directly beneath. */}
           <section className="space-y-4 pt-2">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total balance</p>
@@ -164,8 +157,6 @@ export function AccountsWorkspace() {
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
             <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
-              {/* The form's own colour band is the visible heading; keep an
-                  accessible title for screen readers. */}
               <SheetHeader className="sr-only">
                 <SheetTitle>{editingAccountId ? "Edit account" : "Add account"}</SheetTitle>
                 <SheetDescription>Add or update an account you hold money in.</SheetDescription>

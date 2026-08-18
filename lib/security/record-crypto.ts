@@ -1,23 +1,9 @@
 import type { StoreName } from "@/lib/repositories/store-names";
 import { base64ToBytes, bytesToBase64 } from "@/lib/security/codec";
 
-/**
- * Envelope versions:
- *   1 — record contents encrypted, but index fields (userId, month, …) stored
- *       as plaintext so IndexedDB indexes worked. Leaked queryable metadata.
- *   2 — index fields are keyed HMAC "blind indexes" derived from the DEK, so
- *       nothing sensitive is stored in plaintext at rest. Queries hash their
- *       arguments the same way. Records written at v1 are transparently
- *       re-blinded on unlock (see reblindAllRecords).
- */
 const RECORD_ENVELOPE_VERSION = 2;
 const IV_BYTES = 12;
 
-// NUL is the domain separator between a blind index's namespace and value: it
-// can never appear in either side, so "a"+"bc" and "ab"+"c" hash differently.
-// Built with fromCharCode instead of an escape or raw byte so the file stays
-// reviewable text and no tooling can silently normalize the separator.
-// Changing this value would invalidate every blind index already on disk.
 const BLIND_INDEX_SEPARATOR = String.fromCharCode(0);
 
 type RecordMetadata = Record<string, unknown>;
@@ -31,16 +17,9 @@ export type EncryptedRecordEnvelope = RecordMetadata & {
 };
 
 let activeRecordKey: CryptoKey | null = null;
-// Blind-index HMAC key, derived on demand from the active DEK. Cached against
-// the DEK it was derived from so it invalidates whenever the DEK changes.
 let activeBlindKey: CryptoKey | null = null;
 let blindKeySourceDek: CryptoKey | null = null;
 
-/**
- * The plaintext index fields each store needs to stay queryable. Values are
- * stringified and blinded; for transactions the stored key is the month
- * (`occurredOn` truncated to `YYYY-MM`) so month lookups remain exact.
- */
 const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>) => Record<string, string>>> = {
   accounts: (entity) => ({ userId: String(entity.userId) }),
   transactions: (entity) => ({
@@ -65,16 +44,10 @@ const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>
   transactionLineItems: (entity) => ({ userId: String(entity.userId) }),
 };
 
-/** Truncate an ISO date (`YYYY-MM-DD…`) to its month (`YYYY-MM`). */
 function monthOf(occurredOn: unknown): string {
   return String(occurredOn).slice(0, 7);
 }
 
-/**
- * Derive (and cache) the blind-index HMAC key from the active DEK. The DEK is
- * extractable by design so it can be re-wrapped; we reuse it here as HKDF input
- * to derive a separate, single-purpose signing key bound to a fixed context.
- */
 async function ensureBlindIndexKey(): Promise<CryptoKey> {
   if (activeBlindKey && blindKeySourceDek === activeRecordKey) {
     return activeBlindKey;
@@ -100,11 +73,6 @@ async function ensureBlindIndexKey(): Promise<CryptoKey> {
   return activeBlindKey;
 }
 
-/**
- * Deterministic keyed hash of an index value, namespaced per store+field so
- * the same literal in different columns produces different hashes. Requires an
- * active key; only ever called on the encrypted write/query path.
- */
 export async function blindIndexValue(namespace: string, value: string): Promise<string> {
   const key = await ensureBlindIndexKey();
   const message = new TextEncoder().encode(`${namespace}${BLIND_INDEX_SEPARATOR}${value}`);
@@ -112,11 +80,6 @@ export async function blindIndexValue(namespace: string, value: string): Promise
   return bytesToBase64(new Uint8Array(signature));
 }
 
-/**
- * The IndexedDB index key for a query: blinded when encryption is active, raw
- * otherwise (plaintext-mode users have no key and store raw index values).
- * `fields`/`values` are positional and align with the index's keyPath.
- */
 export async function indexQueryKey(
   storeName: StoreName,
   fields: string[],
@@ -131,7 +94,6 @@ export async function indexQueryKey(
   return blinded.length === 1 ? blinded[0] : blinded;
 }
 
-/** Build the blinded index metadata stored alongside the ciphertext. */
 async function getRecordMetadata(
   storeName: StoreName,
   entity: Record<string, unknown>,
@@ -156,7 +118,6 @@ export function hasActiveRecordCryptoKey() {
   return activeRecordKey !== null;
 }
 
-/** The active Data Encryption Key, for re-wrapping when unlock methods change. */
 export function getActiveRecordCryptoKey(): CryptoKey | null {
   return activeRecordKey;
 }

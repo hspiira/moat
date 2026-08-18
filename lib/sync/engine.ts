@@ -12,7 +12,6 @@ import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
 
-// Stops the loop if a server keeps returning hasMore without advancing.
 const MAX_PULL_PAGES = 1000;
 const PUSH_BATCH_SIZE = 200;
 
@@ -60,8 +59,6 @@ function lastCursorOf(records: SyncPullRecord[]): string | undefined {
   return last ? serializeCursor(last) : undefined;
 }
 
-// Pulls page by page, saving the cursor after each one so an interrupted run
-// picks up where it stopped instead of starting over.
 async function pullAllPages(params: {
   repositories: RepositoryBundle;
   profile: SyncProfile;
@@ -165,8 +162,6 @@ export async function runHostedSync(params: {
     let pushedAt: string | undefined;
     const conflictedEntityKeys = new Set<string>();
 
-    // A first backfill can queue thousands of items, so send them in batches
-    // rather than one request body.
     for (let start = 0; start < pendingItems.length; start += PUSH_BATCH_SIZE) {
       const batch = pendingItems.slice(start, start + PUSH_BATCH_SIZE);
 

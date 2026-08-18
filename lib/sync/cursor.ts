@@ -1,15 +1,3 @@
-/**
- * Keyset pagination for pull.
- *
- * A timestamp alone is not enough for a cursor: records written in the same
- * millisecond sort together, so a page boundary inside that group either drops
- * the rest of it (`>`) or replays it forever (`>=`). The cursor pairs
- * `updatedAt` with the entity key, which is unique, so boundaries are exact.
- *
- * Maps onto Postgres later as:
- *   WHERE (updated_at, entity_key) > ($1, $2) ORDER BY updated_at, entity_key
- */
-
 export const DEFAULT_PULL_PAGE_SIZE = 500;
 export const MAX_PULL_PAGE_SIZE = 2000;
 
@@ -28,11 +16,6 @@ export function serializeCursor(cursor: SyncPullCursor): string {
   return `${cursor.updatedAt}${CURSOR_SEPARATOR}${cursor.entityKey}`;
 }
 
-/**
- * Also accepts a bare timestamp, which is what profiles stored before paging
- * existed. Those get an empty tiebreaker, making them inclusive of records at
- * exactly that instant. Re-applying an upsert is harmless; skipping one is not.
- */
 export function parseCursor(since: string | undefined): SyncPullCursor | null {
   if (!since?.trim()) {
     return null;

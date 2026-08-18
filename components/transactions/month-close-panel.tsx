@@ -42,7 +42,6 @@ const groupIcons = {
   obligation: IconCalendarEvent,
 } as const;
 
-/** Label + count, with the reason underneath. */
 function GroupHeader({
   icon: Icon,
   label,
@@ -102,14 +101,6 @@ function BlockerRow({
   );
 }
 
-/**
- * What is unfinished in a month, and a way into each of those things.
- *
- * The previous panel laid three lists out in `lg:grid-cols-3` on a mobile-first
- * app, printed unresolved records as a raw ISO date and an unformatted number
- * with no payee or currency, and silently cut each list at five. Nothing in it
- * was tappable, so it could tell you that you were blocked but not help.
- */
 export function MonthClosePanel({
   period,
   monthClose,
@@ -258,8 +249,6 @@ export function MonthClosePanel({
             Mark month as checked
           </Button>
         </div>
-        {/* Stated in the page, not a title attribute: a tooltip never appears
-            on a phone, so the reason a button is disabled was invisible. */}
         {!isClosed && !evaluation.isReadyToClose ? (
           <p className="text-xs text-muted-foreground">
             Sort out the items above first.

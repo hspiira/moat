@@ -183,9 +183,6 @@ export function OnboardingWorkspace() {
 
       {error ? <ErrorNotice message={error} /> : null}
 
-      {/* Chromeless under sm: the app shell already provides the page gutter,
-          so the card's border and padding stack on top of it and cost ~17% of a
-          375px screen without adding structure a phone user can perceive. */}
       <Card className="rounded-none border-0 bg-transparent py-0 shadow-none ring-0 sm:rounded-xl sm:bg-card sm:py-4">
         <CardContent className="px-0 pt-2 sm:px-4 sm:pt-6">
           <form className="grid gap-5" onSubmit={handleSubmit}>
@@ -209,11 +206,6 @@ export function OnboardingWorkspace() {
             ) : null}
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {/* On the first step, Back returns to the start-fresh / restore
-                  choice rather than disappearing — otherwise picking "Start
-                  fresh" is a one-way door and someone who meant to restore a
-                  backup has to reload the page to get out. Safe to leave: no
-                  records are written until the final step's submit. */}
               {stepIndex > 0 ? (
                 <Button type="button" size="lg" variant="outline" onClick={handleBack}>
                   Back

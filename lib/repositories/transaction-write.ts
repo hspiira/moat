@@ -10,7 +10,6 @@ export async function applyTransactionWrite(
   categories: Category[],
   userId: string,
 ): Promise<void> {
-  // Write before prune: an interruption leaves a duplicate, not a hole.
   await Promise.all(plan.rows.map((row) => repositories.transactions.upsert(row)));
 
   if (plan.fee) {

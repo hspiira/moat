@@ -21,9 +21,6 @@ export function DashboardBalanceBridge({
   movement: number;
   closingBalance: number;
 }) {
-  // Collapsed by default. This is a six-row reconciliation table — the thing you
-  // open when a balance looks wrong, not something you read every day. Native
-  // <details> so it works without JS and stays keyboard-accessible for free.
   return (
     <Card className="py-0 shadow-none">
       <details className="group/bridge">

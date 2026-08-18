@@ -61,7 +61,6 @@ type Props = {
   onFormChange: (updater: (prev: GoalFormState) => GoalFormState) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
-  /** When true, render as a full-bleed sheet form (no card border). */
   embedded?: boolean;
 };
 

@@ -37,13 +37,10 @@ export function TransactionsLedgerWorkspace() {
   );
 
   const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / LEDGER_PAGE_SIZE));
-  // Clamp rather than reset so deletes on the last page don't strand the view.
   const currentPage = Math.min(page, totalPages - 1);
   const pageStart = currentPage * LEDGER_PAGE_SIZE;
   const pageTransactions = visibleTransactions.slice(pageStart, pageStart + LEDGER_PAGE_SIZE);
   const isEditing = Boolean(workspace.editingTransactionId);
-  // Resolved from the live list so a deleted transaction closes the sheet
-  // instead of stranding a stale copy in it.
   const detailTransaction =
     workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
 
@@ -64,9 +61,6 @@ export function TransactionsLedgerWorkspace() {
       }}
     >
       <div className="grid gap-5">
-        {/* Two separate queues, so one sentence each rather than three counts
-            summed into a number that matched neither. Captured items lead when
-            present: that is the queue that grows on its own. */}
         {workspace.captureReviewCount > 0 ? (
           <Card className="bg-muted/20 shadow-none">
             <CardContent className="flex items-center justify-between gap-4 px-4 py-3">

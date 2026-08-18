@@ -22,8 +22,6 @@ export function DebtWorkspace() {
   const workspace = useTransactionsWorkspace();
   const { accounts, transactions, counterparties } = workspace;
 
-  // Derived once here and handed down, rather than each band computing its own
-  // and this page computing both again just to test for emptiness.
   const { lending, borrowing, formalDebts } = useMemo(() => {
     const asOf = new Date();
     return {

@@ -11,8 +11,6 @@ export function PageHeader({
   title: string;
   description?: string;
   aside?: ReactNode;
-  // When the nav already names this page, the heading stays for screen readers
-  // and the browser tab but stops repeating the label visually.
   srOnlyTitle?: boolean;
 }) {
   if (srOnlyTitle && !description && !aside) {

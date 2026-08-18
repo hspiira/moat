@@ -40,23 +40,12 @@ import { decryptAllRecords, encryptAllRecordsWithDek, reblindAllRecords } from "
 
 const KEY_MATERIAL_KEY = "moat:key_material";
 const LEGACY_PIN_HASH_KEY = "moat:pin_hash";
-// Current on-disk index format. Records written before blind indexes (v1) are
-// re-encrypted to v2 on first unlock; the marker keeps it a one-time pass.
 const BLIND_INDEX_VERSION_KEY = "moat:blind_index_version";
 const BLIND_INDEX_VERSION = "2";
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-// How long the app may stay hidden (backgrounded, screen off, app switcher)
-// before it locks on return. Deliberately much shorter than the inactivity
-// window: leaving the app is a stronger "walked away" signal than idling in it.
 const BACKGROUND_LOCK_MS = 60 * 1000;
-// Locking in one tab locks every tab sharing the origin.
 const LOCK_CHANNEL_NAME = "moat:lock";
 
-/**
- * Migrate plaintext-metadata records to keyed blind indexes if not already
- * done. Idempotent and safe to retry: the DEK stays active, contents are
- * untouched, and the marker is only set once every record is re-blinded.
- */
 async function migrateBlindIndexesIfNeeded(): Promise<void> {
   if (typeof window === "undefined") {
     return;
@@ -68,7 +57,6 @@ async function migrateBlindIndexesIfNeeded(): Promise<void> {
     await reblindAllRecords();
     localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
   } catch (error) {
-    // Leave the marker unset so the next unlock retries; records stay readable.
     console.warn("Moat: blind-index migration deferred; will retry on next unlock.", error);
   }
 }
@@ -77,17 +65,9 @@ type StoredKeyMaterial = {
   version: 2;
   pin: PinKeyMaterial;
   passkey?: PasskeyKeyMaterial;
-  /**
-   * Number of digits in the PIN, so the lock screen can auto-submit the moment
-   * the last digit is entered (phone-lockscreen behaviour). Backfilled on the
-   * next unlock for material saved before this field existed. Not sensitive:
-   * the DEK is protected by Argon2id cost + throttling, which knowing the
-   * length does not weaken in any practical way.
-   */
   pinLength?: number;
 };
 
-/** Legacy (v1) PBKDF2 sentinel, read only to migrate off it. */
 type LegacyPinRecord = {
   salt: string;
   payload: EncryptedPayload;
@@ -97,43 +77,24 @@ type PinLockState =
   | { status: "initializing" }
   | { status: "no_pin" }
   | { status: "locked" }
-  // Correct PIN accepted; the DEK is active and the app can mount behind the
-  // lock screen while it plays its unlock reveal. `completeUnlock` finishes it.
   | { status: "unlocking" }
   | { status: "unlocked" };
 
 type PinLockContextValue = {
   lockState: PinLockState;
-  /** Set (or change) the PIN. Returns false if the PIN is invalid or the operation fails. */
   setPin: (pin: string) => Promise<boolean>;
-  /** Unlock with a PIN. Returns false if wrong or throttled. */
   unlock: (pin: string) => Promise<boolean>;
-  /** Milliseconds until the next unlock attempt is allowed. 0 when not throttled. */
   getUnlockLockoutMs: () => number;
-  /**
-   * Attempts left before a wrong PIN triggers the first lockout. 0 once
-   * lockouts have begun (each further failure re-locks immediately).
-   */
   getAttemptsUntilLockout: () => number;
-  /** Total duration of the lockout currently in effect, for countdown UI. 0 when none. */
   getCurrentLockoutTotalMs: () => number;
-  /** Digits in the saved PIN, so the lock screen can auto-submit. Null if unknown. */
   getPinLength: () => number | null;
-  /** Finish the unlock reveal: transition from `unlocking` to `unlocked`. */
   completeUnlock: () => void;
-  /** Lock the session immediately. */
   lock: () => void;
-  /** Remove the PIN and decrypt data back to plaintext. Requires the current PIN. */
   removePin: (currentPin: string) => Promise<boolean>;
-  /** True if the app is PIN-protected (locked or unlocked). */
   hasPinLock: boolean;
-  /** True if a passkey (biometric) unlock is enrolled. */
   hasPasskey: boolean;
-  /** Enroll a passkey that unlocks the same data. Requires the app to be unlocked. */
   enablePasskey: () => Promise<{ ok: boolean; error?: string }>;
-  /** Unlock with the enrolled passkey. Returns false if unavailable or cancelled. */
   unlockWithPasskey: () => Promise<boolean>;
-  /** Remove the enrolled passkey (the PIN remains). */
   removePasskey: () => void;
 };
 
@@ -173,7 +134,6 @@ function writeStoredMaterial(material: StoredKeyMaterial): void {
   localStorage.setItem(KEY_MATERIAL_KEY, JSON.stringify(material));
 }
 
-/** Adopt the legacy PBKDF2 key bytes as the DEK — records stay readable, no re-encrypt. */
 async function adoptLegacyKeyAsDek(pin: string, legacy: LegacyPinRecord): Promise<CryptoKey> {
   const bytes = await deriveLegacyKeyBytes(pin, base64ToUint8Array(legacy.payload.salt));
   return importDekBytes(bytes);
@@ -188,13 +148,9 @@ export function usePinLock(): PinLockContextValue {
 }
 
 export function PinLockProvider({ children }: { children: React.ReactNode }) {
-  // Start "initializing" so the server and the first client render match; the
-  // real state (which depends on client-only localStorage) is resolved on mount.
   const [lockState, setLockState] = useState<PinLockState>({ status: "initializing" });
   const [hasPasskey, setHasPasskey] = useState(false);
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Wall-clock timestamps: setTimeout is suspended while the device sleeps or
-  // the tab is backgrounded, so elapsed real time must be checked on return.
   const lastActivityAt = useRef(0);
   const hiddenAt = useRef<number | null>(null);
   const lockChannel = useRef<BroadcastChannel | null>(null);
@@ -210,7 +166,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Mirror locks across tabs sharing this origin.
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(LOCK_CHANNEL_NAME);
@@ -229,8 +184,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const hasMaterial =
       localStorage.getItem(KEY_MATERIAL_KEY) || localStorage.getItem(LEGACY_PIN_HASH_KEY);
-    // Hydration-safe: resolve client-only lock state once after mount so the
-    // server and first client render stay identical.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLockState(hasMaterial ? { status: "locked" } : { status: "no_pin" });
     setHasPasskey(Boolean(readKeyMaterial()?.passkey));
@@ -255,9 +208,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       resetInactivityTimer();
     }
 
-    // The timer only fires while the page is running; sleep and backgrounding
-    // suspend it. On any return to the foreground, compare wall-clock time
-    // against both the background threshold and the inactivity window.
     function handleReturnToForeground() {
       const now = Date.now();
       const hiddenFor = hiddenAt.current == null ? 0 : now - hiddenAt.current;
@@ -309,8 +259,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
 
       const activeDek = getActiveRecordCryptoKey();
 
-      // Changing the PIN while unlocked: just re-wrap the existing DEK,
-      // preserving any enrolled passkey (it wraps the same DEK).
       if (activeDek) {
         writeStoredMaterial({
           version: 2,
@@ -324,19 +272,13 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
 
-      // Fresh enable: generate a DEK, encrypt any existing plaintext records,
-      // then store the wrapped material.
       const dek = await generateDek();
       try {
         await encryptAllRecordsWithDek(dek); // activates the DEK on success
         writeStoredMaterial({ version: 2, pin: await createPinKeyMaterial(pin, dek), pinLength: pin.length });
         localStorage.removeItem(LEGACY_PIN_HASH_KEY);
-        // Records are written v2 (blinded) from the start, so mark it done.
         localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
       } catch {
-        // encryptAllRecordsWithDek owns key state on failure: it either rolled
-        // the data back to plaintext (key cleared) or kept the DEK active
-        // because some records are already encrypted with it. Don't force-null.
         return false;
       }
       setLockState({ status: "unlocked" });
@@ -392,7 +334,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       if (material) {
         try {
           dek = await unwrapDekWithPin(pin, material.pin);
-          // Backfill the PIN length for material saved before auto-submit existed.
           if (material.pinLength == null) {
             writeStoredMaterial({ ...material, pinLength: pin.length });
           }
@@ -402,7 +343,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       } else if (legacy) {
         const valid = await verifyPin(legacy.payload, pin);
         if (valid) {
-          // Migrate off PBKDF2: adopt the old key as the DEK and re-wrap with Argon2id.
           dek = await adoptLegacyKeyAsDek(pin, legacy);
           writeStoredMaterial({
             version: 2,
@@ -421,7 +361,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
       setActiveRecordCryptoKey(dek);
       await migrateBlindIndexesIfNeeded();
-      // Hand off to the lock screen's reveal; it calls completeUnlock when done.
       setLockState({ status: "unlocking" });
       return true;
     },
@@ -457,7 +396,6 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    // Decrypt everything back to plaintext, then drop all key material.
     setActiveRecordCryptoKey(dek);
     await decryptAllRecords();
     localStorage.removeItem(KEY_MATERIAL_KEY);

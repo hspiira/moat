@@ -20,7 +20,6 @@ describe("getChangePercent", () => {
   });
 
   it("keeps the sign aligned with the direction of change on a negative baseline", () => {
-    // Saved going from -300k to -1.1M is a decrease and must not read as +266%.
     const change = getChangePercent(-1_100_000, -300_000);
     expect(change.kind).toBe("delta");
     expect(change.value).toBeCloseTo(-266.67, 1);

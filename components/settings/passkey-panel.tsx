@@ -25,7 +25,6 @@ export function PasskeyPanel() {
     };
   }, []);
 
-  // Nothing to offer if the device has no biometric authenticator.
   if (!available) {
     return null;
   }

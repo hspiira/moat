@@ -26,7 +26,6 @@ export function TransactionsToolsWorkspace() {
           onToggleRule={(rule) => void workspace.toggleRule(rule)}
         />
 
-
         <CorrectionLogPanel profile={workspace.profile} />
       </div>
     </TransactionsWorkspaceFrame>

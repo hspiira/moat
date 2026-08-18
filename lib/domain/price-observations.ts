@@ -29,16 +29,11 @@ export function derivePriceObservations(
   return observations;
 }
 
-/** ISO date 12 months before `today`, for the bestRecent window. */
 function recentCutoff(today: string): string {
   const [year, rest] = [Number(today.slice(0, 4)) - 1, today.slice(4)];
   return `${year}${rest}`;
 }
 
-/**
- * Per-unit price, so a 2-pack's total isn't compared against a single
- * item's unit price as if they were the same thing.
- */
 function pricePoint(observation: PriceObservation): number | undefined {
   if (observation.unitPrice != null) return observation.unitPrice;
   if (observation.amount == null) return undefined;

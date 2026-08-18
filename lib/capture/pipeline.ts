@@ -22,9 +22,6 @@ function inferCategoryId(
   categories: CapturePipelineInput["categories"],
   type: CapturePipelineCandidate["type"],
 ) {
-  // Reads the shared type→kind map. This used to fall every non-income,
-  // non-savings type through to "expense", which filed SMS-parsed loan
-  // repayments under an ordinary expense category.
   return defaultCategoryForType(categories, type)?.id ?? "";
 }
 

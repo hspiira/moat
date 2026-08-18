@@ -52,9 +52,6 @@ function makeRepositories(): RepositoryBundle {
   };
 }
 
-// Purchase-planner entities must sync exactly like transactions: recognized,
-// manual-review on conflict (never silently overwritten), and applied through
-// the matching repository on pull.
 describe.each(["items", "plannedPurchases", "transactionLineItems"] as const)(
   "entity-sync: %s",
   (entityType) => {

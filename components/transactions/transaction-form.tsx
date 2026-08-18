@@ -41,22 +41,16 @@ export type TransactionFormState = {
   categoryId: string;
   currency: SupportedCurrency;
   payee: string;
-  /** The person on a loan. NEW_COUNTERPARTY means "use counterpartyName". */
   counterpartyId: string;
   counterpartyName: string;
   amount: string;
   fxRateToUgx: string;
   feeAmount: string;
   occurredOn: string;
-  /** Lending only: the date the borrower agreed to repay by. Never inferred. */
   expectedRepaymentDate: string;
   note: string;
 };
 
-/**
- * A function, not a constant. As a constant the date was fixed when the bundle
- * loaded, so an installed PWA left open overnight kept offering yesterday.
- */
 export function createDefaultTransactionForm(): TransactionFormState {
   return { ...defaultTransactionFormShape, occurredOn: todayIso() };
 }
@@ -78,7 +72,6 @@ const defaultTransactionFormShape: TransactionFormState = {
   note: "",
 };
 
-// Re-exported for the modules that already import it from here. The rule
 type Props = {
   accounts: Account[];
   categories: Category[];
@@ -131,9 +124,6 @@ export function TransactionForm({
     [accounts, form.accountId, form.destinationAccountId, form.type],
   );
 
-  // Payee, note, and currency are the rare fields; they stay collapsed until
-  // asked for. Auto-expand (render-time adjust, never auto-collapse) when a
-  // deep link or an edit populates one of them.
   const hasDetails = Boolean(
     form.payee || form.note || form.currency !== "UGX" || form.feeAmount,
   );
@@ -188,8 +178,6 @@ export function TransactionForm({
             </>
           ) : null}
 
-          {/* Category comes first now: it decides the transaction type, and
-              therefore which of the fields below are even relevant. */}
           <CategoryField
             categories={categories}
             value={form.categoryId}
@@ -200,9 +188,6 @@ export function TransactionForm({
               onFormChange((c) => ({
                 ...c,
                 categoryId: picked.id,
-                // The category decides the type. There is no separate type
-                // field left to disagree with it, so the pair is coherent by
-                // construction rather than by validation.
                 type: transactionTypeForCategory(picked),
               }))
             }

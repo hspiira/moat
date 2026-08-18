@@ -36,7 +36,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("treats an interest-free loan as pure principal", () => {
-    // The family-loan case: no rate set at all.
     const split = splitDebtPayment({
       account: debtAccount({ debtInterestRate: undefined }),
       paymentAmount: 100_000,
@@ -60,7 +59,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("accrues interest on the outstanding balance for a reducing-balance loan", () => {
-    // 1,000,000 at 12% for 30 days: 1,000,000 * 0.12 * 30/365 = 9,863.01
     const split = splitDebtPayment({
       account: debtAccount({ debtInterestRate: 12, balance: -1_000_000 }),
       paymentAmount: 100_000,
@@ -73,8 +71,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("accrues a flat-rate loan on the original principal, not the balance", () => {
-    // Flat: 1,000,000 principal at 12% for 30 days, even though only
-    // 400,000 is still owed.
     const split = splitDebtPayment({
       account: debtAccount({
         debtInterestRate: 12,
@@ -114,8 +110,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("charges no interest when there is no start date and no prior payment", () => {
-    // Nothing to measure elapsed time against; inventing a period would
-    // invent a cost the user never agreed to.
     const split = splitDebtPayment({
       account: debtAccount({ debtInterestRate: 12, debtStartDate: undefined }),
       paymentAmount: 100_000,
@@ -127,8 +121,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("puts the whole payment to interest when it cannot cover what accrued", () => {
-    // A year of 24% on 1,000,000 accrues ~240,000; a 50,000 payment does not
-    // touch principal, and the debt grows.
     const split = splitDebtPayment({
       account: debtAccount({ debtInterestRate: 24, balance: -1_000_000 }),
       paymentAmount: 50_000,
@@ -178,8 +170,6 @@ describe("splitDebtPayment", () => {
   });
 
   it("splits a payment into parts that add back to exactly the payment", () => {
-    // Rounding interest to whole UGX must not lose or invent money, or the
-    // three transactions written from a split would not reconcile.
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 5_000_000 }),

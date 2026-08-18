@@ -3,6 +3,7 @@ import { reconcileDefaultCategories } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { findTransactionTypeDrift } from "@/lib/domain/transaction-type-drift";
 import { repositories } from "@/lib/repositories/instance";
+import { repairMoneyDrift } from "@/lib/repositories/money-drift-repair";
 import type {
   Account,
   BudgetTarget,
@@ -59,6 +60,8 @@ export async function loadWorkspaceSnapshot(
   options: WorkspaceSnapshotOptions,
 ): Promise<WorkspaceSnapshot> {
   const { userId, closePeriod, timestamp, backfillCounterparties } = options;
+
+  await repairMoneyDrift(userId, timestamp);
 
   const [storedAccounts, storedCategories, storedTransactions, lineItems] = await Promise.all([
     repositories.accounts.listByUser(userId),

@@ -12,8 +12,6 @@ export function TransactionsReviewWorkspace() {
   const workspace = useTransactionsWorkspace();
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
-  // Resolved from the live list so a deleted transaction closes the sheet
-  // instead of stranding a stale copy in it.
   const detailTransaction =
     workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
 
@@ -25,8 +23,6 @@ export function TransactionsReviewWorkspace() {
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
-      {/* A fragment, not another grid: the frame already wraps children in a
-          gap-5 grid, so nesting an identical one only added a DOM layer. */}
       <>
         <CaptureReviewSectionLinks current="month-close" />
 

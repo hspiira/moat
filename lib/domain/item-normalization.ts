@@ -5,10 +5,6 @@ export function normalizeItemName(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/**
- * Exact normalized match reuses the item; anything else creates one. Archived
- * items never match so a re-used name starts a fresh history on purpose.
- */
 export function resolveItem(params: {
   existing: Item[];
   rawName: string;

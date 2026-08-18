@@ -1,30 +1,19 @@
 import { todayIso } from "@/lib/today";
 
-/**
- * Small, shared form validators. Each returns a user-facing error string, or
- * null when the value is acceptable — so callers can drive field-level errors.
- */
-
 import { parseAmountInput } from "@/lib/parse-amount";
 
 type AmountOptions = {
-  /** Allow exactly zero (e.g. an opening balance). Default false. */
   allowZero?: boolean;
-  /** Allow negative values (e.g. a debt opening balance). Default false. */
   allowNegative?: boolean;
-  /** Message when the field is empty. Default "Enter an amount." */
   requiredMessage?: string;
+  allowFraction?: boolean;
 };
 
-/** Validate a money/number input typed as a string. */
 export function validateAmount(raw: string, options: AmountOptions = {}): string | null {
   const trimmed = raw.trim();
   if (trimmed === "") {
     return options.requiredMessage ?? "Enter an amount.";
   }
-  // parseAmountInput, not Number(): people type "50,000", and Number() reads any
-  // thousands separator as NaN — which reached the user as "Enter a valid
-  // number." on a figure that was perfectly valid.
   const value = parseAmountInput(trimmed);
   if (value === null) {
     return "Enter a valid number.";
@@ -35,10 +24,12 @@ export function validateAmount(raw: string, options: AmountOptions = {}): string
   if (!options.allowZero && value === 0) {
     return "Enter an amount greater than zero.";
   }
+  if (!options.allowFraction && !Number.isInteger(value)) {
+    return "Enter a whole number of shillings.";
+  }
   return null;
 }
 
-/** Validate an integer within an inclusive range. */
 export function validateInteger(
   raw: string,
   min: number,
@@ -59,7 +50,6 @@ export function validateInteger(
   return null;
 }
 
-/** True when an ISO date string (YYYY-MM-DD) is strictly before today. */
 export function isPastDate(iso: string): boolean {
   if (!iso) return false;
   const today = todayIso();

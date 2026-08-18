@@ -6,11 +6,6 @@ export function buildDefaultAccounts(userId: string, timestamp: string): Account
   return PARTY_LEDGERS.map((ledger) => buildPoolAccount(ledger, userId, timestamp));
 }
 
-/**
- * Mirrors `reconcileDefaultCategories` for devices set up before the pools were
- * seeded. An archived pool is left alone rather than resurrected, which is why
- * the pools can be archived but not deleted.
- */
 export function reconcileDefaultAccounts(
   stored: Account[],
   userId: string,
@@ -18,8 +13,6 @@ export function reconcileDefaultAccounts(
 ): Account[] {
   const existingIds = new Set(stored.map((account) => account.id));
 
-  // Matches the derived id and the slug it used to be stored under, so a
-  // device set up before ids were derived does not gain a second pool.
   return PARTY_LEDGERS.filter(
     (ledger) =>
       !existingIds.has(poolAccountIdFor(ledger, userId)) &&

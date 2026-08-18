@@ -63,14 +63,6 @@ const meterTone: Record<EnvelopeStatus, "positive" | "warning" | "negative"> = {
   overspent: "negative",
 };
 
-/**
- * Budgets for one month: what each envelope has left, and how full it is.
- *
- * The list used to make you do the subtraction — a row read "Allocated X · Spent
- * Y" in muted text with no fill, so nothing said at a glance which envelope was
- * about to run out. Rows now carry a meter, and the status is stated in words
- * because the amber and red steps are too close in hue to carry it alone.
- */
 export function BudgetManagerPanel({
   month,
   categories,
@@ -118,8 +110,6 @@ export function BudgetManagerPanel({
     setIsOpen(false);
   }
 
-  // Memoised because `form` is a prop: without this, every keystroke in the
-  // sheet re-ran four passes over the whole transaction list.
   const monthTransactions = useMemo(
     () => transactions.filter((transaction) => transaction.occurredOn.startsWith(month)),
     [month, transactions],
@@ -154,9 +144,6 @@ export function BudgetManagerPanel({
 
   return (
     <div id="budgets" className="grid min-w-0 scroll-mt-20 gap-4">
-      {/* The one figure worth leading with: what is still yours to spend.
-          The label flips to "Over budget by" rather than colouring an absolute
-          number red — hue alone cannot carry "this is overdrawn". */}
       <div className="grid gap-1 pt-2">
         <p className="text-sm text-muted-foreground">
           {position.remaining < 0 ? "Over budget by" : "Left to spend"}
@@ -378,7 +365,6 @@ function EnvelopeRow({
         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
           {envelope.categoryName}
         </span>
-        {/* The status is in words, so the bar's colour is reinforcement. */}
         <span className="shrink-0 text-sm">
           {progress.status === "overspent" ? (
             <span className="text-neg">

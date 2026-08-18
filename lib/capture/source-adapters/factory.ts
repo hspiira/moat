@@ -10,11 +10,6 @@ export type CaptureEnvelopeParams = {
   capturedAt?: string;
 };
 
-/**
- * Builds one `CaptureEnvelope` factory per capture source. Each source
- * adapter is a thin call into this — the only things that vary between
- * sources are the `source` tag and the fields folded into the content hash.
- */
 export function createEnvelopeFactory<TParams extends CaptureEnvelopeParams>(
   source: CaptureEnvelopeSource,
   buildHashKey: (params: TParams) => string[],

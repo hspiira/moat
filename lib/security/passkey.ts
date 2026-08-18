@@ -1,17 +1,3 @@
-/**
- * WebAuthn passkey unlock using the PRF extension.
- *
- * A platform passkey (Face ID / Touch ID / Android biometric) returns a
- * high-entropy secret via the PRF extension for a given salt. That secret
- * derives a KEK that wraps the same DEK the PIN wraps, so a passkey is an
- * additional unlock method, never a replacement — the PIN always remains as a
- * recoverable fallback.
- *
- * PRF support cannot be fully feature-detected up front; enrollment attempts a
- * real PRF evaluation and fails cleanly if the authenticator doesn't provide it.
- */
-
-// Minimal typings for the PRF extension, which isn't in the DOM lib yet.
 type PrfInputs = { prf?: { eval?: { first: BufferSource } } };
 type PrfOutputs = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
 
@@ -51,7 +37,6 @@ export function isWebAuthnAvailable(): boolean {
   return typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";
 }
 
-/** True if a platform authenticator (biometric) is present. */
 export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
   if (!isWebAuthnAvailable()) return false;
   try {
@@ -86,10 +71,6 @@ async function evaluatePrf(credentialId: string, prfSalt: Uint8Array): Promise<A
   return first;
 }
 
-/**
- * Create a platform passkey and obtain its PRF output for a fresh salt.
- * Throws if the device lacks platform/PRF support or the user cancels.
- */
 export async function registerPasskey(params: {
   userId: string;
   userName: string;
@@ -127,7 +108,6 @@ export async function registerPasskey(params: {
   return { credentialId, prfSalt, prfOutput };
 }
 
-/** Obtain the PRF output for an existing enrolled passkey (used to unlock). */
 export async function getPasskeyPrfOutput(
   credentialId: string,
   prfSalt: Uint8Array,

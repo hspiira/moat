@@ -23,13 +23,6 @@ const emptyEvaluation: MonthCloseEvaluation = {
   isReadyToClose: false,
 };
 
-/**
- * Closing a month.
- *
- * `refresh` reads straight from storage rather than from the workspace's state,
- * because it also runs after an obligation changes, before that state has been
- * reloaded.
- */
 export function useMonthClose({
   profile,
   closePeriod,

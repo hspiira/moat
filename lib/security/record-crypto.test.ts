@@ -33,9 +33,7 @@ describe("record encryption helpers", () => {
       amount: 1200,
     });
 
-    // The record id stays clear (it is an opaque uuid, needed as the key path).
     expect(stored).toMatchObject({ id: "transaction:1", __moatEncrypted: true });
-    // Index fields are present but blinded — the plaintext values never appear.
     const serialized = JSON.stringify(stored);
     expect(serialized).not.toContain("user:1");
     expect(serialized).not.toContain("2026-04-07");

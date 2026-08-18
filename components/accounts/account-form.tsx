@@ -38,7 +38,6 @@ export type AccountFormState = {
   notes: string;
 };
 
-/** A function, not a constant: a constant freezes today's date at bundle load. */
 export function createDefaultAccountForm(): AccountFormState {
   return {
     name: "",
@@ -67,7 +66,6 @@ type Props = {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
   fieldErrors?: { name?: string; openingBalance?: string };
-  /** When true, render just the form (no Card chrome) for use inside a sheet. */
   embedded?: boolean;
 };
 

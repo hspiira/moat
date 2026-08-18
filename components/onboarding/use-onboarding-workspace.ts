@@ -51,7 +51,6 @@ export type GoalSetupState = {
   targetDate: string;
 };
 
-/** Never persisted to the draft — PINs must not touch localStorage. */
 export type SecuritySetupState = {
   enabled: boolean;
   pin: string;
@@ -356,8 +355,6 @@ export function useOnboardingWorkspace() {
     event.preventDefault();
     setError(null);
 
-    // Re-validate every step at the final submit, not just the last two, so a
-    // blank name or missing consent can never slip through.
     const finalError = steps
       .map((s) => getStepError({ step: s, profile: form, account, goal, security, consentGiven }))
       .find(Boolean);
@@ -369,8 +366,6 @@ export function useOnboardingWorkspace() {
     setIsSubmitting(true);
 
     try {
-      // Enable encryption before the first record is written so every entity
-      // is stored encrypted from day one.
       if (security.enabled) {
         const pinSet = await setPin(security.pin);
         if (!pinSet) {
@@ -433,8 +428,6 @@ export function useOnboardingWorkspace() {
         } as Goal);
       }
 
-      // Saved last: the profile's presence is what marks onboarding complete,
-      // so it must only exist once every bootstrap write above has succeeded.
       await repositories.userProfile.save(profile);
 
       announceLocalSave({

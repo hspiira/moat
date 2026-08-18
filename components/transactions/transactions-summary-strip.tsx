@@ -9,11 +9,7 @@ import { Money } from "@/components/ui/money";
 type Props = {
   recordedCount: number;
   transactionCount: number;
-  /** Ledger records still unposted — draft or parsed. */
   reviewCount: number;
-  /** Captured items not yet approved or rejected. A separate queue, so a
-   *  separate number: adding them together produced one figure that matched
-   *  neither the ledger nor the capture inbox. */
   captureInboxCount: number;
   duplicateCount: number;
   summary: MonthSummary;

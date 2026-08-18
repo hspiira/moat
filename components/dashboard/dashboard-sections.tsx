@@ -30,11 +30,6 @@ import { formatMoney } from "@/lib/currency";
 const CHART_PERIOD_LABELS_CLASS =
   "flex justify-between text-[11px] text-muted-foreground";
 
-/**
- * Present the savings rate as a headline. A raw percentage beyond ±100% reads
- * as absurd (spending 5× income shows "-400%"), so deep deficits switch to a
- * plain multiple of income spent.
- */
 function describeSavingsRate(
   hasIncome: boolean,
   savingsRate: number,
@@ -53,8 +48,6 @@ function describeSavingsRate(
   if (savingsRate > 0) {
     return { value: `${Math.round(savingsRate * 100)}%`, tone: "positive", sign: "positive", note: null };
   }
-  // Deficit. Below -100% the percentage stops being meaningful, so show how
-  // many times income was spent instead (outflow / income = 1 - rate).
   if (savingsRate <= -1) {
     const multiple = 1 - savingsRate;
     const label = multiple >= 10 ? String(Math.round(multiple)) : multiple.toFixed(1).replace(/\.0$/, "");
@@ -98,14 +91,10 @@ export function DashboardSavingsOverview({
 
     return (
       <div className="grid gap-2">
-        {/* Diverging around zero: saved rises when the month built the moat and
-            drops when it drained it; outflow always points down (money out) as
-            muted context. Direction carries the meaning; color reinforces it. */}
         <div className="relative grid h-36 grid-cols-6 gap-1.5 lg:h-44 lg:gap-2">
           <div aria-hidden className="absolute inset-x-0 top-1/2" />
           {chartSeries.map((point, index) => {
             const isCurrent = index === chartSeries.length - 1;
-            // Half the plot is above zero, half below, so scale to 50%.
             const outflowPct = Math.max(
               (point.outflow / maxFlow) * 50,
               point.outflow === 0 ? 0 : 3,
@@ -126,7 +115,6 @@ export function DashboardSavingsOverview({
 
             return (
               <div key={point.key} className="relative" role="img" aria-label={summaryText} title={summaryText}>
-                {/* Saved — left half of the column, up or down by sign */}
                 <div
                   className={`absolute right-1/2 left-0 mr-px ${savedColor} ${savedUp ? "rounded-t-lg" : "rounded-b-lg"}`}
                   style={
@@ -135,7 +123,6 @@ export function DashboardSavingsOverview({
                       : { top: "50%", height: `${savedPct}%` }
                   }
                 />
-                {/* Outflow — right half, always downward, muted context */}
                 <div
                   className={`absolute right-0 left-1/2 ml-px rounded-b-lg ${
                     isCurrent ? "bg-muted-foreground/40" : "bg-muted-foreground/25"
@@ -167,7 +154,6 @@ export function DashboardSavingsOverview({
       </div>
     );
   }
-
 
   return (
     <Card className="shadow-none">
@@ -257,10 +243,6 @@ export function DashboardCashFlowSection({
   chartLabel: string;
   chartSeries: DashboardChartPoint[];
 }) {
-  // The summary tiles that used to sit beside this repeated the inflow and
-  // outflow figures already shown in the hero, and their savings tile repeated
-  // the savings overview below. Their period deltas now live on the hero's
-  // In/Out stats instead.
   return (
     <DashboardSavingsOverview
       savingsRate={savingsRate}
@@ -302,8 +284,6 @@ export function DashboardTopSpendingCategories({
         {categories.length === 0 ? (
           <EmptyState>
             No spending recorded in this period.{" "}
-            {/* Opens here rather than sending you to Transactions: the page
-                asked for a figure, not for a change of address. */}
             <button
               type="button"
               onClick={onAddTransaction}
@@ -320,8 +300,6 @@ export function DashboardTopSpendingCategories({
                 <div className="flex items-center justify-between gap-4">
                   <span className="min-w-0 truncate text-sm font-medium text-foreground">
                     {category.categoryName}
-                    {/* Frequency changes the meaning: 23 small buys and 4 big
-                        ones can total the same and need different answers. */}
                     <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
                       {category.count}×
                     </span>
@@ -333,7 +311,6 @@ export function DashboardTopSpendingCategories({
                     className="shrink-0 text-sm font-semibold tabular-nums"
                   />
                 </div>
-                {/* Proportional bar — share of the largest category this period. */}
                 <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-neg/45"
@@ -350,8 +327,6 @@ export function DashboardTopSpendingCategories({
 }
 
 export function DashboardAttentionPanel({ items }: { items: AttentionItem[] }) {
-  // Nothing to say means say nothing. A card whose only content is "nothing
-  // needs attention" spends prime vertical space reporting an absence.
   if (items.length === 0) {
     return null;
   }

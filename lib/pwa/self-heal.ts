@@ -1,10 +1,3 @@
-// Self-healing for stale-client failures. When a deploy leaves a browser
-// holding outdated cached chunks or a stale service worker, the app can fail
-// to boot a page ("ChunkLoadError", "module factory is not available", etc.).
-// Users should never have to hard-reload or clear caches to fix this — the app
-// detects these failures, drops its own caches, unregisters the worker, and
-// reloads once. A short cool-down prevents reload loops.
-
 const CHUNK_ERROR_PATTERN =
   /ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported module|module factory is not available|importScripts/i;
 
@@ -19,12 +12,6 @@ export function isChunkLoadError(input: unknown): boolean {
   return CHUNK_ERROR_PATTERN.test(message);
 }
 
-/**
- * Full-screen "we're updating" state shown while healing. Injected as plain
- * DOM (not React) because the React tree is usually the thing that broke, and
- * inline styles + CSS vars keep it working even mid-failure. Framed as an
- * update, never an error, so it reassures rather than alarms.
- */
 function showHealingOverlay(): void {
   if (typeof document === "undefined" || document.getElementById("moat-healing")) return;
 
@@ -67,11 +54,6 @@ function showHealingOverlay(): void {
   document.body.appendChild(overlay);
 }
 
-/**
- * Best-effort recovery: clear Moat's caches and service worker, then reload.
- * Guarded so a page that keeps failing after a heal shows the friendly error
- * screen instead of reloading forever. Never throws.
- */
 export async function purgeStaleClientAndReload(): Promise<void> {
   if (typeof window === "undefined") return;
 
@@ -82,7 +64,6 @@ export async function purgeStaleClientAndReload(): Promise<void> {
     }
     sessionStorage.setItem(HEAL_MARK_KEY, String(Date.now()));
   } catch {
-    // sessionStorage unavailable (private mode edge cases) — proceed anyway.
   }
 
   showHealingOverlay();
@@ -99,7 +80,6 @@ export async function purgeStaleClientAndReload(): Promise<void> {
       );
     }
   } catch {
-    // Recovery is best-effort; reload regardless so fresh assets are fetched.
   }
 
   window.location.reload();

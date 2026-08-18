@@ -71,8 +71,6 @@ const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
     title: "Lifetime cash flow",
     caption: "All recorded transactions since setup.",
     comparisonLabel: "before this year",
-    // Chart series never renders in "all" mode (buildDashboardChartSeries
-    // maps it to "year" first), so this formatter is unreachable in practice.
     formatChartPoint: (date) => String(date.getFullYear()),
   },
 };
@@ -91,9 +89,6 @@ export function getChangePercent(current: number, previous: number): ChangeMetri
 
   return {
     kind: "delta",
-    // Divide by |previous| so the sign always follows the direction of the
-    // change; dividing by a negative baseline would flip it (e.g. saved going
-    // from -300k to -1.1M must read as a decrease, not +279%).
     value: ((current - previous) / Math.abs(previous)) * 100,
   };
 }

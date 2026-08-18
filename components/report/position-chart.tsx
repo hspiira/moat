@@ -8,11 +8,6 @@ import type { PositionPoint } from "@/lib/domain/report";
 
 const HEIGHT = 160;
 
-/**
- * Net position over the window, as an area under a line. Endpoints are labelled
- * with their date and value the way a statement would caption them, so the
- * shape never has to be read against an axis.
- */
 export function PositionChart({ points }: { points: PositionPoint[] }) {
   const geometry = useMemo(() => {
     if (points.length < 2) return null;
@@ -20,7 +15,6 @@ export function PositionChart({ points }: { points: PositionPoint[] }) {
     const values = points.map((point) => point.balance);
     const min = Math.min(...values);
     const max = Math.max(...values);
-    // A flat series would divide by zero; give it a band so the line centres.
     const span = max - min || Math.max(Math.abs(max), 1);
     const floor = max === min ? min - span / 2 : min;
 

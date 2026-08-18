@@ -6,13 +6,6 @@ import {
 } from "@/lib/domain/reserved-accounts";
 import type { Account, Counterparty, Transaction } from "@/lib/types";
 
-/**
- * Nothing cascades a delete, and the reporting paths silently skip transactions
- * whose account they cannot find — orphans vanish from the bands while sitting
- * in storage forever. So delete is only offered when there is nothing to
- * orphan; anything with history is archived or merged instead.
- */
-
 export type DeleteVerdict = { allowed: true } | { allowed: false; reason: string };
 
 export function countAccountTransactions(
@@ -53,7 +46,6 @@ export type MergePlan =
       blocked?: undefined;
       counterparty: Counterparty;
       transactions: Transaction[];
-      /** The pool, with the merged account's opening balance folded in. */
       target: Account;
     };
 
@@ -66,14 +58,6 @@ export type MergeRequest = {
   nextCounterpartyId: () => string;
 };
 
-/**
- * Folds a per-person account into the pool it duplicates, turning the account
- * itself into the counterparty that its name stood for.
- *
- * The opening balance moves onto both the counterparty and the pool, so the
- * control account still equals the sum of its subsidiary entries and net worth
- * does not move: the pool gains exactly what the removed account took with it.
- */
 export function planAccountMerge(request: MergeRequest): MergePlan {
   const { source, target, transactions, counterparties, timestamp, nextCounterpartyId } =
     request;

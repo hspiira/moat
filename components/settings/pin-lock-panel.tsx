@@ -85,11 +85,16 @@ export function PinLockPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">PIN lock</CardTitle>
         <CardDescription>
-          Protect the app with a PIN. Your PIN never leaves this device, and the app locks
-          itself after 5 minutes of inactivity.
+          A PIN locks the app and encrypts your records on this device. It never leaves
+          the device, and the app locks itself after 5 minutes of inactivity.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!hasPinLock ? (
+          <p className="text-xs text-foreground">
+            No PIN is set, so your records are stored unencrypted on this device.
+          </p>
+        ) : null}
         {success ? (
           <p className="text-xs text-muted-foreground">{success}</p>
         ) : null}
@@ -164,6 +169,11 @@ export function PinLockPanel() {
 
         {mode === "remove" ? (
           <form className="grid gap-4" onSubmit={(e) => void handleRemovePin(e)}>
+            <p className="text-xs text-muted-foreground">
+              Removing the PIN also decrypts your records on this device. They stay
+              readable to anything that can read this browser&apos;s storage until you set
+              a PIN again.
+            </p>
             <PinInputField
               id="current-pin"
               label="Current PIN"

@@ -1,8 +1,3 @@
-/**
- * Backend-neutral catalogue of storage collections. Both the IndexedDB and
- * SQLite backends key their records by these names, so it lives here rather
- * than inside either backend to keep them decoupled.
- */
 export const storeNames = {
   meta: "meta",
   userProfiles: "userProfiles",

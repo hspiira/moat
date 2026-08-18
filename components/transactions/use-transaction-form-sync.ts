@@ -73,7 +73,6 @@ export function useTransactionFormSync({
   };
 }
 
-// Only a date the app stamped itself moves; a date the user picked is left alone.
 function useDateRollover({
   setForm,
   editingTransactionId,

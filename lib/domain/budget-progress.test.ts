@@ -34,7 +34,6 @@ describe("getEnvelopeProgress", () => {
   });
 
   it("warns once most of the envelope is gone", () => {
-    // The warning exists so overspending is visible before it happens.
     expect(getEnvelopeProgress(envelope({ spent: 84_000 })).status).toBe("on_track");
     expect(getEnvelopeProgress(envelope({ spent: 85_000 })).status).toBe("near_limit");
     expect(getEnvelopeProgress(envelope({ spent: 100_000 })).status).toBe("near_limit");

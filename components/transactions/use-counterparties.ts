@@ -25,12 +25,6 @@ export type CounterpartySelection = {
 export function useCounterparties() {
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
 
-  /**
-   * Loans recorded before counterparties existed were grouped by their payee
-   * text. Promoting each distinct payee to a record once keeps that history in
-   * the same buckets it has always been in. Returns the transactions with ids
-   * stamped on, so the caller does not have to re-read them.
-   */
   const loadAndBackfill = useCallback(
     async (userId: string, transactions: Transaction[]): Promise<Transaction[]> => {
       const stored = await repositories.counterparties.listByUser(userId);
@@ -54,9 +48,6 @@ export function useCounterparties() {
       const afterBackfill = transactions.map((row) => stamped.get(row.id) ?? row);
       const afterBackfillParties = [...stored, ...backfill.counterparties];
 
-      // Collapse records that name the same person. Dedupe on write only ever
-      // covered one path, so duplicates could reach the store and split a
-      // party's balance across them.
       const merge = planCounterpartyMerge(
         afterBackfillParties,
         afterBackfill,
@@ -68,8 +59,6 @@ export function useCounterparties() {
         return afterBackfill;
       }
 
-      // Repointed rows and survivors land before the duplicates go, so an
-      // interruption leaves an unused record rather than an orphaned reference.
       await Promise.all([
         ...merge.counterparties.map((entry) => repositories.counterparties.upsert(entry)),
         ...merge.transactions.map((row) => repositories.transactions.upsert(row)),
@@ -96,12 +85,6 @@ export function useCounterparties() {
     [],
   );
 
-  /**
-   * Turns whatever the loan fields hold into a stored person. Picking an
-   * existing one reuses it; naming a new one creates it, unless that name is
-   * already on file — in which case the existing record wins, which is the
-   * whole point of not keying on text.
-   */
   const resolveSelection = useCallback(
     async (params: {
       userId: string;

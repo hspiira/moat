@@ -70,9 +70,6 @@ export const mobileSecondaryNav = [
   "/investment-compass",
   "/learn",
 ] as const;
-// Every route reachable from the More sheet must appear here: this list is
-// what lets the More pill name the current page, and a page the nav cannot
-// name has no wayfinding at all now that headings defer to the nav.
 const mobileContextNav = [
   {
     href: "/report",
@@ -182,12 +179,10 @@ export function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-
 export function getMobileContextNavItem(pathname: string) {
   return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
 }
 
-/** Exact match. getMobileContextNavItem's prefix match would find /settings. */
 export function getNavEntry(href: string) {
   return mobileContextNav.find((item) => item.href === href);
 }

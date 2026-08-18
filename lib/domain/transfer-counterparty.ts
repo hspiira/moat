@@ -3,19 +3,12 @@ import { LENDING_LEDGER } from "@/lib/domain/lending";
 import { isReservedAccount } from "@/lib/domain/reserved-accounts";
 import type { Account, Counterparty, CounterpartyKind } from "@/lib/types";
 
-/**
- * Both legs are inspected, not just the destination. A repayment puts the loan
- * account on the source side, so looking only at the destination collected no
- * name and dropped the record into the pool's unnamed bucket.
- */
-
 export type TransferDirection = "lend" | "collect" | "borrow" | "repay";
 
 export type TransferCounterparty = {
   direction: TransferDirection;
   label: string;
   placeholder: string;
-  /** Pools group on the payee; a dedicated account carries the name already. */
   requiresPayee: boolean;
   showExpectedDate: boolean;
 };
@@ -28,7 +21,6 @@ function isPool(account: Account | undefined): boolean {
   return account !== undefined && isReservedAccount(account);
 }
 
-/** The single place a transfer direction becomes a counterparty role. */
 export function counterpartyKindForDirection(
   direction: TransferDirection,
 ): CounterpartyKind {
@@ -94,11 +86,6 @@ export function describeTransferCounterparty(
 
 export const NEW_COUNTERPARTY = "counterparty:new";
 
-/**
- * Picking from a list rather than retyping a name is what stops one borrower
- * becoming two. Someone recorded on the other side of the ledger still shows,
- * since lending to a person you have borrowed from is ordinary.
- */
 export function counterpartyOptionsFor(
   counterparties: Counterparty[],
   direction: TransferDirection,

@@ -11,15 +11,6 @@ import { AppSelfHeal } from "@/components/app-self-heal";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
 
-/**
- * Fonts are checked in rather than fetched from Google at build time.
- *
- * next/font/google downloads the files during `next build`, so the build
- * depends on a live third-party request. That failed in CI when the CDN
- * returned CSS pointing at font files Google had already rotated away, and it
- * would fail again on any network hiccup. These are the same latin-subset
- * variable files, self-hosted: see app/fonts/README.md.
- */
 const geist = localFont({
   src: "./fonts/geist-latin.woff2",
   variable: "--font-sans",

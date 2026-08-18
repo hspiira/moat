@@ -276,11 +276,6 @@ describe("migrateIdsToCuid2", () => {
   });
 });
 
-/**
- * The map is hand-written, so this guards the failure mode that matters: a new
- * reference field added to lib/types.ts and forgotten here would keep an id
- * that no longer resolves.
- */
 describe("id reference map", () => {
   it("covers every id-shaped field in lib/types.ts", () => {
     const source = readFileSync(path.join(process.cwd(), "lib/types.ts"), "utf8");
@@ -291,7 +286,6 @@ describe("id reference map", () => {
         .map((reference) => reference.path.split(".").pop() as string),
     );
 
-    // Fields that hold an id but are deliberately not remapped.
     const exempt = new Set([
       "userId", // rewritten directly, not through the map
       "id",

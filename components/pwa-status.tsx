@@ -7,6 +7,12 @@ import { IconShare, IconSquareRoundedPlus } from "@tabler/icons-react";
 import { getLocalSaveEventName, type LocalSaveDetail } from "@/lib/local-save";
 import { useHasProfile } from "@/components/hooks/use-has-profile";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
+import {
+  ensurePersistentStorage,
+  isEvictable,
+  isRunningLowOnSpace,
+  type StorageDurability,
+} from "@/lib/storage-durability";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,10 +39,6 @@ function isStandaloneDisplay() {
   );
 }
 
-// iOS Safari never fires beforeinstallprompt, so the only way to detect an
-// installable iOS session is by platform sniffing. iPadOS 13+ reports as
-// "MacIntel" with touch support, which is what the maxTouchPoints check
-// disambiguates from an actual Mac.
 function isIosDevice() {
   if (typeof window === "undefined") {
     return false;
@@ -59,12 +61,14 @@ export function PwaStatus() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
   const [lastLocalSave, setLastLocalSave] = useState<LocalSaveDetail | null>(null);
+  const [durability, setDurability] = useState<StorageDurability | null>(null);
 
   useEffect(() => {
     setIsOnline(window.navigator.onLine);
     setIsInstalled(isStandaloneDisplay());
     setIsIos(isIosDevice());
     setHasBackup(Boolean(readGoogleDriveBackupPreferences().lastBackupAt));
+    void ensurePersistentStorage().then(setDurability);
 
     function handleOnline() {
       setIsOnline(true);
@@ -126,20 +130,27 @@ export function PwaStatus() {
 
   const shouldShowInstall = Boolean(installPrompt) && !isInstalled;
   const shouldShowIosInstall = isIos && !isInstalled && !installPrompt;
-  // iOS aggressively evicts PWA storage under disk pressure, so an unbacked-up
-  // device risks silent data loss in a way Android doesn't. Surface this
-  // everywhere, not just in settings.
-  // Nothing to lose yet, so nothing to warn about. Telling a prospect their
-  // records could be cleared before they have any reads as a broken app.
   const hasProfile = profilePresence === "present";
   const shouldShowBackupNudge = isIos && !hasBackup && hasProfile;
+
+  const isAtRisk = Boolean(durability && isEvictable(durability)) && hasProfile && !hasBackup;
+  const isLowOnSpace = Boolean(durability && isRunningLowOnSpace(durability)) && hasProfile;
+
+  const storageWarning = isLowOnSpace
+    ? "Device storage is nearly full, which is when a browser starts clearing app data."
+    : isAtRisk
+      ? "This browser has not promised to keep your records, so it may clear them to free space."
+      : shouldShowBackupNudge
+        ? "No backup yet, and iOS can clear app storage under low disk space."
+        : null;
+
   const shouldShowStatus =
     !isOnline ||
     !isInstalled ||
     lastLocalSave !== null ||
     shouldShowInstall ||
     shouldShowIosInstall ||
-    shouldShowBackupNudge;
+    storageWarning !== null;
 
   if (!shouldShowStatus) {
     return null;
@@ -153,9 +164,9 @@ export function PwaStatus() {
         {lastLocalSave ? (
           <span className="text-xs text-muted-foreground">{lastLocalSave.message}</span>
         ) : null}
-        {shouldShowBackupNudge ? (
+        {storageWarning ? (
           <span className="text-xs text-muted-foreground">
-            No backup yet — iOS can clear app storage under low disk space.{" "}
+            {storageWarning}{" "}
             <Link href="/settings" className="text-foreground underline underline-offset-2">
               Back up now
             </Link>

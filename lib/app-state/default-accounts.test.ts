@@ -52,7 +52,6 @@ describe("default accounts", () => {
     expect(isReservedAccount(lendingPool)).toBe(true);
     expect(isReservedAccount(borrowingPool)).toBe(true);
     expect(isReservedAccount({ ...lendingPool, id: "not-a-pool" })).toBe(false);
-    // The same slug under a different user is not this user's pool.
     expect(isReservedAccount({ ...lendingPool, userId: "user:other" })).toBe(false);
 
     expect(isReservedAccountName("Money lent out")).toBe(true);

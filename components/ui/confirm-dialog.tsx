@@ -13,17 +13,11 @@ type ConfirmDialogProps = {
   description?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Style the confirm button as a destructive action. */
   destructive?: boolean;
-  /** Disable the confirm button (e.g. while the action runs). */
   busy?: boolean;
   onConfirm: () => void;
 };
 
-/**
- * A focused yes/no confirmation modal for irreversible actions. Confirm is
- * autofocused so Enter confirms and Escape cancels.
- */
 export function ConfirmDialog({
   open,
   onOpenChange,

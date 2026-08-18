@@ -1,14 +1,3 @@
-/**
- * Slugs for records the app seeds for every user.
- *
- * A seeded record's id is `deriveSeededId(userId, slug)`, so two devices
- * belonging to the same user compute the same id and sync merges them rather
- * than creating a second copy of every default.
- *
- * These strings are part of the data format. Changing one repoints the record
- * it names, which orphans whatever is already stored under the old id.
- */
-
 import { deriveSeededId } from "@/lib/ids";
 
 export const SEEDED_SLUGS = {
@@ -25,7 +14,6 @@ export const SEEDED_SLUGS = {
 
 export type SeededSlug = (typeof SEEDED_SLUGS)[keyof typeof SEEDED_SLUGS];
 
-/** The slug a seeded category is derived from, given its display name. */
 export function categorySlug(name: string): string {
   return `category:${name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
 }

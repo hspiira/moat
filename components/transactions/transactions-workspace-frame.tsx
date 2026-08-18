@@ -19,7 +19,6 @@ type Props = {
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-  /** Only the ledger leads with the month's totals. */
   summary?: ComponentProps<typeof TransactionsSummaryStrip>;
   children: ReactNode;
 };

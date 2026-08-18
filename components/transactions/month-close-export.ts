@@ -1,6 +1,3 @@
-// Builds the month-close CSV export. Pure so the format is unit-testable;
-// the workspace hook only handles the browser download.
-
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import type { Category, Transaction } from "@/lib/types";
 

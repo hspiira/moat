@@ -24,9 +24,6 @@ function buildSummary(
   const transfers = transactions
     .filter(isTransferTransaction)
     .reduce((sum, transaction) => sum + transaction.amount, 0);
-  // savings: everything not spent this period, whether or not it was
-  // explicitly allocated. net: what remains after spending AND explicit
-  // savings allocations — the truly uncommitted remainder.
   const savings = inflow - outflow;
   const net = inflow - outflow - allocatedSavings;
   const movement = transactions.reduce(

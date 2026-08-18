@@ -34,7 +34,6 @@ type Props = {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
-  /** Transactions with local changes not yet accepted by hosted sync. */
   pendingSyncIds?: Set<string>;
   isSubmitting: boolean;
   onEdit: (transaction: Transaction) => void;
@@ -67,8 +66,6 @@ const presentationByType: Record<TransactionType, RowPresentation> = {
   },
 };
 
-
-/** Newest first, one section per calendar day. */
 function groupByDay(transactions: Transaction[]): [string, Transaction[]][] {
   const groups = new Map<string, Transaction[]>();
   for (const transaction of transactions) {
@@ -104,10 +101,6 @@ export function TransactionList({
         ) : (
           <div className="grid gap-4">
             {groupByDay(transactions).map(([day, dayTransactions]) => (
-              /* min-w-0: a grid item defaults to min-width:auto, so without it
-                 this section refuses to shrink below the row's min-content
-                 width. On a phone that pushed the amount and the actions menu
-                 past the card's edge, where overflow-hidden cut them off. */
               <section key={day} className="min-w-0">
                 <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
                   {formatDate(day)}
@@ -118,8 +111,6 @@ export function TransactionList({
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
               const isLinkedFee = Boolean(transaction.feeParentId);
-              // A fee is edited through its payment, and a loan repayment's
-              // interest split cannot be rebuilt, so neither offers Edit.
               const canEdit = isEditableTransaction(transaction, transactions);
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
@@ -134,8 +125,6 @@ export function TransactionList({
                   key={transaction.id}
                   className="flex items-center gap-3 pr-4 transition-colors hover:bg-muted/40"
                 >
-                  {/* The row body opens the read-only detail; the actions menu
-                      stays a sibling so no button is nested inside another. */}
                   <button
                     type="button"
                     onClick={() => onOpenDetail(transaction)}

@@ -19,18 +19,12 @@ const typeOptions = [
   { value: "debt_payment", label: "Debt payment" },
 ];
 
-/** Types that debit an account, and so can carry a provider charge. */
 const feeBearingTypes = new Set<CaptureReviewItem["type"]>([
   "expense",
   "debt_payment",
   "savings_contribution",
 ]);
 
-/**
- * The correction form for one captured item. Controlled by whoever opened it,
- * so the sheet owns the draft and the actions that save it — this component
- * only collects edits.
- */
 export function CaptureReviewFields({
   draft,
   accounts,

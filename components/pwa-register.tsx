@@ -13,9 +13,6 @@ export function PwaRegister() {
     }
 
     if (process.env.NODE_ENV !== "production") {
-      // In development, a service worker left over from a previous production
-      // run on this origin will keep serving stale hashed chunks and break
-      // hot reloads. Unregister it and drop its caches so dev self-heals.
       void navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const registration of registrations) {
           void registration.unregister();
@@ -41,8 +38,6 @@ export function PwaRegister() {
       function watch(worker: ServiceWorker | null) {
         if (!worker) return;
         worker.addEventListener("statechange", () => {
-          // A worker that reaches "installed" while another already controls
-          // the page is a new version waiting behind the current one.
           if (worker.state === "installed" && navigator.serviceWorker.controller) {
             setUpdateReady(true);
           }

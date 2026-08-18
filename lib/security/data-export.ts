@@ -23,8 +23,6 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
-// Schema 2 covered 8 of 19 stores. Fields added in 3 are optional so a
-// schema 2 backup still restores.
 export const EXPORT_SCHEMA_VERSION = 3;
 
 export type FullExport = {
@@ -52,7 +50,6 @@ export type FullExport = {
   correctionLogs?: CorrectionLog[];
 };
 
-// resources is excluded: seeded reference data, recreated on load.
 export async function collectFullExport(): Promise<FullExport> {
   const userProfile = await repositories.userProfile.get();
   const userId = userProfile?.id ?? "";
@@ -128,14 +125,7 @@ export async function collectFullExport(): Promise<FullExport> {
   };
 }
 
-/**
- * Restore a FullExport into IndexedDB, overwriting any existing records with the same id.
- */
 export async function restoreFullExport(data: FullExport): Promise<void> {
-  // Replaces rather than adds. Restoring onto a device that already had a
-  // profile used to leave two, and userProfile.get() returns whichever comes
-  // first, so every restored record was scoped to a user the app was not
-  // reading as. The data was all there and none of it appeared.
   if (data.userProfile) {
     await repositories.userProfile.replaceAll(data.userProfile);
   }
@@ -169,9 +159,6 @@ export async function restoreFullExport(data: FullExport): Promise<void> {
   ]);
 }
 
-/**
- * Trigger a browser download of the export as a JSON file.
- */
 export function downloadJson(data: unknown, filename: string): void {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -185,9 +172,6 @@ export function downloadJson(data: unknown, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Trigger a browser download of an encrypted backup blob.
- */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
 
@@ -199,10 +183,6 @@ export function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Permanently delete all user data from IndexedDB.
- * This is destructive and cannot be undone.
- */
 export async function deleteAllUserData(): Promise<void> {
   return clearRepositoryStorage();
 }

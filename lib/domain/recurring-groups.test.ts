@@ -86,8 +86,6 @@ describe("getRecurringSections", () => {
   });
 
   it("surfaces paused bills so they can be resumed", () => {
-    // evaluateRecurringObligations only evaluates active bills, so a paused one
-    // vanished from the UI entirely — along with its own Resume button.
     const paused = obligation({ id: "ob:paused", name: "Gym", status: "paused" });
     const sections = getRecurringSections({
       evaluations: [],
@@ -149,7 +147,6 @@ describe("getRecurringSections", () => {
       today: "2026-07-09",
     });
 
-    // 60,000 still owed on the partial, plus the whole 50,000.
     expect(sections.outstandingTotal).toBe(110_000);
   });
 });

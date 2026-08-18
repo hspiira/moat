@@ -18,11 +18,6 @@ export type ItemizationSummary = {
   overItemizedBy: number;
 };
 
-/**
- * Itemization is informal: lines may cover part, all, or (by mistake) more
- * than the transaction amount. Over-coverage is reported, never clamped, so
- * the UI can say "over-itemized by X" instead of silently lying.
- */
 export function summarizeItemization(
   transactionAmount: number,
   lineItems: TransactionLineItem[],
@@ -47,22 +42,9 @@ export type LineItemDraftValues = {
 };
 
 export type ResolvedLineItemDraft = LineItemDraftValues & {
-  /** Which field this resolution filled in, or null if nothing could be. */
   derived: LineItemField | null;
 };
 
-/**
- * Fills in whichever of quantity, unit price, and amount you did not type.
- *
- * Any two of the three determine the third, and which two you have depends on
- * the receipt: a price tag gives a unit price, a handwritten total does not.
- * So rather than fixing one field as the computed one, the two you touched
- * most recently win and the third is solved for.
- *
- * `recentlyEdited` is most-recent-first and lists only fields the user
- * actually typed into, so a stale value left in form state never outranks
- * something just entered.
- */
 export function resolveLineItemDraft(
   values: LineItemDraftValues,
   recentlyEdited: LineItemField[],
@@ -78,7 +60,6 @@ export function resolveLineItemDraft(
   const [first, second] = known;
 
   if (!first || !second) {
-    // Nothing to solve from; echo back only what the user actually entered.
     return { ...blank, ...pick(values, known) };
   }
 
@@ -91,8 +72,6 @@ export function resolveLineItemDraft(
   const unitPrice = values.unitPrice;
   const amount = values.amount;
 
-  // Division by zero would invent a value out of nothing, so those cases stay
-  // unresolved rather than guessing.
   if (target === "amount") {
     return { quantity, unitPrice, amount: quantity! * unitPrice!, derived: "amount" };
   }

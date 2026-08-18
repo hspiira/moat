@@ -59,7 +59,6 @@ export function CaptureAutomationPanel() {
       saveCaptureAutomationSettings(next);
       syncNativeCaptureSettings(JSON.stringify(next));
     } catch (error) {
-      // Roll back the optimistic change so the UI matches what was actually saved.
       setSettings(previous);
       show(errorMessage(error, "Couldn't update capture settings."), "error");
     }

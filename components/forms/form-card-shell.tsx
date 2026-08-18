@@ -9,27 +9,11 @@ type Props = {
   title: string;
   description: string;
   children: ReactNode;
-  /**
-   * Action bar (e.g. submit/cancel). When embedded, it's pinned to the bottom
-   * of the sheet so it stays reachable and the form fills the height instead
-   * of leaving dead space below a short body.
-   */
   footer?: ReactNode;
-  /** When true, render as a full-bleed panel (for use inside a sheet) instead of a bordered card. */
   embedded?: boolean;
-  /**
-   * When true, render the children with no card or header chrome at all —
-   * for forms on dedicated pages where the page header already says what
-   * the form does.
-   */
   plain?: boolean;
 };
 
-/**
- * Shared wrapper for the transaction/goal/account forms: a full-bleed panel
- * with an accent header when embedded in a sheet, or a bordered card
- * elsewhere. Both variants share the same accent header treatment.
- */
 export function FormCardShell({ title, description, children, footer, embedded, plain }: Props) {
   if (plain) {
     return (

@@ -1,9 +1,3 @@
-// DEV-ONLY sync store. This is a single-process, file-backed JSON stand-in
-// used to exercise the sync contract locally. It has no locking (concurrent
-// requests race on read-modify-write), no per-user tenancy, and no real
-// authentication. It must be replaced by a real database with per-user auth
-// before hosted sync is offered to anyone.
-
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -210,7 +204,6 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
     const key = getEntityKey(item.entityType, item.entityId);
     const existing = userState.records[key];
 
-    // Idempotency: a previously applied outbox item replays its stored result.
     if (userState.appliedOutboxIds[item.outboxId]) {
       return {
         outboxId: item.outboxId,
@@ -225,7 +218,6 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
     const deleted = item.operation === "remove";
     const payload = deleted ? null : item.payload;
 
-    // Payload validation: an upsert's embedded id must match the entityId.
     if (item.operation === "upsert") {
       try {
         const parsed = JSON.parse(item.payload) as { id?: string };
@@ -248,8 +240,6 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
     const sameAsServer =
       existing && existing.deleted === deleted && existing.payload === payload;
 
-    // Fast path: nothing on the server yet, or the incoming record already
-    // matches it — store (unless unchanged) and acknowledge without conflict.
     if (!existing || sameAsServer) {
       if (!sameAsServer) {
         userState.records[key] = createServerRecord({
@@ -273,7 +263,6 @@ export async function applyHostedSyncPush(request: SyncPushRequest): Promise<Syn
       };
     }
 
-    // The incoming record diverges from the server — resolve per strategy.
     return resolveConflict({
       userState,
       key,
@@ -320,8 +309,6 @@ export async function pullHostedSyncChanges(request: SyncPullRequest): Promise<S
   return {
     syncedAt: new Date().toISOString(),
     records: page.map((entry) => toPullRecord(entry.record)),
-    // Advances only past records actually returned, never to the server clock,
-    // so a write landing mid-page is not skipped.
     nextSince: last ? serializeCursor(last.position) : request.since,
     hasMore: ordered.length > pageSize,
   };

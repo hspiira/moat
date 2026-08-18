@@ -32,7 +32,6 @@ export function DeleteAccountPanel() {
 
     try {
       await deleteAllUserData();
-      // Clear any local storage keys used by the app
       localStorage.removeItem("moat:pin_hash");
       localStorage.removeItem("moat:pin_salt");
       router.push("/onboarding");

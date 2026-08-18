@@ -6,15 +6,12 @@ import { currentMonthIso, todayIso } from "@/lib/today";
 
 describe("todayIso", () => {
   it("reads the device's date, not UTC's", () => {
-    // 01:30 in Kampala on the 17th is still the 16th in UTC. toISOString would
-    // stamp yesterday, which is how a 1am transaction landed on the wrong day.
     const localMidnightish = new Date(2026, 7, 17, 1, 30);
     expect(todayIso(localMidnightish)).toBe("2026-08-17");
     expect(localMidnightish.toISOString().slice(0, 10)).not.toBe("2026-08-17");
   });
 
   it("reads the local day late at night too", () => {
-    // 23:30 local. West of UTC this instant is already tomorrow in UTC.
     expect(todayIso(new Date(2026, 7, 17, 23, 30))).toBe("2026-08-17");
   });
 

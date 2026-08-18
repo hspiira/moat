@@ -1,10 +1,5 @@
 "use client";
 
-// Orchestrates the main transactions workspace: loads ledger data, handles
-// capture intake, and derives month-close state for the UI. Budget and
-// rule/obligation slices live in their own hooks; transaction construction
-// and the month-close CSV are pure modules with their own tests.
-
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { announceLocalSave } from "@/lib/local-save";
@@ -73,13 +68,6 @@ function sortTransactions(transactions: Transaction[]) {
   });
 }
 
-/**
- * Accounts an ordinary transaction may default to.
- *
- * The party-ledger pools are seeded for everyone and can sort ahead of the
- * user's own accounts, so defaulting to one files ordinary spending against the
- * lending or borrowing ledger. They stay selectable, just never preselected.
- */
 function selectableAccounts(accounts: Account[]): Account[] {
   const spendable = accounts.filter(
     (account) => !isReservedAccount(account) && !account.isArchived,
@@ -196,9 +184,6 @@ export function useTransactionsWorkspace() {
     [categories, periodTransactions],
   );
 
-  // One definition of "unresolved", shared with month close. This used to count
-  // "reviewed" as well, and an approved capture is written as "reviewed" — so
-  // every capture you approved permanently incremented "Needs review".
   const reviewCount = useMemo(
     () => getUnresolvedTransactions(periodTransactions).length,
     [periodTransactions],
@@ -301,8 +286,6 @@ export function useTransactionsWorkspace() {
     setTransactionRules,
   ]);
 
-  // Stable indirection so the sub-hooks can trigger a reload without a
-  // circular dependency between hook definitions.
   const loadWorkspaceRef = useLatest(loadWorkspace);
 
   useEffect(() => {
@@ -347,7 +330,6 @@ export function useTransactionsWorkspace() {
         const isTransfer = transactionForm.type === "transfer";
         const isManual = !isTransfer && transactionForm.type !== "debt_payment";
 
-        // Validated before the first write, so a bad form leaves storage untouched.
         const plan = planTransactionWrite({
           build: {
             form: transactionForm,
@@ -405,11 +387,6 @@ export function useTransactionsWorkspace() {
     ],
   );
 
-  /**
-   * Makes a category the user asked for while recording. The kind comes from
-   * the movement in play, so the new category is valid for this transaction at
-   * once. Selecting it is left to the caller, which knows the form.
-   */
   const createCategory = useCallback(
     async (name: string, kind: CategoryKind): Promise<Category | null> => {
       if (!profile) return null;
@@ -437,7 +414,6 @@ export function useTransactionsWorkspace() {
     [categories, profile],
   );
 
-  /** Transactions per categoryId, so the picker lists common ones first. */
   const categoryUsage = useMemo(() => countCategoryUsage(transactions), [transactions]);
 
   const beginTransactionEdit = useCallback(

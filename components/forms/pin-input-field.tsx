@@ -12,11 +12,6 @@ type Props = {
   autoComplete?: string;
 };
 
-/**
- * A numeric-only, masked PIN input with the label/tracking treatment shared
- * by the backup panel's four PIN fields. Not used by the PIN-lock screen,
- * which has its own dedicated input.
- */
 export function PinInputField({ id, label, value, onChange, placeholder, autoComplete }: Props) {
   return (
     <div className="grid min-w-0 gap-2">

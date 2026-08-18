@@ -129,7 +129,6 @@ export function PlannerList(props: {
   onEdit: (purchase: PlannedPurchase) => void;
   onRestore: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
-  /** For showing a bought item's expense rather than just labelling it. */
   transactionsById: Map<string, Transaction>;
   isSubmitting: boolean;
 }) {
@@ -159,8 +158,6 @@ export function PlannerList(props: {
                 >
                   <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
 
-                  {/* A bought item became a real expense; the plan stored the
-                      link but never showed it, so the trail stopped here. */}
                   {isPurchased && expense ? (
                     <Link
                       href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}

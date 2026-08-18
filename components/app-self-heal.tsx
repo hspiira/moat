@@ -4,10 +4,6 @@ import { useEffect } from "react";
 
 import { isChunkLoadError, purgeStaleClientAndReload } from "@/lib/pwa/self-heal";
 
-/**
- * Watches for chunk/module load failures anywhere in the app and silently
- * recovers, so a stale cached client never leaves the user stuck.
- */
 export function AppSelfHeal() {
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {

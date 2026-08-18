@@ -55,11 +55,6 @@ export type GoalType =
   | "education"
   | "house_construction";
 
-/**
- * The purpose axis. Each kind belongs to exactly one TransactionType — see
- * `allowedCategoryKinds` in lib/domain/transaction-classification.ts. Two types
- * sharing a kind is what once allowed "Debt payment" to be filed under "Food".
- */
 export type CategoryKind =
   | "income"
   | "expense"
@@ -159,19 +154,9 @@ export type Transaction = {
   matchedRuleId?: string;
   reviewedAt?: string;
   transferGroupId?: string;
-  /** Set on a fee expense; points at the payment it was charged against. */
   feeParentId?: string;
-  /** The account balance the source message stated, used for gap reconciliation. */
   statedBalance?: number;
-  /**
-   * The person on the other side of a loan. This is the subsidiary-ledger key:
-   * the lending and borrowing pools are control accounts, and every per-person
-   * balance is derived by grouping on this rather than on the `payee` text.
-   */
   counterpartyId?: string;
-  /**
-   * Always user-stated — never inferred the way a debt minimum payment is.
-   */
   expectedRepaymentDate?: string;
   importBatchId?: string;
   createdAt: string;
@@ -180,21 +165,11 @@ export type Transaction = {
 
 export type CounterpartyKind = "borrower" | "lender" | "both";
 
-/**
- * A person money is owed to or by. Deliberately not an Account: an account is
- * a place money sits, and a person is not. This is the subsidiary ledger behind
- * the two pool control accounts.
- */
 export type Counterparty = {
   id: string;
   userId: string;
   name: string;
   kind: CounterpartyKind;
-  /**
-   * Money already owed before Moat was in use. The matching pool account holds
-   * the same total in its own opening balance, so the control account and the
-   * sum of its subsidiary entries still agree.
-   */
   openingBalance?: number;
   phone?: string;
   notes?: string;
@@ -257,7 +232,6 @@ export type TransactionLineItem = {
   updatedAt: string;
 };
 
-/** Derived, never stored: a line item joined with its transaction's context. */
 export type PriceObservation = {
   itemId: string;
   transactionId: string;

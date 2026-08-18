@@ -204,9 +204,6 @@ export function ReportWorkspace() {
                 <CardTitle className="text-base">Where it sits</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3">
-                {/* A stacked bar rather than a donut: shares this uneven read
-                    far better in a strip, and every slice keeps its own
-                    labelled row below, so the bar is never the only source. */}
                 <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
                   {allocation.map((slice, index) => (
                     <div

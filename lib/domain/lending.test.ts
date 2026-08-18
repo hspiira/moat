@@ -34,7 +34,6 @@ type LegOptions = {
   expectedRepaymentDate?: string;
 };
 
-/** The leg that lands on the receivable side. Positive = lent, negative = repaid. */
 function leg(
   amount: number,
   occurredOn: string,

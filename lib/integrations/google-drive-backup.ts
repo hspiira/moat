@@ -66,7 +66,6 @@ function getGoogleDriveClientId() {
   return clientId;
 }
 
-/** Whether Google Drive backup is configured for this deployment. */
 export function isGoogleDriveConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID?.trim());
 }

@@ -15,14 +15,6 @@ import {
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { useTransactionsWorkspace } from "@/components/transactions/use-transactions-workspace";
 
-/**
- * Records a transaction without leaving the page that asked for one.
- *
- * A screen that says "no spending recorded yet" and then navigates you to
- * Transactions has answered a different question than the one you asked: you
- * wanted the number filled in, not a change of address. The form comes to you,
- * and the page you were reading is still behind it when you are done.
- */
 export function RecordTransactionSheet({
   open,
   onOpenChange,
@@ -32,19 +24,14 @@ export function RecordTransactionSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecorded?: () => void;
-  /** Seeds the form each time the sheet opens — e.g. the ledger's account. */
   initialForm?: Partial<TransactionFormState>;
 }) {
   const workspace = useTransactionsWorkspace();
 
-  // Render-time adjust: apply the seed on the transition into open, so the
-  // caller's context (which account's page asked) reaches the form.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      // Restamp the date on open for the same reason: a long-lived session
-      // would otherwise keep offering the day it started on.
       workspace.setTransactionForm((current) => ({
         ...current,
         occurredOn: todayIso(),
@@ -96,10 +83,6 @@ export function RecordTransactionSheet({
   );
 }
 
-/**
- * Wraps a trigger so any empty state or prompt can host the sheet with one
- * piece of state instead of each caller inventing its own.
- */
 export function useRecordTransaction(onRecorded?: () => void) {
   const [open, setOpen] = useState(false);
   const [initialForm, setInitialForm] = useState<Partial<TransactionFormState> | undefined>();

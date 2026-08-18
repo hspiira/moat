@@ -7,16 +7,6 @@ import {
   type CaptureReviewSection,
 } from "@/lib/domain/capture-review";
 
-/**
- * One segmented control, same treatment as the capture page's method switcher.
- *
- * Three sections fit a phone at full width, so there is no scroller, no fade,
- * and no scroll-the-active-tab-into-view: a tab can never be selected while
- * off-screen. Five status tabs needed all of that machinery.
- *
- * Counts appear only when non-zero — a row of "0"s is noise, and in a mono face
- * the slashed zero read as a rendering glitch.
- */
 export function CaptureReviewFilterRail({
   section,
   counts,

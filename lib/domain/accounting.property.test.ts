@@ -47,10 +47,6 @@ const receivable: Account = {
   updatedAt: "2026-04-01T00:00:00.000Z",
 };
 
-/**
- * Drives the real production transfer builder, so these properties guard the
- * path the app actually takes when recording a loan — not a reconstruction.
- */
 function buildLendingPair(amount: number, occurredOn: string): [Transaction, Transaction] {
   return buildTransferPair({
     form: {
@@ -91,7 +87,6 @@ function buildWriteOff(amount: number, occurredOn: string): Transaction {
 
 const lendingAmountArbitrary = fc.integer({ min: 1, max: 5_000_000 });
 
-/** A single leg sitting on the shared borrowing pool, attributed by payee. */
 function borrowingLeg(
   amount: number,
   occurredOn: string,
@@ -116,7 +111,6 @@ function borrowingLeg(
   };
 }
 
-/** A single leg sitting on the shared lending pool, attributed by payee. */
 function poolLeg(
   amount: number,
   occurredOn: string,
@@ -255,7 +249,6 @@ describe("accounting property invariants", () => {
     fc.assert(
       fc.property(lendingAmountArbitrary, dateArbitrary.map(toIsoDate), (amount, occurredOn) => {
         const lent = buildLendingPair(amount, occurredOn);
-        // The repayment is the same pair with the legs swapped.
         const repaid = lent.map((leg) => ({ ...leg, id: `${leg.id}:repaid`, amount: -leg.amount }));
 
         const afterLending = getAccountTotals(
@@ -329,9 +322,6 @@ describe("accounting property invariants", () => {
             borrower: fc.constantFrom("Sarah", "Musa", "Cousin", "Aunt"),
             amount: fc.integer({ min: 1, max: 2_000_000 }),
             repay: fc.integer({ min: 0, max: 2_000_000 }),
-            // Write-offs must be in here: they reduce both the borrower's
-            // balance and the pool's, so leaving them out would let the
-            // invariant hold while the write-off maths was broken.
             writeOff: fc.integer({ min: 0, max: 2_000_000 }),
             occurredOn: dateArbitrary.map(toIsoDate),
           }),
@@ -352,8 +342,6 @@ describe("accounting property invariants", () => {
           const portfolio = getLendingPortfolio([reconciledPool], legs, new Date("2026-07-29"));
           const summed = portfolio.parties.reduce((total, b) => total + b.outstanding, 0);
 
-          // If these ever diverge, the band shows per-borrower figures that do
-          // not add up to the account they all live in.
           expect(summed).toBe(reconciledPool.balance);
         },
       ),
@@ -402,9 +390,6 @@ describe("accounting property invariants", () => {
             lender: fc.constantFrom("Grace", "Musa", "Cousin", "Chairman"),
             amount: fc.integer({ min: 1, max: 2_000_000 }),
             repay: fc.integer({ min: 0, max: 2_000_000 }),
-            // Forgiveness must be in here for the same reason write-offs are on
-            // the lending side: without it the invariant holds even when the
-            // forgiveness maths is broken.
             forgiven: fc.integer({ min: 0, max: 2_000_000 }),
             occurredOn: dateArbitrary.map(toIsoDate),
           }),
@@ -425,8 +410,6 @@ describe("accounting property invariants", () => {
           const portfolio = getBorrowingPortfolio([reconciledPool], legs, new Date("2026-07-29"));
           const summed = portfolio.parties.reduce((total, l) => total + l.outstanding, 0);
 
-          // A liability is stored negative, so the rows must add up to its
-          // mirror or the band shows figures that do not reconcile.
           expect(summed).toBe(-reconciledPool.balance);
         },
       ),

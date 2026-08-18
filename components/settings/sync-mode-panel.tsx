@@ -15,7 +15,6 @@ import { InputField } from "@/components/forms/input-field";
 import { createId } from "@/lib/ids";
 import { syncProfileId } from "@/lib/domain/seeded-ids";
 
-
 const syncModeOptions: { value: SyncMode; label: string; body: string }[] = [
   {
     value: "local_only",
@@ -111,13 +110,9 @@ export function SyncModePanel() {
       setSuccess("Sync preference saved locally.");
 
       if (next.hostedSyncEnabled && next.mode === "hosted_opt_in" && !hasBackfilled(next)) {
-        // Renumber to cuid2 first. This is the only safe window: nothing has
-        // been pushed yet, so no server record can be orphaned by it.
         setBackfillStatus("Preparing your records...");
         await migrateIdsToCuid2({ repositories, userId: next.userId });
 
-        // The migration may have changed the user id, so re-read rather than
-        // backfilling against the profile captured before it ran.
         const migratedUser = await repositories.userProfile.get();
         const activeProfile = migratedUser
           ? ((await repositories.syncProfiles.getByUser(migratedUser.id)) ?? {
@@ -126,7 +121,6 @@ export function SyncModePanel() {
             })
           : next;
 
-        // Records written before opt-in have no outbox entry, so queue them once.
         const summary = await backfillSyncOutbox({
           repositories,
           profile: activeProfile,
@@ -199,8 +193,6 @@ export function SyncModePanel() {
     );
   }
 
-  // Until a hosted backend ships, show a plain on-device summary rather than
-  // sync controls that can't do anything yet.
   if (!hostedSyncEnabled) {
     return (
       <Card className="shadow-none">

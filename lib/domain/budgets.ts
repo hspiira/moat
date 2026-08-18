@@ -72,9 +72,6 @@ export function getBudgetCoverage(
     (sum, budget) => sum + budget.targetAmount + (budget.rolloverAmount ?? 0),
     0,
   );
-  // Only spending in budgeted categories counts against the allocation —
-  // otherwise unbudgeted spending makes "remaining" go negative even when
-  // every envelope is under budget.
   const budgetedCategories = new Set(budgets.map((budget) => budget.categoryId));
   const spent = transactions.reduce((sum, transaction) => {
     if (!isSpendingTransaction(transaction) || !budgetedCategories.has(transaction.categoryId)) {

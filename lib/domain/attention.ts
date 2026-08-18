@@ -4,11 +4,6 @@ import { formatMoney } from "@/lib/currency";
 
 const DUE_SOON_WINDOW_DAYS = 5;
 
-/**
- * Unpaid obligations whose due day falls within the next few days. Overdue
- * bills stay listed until paid: an unpaid bill does not stop mattering when
- * its date passes.
- */
 export function getBillsDueSoon(
   evaluations: RecurringEvaluation[],
   today: Date,
@@ -78,13 +73,6 @@ export type HabitInput = {
   targetCoverMonths: number;
 };
 
-/**
- * Plain observations about how the period went, stated as facts.
- *
- * Deliberately not a persona or a score. Apps that award you a title are
- * selling the next product; a spending tracker's job is to say what happened
- * and let the reader draw the conclusion.
- */
 export function getHabitItems(input: HabitInput): AttentionItem[] {
   const items: AttentionItem[] = [];
 
@@ -117,11 +105,6 @@ export function getHabitItems(input: HabitInput): AttentionItem[] {
   return items;
 }
 
-/**
- * Everything asking for a decision, in one list. Ordered by how much it costs to
- * ignore: money already overspent, then a queue that grows while untouched, then
- * observations that are only ever advisory.
- */
 export function getAttentionItems({
   envelopes,
   billsDueSoon = [],
@@ -161,7 +144,6 @@ export function getAttentionItems({
     ...billsDueSoon,
     ...review,
     ...insights.map((insight) => ({ ...insight })),
-    // Habits go last: they are observations, not decisions waiting on you.
     ...habits,
   ];
 }

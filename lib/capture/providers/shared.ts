@@ -18,11 +18,6 @@ const MONTHS: Record<string, string> = {
   jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
 };
 
-/**
- * Bounds a raw payee capture: cuts the greedy tail at the first real delimiter
- * (" on ", ". ", " Fee", " Tax", newline, or ", <digits>") and trims trailing
- * punctuation. Turns "MILLY NAKIRANDA, 256… on 2026…" into "MILLY NAKIRANDA".
- */
 export function cleanCapturePayee(raw: string): string {
   return raw
     .split(/\s+on\s|\.\s|\s*\bFee\b|\s*\bTax\b|\n|,\s*(?=\d)/i)[0]
@@ -30,11 +25,6 @@ export function cleanCapturePayee(raw: string): string {
     .replace(/[.,\s]+$/, "");
 }
 
-/**
- * Sums every charge line (fee / tax / charge / excise duty) in a captured
- * message. Returns undefined when the message states no charges. Word-boundary
- * anchored so "recharge" does not count as a charge.
- */
 export function parseCaptureFee(text: string): number | undefined {
   const matches = text.matchAll(
     /\b(?:excise\s+duty|fee|tax|charge)s?\s*:?\s*(?:UGX|USh)?\s*([0-9,]+(?:\.\d+)?)/gi,

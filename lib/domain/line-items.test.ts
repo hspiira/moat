@@ -64,8 +64,6 @@ describe("summarizeItemization", () => {
           expect(summary.itemizedTotal).toBeGreaterThanOrEqual(0);
           expect(summary.unitemized).toBeGreaterThanOrEqual(0);
           expect(summary.overItemizedBy).toBeGreaterThanOrEqual(0);
-          // Exactly one of unitemized / overItemizedBy is nonzero, and they
-          // reconcile against the transaction amount.
           expect(summary.itemizedTotal - summary.overItemizedBy + summary.unitemized).toBe(
             transactionAmount,
           );
@@ -83,7 +81,6 @@ describe("resolveLineItemDraft", () => {
   });
 
   it("back-solves the unit price when you know the line total", () => {
-    // How a handwritten receipt usually reads: two of these, twelve thousand.
     expect(
       resolveLineItemDraft({ quantity: 2, amount: 12000 }, ["amount", "quantity"]),
     ).toEqual({ quantity: 2, unitPrice: 6000, amount: 12000, derived: "unitPrice" });
@@ -96,8 +93,6 @@ describe("resolveLineItemDraft", () => {
   });
 
   it("lets the two most recently touched fields win once all three are filled", () => {
-    // Typing a total after entering qty and unit price re-solves the unit
-    // price rather than leaving the row contradicting itself.
     expect(
       resolveLineItemDraft(
         { quantity: 2, unitPrice: 9999, amount: 12000 },
@@ -137,7 +132,6 @@ describe("resolveLineItemDraft", () => {
   });
 
   it("ignores fields the user never touched", () => {
-    // A stale unit price left in state must not outrank what was just typed.
     expect(
       resolveLineItemDraft({ quantity: 3, unitPrice: 500, amount: 3000 }, ["amount", "quantity"]),
     ).toMatchObject({ unitPrice: 1000, derived: "unitPrice" });

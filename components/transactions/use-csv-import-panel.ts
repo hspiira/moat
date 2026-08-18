@@ -1,7 +1,5 @@
 "use client";
 
-// Powers the CSV import flow by parsing uploaded files, building preview rows, and persisting valid transactions into the ledger.
-
 import { useMemo, useState } from "react";
 
 import { applyTransactionRules } from "@/lib/domain/rules";
@@ -28,7 +26,6 @@ import {
   coerceCategoryForType,
 } from "@/lib/domain/transaction-classification";
 import { createId } from "@/lib/ids";
-
 
 function guessHeader(headers: string[], matcher: (normalizedHeader: string) => boolean) {
   return headers.find((header) => matcher(header.trim().toLowerCase())) ?? "";
@@ -183,9 +180,6 @@ export function useCsvImportPanel({
           originalAmount: row.originalAmount,
           fxRateToUgx: row.currency === "UGX" ? undefined : row.fxRateToUgx,
           occurredOn: row.occurredOn,
-          // A CSV can pair any type column with any category column. Nobody is
-          // standing by to fix it, so snap it to a coherent pair rather than
-          // dropping the row.
           categoryId: coerceCategoryForType(
             categories,
             row.type as TransactionType,

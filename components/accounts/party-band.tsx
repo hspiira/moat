@@ -18,7 +18,6 @@ export type PartyBandCopy = {
   settledMessage: string;
   advancedLabel: string;
   cancelledLabel: string;
-  /** Reads the same either way: "Expected back" vs "Agreed to repay by". */
   dueLabel: (when: string) => string;
   overdueLabel: (when: string) => string;
   lastRepaymentLabel: (when: string) => string;

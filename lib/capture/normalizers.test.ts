@@ -19,8 +19,6 @@ describe("parseStatedBalance", () => {
 });
 
 describe("inferCapturePayee", () => {
-  // These strings are from a real ledger, where the whole SMS tail ended up in
-  // the payee because the no-provider fallback did not bound the capture.
   it("stops at the phone number rather than swallowing the tail", () => {
     expect(
       inferCapturePayee(

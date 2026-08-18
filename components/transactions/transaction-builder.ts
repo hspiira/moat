@@ -1,6 +1,3 @@
-// Pure construction and validation for manual transaction entry. Extracted
-// from the workspace hook so the money-critical paths are unit-testable.
-
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
@@ -17,7 +14,6 @@ export type TransactionBuildInput = {
   userId: string;
   timestamp: string;
   editingTransactionId: string | null;
-  /** Existing transactions, used to preserve createdAt when editing. */
   existingTransactions: Transaction[];
 };
 
@@ -25,9 +21,6 @@ export function validateTransactionAmounts(form: TransactionFormState): {
   originalAmount: number;
   normalizedAmount: number;
 } {
-  // parseAmountInput, not Number(): people type "1,790,590", and Number() reads
-  // any thousands separator as NaN, which surfaced as "Amount must be greater
-  // than zero" on a perfectly good figure.
   const originalAmount = parseAmountInput(form.amount) ?? Number.NaN;
   const normalizedAmount = normalizeAmountToUgx(
     originalAmount,
@@ -37,6 +30,9 @@ export function validateTransactionAmounts(form: TransactionFormState): {
 
   if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
     throw new Error("Amount must be greater than zero.");
+  }
+  if (form.currency === "UGX" && !Number.isInteger(originalAmount)) {
+    throw new Error("Enter a whole number of shillings.");
   }
   if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
     throw new Error("Enter a valid currency and FX rate.");
@@ -70,10 +66,6 @@ function preservedCreatedAt(input: TransactionBuildInput, id: string): string {
   );
 }
 
-/**
- * Builds the balanced source/destination pair for a transfer. The pair
- * always sums to zero and shares one transferGroupId.
- */
 export function buildTransferPair(input: TransactionBuildInput): [Transaction, Transaction] {
   const { form, userId } = input;
   const { originalAmount, normalizedAmount } = validateTransactionAmounts(form);
@@ -85,10 +77,6 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
     throw new Error("Source and destination must be different accounts.");
   }
 
-  // Editing an existing transfer reuses its group, which makes the two leg ids
-  // come out identical to the stored ones so the save overwrites them. A fresh
-  // group here would write a second balanced pair and leave the first behind,
-  // doubling the money that moved.
   const edited = input.editingTransactionId
     ? input.existingTransactions.find(
         (transaction) => transaction.id === input.editingTransactionId,
@@ -107,9 +95,6 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
       type: "transfer",
       amount: -Math.abs(normalizedAmount),
       transferGroupId,
-      // Carried on both legs because the loan leg is the destination when
-      // lending out and the source when borrowing. Only the loan account's own
-      // leg is ever read, so the other copy is inert.
       expectedRepaymentDate: form.expectedRepaymentDate || undefined,
       createdAt: preservedCreatedAt(input, sourceId),
       ...shared,
@@ -128,14 +113,6 @@ export function buildTransferPair(input: TransactionBuildInput): [Transaction, T
   ];
 }
 
-/**
- * Builds a manual (non-transfer) transaction with rules applied.
- *
- * `categories` is optional only so existing callers that have no catalogue to
- * hand keep working; pass it wherever one is available. Without it the
- * type/category pair goes unchecked, which is what allowed a debt payment to be
- * filed under Food.
- */
 export function buildManualTransaction(
   input: TransactionBuildInput,
   rules: TransactionRule[],
@@ -170,7 +147,6 @@ export function buildManualTransaction(
   return applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
 }
 
-/** Payment dates already recorded against a loan, oldest first. */
 function getLoanPaymentDates(loanId: string, transactions: Transaction[]): string[] {
   return transactions
     .filter(
@@ -182,19 +158,6 @@ function getLoanPaymentDates(loanId: string, transactions: Transaction[]): strin
     .sort();
 }
 
-/**
- * Builds the rows for a loan payment: a balanced transfer pair for the
- * principal, plus an interest expense when interest has accrued.
- *
- * This replaces the single `debt_payment` row, which could not work in either
- * placement. On the debt account its delta pushed the balance further negative,
- * so paying a loan made the debt grow. On the cash account the loan balance
- * never moved and `getDebtPayments` — which filters by the debt account's id —
- * found nothing, so "total paid" stayed at zero.
- *
- * The split needs nothing from the user: the rate, model, balance and start date
- * are already on the account.
- */
 export function buildDebtPaymentTransactions(
   input: TransactionBuildInput,
   loan: Account,
@@ -226,8 +189,6 @@ export function buildDebtPaymentTransactions(
 
   const groupId = createId();
   const shared = sharedTransactionFields(input, originalAmount);
-  // Anything paid beyond the balance still moves into the loan, so the pair
-  // stays balanced and the account can go positive rather than money vanishing.
   const towardsLoan = split.principal + split.overpayment;
   const rows: Transaction[] = [];
 
@@ -264,9 +225,6 @@ export function buildDebtPaymentTransactions(
       userId,
       accountId: form.accountId,
       type: "expense",
-      // Shares the payment's group so deleting the repayment takes the
-      // interest with it. It stays type "expense", so it is still counted as
-      // spending and is never treated as a transfer leg.
       transferGroupId: groupId,
       amount: split.interest,
       createdAt: preservedCreatedAt(input, deriveSeededId(groupId, "interest")),
@@ -280,21 +238,10 @@ export function buildDebtPaymentTransactions(
   return rows;
 }
 
-/**
- * Builds the linked fee expense for a payment. The fee is always a UGX expense
- * in the fees category, sharing the parent's account and date, with a
- * deterministic id so edits upsert in place and deletes are derivable.
- * Returns null when no positive fee was entered.
- */
 export function buildFeeTransaction(
   parent: Transaction,
   feeAmountRaw: string,
   feesCategoryId: string,
-  /**
-   * The fee already recorded against this payment, found by `feeParentId`.
-   * Reusing its id is what makes saving an edit overwrite the fee instead of
-   * adding a second one.
-   */
   existingFee?: Transaction,
 ): Transaction | null {
   const value = parseAmountInput(feeAmountRaw) ?? Number.NaN;

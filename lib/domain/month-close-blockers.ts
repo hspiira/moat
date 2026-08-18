@@ -1,9 +1,3 @@
-// Turns a month-close evaluation into the list of things standing between you
-// and a closed month — carrying the underlying records, not just counts.
-//
-// The old panel showed "3 records look the same" with no way to see which three,
-// so it told you that you were blocked without offering a route forward.
-
 import type { MonthCloseEvaluation } from "@/lib/domain/reconciliation";
 import type { RecurringEvaluation } from "@/lib/domain/recurring";
 import type { Transaction } from "@/lib/types";

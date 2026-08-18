@@ -90,8 +90,6 @@ describe("budget domain", () => {
   });
 
   it("excludes spending in unbudgeted categories from coverage", () => {
-    // Spending in a category with no budget must not count against the
-    // allocation, or "remaining" goes negative even when every envelope holds.
     const withUnbudgetedSpend: Transaction[] = [
       ...transactions,
       {

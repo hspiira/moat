@@ -61,13 +61,6 @@ export function CheckOffSheet({
   onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
   onOpenChange: (open: boolean) => void;
 }) {
-  // The sheet content stays mounted across opens (Radix animates it out
-  // rather than unmounting), so its form state would otherwise survive a
-  // close/reopen — most dangerously, an "attach" target left pointing at an
-  // already-used expense. Bumping a session key on each open→true transition
-  // forces a fresh mount of the form, which resets its state for free. Done
-  // during render (the React-endorsed way to react to a prop change) rather
-  // than in an effect, so it doesn't trigger a second render pass.
   const [wasOpen, setWasOpen] = useState(open);
   const [sessionKey, setSessionKey] = useState(0);
   if (open !== wasOpen) {
@@ -123,9 +116,6 @@ function CheckOffSheetForm({
   const [form, setForm] = useState(emptyForm);
   const itemsById = new Map(items.map((item) => [item.id, item]));
 
-  // Prefilled with the estimate so an accurate guess is one tap, but shown and
-  // editable — the price that reaches the history is one you confirmed, not one
-  // the app assumed on your behalf.
   const [actuals, setActuals] = useState<Record<string, { quantity: string; unitPrice: string }>>(
     () =>
       Object.fromEntries(
@@ -171,8 +161,6 @@ function CheckOffSheetForm({
 
   return (
     <div className="grid gap-4 p-4">
-      {/* What each item actually cost. This is what the price history is built
-          from, so it is asked for rather than assumed. */}
       <div className="grid gap-2">
         <p className="text-xs font-medium text-muted-foreground">What did they cost?</p>
         <ul className="grid gap-2">

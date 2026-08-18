@@ -34,7 +34,6 @@ type LegOptions = {
   expectedRepaymentDate?: string;
 };
 
-/** The leg that lands on the debt side. Negative = borrowed, positive = repaid. */
 function leg(
   amount: number,
   occurredOn: string,
@@ -148,7 +147,6 @@ describe("borrowing portfolio", () => {
     expect(grace?.isOverdue).toBe(true);
     expect(musa?.expectedRepaymentDate).toBeUndefined();
     expect(musa?.isOverdue).toBe(false);
-    // Overdue sorts ahead of the larger balance.
     expect(portfolio.parties[0].partyName).toBe("Grace");
   });
 
@@ -218,7 +216,6 @@ describe("borrowing portfolio", () => {
     const portfolio = getBorrowingPortfolio([reconciled], legs, ASOF);
     const summed = portfolio.parties.reduce((total, lender) => total + lender.outstanding, 0);
 
-    // A liability is stored negative, so the rows must add up to its mirror.
     expect(summed).toBe(-reconciled.balance);
   });
 });

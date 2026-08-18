@@ -16,8 +16,6 @@ describe("parseAmountInput", () => {
   });
 
   it("tolerates the separators people actually paste", () => {
-    // Spaces and non-breaking spaces arrive from copied bank statements;
-    // apostrophes from Swiss-formatted exports.
     expect(parseAmountInput("1 790 590")).toBe(1_790_590);
     expect(parseAmountInput("1 790 590")).toBe(1_790_590);
     expect(parseAmountInput("1'790'590")).toBe(1_790_590);
@@ -70,7 +68,6 @@ describe("formatAmountForInput", () => {
   });
 
   it("renders a zero amount as an empty field, not a stray 0", () => {
-    // A parsed capture with no fee should show a blank fee box.
     expect(formatAmountForInput(0)).toBe("");
   });
 

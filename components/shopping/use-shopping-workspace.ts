@@ -28,7 +28,6 @@ import type {
 import { createId } from "@/lib/ids";
 import { todayIso } from "@/lib/today";
 
-/** What an item really cost, gathered at check-off. */
 export type FulfillmentActual = {
   purchaseId: string;
   quantity?: number;
@@ -166,12 +165,6 @@ export function useShoppingWorkspace() {
     [items, profile, refresh],
   );
 
-  /**
-   * Changes a plan that has not been bought yet. Quantity, estimate, date and
-   * note only — never the item it points at, since the price history is keyed
-   * on that; renaming would silently move one item's history onto another.
-   * A purchased plan is history and is left alone.
-   */
   const editPurchase = useCallback(
     async (
       purchase: PlannedPurchase,
@@ -203,12 +196,6 @@ export function useShoppingWorkspace() {
     [refresh],
   );
 
-  /**
-   * Puts a dropped item back on the list. Only dropped ones: reverting a
-   * purchase would clear its links while the line item it created still points
-   * back at this purchase, leaving the expense referencing a plan that no
-   * longer claims it.
-   */
   const restorePurchase = useCallback(
     async (purchase: PlannedPurchase) => {
       if (purchase.status !== "dropped") return;

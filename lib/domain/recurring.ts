@@ -1,7 +1,6 @@
 import { getDebtRepaymentActions, type DebtPayoffStrategy } from "@/lib/domain/debt";
 import type { Account, RecurringObligation, Transaction } from "@/lib/types";
 
-/** A recurring obligation the app derives on the fly rather than one persisted by the user. */
 export type SuggestedRecurringObligation = Omit<
   RecurringObligation,
   "createdAt" | "updatedAt" | "userId"
@@ -9,7 +8,6 @@ export type SuggestedRecurringObligation = Omit<
 
 type MatchableObligation = RecurringObligation | SuggestedRecurringObligation;
 
-/** Suggested obligations assume payments land near month-end since no explicit due date exists. */
 const ASSUMED_MONTH_END_DUE_DAY = 28;
 
 export type RecurringMatchState = "paid" | "partial" | "missing";
@@ -54,7 +52,6 @@ function matchesAmount(expectedAmount: number, actualAmount: number) {
   return Math.abs(expectedAmount - actualAmount) <= tolerance;
 }
 
-/** Common eligibility checks shared by every obligation matcher. */
 function matchesCommonFields(obligation: MatchableObligation, transaction: Transaction) {
   if (obligation.linkedAccountId && transaction.accountId !== obligation.linkedAccountId) {
     return false;
@@ -73,7 +70,6 @@ function matchesCommonFields(obligation: MatchableObligation, transaction: Trans
 
 type ObligationMatcher = (obligation: MatchableObligation, transaction: Transaction) => boolean;
 
-/** Applies to every obligation type without a dedicated matcher below. */
 const defaultMatcher: ObligationMatcher = (obligation, transaction) => {
   if (transaction.type === "transfer") {
     return false;
@@ -82,7 +78,6 @@ const defaultMatcher: ObligationMatcher = (obligation, transaction) => {
   return matchesCommonFields(obligation, transaction);
 };
 
-/** SACCO contributions post as inbound transfer legs, so they need their own credit check. */
 const saccoContributionMatcher: ObligationMatcher = (obligation, transaction) => {
   const isSaccoCredit =
     transaction.type === "transfer" &&
@@ -102,7 +97,6 @@ const saccoContributionMatcher: ObligationMatcher = (obligation, transaction) =>
   return matchesCommonFields(obligation, transaction);
 };
 
-/** Per-obligation-type matchers. Adding a new obligation type is a single entry here. */
 const OBLIGATION_MATCHERS: Partial<Record<RecurringObligation["type"], ObligationMatcher>> = {
   sacco_contribution: saccoContributionMatcher,
 };

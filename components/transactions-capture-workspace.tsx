@@ -34,13 +34,9 @@ export function TransactionsCaptureWorkspace() {
   const workspace = useTransactionsWorkspace();
   const searchParams = useSearchParams();
   const captureParam = searchParams.get("capture");
-  // Land directly on a working form (manual by default). Quick-capture links
-  // (the "+" sheet or a share target) preselect the matching method.
   const [method, setMethod] = useState<CaptureMethod>(
     () => methodFromCaptureParam(captureParam) ?? "manual",
   );
-  // Re-sync when a fresh quick-capture navigation changes the param while we
-  // are already on this route (render-time "adjust state on prop change").
   const [seenCaptureParam, setSeenCaptureParam] = useState<string | null>(null);
   if (captureParam !== seenCaptureParam) {
     setSeenCaptureParam(captureParam);
@@ -48,16 +44,11 @@ export function TransactionsCaptureWorkspace() {
     if (nextMethod) {
       setMethod(nextMethod);
     }
-    // Tapping "Expense" in the capture sheet already said what this is. The
-    // type was parsed off the URL and thrown away, so the picker still opened
-    // on every category the catalogue had.
     const intent = typeFromCaptureParam(captureParam);
     if (intent) {
       workspace.setTransactionForm((current) => ({
         ...current,
         type: intent,
-        // Restamp on every fresh capture: the session may have been open since
-        // before midnight, and the form would still offer that day.
         occurredOn: todayIso(),
         categoryId: categoryMatchesType(
           workspace.categories.find((category) => category.id === current.categoryId) ?? {
@@ -80,7 +71,6 @@ export function TransactionsCaptureWorkspace() {
       error={workspace.error}
     >
       <div className="grid gap-4">
-        {/* Method switcher — swaps the form in place, no extra navigation. */}
         <div
           role="tablist"
           aria-label="Capture method"

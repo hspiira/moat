@@ -14,10 +14,6 @@ type ToastContextValue = {
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
 
-/**
- * App-wide, dependency-free toast surface. Toasts render above sheets/dialogs
- * (z-[200]) so save/delete/error feedback is visible even with a form open.
- */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const nextId = React.useRef(1);

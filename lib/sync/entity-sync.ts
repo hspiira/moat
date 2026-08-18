@@ -39,11 +39,8 @@ type SyncableEntity = { id: string };
 
 type EntityDefinition = {
   strategy: ConflictStrategy;
-  // Resolved values are intentionally discarded by the callers below; the
-  // repository methods return the persisted entity, hence the wide return type.
   upsert: (repositories: RepositoryBundle, payload: Record<string, unknown>) => Promise<unknown>;
   remove: (repositories: RepositoryBundle, entityId: string) => Promise<unknown>;
-  // Only backfill uses this; normal sync reads the outbox.
   list: (repositories: RepositoryBundle, userId: string) => Promise<SyncableEntity[]>;
 };
 
@@ -56,15 +53,11 @@ async function listSingleton<T extends SyncableEntity>(
   return record ? [record] : [];
 }
 
-// Single source of truth for every syncable entity: its conflict strategy plus
-// how a pulled record is applied (upsert) or removed. Adding a new syncable
-// entity means adding exactly one entry here.
 const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
   userProfiles: {
     strategy: "client_wins",
     upsert: (repositories, payload) => repositories.userProfile.save(payload as UserProfile),
     remove: noop,
-    // A profile's id is its userId.
     list: async (repositories, userId) => {
       const profile = await repositories.userProfile.get();
       return profile && profile.id === userId ? [profile] : [];
@@ -156,8 +149,6 @@ const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
   },
 };
 
-// Declaration order puts the profile and reference data ahead of the ledger
-// records that point at them, which is the order backfill should queue them in.
 export const syncableEntityTypes = Object.keys(entityDefinitions) as SyncableEntityType[];
 
 export function listSyncableEntities(

@@ -36,9 +36,6 @@ describe("reconcileDefaultCategories", () => {
   });
 
   it("corrects a default whose kind has changed since it was seeded", () => {
-    // The real case: "Debt repayment" was seeded as an ordinary expense, so on
-    // an existing device it still sits among Food and Airtime — and a debt
-    // payment has no valid category at all.
     const stale = current.map((category) =>
       category.id === deriveSeededId("user:1", "category:debt-repayment")
         ? { ...category, kind: "expense" as const }
@@ -139,9 +136,6 @@ describe("lending and giving seeds", () => {
   });
 });
 
-// Seeded ids became derived from the user id. A device set up before that holds
-// each default under its slug, and matching on the derived id alone seeded a
-// second copy of every category on the next load.
 describe("legacy seeded ids", () => {
   it("does not re-seed a default already stored under its slug", () => {
     const legacy = buildDefaultCategories("user:1").map((category) => ({

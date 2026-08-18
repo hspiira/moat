@@ -1,13 +1,5 @@
 import type { Account, Category, Transaction } from "@/lib/types";
 
-/**
- * Free-text search over the ledger. Every word in the query must match
- * somewhere in the transaction — payee, note, category, account, or amount —
- * so "boda cash" narrows rather than widens.
- *
- * Amounts match on digits: "8000" finds USh 8,000 whether the user types
- * separators or not.
- */
 export function searchTransactions(
   transactions: Transaction[],
   query: string,

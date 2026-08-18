@@ -1,17 +1,3 @@
-/**
- * Envelope encryption key hierarchy.
- *
- * A single random Data Encryption Key (DEK, AES-GCM-256) encrypts every
- * record. The DEK is wrapped by one or more Key Encryption Keys (KEKs), each
- * derived from an unlock method:
- *   - PIN / passphrase KEK via Argon2id (memory-hard).
- *   - Passkey KEK via WebAuthn PRF (added in a later phase; the wrap format
- *     is shared so it plugs into the same DEK).
- *
- * Changing an unlock method only re-wraps the DEK — records are never
- * re-encrypted. Unlock correctness is proven by AES-GCM unwrap succeeding.
- */
-
 import { argon2id } from "hash-wasm";
 
 import { base64ToBytes, bytesToBase64 } from "@/lib/security/codec";
@@ -20,12 +6,6 @@ const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const DEK_BITS = 256;
 
-/**
- * Argon2id cost. Memory-hard defaults sized to run in well under a second on
- * a mid-range phone while being far more brute-force-resistant than PBKDF2.
- * Stored alongside the material so the cost can be retuned later without
- * breaking existing wraps.
- */
 export const DEFAULT_ARGON2_PARAMS: Argon2Params = {
   algorithm: "argon2id",
   timeCost: 3,
@@ -42,20 +22,17 @@ export type Argon2Params = {
   hashLengthBytes: number;
 };
 
-/** A DEK wrapped by some KEK (AES-GCM), portable as JSON. */
 export type WrappedKey = {
   iv: string;
   ciphertext: string;
 };
 
-/** Wrapped-DEK material for the PIN/passphrase unlock method. */
 export type PinKeyMaterial = {
   salt: string;
   params: Argon2Params;
   wrappedDek: WrappedKey;
 };
 
-/** Wrapped-DEK material for a passkey (WebAuthn PRF) unlock method. */
 export type PasskeyKeyMaterial = {
   credentialId: string; // base64url
   prfSalt: string; // base64; the input to the authenticator's PRF
@@ -66,7 +43,6 @@ export function randomBytes(length: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(length));
 }
 
-/** Derive raw KEK bytes from a secret (PIN/passphrase) with Argon2id. */
 export async function deriveKekBytes(
   secret: string,
   salt: Uint8Array,
@@ -84,7 +60,6 @@ export async function deriveKekBytes(
   return hash;
 }
 
-/** Import raw KEK bytes as an AES-GCM key usable for wrapping the DEK. */
 async function importKek(kekBytes: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", kekBytes, { name: "AES-GCM" }, false, [
     "wrapKey",
@@ -92,11 +67,6 @@ async function importKek(kekBytes: Uint8Array): Promise<CryptoKey> {
   ]);
 }
 
-/**
- * Generate a fresh random DEK. Extractable so it can be wrapped for storage
- * and re-wrapped when unlock methods change; it lives in memory only while
- * unlocked and is never persisted unwrapped.
- */
 export async function generateDek(): Promise<CryptoKey> {
   return crypto.subtle.generateKey({ name: "AES-GCM", length: DEK_BITS }, true, [
     "encrypt",
@@ -104,7 +74,6 @@ export async function generateDek(): Promise<CryptoKey> {
   ]);
 }
 
-/** Adopt existing raw key bytes (e.g. a migrated PBKDF2 key) as the DEK. */
 export async function importDekBytes(dekBytes: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", dekBytes, { name: "AES-GCM" }, true, [
     "encrypt",
@@ -130,7 +99,6 @@ export async function unwrapDekWithKek(wrapped: WrappedKey, kek: CryptoKey): Pro
   );
 }
 
-/** Build PIN key material for a brand-new DEK. */
 export async function createPinKeyMaterial(
   pin: string,
   dek: CryptoKey,
@@ -142,10 +110,6 @@ export async function createPinKeyMaterial(
   return { salt: bytesToBase64(salt), params, wrappedDek };
 }
 
-/**
- * Unwrap the DEK from PIN material. Throws if the PIN is wrong (AES-GCM
- * auth-tag failure during unwrap).
- */
 export async function unwrapDekWithPin(pin: string, material: PinKeyMaterial): Promise<CryptoKey> {
   const kek = await importKek(
     await deriveKekBytes(pin, base64ToBytes(material.salt), material.params),
@@ -165,13 +129,6 @@ export async function verifyPinAgainstMaterial(
   }
 }
 
-// --- Passkey (WebAuthn PRF) KEK ---------------------------------------------
-
-/**
- * Derive a KEK from a WebAuthn PRF output via HKDF. The PRF output is a
- * high-entropy secret the authenticator returns for a given salt; HKDF binds
- * it to a fixed context so the same secret can't be reused elsewhere.
- */
 export async function deriveKekFromPrf(prfOutput: BufferSource): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey("raw", prfOutput, "HKDF", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
@@ -202,7 +159,6 @@ export async function createPasskeyKeyMaterial(
   };
 }
 
-/** Unwrap the DEK from passkey material given the authenticator's PRF output. */
 export async function unwrapDekWithPrf(
   material: PasskeyKeyMaterial,
   prfOutput: BufferSource,

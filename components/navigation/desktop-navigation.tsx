@@ -9,9 +9,6 @@ import { navItems } from "@/lib/data";
 
 import { AppBrand, isActiveRoute, navIcons, ThemeToggle } from "./navigation-shared";
 
-// One row, always. The old grid gave every destination an equal column, so
-// adding a tenth wrapped the bar into a ragged second line. These four are the
-// daily routes; the rest sit one click away rather than competing for width.
 const primaryNav = ["/", "/transactions", "/accounts", "/report"] as const;
 
 export function DesktopNavigation({

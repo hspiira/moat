@@ -10,8 +10,6 @@ describe("codec", () => {
   });
 
   it("round-trips a large buffer without throwing (spread-argument variant overflows the call stack)", () => {
-    // crypto.getRandomValues caps out at 65,536 bytes per call, so fill a
-    // larger buffer with a deterministic pattern instead.
     const bytes = new Uint8Array(300_000);
     for (let index = 0; index < bytes.length; index += 1) {
       bytes[index] = index % 256;

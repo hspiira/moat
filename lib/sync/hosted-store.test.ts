@@ -39,7 +39,6 @@ function pushRequest(userId: string, count: number, offset = 0): SyncPushRequest
   };
 }
 
-/** Force every stored record onto one updatedAt, whatever the push produced. */
 async function writeIdenticalTimestamps(userId: string, updatedAt: string) {
   const storePath = process.env.MOAT_SYNC_STORE_PATH as string;
   const state = JSON.parse(await readFile(storePath, "utf8"));
@@ -83,12 +82,6 @@ describe("pullHostedSyncChanges paging", () => {
     expect(new Set(seen).size).toBe(12);
   });
 
-  /**
-   * The reason the cursor is composite. The timestamps are written directly
-   * rather than pushed: a batch usually lands inside one millisecond, but not
-   * always, and a test for same-timestamp paging that only sometimes has one
-   * is not testing anything.
-   */
   it("does not drop records sharing a timestamp across a page boundary", async () => {
     await applyHostedSyncPush(pushRequest("u1", 10));
     await writeIdenticalTimestamps("u1", "2026-04-06T00:00:00.000Z");

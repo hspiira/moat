@@ -43,10 +43,6 @@ export function AppHeroCard({
     <Card
       className={cn(
         "bg-background shadow-none",
-        // This card's fill is bg-background — identical to the page behind it —
-        // so on mobile its border, ring, and padding add no structure, they just
-        // stack on the app shell's own px-4 gutter and read as dead space. Drop
-        // the chrome under sm and let the hero sit directly on the page.
         "rounded-none border-0 py-0 ring-0 sm:py-4",
         className,
       )}
@@ -90,4 +86,3 @@ export function AppSectionHeading({ title, description }: AppSectionHeadingProps
     </div>
   );
 }
-

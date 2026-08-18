@@ -21,9 +21,6 @@ export function getPool(): pg.Pool {
   return pool;
 }
 
-// Verifying certificates is the default. "no-verify" exists because some
-// managed providers issue certs the default trust store rejects, but it has to
-// be asked for: without verification, TLS does not stop an interceptor.
 function resolveSsl(): pg.PoolConfig["ssl"] {
   switch (process.env.DATABASE_SSL) {
     case "disable":
@@ -40,14 +37,6 @@ export async function closePool() {
   pool = null;
 }
 
-/**
- * Run inside a transaction scoped to one user.
- *
- * The row-level security policies read `moat.user_id`, so every statement in
- * here is filtered to that user by the database rather than by the query text.
- * A query that forgets its user_id predicate returns nothing instead of
- * another user's rows.
- */
 export async function withUserTransaction<T>(
   userId: string,
   run: (client: pg.PoolClient) => Promise<T>,

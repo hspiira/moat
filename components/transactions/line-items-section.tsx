@@ -21,15 +21,10 @@ import { DetailSection } from "./detail-row";
 
 const emptyDraft = { label: "", quantity: "1", unitPrice: "", amount: "" };
 
-/** Most-recent-first, so the two newest entries decide what gets solved for. */
 function noteEdit(order: LineItemField[], field: LineItemField): LineItemField[] {
   return [field, ...order.filter((entry) => entry !== field)];
 }
 
-/**
- * Informal itemization of one expense: lines may cover part or all of the
- * amount, and the summary line reports the gap instead of blocking entry.
- */
 export function LineItemsSection({
   transaction,
   lineItems,
@@ -70,7 +65,6 @@ export function LineItemsSection({
     setEditOrder((current) => noteEdit(current, field));
   };
 
-  /** A derived field shows the solved figure rather than whatever was typed. */
   const shownValue = (field: LineItemField) =>
     resolved.derived === field && resolved[field] != null
       ? String(Math.round(resolved[field]! * 100) / 100)
@@ -155,8 +149,6 @@ export function LineItemsSection({
         <p className="text-sm text-muted-foreground">Nothing itemized yet.</p>
       )}
 
-      {/* The gap is the actionable number here, so it carries more weight than
-          the running total it sits beside. */}
       <p className="text-xs text-muted-foreground">
         {summary.overItemizedBy > 0 ? (
           <span className="font-medium text-destructive">
@@ -257,8 +249,6 @@ function NumberField({
     <div className="grid gap-1">
       <Label htmlFor={id} className="flex items-baseline gap-1">
         {label}
-        {/* Named, not just styled — "calculated" has to survive being unable to
-            see the muted colour it is set in. */}
         {derived ? (
           <span className="text-[10px] font-normal text-muted-foreground">calculated</span>
         ) : null}

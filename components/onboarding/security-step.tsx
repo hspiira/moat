@@ -56,9 +56,17 @@ export function SecurityStep({ security, onSecurityChange }: Props) {
           </p>
         </>
       ) : (
-        <div className="rounded-md bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Without a PIN, anyone who picks up this device can open Moat and see your
-          finances. You can turn a PIN on anytime from Settings.
+        <div className="grid gap-2 rounded-md bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <p>
+            Without a PIN, anyone who picks up this device can open Moat and see your
+            finances.
+          </p>
+          <p>
+            Your records are also stored unencrypted, so any other app or extension
+            that can read this browser&apos;s storage can read them too. The PIN is
+            what encrypts them.
+          </p>
+          <p>You can turn a PIN on anytime from Settings.</p>
         </div>
       )}
     </>

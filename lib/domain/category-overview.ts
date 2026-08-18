@@ -4,7 +4,6 @@ import type { Category, CategoryKind, Transaction } from "@/lib/types";
 export type CategoryUse = {
   category: Category;
   count: number;
-  /** Absolute total, so spending and income both read as a magnitude. */
   total: number;
   lastUsedOn: string | null;
 };
@@ -14,7 +13,6 @@ export type CategoryGroup = {
   uses: CategoryUse[];
 };
 
-// "used 8" says nothing about whether a category matters. A total does.
 export function buildCategoryOverview(
   categories: Category[],
   transactions: Transaction[],
@@ -45,8 +43,6 @@ export function buildCategoryOverview(
             lastUsedOn: entry?.lastUsedOn ?? null,
           };
         })
-        // Biggest first, so the ones that matter lead. Unused fall to the
-        // bottom in name order rather than being scattered by a zero total.
         .sort((left, right) =>
           right.total - left.total || left.category.name.localeCompare(right.category.name),
         ),
@@ -54,7 +50,6 @@ export function buildCategoryOverview(
     .filter((group) => group.uses.length > 0);
 }
 
-/** A category still referenced by a transaction can be hidden but never removed. */
 export function isCategoryInUse(use: CategoryUse): boolean {
   return use.count > 0;
 }

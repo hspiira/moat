@@ -62,7 +62,6 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
   const record = useRecordTransaction();
 
   const { totalBalance, activeAccounts: activeAccountCount } = getAccountTotals(accounts);
-  // Use the first name only so the heading and filter always share one row.
   const firstName = profile.displayName.trim().split(/\s+/)[0] || profile.displayName;
 
   return (

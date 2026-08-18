@@ -1,7 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-// A sync push carries at most a few hundred records. Anything far past that is
-// not a real client.
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 export class HttpError extends Error {
@@ -53,11 +51,6 @@ function allowedOrigins(): string[] {
     .filter(Boolean);
 }
 
-/**
- * The app is served from a different origin than this API, so browsers
- * preflight every sync call. Origins are allowlisted rather than mirrored back,
- * so an unlisted site cannot get a browser to make authenticated calls for it.
- */
 export function applyCors(request: IncomingMessage, response: ServerResponse): boolean {
   const origin = request.headers.origin;
   const allowed = allowedOrigins();

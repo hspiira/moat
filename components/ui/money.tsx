@@ -4,13 +4,6 @@ import type { SupportedCurrency } from "@/lib/types";
 
 type MoneyTone = "auto" | "positive" | "negative" | "warning" | "neutral" | "muted";
 
-/**
- * Renders a currency amount with tabular figures and money-semantic color.
- *
- * Sign is conveyed by more than color: a leading +/- glyph plus an
- * sr-only "in"/"out" word, so the meaning survives for color-blind and
- * screen-reader users (WCAG 1.4.1).
- */
 export function Money({
   amount,
   currency = "UGX",
@@ -30,18 +23,12 @@ export function Money({
   const toneClass = {
     positive: "text-pos",
     negative: "text-neg",
-    // Reserved warning step, for a figure that is close to a limit rather than
-    // past it. Callers state that in words too — clay and neg sit near enough
-    // in hue that colour alone would not separate them.
     warning: "text-clay",
     neutral: "text-foreground",
     muted: "text-muted-foreground",
   }[resolvedTone];
 
   const magnitude = formatMoney(Math.abs(amount), currency);
-  // Sign expresses money direction, which the tone already encodes — so an
-  // outflow stored as a positive number still reads as "−". Fall back to the
-  // raw value's sign only when the tone is neutral/auto.
   const sign =
     resolvedTone === "positive"
       ? "+"
@@ -52,9 +39,6 @@ export function Money({
           : amount < 0
             ? "−"
             : "";
-  // "in"/"out" describes a flow, so it only belongs on a signed figure. An
-  // unsigned tone is just emphasis — a budget's "USh 24,000 left" is a balance,
-  // and announcing it as "24,000 in" told screen-reader users the wrong thing.
   const srDirection =
     signed && resolvedTone === "positive"
       ? " in"
@@ -63,13 +47,8 @@ export function Money({
         : "";
 
   return (
-    // Intl money strings join currency and digits with no-break spaces, so
-    // without an escape hatch they overflow tight cards instead of wrapping.
-    // overflow-wrap:anywhere lets them break as a last resort.
     <span
       className={cn(
-        // Sans with tabular figures: mono made every amount read like code
-        // sitting in a page of prose.
         "tabular-nums tracking-tight wrap-anywhere",
         toneClass,
         className,

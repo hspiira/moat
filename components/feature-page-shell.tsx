@@ -22,15 +22,6 @@ type Props = {
   children: ReactNode;
 };
 
-/**
- * Shell for a feature that owns its own route.
- *
- * Deliberately thinner than TransactionsWorkspaceFrame: no summary strip and
- * no sibling tab row. Budgets, debt payoff and recurring bills used to be
- * panels bolted onto other pages, which is what made Transactions read as a
- * catch-all. A destination should show its own thing and let the bottom bar
- * handle navigation.
- */
 export function FeaturePageShell({
   title,
   description,

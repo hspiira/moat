@@ -15,7 +15,6 @@ export async function clearRepositoryStorage(): Promise<void> {
     const database = await openFinanceDatabase();
     database.close();
   } catch {
-    // Continue with deletion even if the database has not been opened before.
   }
 
   await new Promise<void>((resolve, reject) => {

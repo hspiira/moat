@@ -19,7 +19,6 @@ import type {
 } from "@/lib/types";
 import { currentMonthIso } from "@/lib/today";
 
-
 export type InvestmentProfileFormState = {
   timeHorizonMonths: string;
   liquidityNeed: LiquidityNeed;
