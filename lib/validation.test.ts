@@ -16,8 +16,6 @@ describe("validateAmount", () => {
   });
 
   it("accepts a grouped amount, because that is how people type money", () => {
-    // Number("50,000") is NaN, so this used to answer "Enter a valid number."
-    // on a perfectly good figure — in budgets and in recurring bills.
     expect(validateAmount("50,000")).toBeNull();
     expect(validateAmount("1,790,590")).toBeNull();
     expect(validateAmount("-2,000")).toBe("This can't be negative.");
@@ -44,5 +42,22 @@ describe("isPastDate", () => {
     expect(isPastDate("2000-01-01")).toBe(true);
     expect(isPastDate("2999-12-31")).toBe(false);
     expect(isPastDate("")).toBe(false);
+  });
+});
+
+describe("validateAmount and whole shillings", () => {
+  it("refuses a fraction, because UGX has no subdivision", () => {
+    expect(validateAmount("1110.19")).toBe("Enter a whole number of shillings.");
+    expect(validateAmount("0.5", { allowZero: true })).toBe("Enter a whole number of shillings.");
+  });
+
+  it("still accepts whole and grouped figures", () => {
+    expect(validateAmount("1110")).toBeNull();
+    expect(validateAmount("1,790,590")).toBeNull();
+    expect(validateAmount("-4500", { allowNegative: true })).toBeNull();
+  });
+
+  it("allows a fraction only when the caller asks, for a foreign amount", () => {
+    expect(validateAmount("12.34", { allowFraction: true })).toBeNull();
   });
 });
