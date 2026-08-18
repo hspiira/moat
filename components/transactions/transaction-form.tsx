@@ -9,13 +9,18 @@ import type {
   CategoryKind,
   Counterparty,
   SupportedCurrency,
+  Transaction,
   TransactionType,
 } from "@/lib/types";
 import {
   NEW_COUNTERPARTY,
-  counterpartyOptionsFor,
   describeTransferCounterparty,
+  type TransferDirection,
 } from "@/lib/domain/transfer-counterparty";
+import { getBorrowingPortfolio } from "@/lib/domain/borrowing";
+import { getLendingPortfolio } from "@/lib/domain/lending";
+import { previewLoanRepayment, previewPartyRepayment } from "@/lib/domain/repayment";
+import { formatDate } from "@/lib/format-date";
 import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
@@ -23,6 +28,8 @@ import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { CategoryField } from "@/components/transactions/category-field";
+import { PersonField } from "@/components/transactions/person-field";
+import { RepaymentSection, RepaymentSummary } from "@/components/transactions/repayment-section";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import {
   accountOptions,
@@ -51,6 +58,45 @@ export type TransactionFormState = {
   note: string;
 };
 
+const sectionTitles: Record<TransferDirection, string> = {
+  lend: "Lending",
+  collect: "Repayment",
+  borrow: "Borrowing",
+  repay: "Repayment",
+};
+
+const outstandingLabels: Record<TransferDirection, string> = {
+  lend: "Already owes you",
+  collect: "Owes you",
+  borrow: "You already owe",
+  repay: "You owe",
+};
+
+const settlingDirections = new Set<TransferDirection>(["collect", "repay"]);
+
+function loanOptions(accounts: Account[]) {
+  return accounts
+    .filter((account) => account.type === "debt")
+    .map((account) => {
+      const outstanding = Math.max(0, -account.balance);
+      return {
+        value: account.id,
+        label:
+          outstanding > 0
+            ? `${account.name} · ${formatMoney(outstanding, "UGX")} left`
+            : account.name,
+      };
+    });
+}
+
+function loanCaption(loan: Account | undefined): string | null {
+  return loan?.debtStartDate ? `since ${formatDate(loan.debtStartDate)}` : null;
+}
+
+function partyCaption(advancedOn: string | null): string | null {
+  return advancedOn ? `since ${formatDate(advancedOn)}` : null;
+}
+
 export function createDefaultTransactionForm(): TransactionFormState {
   return { ...defaultTransactionFormShape, occurredOn: todayIso() };
 }
@@ -78,6 +124,7 @@ type Props = {
   categoryUsage?: Map<string, number>;
   onCreateCategory?: (name: string, kind: CategoryKind) => void;
   counterparties: Counterparty[];
+  transactions: Transaction[];
   form: TransactionFormState;
   editingId: string | null;
   isSubmitting: boolean;
@@ -97,6 +144,7 @@ export function TransactionForm({
   categoryUsage,
   onCreateCategory,
   counterparties,
+  transactions,
   form,
   editingId,
   isSubmitting,
@@ -123,6 +171,40 @@ export function TransactionForm({
         : null,
     [accounts, form.accountId, form.destinationAccountId, form.type],
   );
+
+  const amountForPreview = hasValidNormalizedAmount ? normalizedUgxAmount : 0;
+
+  const parties = useMemo(() => {
+    if (!counterparty) return [];
+    const asOf = new Date();
+    const portfolio =
+      counterparty.direction === "lend" || counterparty.direction === "collect"
+        ? getLendingPortfolio(accounts, transactions, asOf, counterparties)
+        : getBorrowingPortfolio(accounts, transactions, asOf, counterparties);
+    return portfolio.parties;
+  }, [accounts, counterparties, counterparty, transactions]);
+
+  const party = parties.find((entry) => entry.counterpartyId === form.counterpartyId);
+  const partyPreview = party
+    ? previewPartyRepayment({ party, paymentAmount: amountForPreview })
+    : null;
+
+  const loan = accounts.find(
+    (account) => account.id === form.destinationAccountId && account.type === "debt",
+  );
+  const loanPreview =
+    form.type === "debt_payment" && loan
+      ? previewLoanRepayment({
+          loan,
+          transactions,
+          paymentAmount: amountForPreview,
+          occurredOn: form.occurredOn,
+        })
+      : null;
+
+  const canFillAmount = form.currency === "UGX";
+  const fillAmount = (value: number) =>
+    onFormChange((current) => ({ ...current, amount: String(Math.round(value)) }));
 
   const hasDetails = Boolean(
     form.payee || form.note || form.currency !== "UGX" || form.feeAmount,
@@ -222,48 +304,78 @@ export function TransactionForm({
           ) : null}
 
           {form.type === "debt_payment" ? (
-            <div className="grid gap-2">
+            <RepaymentSection title="Loan payment">
               <SelectField
                 id="tx-loan"
                 label="Which loan"
                 value={form.destinationAccountId}
                 placeholder="Select loan"
-                options={accountOptions(accounts.filter((a) => a.type === "debt"))}
+                options={loanOptions(accounts)}
                 onValueChange={(v) => onFormChange((c) => ({ ...c, destinationAccountId: v }))}
               />
-              <p className="text-xs text-muted-foreground">
-                Interest and principal are separated automatically from the loan&apos;s rate.
-              </p>
-            </div>
+              {loanPreview ? (
+                <RepaymentSummary
+                  preview={loanPreview}
+                  outstandingLabel="Still owed"
+                  caption={loanCaption(loan)}
+                  settling
+                  canPayAll={canFillAmount}
+                  onPayAll={() => fillAmount(loanPreview.payoffAmount)}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Interest and principal are separated automatically from the loan&apos;s rate.
+                </p>
+              )}
+            </RepaymentSection>
           ) : null}
 
           {counterparty ? (
             <>
               {counterparty.requiresPayee ? (
-                <>
-                  <SelectField
-                    id="tx-counterparty"
+                <RepaymentSection title={sectionTitles[counterparty.direction]}>
+                  <PersonField
                     label={counterparty.label}
+                    placeholder="Search or add a person"
+                    counterparties={counterparties}
+                    direction={counterparty.direction}
                     value={form.counterpartyId}
-                    placeholder="Select or add a person"
-                    options={counterpartyOptionsFor(counterparties, counterparty.direction)}
-                    onValueChange={(value) =>
-                      onFormChange((c) => ({ ...c, counterpartyId: value }))
+                    newName={form.counterpartyName}
+                    subtitleFor={(person) => {
+                      const owed = parties.find(
+                        (entry) => entry.counterpartyId === person.id,
+                      )?.outstanding;
+                      return owed && owed > 0
+                        ? `${outstandingLabels[counterparty.direction]} ${formatMoney(owed, "UGX")}`
+                        : null;
+                    }}
+                    onSelect={(counterpartyId) =>
+                      onFormChange((c) => ({ ...c, counterpartyId, counterpartyName: "" }))
+                    }
+                    onAdd={(name) =>
+                      onFormChange((c) => ({
+                        ...c,
+                        counterpartyId: NEW_COUNTERPARTY,
+                        counterpartyName: name,
+                      }))
                     }
                   />
-                  {form.counterpartyId === NEW_COUNTERPARTY ? (
-                    <InputField
-                      id="tx-counterparty-name"
-                      label="Their name"
-                      value={form.counterpartyName}
-                      onChange={(e) =>
-                        onFormChange((c) => ({ ...c, counterpartyName: e.target.value }))
-                      }
-                      placeholder={counterparty.placeholder}
-                      hint="Added to your people, so next time you pick them from the list."
+                  {partyPreview ? (
+                    <RepaymentSummary
+                      preview={partyPreview}
+                      outstandingLabel={outstandingLabels[counterparty.direction]}
+                      caption={partyCaption(party?.advancedOn ?? null)}
+                      settling={settlingDirections.has(counterparty.direction)}
+                      canPayAll={canFillAmount && settlingDirections.has(counterparty.direction)}
+                      onPayAll={() => fillAmount(partyPreview.payoffAmount)}
                     />
+                  ) : form.counterpartyId === NEW_COUNTERPARTY ? (
+                    <p className="text-xs text-muted-foreground">
+                      {form.counterpartyName || "This person"} is added to your people, so next
+                      time you pick them from the list.
+                    </p>
                   ) : null}
-                </>
+                </RepaymentSection>
               ) : null}
               {counterparty.showExpectedDate ? (
                 <DatePickerField

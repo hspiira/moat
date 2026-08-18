@@ -1,7 +1,7 @@
 import { normalizeAmountToUgx } from "@/lib/currency";
 import { parseAmountInput } from "@/lib/parse-amount";
 import { applyTransactionRules } from "@/lib/domain/rules";
-import { splitDebtPayment } from "@/lib/domain/debt-payment";
+import { lastLoanPaymentOn, splitDebtPayment } from "@/lib/domain/debt-payment";
 import { assertCategoryMatchesType } from "@/lib/domain/transaction-classification";
 import { loanInterestCategoryId } from "@/lib/app-state/defaults";
 import type { Account, Category, Transaction, TransactionRule } from "@/lib/types";
@@ -147,17 +147,6 @@ export function buildManualTransaction(
   return applyTransactionRules(baseTransaction, rules)?.proposedTransaction ?? baseTransaction;
 }
 
-function getLoanPaymentDates(loanId: string, transactions: Transaction[]): string[] {
-  return transactions
-    .filter(
-      (transaction) =>
-        transaction.accountId === loanId &&
-        (transaction.type === "transfer" || transaction.type === "debt_payment"),
-    )
-    .map((transaction) => transaction.occurredOn)
-    .sort();
-}
-
 export function buildDebtPaymentTransactions(
   input: TransactionBuildInput,
   loan: Account,
@@ -175,7 +164,7 @@ export function buildDebtPaymentTransactions(
     throw new Error("A loan cannot be paid from itself — choose different accounts.");
   }
 
-  const previousPaymentOn = getLoanPaymentDates(loan.id, input.existingTransactions).at(-1) ?? null;
+  const previousPaymentOn = lastLoanPaymentOn(loan.id, input.existingTransactions);
   const split = splitDebtPayment({
     account: loan,
     paymentAmount: normalizedAmount,

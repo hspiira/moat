@@ -86,13 +86,13 @@ export function describeTransferCounterparty(
 
 export const NEW_COUNTERPARTY = "counterparty:new";
 
-export function counterpartyOptionsFor(
+export function rankCounterpartiesFor(
   counterparties: Counterparty[],
   direction: TransferDirection,
-): { value: string; label: string }[] {
+): Counterparty[] {
   const wanted = counterpartyKindForDirection(direction);
 
-  const people = counterparties
+  return counterparties
     .filter((entry) => !entry.isArchived)
     .sort((left, right) => {
       const leftMatches = left.kind === wanted || left.kind === "both";
@@ -101,8 +101,5 @@ export function counterpartyOptionsFor(
         return leftMatches ? -1 : 1;
       }
       return left.name.localeCompare(right.name);
-    })
-    .map((entry) => ({ value: entry.id, label: entry.name }));
-
-  return [...people, { value: NEW_COUNTERPARTY, label: "Someone else…" }];
+    });
 }
