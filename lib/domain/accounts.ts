@@ -1,5 +1,5 @@
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, AccountType, Transaction } from "@/lib/types";
 
 export type AccountTotals = {
   totalBalance: number;
@@ -43,6 +43,20 @@ export function normalizeOpeningBalance(
   }
 
   return amount;
+}
+
+export const CLAIM_TYPES: AccountType[] = ["debt", "receivable"];
+
+/**
+ * The accounts the accounts screen actually lists. Lending and borrowing pools
+ * are bookkeeping, so they are hidden while they sit at zero. The header count
+ * reads from here too, or it says "across 5" above a list of three.
+ */
+export function listedAccounts(accounts: Account[]): Account[] {
+  return accounts.filter(
+    (account) =>
+      !account.isArchived && (!CLAIM_TYPES.includes(account.type) || account.balance !== 0),
+  );
 }
 
 export function getAccountTotals(accounts: Account[]): AccountTotals {

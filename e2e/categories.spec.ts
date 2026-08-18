@@ -86,6 +86,8 @@ test("moving a category empties it and clears it away", async ({ page }) => {
 test("a category nothing is filed under can be deleted outright", async ({ page }) => {
   await openCategories(page);
 
+  // The screen opens on the categories in use, so an unused one is a filter away.
+  await page.getByRole("button", { name: /^Never used/ }).click();
   await page.getByRole("button", { name: /^Workout & Gym/ }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();

@@ -6,12 +6,14 @@ import {
   IconCalendarEvent,
   IconChevronRight,
   IconCopy,
+  IconCheck,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 
 import type { MonthClose, Transaction } from "@/lib/types";
 import type { MonthCloseEvaluation } from "@/lib/domain/reconciliation";
 import type { RecurringEvaluation } from "@/lib/domain/recurring";
-import { getMonthCloseBlockers } from "@/lib/domain/month-close-blockers";
+import { getMonthCloseBlockers, getMonthCloseChecks } from "@/lib/domain/month-close-blockers";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { formatDate } from "@/lib/format-date";
@@ -114,6 +116,7 @@ export function MonthClosePanel({
 }: Props) {
   const monthLabel = formatMonthLabel(period);
   const { groups, total } = getMonthCloseBlockers({ evaluation, recurringEvaluations });
+  const checks = getMonthCloseChecks({ evaluation, recurringEvaluations });
   const isClosed = monthClose?.state === "closed";
   const checkedOn = monthClose?.closedAt ? formatDate(monthClose.closedAt) : null;
   const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name ?? "—";
@@ -132,6 +135,24 @@ export function MonthClosePanel({
                 : `${total} things to sort out. Until they are, this month's totals may be wrong.`}
         </p>
       </div>
+
+      <ul className="grid min-w-0 gap-1.5 rounded-lg bg-muted/30 px-3 py-2.5">
+        {checks.map((check) => (
+          <li key={check.id} className="flex min-w-0 items-start gap-2 text-sm">
+            {check.passed ? (
+              <IconCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-pos" />
+            ) : (
+              <IconAlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-neg" />
+            )}
+            <span className="min-w-0">
+              <span className={check.passed ? "text-foreground" : "font-medium text-foreground"}>
+                {check.label}
+              </span>{" "}
+              <span className="text-muted-foreground">· {check.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
 
       {groups.length > 0 ? (
         <div className="min-w-0 divide-y divide-border/60">

@@ -70,7 +70,7 @@ export function InvestmentMetricCards({
         <MoatRing
           value={emergencyFundMonthsCovered / 3}
           tone={emergencyFundMonthsCovered >= 3 ? "positive" : "moat"}
-          ariaLabel={`Emergency coverage: ${emergencyFundMonthsCovered.toFixed(1)} of 3 target months`}
+          ariaLabel={`Emergency fund goal: ${emergencyFundMonthsCovered.toFixed(1)} of 3 target months`}
           label={emergencyFundMonthsCovered.toFixed(1)}
           sublabel="months"
           size={104}
@@ -78,12 +78,18 @@ export function InvestmentMetricCards({
           className="justify-self-center sm:justify-self-start"
         />
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Emergency fund</p>
-          <p className="text-xl font-semibold">
-            {emergencyFundMonthsCovered.toFixed(1)} month
-            {emergencyFundMonthsCovered !== 1 ? "s" : ""}
-            <span className="text-sm font-normal text-muted-foreground"> of 3 target</span>
-          </p>
+          <p className="text-xs text-muted-foreground">Emergency fund goal</p>
+          {emergencyFundMonthsCovered > 0 ? (
+            <p className="text-xl font-semibold">
+              {emergencyFundMonthsCovered.toFixed(1)} month
+              {emergencyFundMonthsCovered !== 1 ? "s" : ""}
+              <span className="text-sm font-normal text-muted-foreground"> of 3 target</span>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Not started. This tracks a savings goal, not the balances on your home screen.
+            </p>
+          )}
         </div>
         <div className="space-y-0.5">
           <p className="text-xs text-muted-foreground">Monthly outflow baseline</p>

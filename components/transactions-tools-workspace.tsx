@@ -11,6 +11,7 @@ export function TransactionsToolsWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Rules & corrections"
+      srOnlyTitle
       description="Rules that fill in details for you, and a record of the corrections you have made."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

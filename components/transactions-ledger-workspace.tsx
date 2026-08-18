@@ -21,12 +21,12 @@ import { TransactionList } from "./transactions/transaction-list";
 import { TransactionDetailSheet } from "./transactions/transaction-detail-sheet";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
+import { useIncrementalList } from "@/components/hooks/use-incremental-list";
 
 const LEDGER_PAGE_SIZE = 25;
 
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
-  const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
@@ -36,10 +36,14 @@ export function TransactionsLedgerWorkspace() {
     [workspace.transactions, query, workspace.accounts, workspace.categories],
   );
 
-  const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / LEDGER_PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages - 1);
-  const pageStart = currentPage * LEDGER_PAGE_SIZE;
-  const pageTransactions = visibleTransactions.slice(pageStart, pageStart + LEDGER_PAGE_SIZE);
+  const {
+    visible: pageTransactions,
+    hasMore,
+    shownCount,
+    totalCount,
+    sentinelRef,
+    showMore,
+  } = useIncrementalList(visibleTransactions, { pageSize: LEDGER_PAGE_SIZE, resetKey: query });
   const isEditing = Boolean(workspace.editingTransactionId);
   const detailTransaction =
     workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
@@ -106,7 +110,6 @@ export function TransactionsLedgerWorkspace() {
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
-              setPage(0);
             }}
             placeholder="Search payee, category, note, or amount"
             aria-label="Search transactions"
@@ -118,7 +121,6 @@ export function TransactionsLedgerWorkspace() {
               aria-label="Clear search"
               onClick={() => {
                 setQuery("");
-                setPage(0);
               }}
               className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
@@ -150,30 +152,17 @@ export function TransactionsLedgerWorkspace() {
           onOpenDetail={(transaction) => setDetailTransactionId(transaction.id)}
         />
 
-        {totalPages > 1 ? (
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={currentPage === 0}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {pageStart + 1}–{Math.min(pageStart + LEDGER_PAGE_SIZE, visibleTransactions.length)}{" "}
-              of {visibleTransactions.length}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Next
+        {hasMore ? (
+          <div className="grid justify-items-center gap-1">
+            <p className="text-xs text-muted-foreground">
+              {shownCount} of {totalCount}
+            </p>
+            <Button size="sm" variant="ghost" onClick={showMore}>
+              Show older
             </Button>
           </div>
         ) : null}
+        <div ref={sentinelRef} aria-hidden className="h-px" />
       </div>
 
       <TransactionDetailSheet

@@ -38,6 +38,7 @@ import {
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
 import { todayIso } from "@/lib/today";
+import { IconChevronDown } from "@tabler/icons-react";
 
 export { transactionTypeLabels } from "@/lib/select-options";
 
@@ -452,11 +453,16 @@ export function TransactionForm({
             <button
               type="button"
               onClick={() => setDetailsOpen(true)}
-              className="w-fit text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              aria-expanded={false}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              {supportsFee
-                ? "Add details — fee, payee, note, currency"
-                : "Add details — payee, note, currency"}
+              <span>
+                Add details
+                <span className="text-muted-foreground">
+                  {supportsFee ? " · fee, payee, note, currency" : " · payee, note, currency"}
+                </span>
+              </span>
+              <IconChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             </button>
           )}
 

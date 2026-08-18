@@ -40,7 +40,9 @@ export function useCategoriesWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<CategoryFilter>("all");
+  // Opens on the ones that carry money. The unused set is usually the larger
+  // half and is one tap away.
+  const [filter, setFilter] = useState<CategoryFilter>("used");
 
   const reload = useCallback(async (id: string) => {
     const [storedCategories, storedTransactions, referenceCounts] = await Promise.all([

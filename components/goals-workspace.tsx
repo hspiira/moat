@@ -90,8 +90,8 @@ export function GoalsWorkspace() {
                     ? `Emergency fund: ${emergencyPercent}% of the suggested moat`
                     : "Emergency fund: no goal yet"
                 }
-                label={emergencyFundGoal && emergencyFundSuggestion > 0 ? `${emergencyPercent}%` : "—"}
-                sublabel="of moat"
+                label={emergencyFundGoal && emergencyFundSuggestion > 0 ? `${emergencyPercent}%` : "0%"}
+                sublabel={emergencyFundGoal && emergencyFundSuggestion > 0 ? "of moat" : "no goal yet"}
                 size={124}
                 thickness={10}
                 className="justify-self-center sm:justify-self-start"

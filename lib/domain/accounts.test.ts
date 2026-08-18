@@ -4,6 +4,7 @@ import {
   getAccountBalanceBreakdown,
   getAccountTotals,
   normalizeOpeningBalance,
+  listedAccounts,
   reconcileAccountBalances,
 } from "@/lib/domain/accounts";
 import type { Account, Transaction } from "@/lib/types";
@@ -221,5 +222,37 @@ describe("reconcileAccountBalances with a linked fee", () => {
     const [reconciled] = reconcileAccountBalances([account], transactions);
 
     expect(reconciled.balance).toBe(48_750);
+  });
+});
+
+describe("listedAccounts", () => {
+  const account = (id: string, type: Account["type"], balance: number, isArchived = false) => ({
+    id,
+    userId: "u1",
+    name: id,
+    type,
+    openingBalance: 0,
+    balance,
+    isArchived,
+    createdAt: "x",
+    updatedAt: "x",
+  });
+
+  it("hides an untouched lending or borrowing pool", () => {
+    const accounts = [
+      account("cash", "cash", 1000),
+      account("lent", "receivable", 0),
+      account("borrowed", "debt", 0),
+    ];
+    expect(listedAccounts(accounts).map((a) => a.id)).toEqual(["cash"]);
+  });
+
+  it("shows a pool once it carries a balance", () => {
+    const accounts = [account("cash", "cash", 1000), account("lent", "receivable", 5000)];
+    expect(listedAccounts(accounts).map((a) => a.id)).toEqual(["cash", "lent"]);
+  });
+
+  it("never counts archived accounts", () => {
+    expect(listedAccounts([account("old", "bank", 900, true)])).toEqual([]);
   });
 });

@@ -28,7 +28,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
-import { isEditableTransaction } from "@/lib/domain/transaction-cascade";
+import { isEditableTransaction, transferLegs } from "@/lib/domain/transaction-cascade";
 
 type Props = {
   accounts: Account[];
@@ -62,7 +62,7 @@ const presentationByType: Record<TransactionType, RowPresentation> = {
     icon: IconArrowsExchange,
     iconClass: "bg-muted text-muted-foreground",
     tone: "neutral",
-    signed: false,
+    signed: true,
   },
 };
 
@@ -110,6 +110,12 @@ export function TransactionList({
               const account = accounts.find((a) => a.id === transaction.accountId);
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
+              const legs = isTransfer ? transferLegs(transaction, transactions) : null;
+              const route = legs
+                ? `${accounts.find((a) => a.id === legs.source.accountId)?.name ?? "Unknown"} → ${
+                    accounts.find((a) => a.id === legs.destination.accountId)?.name ?? "Unknown"
+                  }`
+                : null;
               const isLinkedFee = Boolean(transaction.feeParentId);
               const canEdit = isEditableTransaction(transaction, transactions);
               const presentation = presentationByType[transaction.type];
@@ -141,7 +147,7 @@ export function TransactionList({
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="truncate text-sm font-medium text-foreground">{title}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {account?.name ?? "—"}
+                        {route ?? account?.name ?? "—"}
                         {category && !isTransfer ? ` · ${category.name}` : ""}
                         {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
                         {isLinkedFee ? " · Fee" : ""}

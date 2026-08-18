@@ -117,9 +117,9 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
           </Link>
 
           <details className="group">
-            <summary className="cursor-pointer list-none rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              How this period moved
-              <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+            <summary className="flex cursor-pointer list-none items-center gap-1 rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Opening to closing, step by step
+              <IconChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" />
             </summary>
             <div className="pt-2">
               <DashboardBalanceBridge
