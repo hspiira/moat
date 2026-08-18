@@ -1,7 +1,10 @@
 import { reconcileDefaultAccounts } from "@/lib/app-state/default-accounts";
 import { reconcileDefaultCategories } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { planCategoryMerge } from "@/lib/domain/category-merge";
+import { countCategoryUsage } from "@/lib/domain/category-usage";
 import { findTransactionTypeDrift } from "@/lib/domain/transaction-type-drift";
+import { applyCategoryMerge } from "@/lib/repositories/category-references";
 import { repositories } from "@/lib/repositories/instance";
 import { repairMoneyDrift } from "@/lib/repositories/money-drift-repair";
 import type {
@@ -88,15 +91,24 @@ export async function loadWorkspaceSnapshot(
   ]);
 
   const accounts = await repairAccounts(storedAccounts, storedTransactions, userId, timestamp);
-  const categories = await repairCategories(storedCategories, userId);
-  const backfilled = await backfillCounterparties(userId, storedTransactions);
+  const repair = await repairCategories(storedCategories, storedTransactions, userId, timestamp);
+  const categories = repair.categories;
+
+  const [refiledTransactions, refiledLineItems] = repair.merged
+    ? await Promise.all([
+        repositories.transactions.listByUser(userId),
+        repositories.transactionLineItems.listByUser(userId),
+      ])
+    : [storedTransactions, lineItems];
+
+  const backfilled = await backfillCounterparties(userId, refiledTransactions);
   const transactions = await repairTypeDrift(backfilled, categories, timestamp);
 
   return {
     accounts,
     categories,
     transactions,
-    lineItems,
+    lineItems: refiledLineItems,
     budgets,
     captureReviewItems,
     transactionRules,
@@ -119,11 +131,37 @@ async function repairAccounts(
   return reconcileAccountBalances([...stored, ...seeds], transactions);
 }
 
-async function repairCategories(stored: Category[], userId: string): Promise<Category[]> {
+type CategoryRepair = {
+  categories: Category[];
+  merged: boolean;
+};
+
+async function repairCategories(
+  stored: Category[],
+  transactions: Transaction[],
+  userId: string,
+  timestamp: string,
+): Promise<CategoryRepair> {
   const fixes = reconcileDefaultCategories(stored, userId);
-  if (fixes.length === 0) return stored;
-  await Promise.all(fixes.map((category) => repositories.categories.upsert(category)));
-  return repositories.categories.listByUser(userId);
+  if (fixes.length > 0) {
+    await Promise.all(fixes.map((category) => repositories.categories.upsert(category)));
+  }
+
+  const current =
+    fixes.length > 0 ? await repositories.categories.listByUser(userId) : stored;
+
+  const plan = planCategoryMerge(current, countCategoryUsage(transactions));
+  if (plan.removedIds.length === 0) {
+    return { categories: current, merged: false };
+  }
+
+  await applyCategoryMerge({ userId, plan, timestamp });
+  console.warn(
+    `Moat: folded ${plan.removedIds.length} duplicate categor${plan.removedIds.length === 1 ? "y" : "ies"} into the copy that was already in use.`,
+    plan.removedIds,
+  );
+
+  return { categories: await repositories.categories.listByUser(userId), merged: true };
 }
 
 async function repairTypeDrift(

@@ -12,9 +12,9 @@ import {
 } from "@tabler/icons-react";
 
 import { useHasNativeBridge } from "@/components/hooks/use-native-bridge";
+import { Button } from "@/components/ui/button";
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
-import { CategoriesPanel } from "./settings/categories-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PasskeyPanel } from "./settings/passkey-panel";
@@ -74,9 +74,11 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconTags}
         title="Categories"
-        description="What each one has cost you. Rename, add, or hide the ones you never use."
+        description="What each one has cost you, and where duplicates crept in."
       >
-        <CategoriesPanel />
+        <Button asChild variant="outline" className="justify-self-start">
+          <Link href="/settings/categories">Manage categories</Link>
+        </Button>
       </SettingsSection>
 
       {hasNativeBridge ? (

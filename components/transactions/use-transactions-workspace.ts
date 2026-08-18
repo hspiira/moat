@@ -27,6 +27,7 @@ import { getUnresolvedTransactions } from "@/lib/domain/reconciliation";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
+import { findCategoryByName } from "@/lib/domain/category-merge";
 import { countCategoryUsage } from "@/lib/domain/category-usage";
 import { currentMonthIso } from "@/lib/today";
 import { isReservedAccount } from "@/lib/domain/reserved-accounts";
@@ -393,10 +394,16 @@ export function useTransactionsWorkspace() {
       const trimmed = name.trim();
       if (!trimmed) return null;
 
-      const existing = categories.find(
-        (category) => category.name.toLowerCase() === trimmed.toLowerCase(),
-      );
-      if (existing) return existing;
+      const existing = findCategoryByName(categories, trimmed, kind);
+      if (existing) {
+        if (!existing.isArchived) return existing;
+        const revived = { ...existing, isArchived: false };
+        await repositories.categories.upsert(revived);
+        setCategories((current) =>
+          current.map((entry) => (entry.id === revived.id ? revived : entry)),
+        );
+        return revived;
+      }
 
       const category: Category = {
         id: createId(),
