@@ -91,11 +91,6 @@ function inferMinimumPayment(account: Account, outstandingBalance: number, avera
   return Math.max(outstandingBalance * DEFAULT_MIN_PAYMENT_RATE + interestOnly, interestOnly);
 }
 
-/**
- * Without a rate, a term, or a payment history, `inferMinimumPayment` falls
- * through to `DEFAULT_MIN_PAYMENT_RATE` and every balance projects to the same
- * ~34 months — a number that looks like a schedule but is just 1/0.03.
- */
 function hasProjectableSchedule(account: Account, averagePayment: number): boolean {
   return (
     averagePayment > 0 ||
@@ -119,14 +114,6 @@ function compareDebtsByStrategy(strategy: DebtPayoffStrategy) {
   };
 }
 
-/**
- * Payments recorded against a loan.
- *
- * Two shapes exist. New payments arrive as the principal leg of a transfer into
- * the loan (a positive amount on a liability account moves it toward zero).
- * Rows written before payments were split are still typed `debt_payment`, and
- * are counted here so history keeps reporting rather than resetting to zero.
- */
 export function getDebtPayments(account: Account, transactions: Transaction[]) {
   return transactions.filter(
     (transaction) =>
@@ -197,7 +184,6 @@ export function getDebtSummary(account: Account, transactions: Transaction[]): D
   };
 }
 
-/** Informal borrowing is excluded — `borrowing.ts` reports it instead. */
 export function getDebtPortfolioSummary(accounts: Account[], transactions: Transaction[]) {
   return accounts
     .filter((account) => !isInformalDebt(account))

@@ -10,18 +10,8 @@ import type { Account, CaptureReviewItem, Category } from "@/lib/types";
 
 const inflowTypes = new Set(["income"]);
 
-// The amount above already establishes the currency, so the fee line carries
-// digits only — the full "USh 2,875" string is wide enough to overflow a phone.
 const feeFormatter = new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 });
 
-/**
- * One captured item, in every section. Date and account lead the line because
- * that is what separates two captures from the same payee for the same amount.
- *
- * Open items get a one-tap approve, so clearing a batch of correctly parsed
- * messages never means opening anything. Everything else — reading the full
- * record, correcting a field, rejecting — happens in the sheet behind the row.
- */
 export function CaptureReviewRow({
   item,
   accounts,
@@ -46,8 +36,6 @@ export function CaptureReviewRow({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      {/* The row body and the approve action are siblings: nesting a button
-          inside a button is invalid, and the whole row should stay tappable. */}
       <button
         type="button"
         onClick={() => onOpen(item)}
@@ -72,8 +60,6 @@ export function CaptureReviewRow({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-0.5">
-          {/* Same weight and scale the ledger gives an amount: the value is the
-              thing being scanned for, so it outranks the labels around it. */}
           <Money
             amount={item.normalizedAmount}
             currency="UGX"

@@ -10,14 +10,6 @@ import type { ChangeMetric } from "@/lib/domain/dashboard";
 
 const TARGET_MONTHS = 3;
 
-/**
- * Period-over-period delta shown beside a flow figure.
- *
- * Deliberately neutral. It used to be scored green/red for "good"/"bad", but
- * that put a red badge beside a green income figure on the same row — two
- * opposite colour codes an inch apart. Colour belongs to money amounts only;
- * a delta is a fact, and the arrow plus the number states it.
- */
 function ChangeBadge({ change, label }: { change: ChangeMetric; label: string }) {
   if (change.kind === "none") {
     return null;
@@ -57,11 +49,6 @@ function ChangeBadge({ change, label }: { change: ChangeMetric; label: string })
   );
 }
 
-/**
- * Dashboard hero: the moat itself. Answers "how protected am I?" before
- * "what's my balance?" — total position paired with months of cover shown
- * as the signature ring, then this period's flow.
- */
 export function DashboardMoatHero({
   totalBalance,
   accountCount,
@@ -170,8 +157,6 @@ function FlowStat({
   children: React.ReactNode;
 }) {
   return (
-    // Mobile: full-width label/value row so money never has to wrap.
-    // sm and up: stacked label-over-value in a three-column band.
     <div className="flex min-w-0 items-baseline justify-between gap-2 sm:block sm:space-y-1">
       <dt className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
         {icon}

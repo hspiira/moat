@@ -20,7 +20,6 @@ type Props = {
   onDelete?: (accountId: string) => void;
 };
 
-// Every action lives on the account's own page, so the balances line up in one column.
 function AccountRow({ account }: { account: Account }) {
   return (
     <div className="group relative -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/25">
@@ -50,7 +49,6 @@ export function AccountList({
   const active = accounts.filter((a) => !a.isArchived);
   const archived = accounts.filter((a) => a.isArchived);
 
-  // One pass over the ledger instead of a full scan per account per render.
   const deletable = useMemo(() => {
     const counts = new Map<string, number>();
     for (const transaction of transactions) {
@@ -63,7 +61,6 @@ export function AccountList({
     );
   }, [accounts, transactions]);
 
-  // Claims are excluded: including them would stop this column matching the total.
   const holdings = active
     .filter((account) => !CLAIM_TYPES.includes(account.type))
     .sort((left, right) => right.balance - left.balance || left.name.localeCompare(right.name));

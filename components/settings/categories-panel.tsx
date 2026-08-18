@@ -14,14 +14,6 @@ import { formatDate } from "@/lib/format-date";
 import { repositories } from "@/lib/repositories/instance";
 import type { Category, CategoryKind } from "@/lib/types";
 
-/**
- * What each category has actually cost, and the three things you can do about
- * it: rename, hide, add a new one.
- *
- * A category is never deleted. A transaction stores a categoryId, so removing
- * one would leave history pointing at nothing. Hiding takes it out of the
- * picker and leaves the past intact.
- */
 export function CategoriesPanel() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Parameters<typeof buildCategoryOverview>[1]>([]);

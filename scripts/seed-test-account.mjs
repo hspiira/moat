@@ -1,8 +1,3 @@
-// Loads a Moat export into a browser's IndexedDB for testing. Plaintext, so it
-// only works before a PIN is set.
-//
-//   node scripts/seed-test-account.mjs <export.json> [url]
-
 import { readFileSync } from "node:fs";
 
 const DATABASE_NAME = "moat-db";

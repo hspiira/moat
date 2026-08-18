@@ -16,8 +16,6 @@ export function TransactionsCaptureReviewWorkspace() {
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
-      {/* A fragment, not another grid: the frame already wraps children in a
-          gap-5 grid, so nesting an identical one only added a DOM layer. */}
       <>
         <CaptureReviewSectionLinks current="capture" />
         <CaptureReviewQueue

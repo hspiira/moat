@@ -11,10 +11,6 @@ export type LedgerRow = {
   accountId: string;
 };
 
-/**
- * A browser holding the fixture ledger, with the clock frozen so "today" and
- * the current month never drift.
- */
 export async function openSeededApp(page: Page, path = "/transactions") {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
@@ -48,11 +44,6 @@ export function readTransactions(page: Page): Promise<LedgerRow[]> {
   }) as Promise<LedgerRow[]>;
 }
 
-/**
- * The invariants that broke in production and were invisible to the suite: a
- * fee pointing at a row that no longer exists, a transfer group that stopped
- * summing to zero, and a leg left without its partner.
- */
 export async function expectLedgerIntact(page: Page) {
   const rows = await readTransactions(page);
   const ids = new Set(rows.map((row) => row.id));
@@ -78,7 +69,6 @@ export async function expectLedgerIntact(page: Page) {
   return rows;
 }
 
-/** A grid item with min-width:auto silently pushed the page sideways twice. */
 export async function expectNoSidewaysScroll(page: Page) {
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

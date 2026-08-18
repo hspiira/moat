@@ -3,7 +3,6 @@ import type { Transaction } from "@/lib/types";
 import type { TransactionFormState } from "./transaction-form";
 
 export type TransactionEdit = {
-  /** For a transfer, the source leg. */
   editingId: string;
   form: TransactionFormState;
 };

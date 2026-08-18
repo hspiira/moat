@@ -23,7 +23,6 @@ import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
 import { createId } from "@/lib/ids";
 import { currentMonthIso } from "@/lib/today";
 
-
 function sortGoals(goals: Goal[]) {
   return [...goals].sort((left, right) => left.priority - right.priority);
 }
@@ -179,8 +178,6 @@ export function useGoalsWorkspace() {
   }
 
   function beginGoalEdit(goal: Goal) {
-    // Edit from the stored goal, not the derived one, so the manually
-    // entered starting amount round-trips without absorbing contributions.
     const storedGoal = goals.find((candidate) => candidate.id === goal.id) ?? goal;
     setEditingGoalId(storedGoal.id);
     setGoalForm({

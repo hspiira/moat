@@ -220,7 +220,6 @@ describe("reconcileAccountBalances with a linked fee", () => {
 
     const [reconciled] = reconcileAccountBalances([account], transactions);
 
-    // opening 100_000 - 50_000 - 1_250
     expect(reconciled.balance).toBe(48_750);
   });
 });

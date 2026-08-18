@@ -1,16 +1,3 @@
-/**
- * Timestamps are stored as text, not timestamptz.
- *
- * Pull is paged with a keyset cursor the client compares as a string, so the
- * server has to order records exactly the way the client orders them. ISO-8601
- * UTC from `toISOString()` is fixed width, so sorting it lexicographically and
- * sorting it chronologically give the same answer. Keeping it as text removes
- * any chance of Postgres and JavaScript disagreeing about precision or zone.
- *
- * The ordering columns are collate "C" so comparison is byte order, which is
- * what the client's string comparison does. Under a locale collation Postgres
- * can order punctuation differently and the page boundaries would not line up.
- */
 export const SCHEMA_SQL = `
 create table if not exists sync_users (
   user_id     text primary key,

@@ -37,7 +37,6 @@ export const goalFocusOptions: { value: InvestmentProfile["goalFocus"]; label: s
   { value: "house_construction", label: "House / Construction" },
 ];
 
-
 export function InvestmentEmptyState() {
   return (
     <Card className="shadow-none">

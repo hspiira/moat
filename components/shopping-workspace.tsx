@@ -72,8 +72,6 @@ export function ShoppingWorkspace() {
           </Button>
         </div>
 
-        {/* The list is what you came for; the form is what you occasionally
-            need. It opens on request rather than sitting above every visit. */}
         {isAddOpen ? (
           <div className="grid gap-2 rounded-lg border border-border/40 p-3">
             <PlannerAddForm

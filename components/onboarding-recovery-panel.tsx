@@ -78,7 +78,6 @@ export function OnboardingRecoveryPanel({
         try {
           await refreshDriveFiles();
         } catch {
-          // Leave the user in manual reconnect mode if listing fails.
         }
       }
     })();

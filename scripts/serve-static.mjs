@@ -1,9 +1,3 @@
-// Serves the static export for the end-to-end run. `next build` with
-// output: "export" writes /month.html, but the app links to /month, so a plain
-// file server 404s on every route.
-//
-//   node scripts/serve-static.mjs [dir] [port]
-
 import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";

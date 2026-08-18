@@ -14,8 +14,6 @@ export type SyncPushRequest = {
     operation: SyncOutboxItem["operation"];
     payload: string;
     queuedAt: string;
-    // The serverVersionToken this edit was based on. Lets the server tell a
-    // newer version apart from a divergent one. Clients do not send it yet.
     baseVersionToken?: string;
   }>;
 };
@@ -43,9 +41,7 @@ export type SyncPushResponse = {
 
 export type SyncPullRequest = {
   userId: string;
-  // Cursor from the previous page's nextSince. A bare timestamp also works.
   since?: string;
-  // Clamped server-side. See lib/sync/cursor.ts.
   limit?: number;
 };
 
@@ -61,7 +57,6 @@ export type SyncPullRecord = {
 export type SyncPullResponse = {
   syncedAt: string;
   records: SyncPullRecord[];
-  // Pass as the next request's since. Unchanged when the page was empty.
   nextSince?: string;
   hasMore?: boolean;
 };

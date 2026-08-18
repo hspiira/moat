@@ -39,10 +39,6 @@ function isStandaloneDisplay() {
   );
 }
 
-// iOS Safari never fires beforeinstallprompt, so the only way to detect an
-// installable iOS session is by platform sniffing. iPadOS 13+ reports as
-// "MacIntel" with touch support, which is what the maxTouchPoints check
-// disambiguates from an actual Mac.
 function isIosDevice() {
   if (typeof window === "undefined") {
     return false;
@@ -72,8 +68,6 @@ export function PwaStatus() {
     setIsInstalled(isStandaloneDisplay());
     setIsIos(isIosDevice());
     setHasBackup(Boolean(readGoogleDriveBackupPreferences().lastBackupAt));
-    // Asks the browser to exempt the ledger from eviction. Declining is normal
-    // and not an error; it only means a backup matters more.
     void ensurePersistentStorage().then(setDurability);
 
     function handleOnline() {
@@ -136,22 +130,12 @@ export function PwaStatus() {
 
   const shouldShowInstall = Boolean(installPrompt) && !isInstalled;
   const shouldShowIosInstall = isIos && !isInstalled && !installPrompt;
-  // iOS aggressively evicts PWA storage under disk pressure, so an unbacked-up
-  // device risks silent data loss in a way Android doesn't. Surface this
-  // everywhere, not just in settings.
-  // Nothing to lose yet, so nothing to warn about. Telling a prospect their
-  // records could be cleared before they have any reads as a broken app.
   const hasProfile = profilePresence === "present";
   const shouldShowBackupNudge = isIos && !hasBackup && hasProfile;
 
-  // The browser may clear an evictable origin without asking. That was already
-  // true on iOS and warned about there; it is true on Chromium and Firefox too
-  // whenever the persist request was refused.
   const isAtRisk = Boolean(durability && isEvictable(durability)) && hasProfile && !hasBackup;
   const isLowOnSpace = Boolean(durability && isRunningLowOnSpace(durability)) && hasProfile;
 
-  // One message, most urgent first. The iOS line is a fallback for a browser
-  // that does not report a storage state at all.
   const storageWarning = isLowOnSpace
     ? "Device storage is nearly full, which is when a browser starts clearing app data."
     : isAtRisk

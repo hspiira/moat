@@ -113,8 +113,6 @@ describe("planAccountMerge", () => {
     expect(
       plan.transactions.every((row) => row.counterpartyId === plan.counterparty.id),
     ).toBe(true);
-    // The transfer pair must stay balanced, so the moved leg keeps its group
-    // and its amount untouched.
     expect(plan.transactions[0].transferGroupId).toBe("transfer:abc");
     expect(plan.transactions[0].amount).toBe(120_000);
   });
@@ -142,7 +140,6 @@ describe("planAccountMerge", () => {
     if (plan.blocked !== undefined) return;
 
     expect(plan.counterparty.openingBalance).toBe(300_000);
-    // Net worth cannot move: the pool gains exactly what the account took away.
     expect(plan.target.openingBalance).toBe(pool.openingBalance + 300_000);
     expect(plan.target.balance).toBe(pool.balance + 300_000);
   });

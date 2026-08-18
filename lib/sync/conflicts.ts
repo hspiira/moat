@@ -111,4 +111,3 @@ export async function resolveSyncConflictUseServer(
   });
   await bundle.syncOutbox.remove(outboxId);
 }
-

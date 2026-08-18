@@ -32,7 +32,6 @@ import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 import { DebtSummary } from "./debt-summary";
 import { accountTypeLabels } from "./account-form";
 
-
 function normalizeAccountId(value: string) {
   try {
     return decodeURIComponent(value);
@@ -40,7 +39,6 @@ function normalizeAccountId(value: string) {
     return value;
   }
 }
-
 
 export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const record = useRecordTransaction();
@@ -50,7 +48,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // getLedgerRows must stay oldest-first; the running balance depends on it.
   const ledgerRows = useMemo(
     () => (account ? getLedgerRows(account, transactions) : []),
     [account, transactions],
@@ -135,9 +132,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
   }, [accountId]);
 
   return (
-    // Grid items use min-width:auto, so any wide child pushes the whole page
-    // wider and the document scrolls sideways. min-w-0 lets the items shrink,
-    // which is what allows truncate to work on the rows below.
     <div className="grid min-w-0 gap-5">
       <header className="min-w-0 space-y-1">
         <h1 className="text-sm text-muted-foreground">
@@ -174,8 +168,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
 
       {!isLoading && profile && account ? (
         <>
-          {/* The account rows carry no controls, so every action for this
-              account lives here. */}
           <div className="flex gap-2">
             <Button
               onClick={() => record.open({ accountId: account.id })}
@@ -199,8 +191,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
           <section className="grid min-w-0 gap-2">
             <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h2 className="text-xs font-medium text-muted-foreground">History</h2>
-              {/* Money in and money out for this account. Each figure carries a
-                  sign and a word, so the meaning does not rest on colour. */}
               <p className="flex flex-wrap items-baseline gap-x-3 text-xs">
                 <span>
                   <span className="text-muted-foreground">In </span>
@@ -219,12 +209,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                 </EmptyState>
               ) : (
                 <>
-                  {/* Mobile: who or what leads each row in the foreground; the
-                      date is metadata and reads second. */}
-                  {/* min-w-0 is what makes the rows truncate. This list is a
-                      grid item, so its default min-width:auto sized it to the
-                      longest note, pushed the page past the viewport, and made
-                      the whole account page scroll sideways. */}
                   <ul className="flex min-w-0 flex-col divide-y divide-border/50 md:hidden">
                     {historyRows.map((row) => {
                       const category = categories.find((entry) => entry.id === row.categoryId);
@@ -271,7 +255,6 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                     })}
                   </ul>
 
-                  {/* Desktop: scrollable ledger table. Cells never wrap; Details truncates. */}
                   <div className="hidden md:block">
                     <Table>
                       <TableHeader>

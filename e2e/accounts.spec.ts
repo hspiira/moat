@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 import { expectNoSidewaysScroll, openSeededApp } from "./harness";
 import { ACCOUNTS, TRANSACTIONS } from "./fixtures/ledger";
 
-/** Opening balance plus every delta the fixture applies to this account. */
 async function currentBalance(page: import("@playwright/test").Page, accountId: string) {
   const account = Object.values(ACCOUNTS).find((entry) => entry.id === accountId)!;
   const delta = TRANSACTIONS.filter((row) => row.accountId === accountId).reduce(
@@ -17,7 +16,6 @@ test("accounts are listed by name alone", async ({ page }) => {
   const { errors } = await openSeededApp(page, "/accounts");
 
   await expect(page.getByRole("link", { name: /Open Pocket Cash ledger/ })).toBeVisible();
-  // The type headings and institution lines that used to take six lines per balance.
   await expect(page.getByRole("heading", { name: "Banks" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Mobile money" })).toHaveCount(0);
   await expectNoSidewaysScroll(page);
@@ -36,10 +34,6 @@ test("account history reads newest first and loads more on scroll", async ({ pag
   const firstPage = await rows.count();
   expect(firstPage, "the whole history rendered at once").toBeLessThanOrEqual(40);
 
-  // Every fixture row on this account is an expense and the account stays in
-  // credit, so the running balance falls as time moves forward. Read
-  // newest-first it climbs down the list, and the top row carries the
-  // account's current balance.
   const balances = (await rows.locator("div.mt-0\\.5").allInnerTexts()).map((text) =>
     Number(text.replace(/[^\d]/g, "")),
   );

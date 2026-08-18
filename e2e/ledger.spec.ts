@@ -5,7 +5,6 @@ import { TRANSACTIONS } from "./fixtures/ledger";
 
 type Page = import("@playwright/test").Page;
 
-/** Narrows to one row first: a fee offers no Edit, and it can sort first. */
 async function openRow(page: Page, payee: string) {
   await page.getByRole("searchbox").first().fill(payee);
   await page.waitForTimeout(1000);
@@ -48,7 +47,6 @@ test("deleting takes the whole group and nothing else", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   const after = await expectLedgerIntact(page);
-  // Both legs of the pair, never one.
   expect(before.length - after.length, "a transfer did not delete as a pair").toBe(2);
   expect(errors).toEqual([]);
 });

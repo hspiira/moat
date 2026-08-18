@@ -6,13 +6,6 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-/**
- * Money in and out by day of the month. Patterns a list can't show — salary
- * day, rent day, the weekend bleed — are shapes here.
- *
- * The sign lives in the cell text, so the tint is reinforcement rather than the
- * signal: a greyscale reading still separates a +45k day from a -45k one.
- */
 export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: string }) {
   const [year, monthIndex] = month.split("-").map(Number);
   const leadingBlanks = new Date(year, monthIndex - 1, 1).getDay();

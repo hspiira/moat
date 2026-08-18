@@ -17,9 +17,6 @@ type HomeOverviewProps = {
   modulePreviews: ModulePreview[];
 };
 
-// Local to the landing page rather than imported from the nav's icon map: the
-// nav module is "use client", and a marketing surface shouldn't be coupled to
-// navigation internals just to borrow five glyphs.
 const moduleIcons: Record<string, Icon> = {
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
@@ -48,9 +45,6 @@ const principles = [
 
 export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
   return (
-    // No card chrome anywhere above sm: the app shell already provides the page
-    // gutter, so wrapping these sections in bg-background cards would stack a
-    // second inset on top of it without adding any visible structure.
     <div className="grid gap-10 sm:gap-12">
       <section className="grid gap-5 pt-1">
         <div className="grid gap-3">
@@ -93,8 +87,6 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
         />
         <div className="grid gap-3 lg:grid-cols-3">
           {principles.map((principle, index) => {
-            // The first principle carries the accent; the rest stay quiet so the
-            // page has a single entry point rather than three competing ones.
             const isLead = index === 0;
 
             return (
@@ -137,9 +129,6 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
           title="Explore the product"
           description="Every screen has one main job."
         />
-        {/* Rows, not tiles: five stacked colour-cycled cards read as five
-            competing blocks on a phone. A divided list scans in one pass and
-            keeps the tap targets full-width. */}
         <ul className="grid overflow-hidden rounded-xl">
           {modulePreviews.map((module, index) => {
             const IconComponent = moduleIcons[module.href];
@@ -157,9 +146,6 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
                     {IconComponent ? <IconComponent className="size-5" /> : null}
                   </span>
                   <span className="grid min-w-0 flex-1 gap-0.5">
-                    {/* min-h matches the icon chip so the title sits on the
-                        chip's centre line regardless of how far the summary
-                        wraps. */}
                     <span className="flex min-h-10 items-center font-medium text-foreground">
                       {module.title}
                     </span>

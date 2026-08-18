@@ -15,15 +15,6 @@ import { orderCategoriesForPicker } from "@/lib/domain/category-usage";
 import type { Category, CategoryKind, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/**
- * Category picker for transactions.
- *
- * A plain select listed all 25 categories under six headings every time, so
- * capturing an expense meant scrolling past Income, Savings, Transfers, Debt
- * and Lending to reach the fourteen that applied. Here the kinds the current
- * movement allows come first and the rest sit behind one toggle, and typing
- * filters everything — so the list stays short however many categories exist.
- */
 export function CategoryField({
   id = "tx-category",
   label = "Category",
@@ -39,12 +30,9 @@ export function CategoryField({
   label?: string;
   categories: Category[];
   value: string;
-  /** The movement in play. Its categories are offered first. */
   type: TransactionType;
-  /** Transactions per categoryId. The ones you use most are listed first. */
   usage?: Map<string, number>;
   onSelect: (category: Category) => void;
-  /** Omit to hide the create row, as in a review screen. */
   onCreate?: (name: string, kind: CategoryKind) => void;
   error?: string | null;
 }) {
@@ -56,7 +44,6 @@ export function CategoryField({
   const selected = categories.find((category) => category.id === value);
   const preferredKinds = useMemo(() => allowedCategoryKinds[type] ?? [], [type]);
 
-  // Most used first, and hidden categories left out unless still in use.
   const ranked = useMemo(
     () => orderCategoriesForPicker(categories, usage ?? new Map()),
     [categories, usage],
@@ -68,8 +55,6 @@ export function CategoryField({
       ? ranked.filter((category) => category.name.toLowerCase().includes(needle))
       : ranked;
 
-    // Searching means the user knows what they want; scoping the results to
-    // one movement would just hide it.
     const kinds = needle || showAll ? categoryKindOrder : preferredKinds;
 
     return kinds
@@ -86,8 +71,6 @@ export function CategoryField({
     return ranked.filter((category) => !preferredKinds.includes(category.kind)).length;
   }, [ranked, showAll, query, preferredKinds]);
 
-  // A new category takes the kind of the movement in play, so it is valid for
-  // this transaction the moment it is made.
   const newCategoryKind: CategoryKind = preferredKinds[0] ?? "expense";
   const trimmedQuery = query.trim();
   const canCreate =
@@ -156,8 +139,6 @@ export function CategoryField({
             />
           </div>
 
-          {/* Capped so the list can never grow past the viewport, however many
-              categories a user adds. */}
           <div className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain px-1.5 pb-1.5">
             {groups.length === 0 && !canCreate ? (
               <p className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -202,9 +183,6 @@ export function CategoryField({
               </button>
             ) : null}
 
-            {/* Type a name nobody has used yet and make it here. The kind comes
-                from the movement in play, so the user is never asked what a
-                category "kind" is. */}
             {canCreate ? (
               <button
                 type="button"

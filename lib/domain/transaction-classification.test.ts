@@ -39,8 +39,6 @@ describe("allowedCategoryKinds", () => {
   });
 
   it("never lets a purpose kind be reachable from more than one type", () => {
-    // The bug this whole module exists to prevent: two types sharing a kind is
-    // what let "Debt payment" be paired with "Food".
     const seen = new Map<string, string>();
 
     for (const [type, kinds] of Object.entries(allowedCategoryKinds)) {
@@ -61,7 +59,6 @@ describe("transactionTypeForCategory", () => {
       ["savings", "savings", "savings_contribution"],
       ["transfers", "transfer", "transfer"],
       ["debt-repayment", "debt_repayment", "debt_payment"],
-      // Lending is a transfer into a receivable, not a category of spending.
       ["lending", "lending", "transfer"],
     ];
 
@@ -86,8 +83,6 @@ describe("transactionTypeForCategory", () => {
   });
 
   it("always derives a type the category is actually valid for", () => {
-    // The round trip that makes the picker safe: choosing any category and
-    // deriving its type can never produce the mismatch this module prevents.
     for (const entry of catalogue) {
       const derived = transactionTypeForCategory(entry);
       expect(categoryMatchesType(entry, derived), `${entry.id} -> ${derived}`).toBe(true);
@@ -166,8 +161,6 @@ describe("assertCategoryMatchesType", () => {
 });
 
 describe("coerceCategoryForType", () => {
-  // Imported and parsed rows have no user present to fix a mismatch, so they
-  // are snapped to something coherent rather than thrown away.
   it("leaves a coherent pair alone", () => {
     expect(coerceCategoryForType(catalogue, "expense", "category:food")).toBe("category:food");
   });

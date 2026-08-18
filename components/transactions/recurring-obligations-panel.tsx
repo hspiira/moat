@@ -49,11 +49,6 @@ type ObligationFormState = {
   payee: string;
 };
 
-/**
- * Narrows an evaluation's obligation to the persisted shape. Suggested ones
- * (identified by their `suggested:` id prefix) are not persisted and cannot be
- * paused — they are offered for tracking instead.
- */
 function isPersistedObligation(
   obligation: RecurringObligation | SuggestedRecurringObligation,
 ): obligation is RecurringObligation {
@@ -84,15 +79,6 @@ type Props = {
   onToggleObligation: (obligation: RecurringObligation) => void;
 };
 
-/**
- * Recurring bills, grouped by what they still need from you.
- *
- * The old list was flat, printed `evaluation.state` verbatim so a row read
- * "… · missing", and never showed the due day even though it was captured. It
- * also rendered evaluations only — and evaluation covers active bills — so
- * pausing a bill removed it from the screen together with the Resume button
- * that was its only way back.
- */
 export function RecurringObligationsPanel({
   accounts,
   categories,
@@ -111,8 +97,6 @@ export function RecurringObligationsPanel({
     ...accountOptions(accounts),
   ];
 
-  // Memoised: `form` state changes on every keystroke, and regrouping every
-  // bill on each one is wasted work.
   const sections = useMemo(
     () => getRecurringSections({ evaluations, obligations, today }),
     [evaluations, obligations, today],
@@ -427,7 +411,6 @@ function BillRow({
 
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-          {/* State in words, never the raw enum, and never colour alone. */}
           {due.isOverdue && !isPaid ? (
             <>
               <IconAlertTriangle aria-hidden className="size-3.5 shrink-0 text-neg" />

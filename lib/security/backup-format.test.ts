@@ -30,8 +30,6 @@ describe("detectBackupFormat", () => {
   });
 
   it("recognises a plaintext export", () => {
-    // The bug this guards: a plaintext export parses as JSON, so the restore
-    // flow used to hand it to the decrypter and report a wrong-PIN error.
     const result = detectBackupFormat(PLAIN_EXPORT);
     expect(result.kind).toBe("plain");
   });
@@ -47,7 +45,6 @@ describe("detectBackupFormat", () => {
   });
 
   it("does not mistake a partial object for an export", () => {
-    // schemaVersion alone is not enough — two independent markers are required.
     const result = detectBackupFormat(JSON.stringify({ schemaVersion: 1 }));
     expect(result.kind).toBe("unrecognised");
   });

@@ -15,8 +15,6 @@ function requireBearerToken() {
   }
 }
 
-// The shared validators throw plain Errors. Turn those into 400s here so an
-// unexpected fault elsewhere is still reported as a 500.
 function validate<T>(run: () => T): T {
   try {
     return run();
@@ -25,8 +23,6 @@ function validate<T>(run: () => T): T {
   }
 }
 
-// Says what is wrong rather than returning a bare 500, so a misconfigured
-// deploy is obvious from the health check alone.
 async function checkHealth(): Promise<[number, unknown]> {
   const problems: string[] = [];
 

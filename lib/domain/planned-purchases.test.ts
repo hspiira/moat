@@ -72,8 +72,6 @@ describe("groupPlannerRows", () => {
 
 describe("fulfillment", () => {
   it("records what was paid, not what was estimated", () => {
-    // The price memory is derived from these line items. Writing the estimate
-    // here made "what it cost last time" echo back your own guess.
     const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
     const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {
       unitPrice: 4200,
@@ -108,8 +106,6 @@ describe("fulfillment", () => {
   });
 
   it("keeps the planned quantity when none is given", () => {
-    // Quantity may be inherited; price may not. An unstated quantity is still
-    // the plan, but an unstated price is genuinely unknown.
     const planned = purchase({ quantity: 2, estimatedUnitPrice: 3500 });
     const lineItem = buildFulfillmentLineItem(planned, sugar, "transaction:t1", now, {
       unitPrice: 4200,
@@ -157,8 +153,6 @@ describe("sumFulfillmentCost", () => {
   });
 
   it("skips entries with no price rather than counting them as free", () => {
-    // Counting an unpriced row as zero would understate the expense; it is
-    // simply not known yet, and the sheet says so.
     expect(sumFulfillmentCost([{ quantity: 2, unitPrice: 4500 }, { quantity: 3 }])).toBe(9000);
   });
 

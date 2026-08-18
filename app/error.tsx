@@ -15,10 +15,7 @@ export default function RouteError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface the failure for debugging without leaking details to the UI.
     console.error(error);
-    // A stale cached client is the most common cause of a crashed screen —
-    // recover automatically instead of asking the user to clear anything.
     if (isChunkLoadError(error)) {
       void purgeStaleClientAndReload();
     }

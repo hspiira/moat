@@ -24,18 +24,9 @@ type Props = {
   isSubmitting: boolean;
   initialInput?: string;
   onSaveCaptured: (candidates: ParsedCaptureCandidate[]) => Promise<void>;
-  /** When true, render just the content for use inside a sheet (no card chrome). */
   embedded?: boolean;
 };
 
-/**
- * Some banks — Centenary in particular — charge a fee they never state in the
- * alert, but they do state the resulting balance. The difference between that
- * balance and what the recorded ledger predicts is the fee, so it can be
- * recovered rather than silently lost. Offered as one tap, never applied
- * automatically: it is inferred money, and this app does not post inferred
- * money to a ledger without the user agreeing.
- */
 function HiddenFeeNotice({
   candidate,
   existingTransactions,
@@ -50,8 +41,6 @@ function HiddenFeeNotice({
     [candidate, existingTransactions],
   );
 
-  // Only a shortfall is a fee. A positive gap is unrecorded money arriving,
-  // which is a different problem and not one to guess at.
   const fee = gap && gap.gap < 0 ? Math.abs(gap.gap) : 0;
   if (fee === 0) {
     return null;
@@ -335,7 +324,5 @@ export function TextCapturePanel({
     );
   }
 
-  // In the capture workspace the page title and method tabs already frame this,
-  // so render bare — matching the manual form.
   return content;
 }

@@ -33,19 +33,6 @@ const emptyMessages: Record<CaptureReviewSection, string> = {
   rejected: "No captures have been rejected.",
 };
 
-/**
- * The capture inbox: one scannable row per captured item, in every section.
- *
- * Every open item used to render as a full form, which meant parsing a batch of
- * five messages produced five stacked forms to scroll past. Reviewing is the
- * common case, so the queue now reads as a list and the form lives one tap away
- * in the sheet.
- *
- * Rendered bare, like the capture page's own form: the page header already says
- * what this screen is for, so a card around it only repeated that and charged
- * inset for it. Card padding inside the page gutter inside a bordered box per
- * item cost 53px on each side of a 375px screen, leaving form inputs 269px wide.
- */
 export function CaptureReviewQueue({
   accounts,
   categories,
@@ -69,19 +56,9 @@ export function CaptureReviewQueue({
   );
 
   return (
-    // min-w-0 stops the rail's min-content width (its tabs are shrink-0 and
-    // nowrap, so it measures ~490px) from propagating up and stretching the
-    // page grid. The card used to absorb this with overflow-hidden; without a
-    // card the constraint has to be stated.
     <div className="grid min-w-0 gap-3">
       <CaptureReviewFilterRail section={section} counts={counts} onSelect={setSection} />
 
-      {/* min-w-0 again, and it is the same trap as the rail: this is a grid
-          item, so min-width resolves to the subtree's min-content, and a
-          `truncate` block contributes its full untruncated text width because
-          overflow only zeroes that contribution for flex/grid items. Without it
-          a long payee stretched the list to 459px and the page clipped the
-          approve button off-screen. */}
       <div className="min-w-0">
         {sectionItems.length === 0 ? (
           <EmptyState className="py-10">{emptyMessages[section]}</EmptyState>

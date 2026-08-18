@@ -10,11 +10,6 @@ export type BalanceGap = {
 
 const TOLERANCE = 1;
 
-/**
- * Compares consecutive stated-balance checkpoints for a single account's
- * transactions. gap = (statedNow − statedPrev) − Σ(deltas since prev checkpoint).
- * A negative gap is money that left without being recorded — a suspected fee.
- */
 export function detectBalanceGaps(transactions: Transaction[]): BalanceGap[] {
   const sorted = [...transactions].sort((a, b) =>
     a.occurredOn === b.occurredOn
@@ -50,17 +45,6 @@ export function detectBalanceGaps(transactions: Transaction[]): BalanceGap[] {
   return gaps;
 }
 
-/**
- * Computes the gap for a pending review item by treating it as the newest
- * checkpoint on top of the account's existing ledger. Null when the item states
- * no balance.
- */
-/**
- * The fields the gap math actually reads. Both a CaptureReviewItem and a
- * CapturePipelineCandidate satisfy this, so the review inbox and the paste
- * module share one implementation — the paste module previously had no fee
- * detection at all purely because it holds candidates, not review items.
- */
 export type BalanceGapSubject = Pick<
   CaptureReviewItem,
   | "id"

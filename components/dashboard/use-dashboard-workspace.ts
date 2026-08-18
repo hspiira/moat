@@ -127,8 +127,6 @@ export function useDashboardWorkspace(profile: UserProfile) {
   );
   const { totalBalance } = useMemo(() => getAccountTotals(accounts), [accounts]);
   const coverMonths = summary.outflow > 0 && totalBalance > 0 ? totalBalance / summary.outflow : 0;
-  // Explicit obligations only: inferred bills are guesses, and a guess does
-  // not belong in a list of things asking for a decision.
   const billsDueSoon = useMemo(
     () =>
       getBillsDueSoon(
@@ -162,8 +160,6 @@ export function useDashboardWorkspace(profile: UserProfile) {
     [accounts],
   );
 
-  // Only show period-over-period deltas when the prior window actually had
-  // activity. Otherwise every tile reads "New", which is noise, not a signal.
   const hasComparablePrevious = previousTransactions.length > 0;
   const noChange: ChangeMetric = { kind: "none", value: null };
   const inflowChange = hasComparablePrevious
@@ -172,7 +168,6 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const outflowChange = hasComparablePrevious
     ? getChangePercent(summary.outflow, previousSummary.outflow)
     : noChange;
-
 
   return {
     period,

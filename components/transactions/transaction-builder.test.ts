@@ -53,8 +53,6 @@ describe("validateTransactionAmounts", () => {
   });
 
   it("accepts a grouped amount, because that is how people type money", () => {
-    // Number("1,790,590") is NaN, which used to reject a valid figure with
-    // "Amount must be greater than zero".
     expect(validateTransactionAmounts({ ...baseForm, amount: "1,790,590" })).toMatchObject({
       originalAmount: 1_790_590,
       normalizedAmount: 1_790_590,
@@ -72,8 +70,6 @@ describe("validateTransactionAmounts", () => {
   });
 
   it("stores the same rate the validation accepted", () => {
-    // Validation read the rate with parseAmountInput and the row stored it with
-    // Number(), so "3,700" passed the check and saved NaN.
     const [row] = [
       buildManualTransaction(
         buildInput({
@@ -117,8 +113,6 @@ describe("buildTransferPair", () => {
       }),
     );
 
-    // Both legs carry it: the loan leg is the destination when lending out and
-    // the source when borrowing, and only the loan account's own leg is read.
     expect(destination.expectedRepaymentDate).toBe("2026-09-01");
     expect(source.expectedRepaymentDate).toBe("2026-09-01");
   });
@@ -155,12 +149,6 @@ describe("buildTransferPair", () => {
     expect(destination.id).toBe(deriveSeededId(destination.transferGroupId!, "destination"));
   });
 
-  /**
-   * Editing used to be impossible for transfers, and the group id was always
-   * fresh because of it. Now that the form can reopen one, a fresh group would
-   * write a second balanced pair and orphan the first: the money would appear
-   * to have moved twice.
-   */
   it("overwrites both legs in place when editing an existing transfer", () => {
     const [source, destination] = buildTransferPair(
       buildInput({ form: { ...baseForm, type: "transfer" } }),
@@ -278,8 +266,6 @@ describe("buildDebtPaymentTransactions", () => {
   });
 
   it("reduces the loan by the principal, so the debt actually goes down", () => {
-    // The bug this replaces: a debt_payment on the debt account pushed the
-    // balance further negative, and one on the cash account left it untouched.
     const written = build();
     const onLoan = written
       .filter((entry) => entry.accountId === loan.id)
@@ -336,7 +322,6 @@ describe("buildDebtPaymentTransactions", () => {
     const firstInterest = earlier.find((entry) => entry.type === "expense");
     const secondInterest = withHistory.find((entry) => entry.type === "expense");
 
-    // Same payment date, but the clock restarts at the previous payment.
     expect(secondInterest).toBeUndefined();
     expect(firstInterest).toBeDefined();
   });
@@ -373,7 +358,6 @@ describe("buildManualTransaction", () => {
   ];
 
   it("refuses to write a debt payment against an ordinary expense category", () => {
-    // The picker already hides this pair; nothing stopped a caller writing it.
     expect(() =>
       buildManualTransaction(
         buildInput({ form: { ...baseForm, type: "debt_payment", categoryId: "category:food" } }),
@@ -497,12 +481,6 @@ describe("buildFeeTransaction", () => {
     expect(buildFeeTransaction(parentPayment, "abc", feesCategoryId("user:default"))).toBeNull();
   });
 
-  /**
-   * The fee used to take the id `${parent.id}:fee`, so an edit found it by
-   * guessing that string. After the cuid2 migration a stored fee carries an
-   * unrelated id, the guess missed, and saving added a second fee expense
-   * against the same payment — the outflow was counted twice.
-   */
   it("reuses the id of the fee already recorded against the payment", () => {
     const stored = buildFeeTransaction(parentPayment, "1250", feesCategoryId("user:default"))!;
     const migrated = { ...stored, id: "kf83nd0s7a2mqp1xhs9wztlb" };

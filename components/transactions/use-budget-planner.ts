@@ -1,8 +1,5 @@
 "use client";
 
-// Budget slice of the transactions workspace: form state and CRUD for
-// monthly budget targets. Composed inside useTransactionsWorkspace.
-
 import { useCallback, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";

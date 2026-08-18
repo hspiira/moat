@@ -35,11 +35,6 @@ const sourceLabels: Record<Transaction["source"], string> = {
   sms: "SMS",
 };
 
-/**
- * Read-only view of one transaction and the fee charged against it. Asking for
- * a fee row shows its parent instead: a fee on its own says nothing about what
- * was actually bought.
- */
 export function TransactionDetailSheet({
   transaction,
   transactions,
@@ -75,8 +70,6 @@ export function TransactionDetailSheet({
   const category = subject ? categories.find((entry) => entry.id === subject.categoryId) : undefined;
   const isOutflow = subject ? outflowTypes.has(subject.type) : false;
 
-  // A transfer showed only the leg you tapped, so the sheet never said where
-  // the money actually went.
   const legs = subject?.type === "transfer" ? transferLegs(subject, transactions) : null;
   const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name;
   const accountLabel = legs

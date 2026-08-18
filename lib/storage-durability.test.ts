@@ -64,7 +64,6 @@ describe("ensurePersistentStorage", () => {
     expect((await ensurePersistentStorage()).state).toBe("unknown");
   });
 
-  // An unsupported browser must not read as "your data is evictable".
   it("says unknown rather than guessing when the API is absent", async () => {
     stubStorage(null);
     const result = await ensurePersistentStorage();

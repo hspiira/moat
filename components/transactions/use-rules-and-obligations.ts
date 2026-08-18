@@ -1,8 +1,5 @@
 "use client";
 
-// Rules and recurring-obligation slice of the transactions workspace.
-// Composed inside useTransactionsWorkspace.
-
 import { useCallback, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";

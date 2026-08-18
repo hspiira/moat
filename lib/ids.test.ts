@@ -53,12 +53,6 @@ describe("deriveSeededId", () => {
     expect(ids.size).toBe(500);
   });
 
-  /**
-   * These are frozen on purpose. Derived ids must survive refactors and
-   * dependency bumps unchanged, because a device that recomputes one and gets a
-   * different answer creates a duplicate of a record it already has. If this
-   * test fails, the derivation changed and every seeded record needs migrating.
-   */
   it("matches its recorded output", () => {
     expect(deriveSeededId("user:default", "category:fees-charges")).toBe(
       "sc4jmmofomt72fxgmmza7w4z",

@@ -2,10 +2,6 @@ import type { Page } from "@playwright/test";
 
 import { storeNames } from "@/lib/repositories/store-names";
 
-/**
- * Writes an export bundle straight into IndexedDB. Records go in as-is, which
- * the app only reads back while no PIN is set, so this is a test account.
- */
 const BUNDLE_STORES: Record<string, string> = {
   userProfile: storeNames.userProfiles,
   accounts: storeNames.accounts,

@@ -11,7 +11,6 @@ export const USER_ID = "user:e2e";
 export const TODAY = "2026-08-17";
 const STAMP = `${TODAY}T09:00:00.000Z`;
 
-/** Frozen so "this month" and the default date never drift with the clock. */
 export const FIXED_NOW = new Date(`${TODAY}T09:00:00.000Z`);
 
 const account = (
@@ -101,7 +100,6 @@ const day = (offset: number) => {
   return date.toISOString().slice(0, 10);
 };
 
-// 60 ordinary rows so the 40-per-page account history has a second page.
 const ROUTINE: Transaction[] = Array.from({ length: 60 }, (_, index) =>
   transaction({
     id: `e2e-tx-routine-${String(index).padStart(2, "0")}`,
@@ -112,7 +110,6 @@ const ROUTINE: Transaction[] = Array.from({ length: 60 }, (_, index) =>
   }),
 );
 
-/** A payment and the fee charged against it, linked by feeParentId. */
 export const PAYMENT_WITH_FEE = transaction({
   id: "e2e-tx-with-fee",
   day: TODAY,
@@ -136,7 +133,6 @@ export const FEE_ON_PAYMENT: Transaction = {
   note: "Fee / charges",
 };
 
-/** A balanced pair. Deleting either leg must take both. */
 const TRANSFER_GROUP = "e2e-transfer-group";
 export const TRANSFER_OUT: Transaction = {
   ...transaction({
@@ -163,11 +159,6 @@ export const TRANSFER_IN: Transaction = {
   transferGroupId: TRANSFER_GROUP,
 };
 
-/**
- * A payee the parser left as a whole SMS line. This is what forced the ledger
- * row past the viewport: without min-w-0 the grid item sizes to min-content,
- * and short payees never reproduce it.
- */
 export const LONG_PAYEE = transaction({
   id: "e2e-tx-long-payee",
   day: day(1),
@@ -209,7 +200,6 @@ const PROFILE: UserProfile = {
   updatedAt: STAMP,
 };
 
-/** A schema-3 export bundle, the same shape a real backup restores from. */
 export function buildLedgerFixture() {
   return {
     exportedAt: STAMP,

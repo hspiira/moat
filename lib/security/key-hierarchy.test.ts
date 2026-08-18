@@ -13,7 +13,6 @@ import {
   wrapDekWithKek,
 } from "@/lib/security/key-hierarchy";
 
-// Keep tests fast: a low-cost Argon2id profile. Production uses the default.
 const FAST_PARAMS = {
   ...DEFAULT_ARGON2_PARAMS,
   timeCost: 1,
@@ -47,7 +46,6 @@ describe("key hierarchy", () => {
     const dek = await generateDek();
     const first = await createPinKeyMaterial("111111", dek, FAST_PARAMS);
 
-    // Encrypt something with the original DEK.
     const iv = randomBytes(12);
     const ciphertext = await crypto.subtle.encrypt(
       { name: "AES-GCM", iv },
@@ -55,11 +53,9 @@ describe("key hierarchy", () => {
       new TextEncoder().encode("secret balance"),
     );
 
-    // Change PIN: re-wrap the SAME dek under new material.
     const unwrapped = await unwrapDekWithPin("111111", first);
     const second = await createPinKeyMaterial("222222", unwrapped, FAST_PARAMS);
 
-    // The new material yields a DEK that still decrypts the old ciphertext.
     const dekAfterChange = await unwrapDekWithPin("222222", second);
     const plaintext = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv },
@@ -84,7 +80,6 @@ describe("key hierarchy", () => {
     const dek = await generateDek();
     const a = await createPinKeyMaterial("123456", dek, FAST_PARAMS);
     const b = await createPinKeyMaterial("123456", dek, FAST_PARAMS);
-    // Same PIN + same DEK still produce different salts and ciphertext.
     expect(a.salt).not.toBe(b.salt);
     expect(a.wrappedDek.ciphertext).not.toBe(b.wrappedDek.ciphertext);
   });

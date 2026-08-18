@@ -25,21 +25,10 @@ const defaultCategorySeeds: DefaultCategorySeed[] = [
   { name: "Savings", kind: "savings" },
   { name: "Investments", kind: "savings" },
   { name: "Transfers", kind: "transfer" },
-  // Distinct from the "Money lent out" account so the form does not read
-  // "to Money lent out / Money lent out". Its own kind keeps a loan out of both
-  // the expense list and ordinary account-to-account transfers.
   { name: "Lending", kind: "lending" },
-  // Not an expense: a debt payment reduces a liability. Its own kind keeps it
-  // out of the ordinary expense list, so it can never be filed under Food.
   { name: "Debt repayment", kind: "debt_repayment" },
-  // The interest half of a loan payment *is* an expense — it leaves and never
-  // comes back. Only the principal half is a balance-sheet move.
   { name: "Loan interest", kind: "expense" },
-  // Booking a bad loan as a loss. Lending itself is a transfer, not spending —
-  // only the write-off is an expense.
   { name: "Money written off", kind: "expense" },
-  // The mirror: a lender writing off what you owe them. Your liability falls
-  // and net worth rises, so it is income, not a negative expense.
   { name: "Debt forgiven", kind: "income" },
 ];
 
@@ -81,7 +70,6 @@ export function buildFeesCategory(userId: string): Category {
   };
 }
 
-/** The fees category to write, or null when one already exists. */
 export function ensureFeesCategory(
   stored: Category[],
   userId: string,
@@ -103,19 +91,6 @@ export function buildDefaultCategories(userId: string): Category[] {
   }));
 }
 
-/**
- * Brings a device's seeded categories up to date, returning only the records
- * that need writing.
- *
- * Seeds change over time. "Debt repayment" shipped as an ordinary expense, so
- * on a device set up before it got its own kind it still sits among Food and
- * Airtime — and because a debt payment now accepts only `debt_repayment`, it
- * would have no valid category at all. Changing `defaultCategorySeeds` fixes new
- * devices; this fixes the ones already out there.
- *
- * Only `isDefault` categories are ever touched, so a category the user made
- * themselves is never rewritten even if its id or name collides.
- */
 export function reconcileDefaultCategories(
   stored: Category[],
   userId: string,
@@ -123,9 +98,6 @@ export function reconcileDefaultCategories(
   const byId = new Map(stored.map((category) => [category.id, category]));
 
   return buildDefaultCategories(userId).flatMap((seed) => {
-    // Seeded ids became derived from the user id. A device set up before that
-    // holds the same category under its slug, so match both or every default
-    // is seeded a second time.
     const existing = byId.get(seed.id) ?? byId.get(categorySlug(seed.name));
 
     if (!existing) {
@@ -135,8 +107,6 @@ export function reconcileDefaultCategories(
       return [];
     }
 
-    // Correct the kind, keep everything the device already knows — including
-    // when it was first created and any rename the user made.
     return [{ ...existing, kind: seed.kind }];
   });
 }

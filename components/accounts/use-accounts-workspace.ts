@@ -18,7 +18,6 @@ import { createDefaultAccountForm, type AccountFormState } from "./account-form"
 import { createId } from "@/lib/ids";
 import { todayIso } from "@/lib/today";
 
-
 function toInstitutionType(type: AccountType): Account["institutionType"] {
   if (type === "bank") return "bank";
   if (type === "mobile_money") return "mobile_money";
@@ -86,8 +85,6 @@ export function useAccountsWorkspace() {
     event.preventDefault();
     if (!profile) return false;
 
-    // Debt accounts may carry a negative opening balance (money owed); every
-    // other type may not. Zero is always fine.
     const nextFieldErrors: { name?: string; openingBalance?: string } = {};
     if (!accountForm.name.trim()) {
       nextFieldErrors.name = "Give this account a name.";
@@ -249,9 +246,6 @@ export function useAccountsWorkspace() {
         throw new Error(plan.blocked);
       }
 
-      // The counterparty and the moved records land before the account goes.
-      // If this is interrupted the source is still there holding whatever has
-      // not moved, which is recoverable; removing it first would orphan them.
       await repositories.counterparties.upsert(plan.counterparty);
       await Promise.all(plan.transactions.map((row) => repositories.transactions.upsert(row)));
       await repositories.accounts.upsert(plan.target);

@@ -1,17 +1,5 @@
-/**
- * Whether the browser has promised to keep the ledger.
- *
- * IndexedDB in a "best-effort" origin is evictable: Chromium and Firefox may
- * clear it under storage pressure, and Safari expires unused origins. For an
- * app whose records exist nowhere else, that is silent total data loss.
- * `navigator.storage.persist()` moves the origin to "persistent", which
- * exempts it from that eviction.
- */
-
 export type StorageDurability = {
-  /** Unsupported browsers report "unknown" rather than a false negative. */
   state: "persisted" | "best-effort" | "unknown";
-  /** Fraction of the quota in use, when the browser reports both numbers. */
   usedFraction: number | null;
   usedBytes: number | null;
   quotaBytes: number | null;
@@ -24,7 +12,6 @@ const UNSUPPORTED: StorageDurability = {
   quotaBytes: null,
 };
 
-/** Above this, an eviction is close enough to warn about. */
 export const QUOTA_WARNING_FRACTION = 0.8;
 
 function storageManager(): StorageManager | null {
@@ -53,14 +40,6 @@ async function readUsage(storage: StorageManager) {
   }
 }
 
-/**
- * Asks once for persistent storage and reports where things stand.
- *
- * Chromium grants this without a prompt for an installed app or a site with
- * engagement, and declines silently otherwise; Firefox may prompt. A refusal
- * is not an error, it just means the data stays evictable and a backup matters
- * more, so this never throws.
- */
 export async function ensurePersistentStorage(): Promise<StorageDurability> {
   const storage = storageManager();
   if (!storage || typeof storage.persisted !== "function") {
@@ -82,7 +61,6 @@ export async function ensurePersistentStorage(): Promise<StorageDurability> {
   }
 }
 
-/** Reads the current state without asking for anything. */
 export async function readStorageDurability(): Promise<StorageDurability> {
   const storage = storageManager();
   if (!storage || typeof storage.persisted !== "function") {
@@ -104,7 +82,6 @@ export function isRunningLowOnSpace(durability: StorageDurability): boolean {
   return durability.usedFraction !== null && durability.usedFraction >= QUOTA_WARNING_FRACTION;
 }
 
-/** True when the ledger could be cleared by the browser without warning. */
 export function isEvictable(durability: StorageDurability): boolean {
   return durability.state === "best-effort";
 }

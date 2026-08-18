@@ -19,13 +19,6 @@ export type LineItemInput = {
   categoryId?: string;
 };
 
-/**
- * Itemizing a transaction.
- *
- * Saving an item also resolves its name to a shared Item record, which is what
- * lets the shopping planner remember prices across purchases. Deleting one puts
- * any plan it fulfilled back on the shopping list.
- */
 export function useLineItems({
   profile,
   lineItems,

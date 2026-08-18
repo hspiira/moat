@@ -40,8 +40,6 @@ describe("findTransactionTypeDrift", () => {
     expect(drift).toEqual({ repaired: [], needsReview: [] });
   });
 
-  // The Joe repayment in the real ledger: filed under a debt_repayment category
-  // while still typed expense, so assertCategoryMatchesType refused to save it.
   it("repairs an expense filed under a debt repayment category", () => {
     const drift = findTransactionTypeDrift(
       [transaction({ id: "t:1", categoryId: "category:debt-repayment" })],

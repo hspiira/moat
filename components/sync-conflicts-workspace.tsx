@@ -211,4 +211,3 @@ export function SyncConflictsWorkspace() {
     </div>
   );
 }
-

@@ -33,7 +33,6 @@ export interface Repository<T extends { id: string }> {
 export interface UserProfileRepository {
   get(): Promise<UserProfile | null>;
   save(profile: UserProfile): Promise<UserProfile>;
-  /** Makes this the only profile. A device has one user. */
   replaceAll(profile: UserProfile): Promise<UserProfile>;
 }
 

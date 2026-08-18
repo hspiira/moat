@@ -1,10 +1,3 @@
-/**
- * Runs only when DATABASE_URL points at a throwaway Postgres:
- *
- *   DATABASE_SSL=disable DATABASE_URL=postgres://localhost/moat_test pnpm test
- *
- * It creates and drops its own tables, so do not aim it at anything real.
- */
 import pg from "pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -131,11 +124,6 @@ describeDb("postgres sync store", () => {
     expect(new Set(seen).size).toBe(12);
   });
 
-  /**
-   * The reason the cursor is composite. These rows all carry the same
-   * updated_at, so a timestamp-only cursor would either drop the tail of the
-   * group or serve it forever.
-   */
   it("pages through records that all share one timestamp", async () => {
     await getPool().query(
       `insert into sync_users (user_id, created_at) values ('u1', '2026-01-01T00:00:00.000Z')`,
@@ -193,12 +181,6 @@ describeDb("postgres sync store", () => {
     expect(response.records).toHaveLength(0);
   });
 
-  /**
-   * Every query already filters by user_id, so these tests would pass with no
-   * policies at all — and the role running them is usually a superuser, which
-   * bypasses RLS outright. This connects as an ordinary role to check the
-   * database enforces tenancy on its own.
-   */
   it("enforces tenancy in the database, not just in the query", async () => {
     await getPool().query(`
       drop role if exists moat_rls_test;
@@ -233,7 +215,6 @@ describeDb("postgres sync store", () => {
 
         await client.query("rollback");
 
-        // With no tenant set the policy matches nothing, so it fails closed.
         const unscoped = await client.query("select count(*)::int as count from sync_records");
         expect(unscoped.rows[0].count).toBe(0);
       } finally {

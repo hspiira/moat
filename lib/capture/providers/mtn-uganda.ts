@@ -8,7 +8,6 @@ import {
 } from "@/lib/capture/providers/shared";
 
 export function parseMtnUgandaMessage(text: string): CaptureProviderResult | null {
-  // Pre-authorization requests are not completed transactions.
   if (/you have requested|authorize the transaction/i.test(text)) {
     return null;
   }

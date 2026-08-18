@@ -5,18 +5,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { repositories } from "@/lib/repositories/instance";
 import { runHostedSync } from "@/lib/sync/engine";
 
-/**
- * Drains the sync outbox wherever the user happens to be.
- *
- * Captures already succeed offline — they are written straight to IndexedDB —
- * so the gap was never capture, it was delivery: the outbox only drained on the
- * settings screen, which is the one screen nobody visits after setup. A capture
- * made on a bus could sit unsent for days.
- *
- * True background delivery would need the key hierarchy inside the service
- * worker, so this runs on the events that actually precede a successful send:
- * regaining connectivity, and returning to the app.
- */
 export function SyncOutboxDrain() {
   const running = useRef(false);
 
@@ -40,8 +28,6 @@ export function SyncOutboxDrain() {
 
       await runHostedSync({ repositories, profile: syncProfile, isOnline: true });
     } catch {
-      // A failed drain is not worth interrupting the user for. The items stay
-      // in the outbox and the next trigger tries again.
     } finally {
       running.current = false;
     }

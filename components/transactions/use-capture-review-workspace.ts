@@ -1,7 +1,5 @@
 "use client";
 
-// Manages the capture review inbox: loading review items, validating edits, and resolving them into approved or rejected outcomes.
-
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
 import { announceLocalSave } from "@/lib/local-save";
@@ -29,19 +27,12 @@ import type {
 } from "@/lib/types";
 import { currentMonthIso } from "@/lib/today";
 
-
 function sortByUpdatedAt(items: CaptureReviewItem[]) {
   return [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-/** Marked by hand, with nothing to point at. Still blocks approval. */
 const MANUAL_DUPLICATE_ISSUE = "Marked as duplicate";
 
-/**
- * Recomputes an open item's status from its issues. Settled items keep the
- * status they were given: recomputing it was how an edited approved item slid
- * back into the New queue while its ledger transaction stayed behind.
- */
 function resolveOpenStatus(item: CaptureReviewItem, issues: string[]): CaptureReviewItem["status"] {
   if (item.status === "approved" || item.status === "rejected") return item.status;
   if (item.duplicateTransactionId || item.duplicateCaptureReviewItemId) return "duplicate";
@@ -161,9 +152,6 @@ export function useCaptureReviewWorkspace() {
   const approveItem = useCallback(async (item: CaptureReviewItem) => {
     if (!profile) return;
 
-    // The guard the inbox lacked. buildTransactionFromCaptureReviewItem mints a
-    // fresh id on every call, so a second approval writes a second, unrelated
-    // ledger row for the same capture.
     if (!canApproveCaptureItem(item)) {
       setError(
         item.approvedTransactionId || item.status === "approved"
@@ -256,8 +244,6 @@ export function useCaptureReviewWorkspace() {
 
   const rejectItem = useCallback(async (item: CaptureReviewItem) => {
     if (item.status === "approved" || item.approvedTransactionId) {
-      // Rejecting here would only relabel the capture; the ledger row it
-      // created would stay. Deleting that is the ledger's job, not the inbox's.
       setError("This capture is already in the ledger. Delete the transaction to undo it.");
       return;
     }
@@ -287,10 +273,6 @@ export function useCaptureReviewWorkspace() {
     try {
       const timestamp = new Date().toISOString();
 
-      // Marking by hand used to record nothing, leaving an item flagged as a
-      // duplicate of nothing in particular — and still approvable, because
-      // validation only reacts to duplicateTransactionId. Reuse the pipeline's
-      // own matcher so the mark points at something the user can compare.
       const match =
         item.duplicateTransactionId || item.duplicateCaptureReviewItemId
           ? null
@@ -313,8 +295,6 @@ export function useCaptureReviewWorkspace() {
         duplicateTransactionId,
       });
       if (!duplicateTransactionId) {
-        // Nothing to point at, so carry the reason explicitly rather than
-        // letting the item stay silently approvable.
         issues.push(MANUAL_DUPLICATE_ISSUE);
       }
 

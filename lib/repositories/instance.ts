@@ -45,11 +45,6 @@ function getBundlePromise() {
   return bundlePromise;
 }
 
-/**
- * Build a lazy stand-in for a repository whose real implementation isn't
- * resolved until the first call. Each named method resolves the backing
- * repository, then forwards its arguments and return value unchanged.
- */
 function lazyDelegate<T extends object>(resolve: () => Promise<T>, methods: Array<keyof T>): T {
   const proxy = {} as Record<keyof T, unknown>;
   for (const method of methods) {

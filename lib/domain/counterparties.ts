@@ -1,14 +1,6 @@
 import type { Counterparty, CounterpartyKind, Transaction } from "@/lib/types";
 import { createId } from "@/lib/ids";
 
-/**
- * The subsidiary ledger behind the two pool control accounts.
- *
- * Grouping used to run on the `payee` text, which meant a typo created a
- * second borrower and a rename re-bucketed history. A counterparty id is
- * stable, so the name becomes a label rather than a key.
- */
-
 export function newCounterpartyId(): string {
   return createId();
 }
@@ -17,7 +9,6 @@ export function normalizeCounterpartyName(name: string): string {
   return name.trim().replace(/\s+/g, " ");
 }
 
-/** Match key for deduplication only — never displayed, never stored. */
 export function counterpartyMatchKey(name: string): string {
   return normalizeCounterpartyName(name).toLowerCase();
 }
@@ -52,17 +43,12 @@ export function findCounterpartyByName(
   return counterparties.find((entry) => counterpartyMatchKey(entry.name) === key);
 }
 
-/**
- * Widens a counterparty's kind rather than overwriting it, so someone who has
- * both lent to and borrowed from the user keeps both roles.
- */
 export function widenKind(current: CounterpartyKind, next: CounterpartyKind): CounterpartyKind {
   return current === next ? current : "both";
 }
 
 export type ResolvedCounterparty = {
   counterparty: Counterparty;
-  /** True when the record is new or its kind widened — that is, needs writing. */
   changed: boolean;
 };
 
@@ -95,20 +81,12 @@ export type CounterpartyBackfill = {
 export type BackfillRequest = {
   transactions: Transaction[];
   existing: Counterparty[];
-  /** Which pool account implies which role. */
   poolKinds: Map<string, CounterpartyKind>;
   userId: string;
   timestamp: string;
   nextId: () => string;
 };
 
-/**
- * Turns the distinct payees already recorded against the pools into
- * counterparty records, and stamps the resulting id onto those transactions.
- *
- * Runs once per device. Rows with no payee are left alone: inventing a party
- * for them would assert an identity the user never gave.
- */
 export function backfillCounterparties(request: BackfillRequest): CounterpartyBackfill {
   const { transactions, existing, poolKinds, userId, timestamp, nextId } = request;
 

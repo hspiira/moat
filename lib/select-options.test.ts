@@ -41,8 +41,6 @@ describe("categoryOptionGroups", () => {
     const debt = groups.find((group) => group.label === "Debt");
 
     expect(spending?.options.map((option) => option.label)).toEqual(["Food"]);
-    // The pairing this whole change exists to prevent: debt repayment must not
-    // sit among the spending categories.
     expect(debt?.options.map((option) => option.label)).toEqual(["Debt repayment"]);
   });
 

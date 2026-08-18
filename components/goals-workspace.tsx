@@ -80,8 +80,6 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          {/* Content first, then the action beneath it — a lone button above
-              an empty header row was the page's opening line. */}
           <Card>
             <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
               <MoatRing

@@ -11,13 +11,6 @@ import type { RepositoryBundle } from "@/lib/repositories/types";
 import { setActiveRecordCryptoKey } from "@/lib/security/record-crypto";
 import type { Account, ResourceLink, SyncProfile } from "@/lib/types";
 
-/**
- * One behavioral contract, run against BOTH storage backends, so the two
- * implementations can never drift. Exercises the shared repository policy:
- * CRUD round-trips, per-user scoping, outbox enqueueing rules, and the
- * fault-tolerant skip-a-bad-record read path.
- */
-
 function makeAccount(overrides: Partial<Account> & { id: string; userId: string }): Account {
   return {
     name: "Cash",
@@ -53,8 +46,6 @@ function makeResource(id: string): ResourceLink {
   };
 }
 
-// A record that reads back as an encrypted envelope but cannot be decrypted
-// (no active key), standing in for corrupt/locked data on the IndexedDB side.
 function makeUnreadableEnvelope(id: string) {
   return {
     id,
@@ -67,11 +58,8 @@ function makeUnreadableEnvelope(id: string) {
 
 type Harness = {
   bundle: RepositoryBundle;
-  /** Insert a raw stored value straight into a store, bypassing serialization. */
   injectRaw: (store: StoreName, id: string, raw: unknown) => Promise<void>;
 };
-
-// --- SQLite backend: in-memory fake of the native bridge client ------------
 
 type SqliteRow = Record<string, unknown> & { id: string };
 
@@ -164,8 +152,6 @@ class InMemorySqliteClient implements SqliteClient {
     return records;
   }
 }
-
-// --- IndexedDB backend: real adapter over fake-indexeddb -------------------
 
 async function clearIndexedDb() {
   const database = await openFinanceDatabase();
@@ -294,7 +280,6 @@ describe.each(backends)("repository contract: $name", (backend) => {
   });
 
   it("does not enqueue mutations when the sync mode is local_only", async () => {
-    // hostedSyncEnabled alone is not enough: the mode gate must also pass.
     await harness.bundle.syncProfiles.save({
       ...makeSyncProfile("u1", true),
       mode: "local_only",
@@ -310,7 +295,6 @@ describe.each(backends)("repository contract: $name", (backend) => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await harness.bundle.resources.replaceAll([makeResource("res-good")]);
-    // A stored value that cannot be materialized back into a domain record.
     const badRecord =
       backend.name === "indexeddb" ? makeUnreadableEnvelope("res-bad") : "not-an-object";
     await harness.injectRaw("resources", "res-bad", badRecord);
@@ -324,9 +308,6 @@ describe.each(backends)("repository contract: $name", (backend) => {
   });
 });
 
-// The encrypted read/write path is IndexedDB-specific: the native SQLite
-// bridge handles its own at-rest encryption, so only this backend routes
-// queries through blinded indexes.
 describe("repository contract: indexeddb with an active record key", () => {
   beforeEach(async () => {
     setActiveRecordCryptoKey(null);
@@ -378,12 +359,10 @@ describe("repository contract: indexeddb with an active record key", () => {
     await bundle.transactions.upsert(makeTransaction("tx-1", "2026-04-05"));
     await bundle.transactions.upsert(makeTransaction("tx-2", "2026-03-31"));
 
-    // At rest the record is an envelope, not plaintext.
     const stored = await readStoredRecord("transactions", "tx-1");
     expect(stored).toMatchObject({ id: "tx-1", __moatEncrypted: true });
     expect(JSON.stringify(stored)).not.toContain("2026-04-05");
 
-    // Reads decrypt transparently and blinded index queries still resolve.
     await expect(bundle.transactions.getById("tx-1")).resolves.toMatchObject({
       id: "tx-1",
       occurredOn: "2026-04-05",

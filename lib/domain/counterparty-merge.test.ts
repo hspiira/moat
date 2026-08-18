@@ -47,7 +47,6 @@ describe("planCounterpartyMerge", () => {
     expect(plan).toEqual({ counterparties: [], transactions: [], removedIds: [] });
   });
 
-  // The real ledger: one person, four records, three still showing a balance.
   it("collapses four records for one person and repoints every transaction", () => {
     const plan = planCounterpartyMerge(
       [

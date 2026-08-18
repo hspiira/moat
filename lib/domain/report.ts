@@ -34,11 +34,6 @@ function toDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Aggregate position, one point per day for the trailing window. Seeded with
- * the balance the day before the window opens, then walked forward by summing
- * each day's transaction deltas — one pass, not one balance query per day.
- */
 export function buildPositionSeries(
   accounts: Account[],
   transactions: Transaction[],
@@ -75,7 +70,6 @@ export function buildPositionSeries(
   };
 }
 
-/** Net movement per day for one month ("YYYY-MM"), one cell per calendar day. */
 export function buildDailyNetCalendar(transactions: Transaction[], month: string): CalendarCell[] {
   const [year, monthIndex] = month.split("-").map(Number);
   const daysInMonth = new Date(year, monthIndex, 0).getDate();
@@ -102,7 +96,6 @@ export function buildDailyNetCalendar(transactions: Transaction[], month: string
   });
 }
 
-/** Totals and how often money moved, for a window's transactions. */
 export function getFlowBreakdown(transactions: Transaction[]): FlowBreakdown {
   let inflow = 0;
   let inflowCount = 0;
@@ -143,11 +136,6 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   receivable: "Owed to you",
 };
 
-/**
- * Where the money actually sits, by account type. Debt and receivable accounts
- * are excluded: they are claims, not holdings, and folding a negative balance
- * into a share-of-total makes every other slice lie.
- */
 export function getAllocation(accounts: Account[]): AllocationSlice[] {
   const totals = new Map<string, number>();
 
@@ -171,7 +159,6 @@ export function getAllocation(accounts: Account[]): AllocationSlice[] {
     .sort((left, right) => right.amount - left.amount);
 }
 
-/** "1.2M", "45k" — amounts short enough to live inside a calendar cell. */
 export function formatCompactAmount(amount: number): string {
   const magnitude = Math.abs(amount);
   if (magnitude >= 1_000_000) {

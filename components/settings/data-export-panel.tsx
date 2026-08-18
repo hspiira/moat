@@ -46,10 +46,6 @@ export function DataExportPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* This file is deliberately unencrypted so it stays portable, which
-            makes it the wrong thing to keep as a safety copy. Saying so at the
-            point of download is the only place the warning can land — the file
-            itself carries no indication. */}
         <div className="flex gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
           <IconAlertTriangle
             aria-hidden="true"

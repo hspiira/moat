@@ -1,10 +1,6 @@
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { repositories } from "@/lib/repositories/instance";
 
-/**
- * Recomputes balances from the ledger and writes only the accounts that moved,
- * so the sync outbox is not flooded with no-op upserts.
- */
 export async function persistReconciledBalances(userId: string): Promise<void> {
   const [accounts, transactions] = await Promise.all([
     repositories.accounts.listByUser(userId),

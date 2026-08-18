@@ -99,9 +99,6 @@ describe("summarizeItemPrices", () => {
   });
 
   it("compares an amount-only observation on a per-unit basis, not the line total", () => {
-    // A 2-pack totalling 7000 is 3500/unit — tied with the unit-priced
-    // observation, so it must not be treated as pricier just because its
-    // total (7000) looks bigger than the other row's unit price (3500).
     const observations: PriceObservation[] = [
       { ...base, lineItemId: "line:1", occurredOn: "2026-08-01", unitPrice: 3500, merchant: "Mega Standard" },
       {
@@ -115,8 +112,6 @@ describe("summarizeItemPrices", () => {
       },
     ];
     const summary = summarizeItemPrices(observations, "2026-08-07").get("item:sugar");
-    // Tie goes to whichever was seen first; the important assertion is that
-    // Owino's 2-for-7000 is not read as 7000/unit and discarded as worse.
     expect(summary?.bestRecent?.merchant).toBe("Mega Standard");
 
     const beatingObservations: PriceObservation[] = [
@@ -134,7 +129,6 @@ describe("summarizeItemPrices", () => {
     const beatingSummary = summarizeItemPrices(beatingObservations, "2026-08-07").get(
       "item:sugar",
     );
-    // 6000 for 2 is 3000/unit, genuinely cheaper than 3500/unit.
     expect(beatingSummary?.bestRecent?.merchant).toBe("Owino");
   });
 });

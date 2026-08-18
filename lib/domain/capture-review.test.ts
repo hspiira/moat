@@ -90,8 +90,6 @@ describe("getSectionItems", () => {
   ];
 
   it("gathers everything still awaiting a decision into one section", () => {
-    // new, needs_review and duplicate differ only in why they are open, which
-    // the row shows with a glyph — they do not each need their own tab.
     expect(getSectionItems(items, "to_review").map((entry) => entry.id).sort()).toEqual([
       "a",
       "b",
@@ -166,8 +164,6 @@ describe("canApproveCaptureItem", () => {
   });
 
   it("refuses an item carrying an approved transaction id whatever its status says", () => {
-    // The status regression bug used to leave this pairing behind: an approved
-    // item pushed back to "new" keeps its ledger link and must not be re-approved.
     expect(
       canApproveCaptureItem(item({ id: "a", status: "new", approvedTransactionId: "transaction:1" })),
     ).toBe(false);

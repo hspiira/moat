@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-
 const topicCopy: Record<string, { title: string; summary: string }> = {
   "money-behaviour": {
     title: "How money works in Uganda",

@@ -104,7 +104,6 @@ export function BackupPanel() {
         try {
           await refreshDriveFiles();
         } catch {
-          // Keep metadata visible even if listing fails on hydrate.
         }
       }
 
@@ -159,10 +158,6 @@ export function BackupPanel() {
 
     try {
       const text = await file.text();
-      // Inspect the file before touching the decrypter. A plaintext export is
-      // valid JSON, so it used to reach decryptWithPin and fail there — which
-      // the catch below reported as a PIN problem, sending people to re-check a
-      // PIN that was never the issue.
       const format = detectBackupFormat(text);
 
       if (format.kind === "unrecognised") {
@@ -184,7 +179,6 @@ export function BackupPanel() {
         return;
       }
 
-      // Restores accept legacy 4-digit PINs so older backups stay recoverable.
       if (restorePin.length < 4) {
         setError("This backup is encrypted. Enter the PIN used to create it.");
         return;
@@ -200,8 +194,6 @@ export function BackupPanel() {
       setSuccess("Backup restored successfully. Reload the app to see your data.");
       reset();
     } catch {
-      // Reaching here means the file *was* a well-formed encrypted backup, so
-      // the PIN really is the likely culprit.
       setError("Could not decrypt this backup. Check the PIN used when it was created.");
     } finally {
       setIsWorking(false);
@@ -259,7 +251,6 @@ export function BackupPanel() {
   }
 
   async function handleDriveRestore(fileId: string) {
-    // Restores accept legacy 4-digit PINs so older backups stay recoverable.
     if (driveRestorePin.length < 4) {
       setError("Enter the backup PIN used for the selected Google Drive backup.");
       return;

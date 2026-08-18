@@ -1,11 +1,5 @@
 import type { Goal, GoalContributionPlan, Transaction } from "@/lib/types";
 
-/**
- * Goal progress is derived, not stored: `goal.currentAmount` is the manual
- * starting amount, and savings contributions recorded against the goal's
- * linked account accrue on top of it. Goals without a linked account fall
- * back to the manually entered amount.
- */
 export function deriveGoalCurrentAmount(goal: Goal, transactions: Transaction[]): number {
   if (!goal.linkedAccountId) {
     return goal.currentAmount;

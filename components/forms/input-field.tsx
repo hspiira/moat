@@ -10,7 +10,6 @@ type Props = Omit<ComponentProps<typeof Input>, "id"> & {
   id: string;
   label: ReactNode;
   hint?: ReactNode;
-  /** Field-level validation message. When set, the input is marked invalid. */
   error?: string | null;
 };
 

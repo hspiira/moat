@@ -58,10 +58,6 @@ function formatLockoutMessage(lockoutMs: number): string {
 
 const MAX_PIN_LENGTH = 12;
 
-/**
- * The live padlock: a moat ring with an orbiting accent and a lock that opens.
- * During a lockout the ring drains, then visibly refills as the wait expires.
- */
 function LockMark({ spinning, open, progress = 1 }: { spinning: boolean; open: boolean; progress?: number }) {
   return (
     <div className="relative grid place-items-center">
@@ -80,20 +76,16 @@ function LockMark({ spinning, open, progress = 1 }: { spinning: boolean; open: b
         ariaLabel={open ? "Unlocked" : "Moat is locked"}
       />
 
-      {/* Orbiting accent — a slow ambient drift, fast while verifying. */}
       {!open ? (
         <div
           aria-hidden
           className="absolute inset-0"
           style={{ animation: `moat-orbit ${spinning ? "0.8s" : "9s"} linear infinite` }}
         >
-          {/* Dot centre sits on the ring's stroke centreline: the 72px ring with
-              5px stroke has its centreline 2.5px in, so a 6px dot starts at -0.5px. */}
           <span className="absolute top-[-0.5px] left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-clay" />
         </div>
       ) : null}
 
-      {/* Lock glyph cross-fades from closed to open. */}
       <span
         aria-hidden
         className={cn(
@@ -141,18 +133,14 @@ function LockScreen({
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBiometricChecking, setIsBiometricChecking] = useState(false);
-  // With a passkey enrolled the OS sheet is already up, so the keypad starts
-  // hidden and appears on request or on biometric failure.
   const [pinRequested, setPinRequested] = useState(!hasPasskey);
   const [shaking, setShaking] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(() => getUnlockLockoutMs());
   const [pinLength] = useState(() => getPinLength());
-  // Briefly reveal the digit just typed (phone-style), then mask it.
   const [revealedDigit, setRevealedDigit] = useState<string | null>(null);
   const revealTimer = useRef<number | null>(null);
   const autoPromptedBiometric = useRef(false);
 
-  // Reveal animation state (driven once `exiting` flips true).
   const [markStyle, setMarkStyle] = useState<React.CSSProperties>();
   const [opened, setOpened] = useState(false);
   const [veilOut, setVeilOut] = useState(false);
@@ -170,9 +158,6 @@ function LockScreen({
     return () => window.clearInterval(id);
   }, [lockoutMs, getUnlockLockoutMs]);
 
-  // The unlock reveal: glide the padlock to screen centre, open it, lift the
-  // veil to show the app behind, then finish. Reduced-motion skips straight to
-  // the finish. Contents behind are already mounted (status: unlocking).
   useEffect(() => {
     if (!exiting) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
@@ -274,9 +259,6 @@ function LockScreen({
     setIsBiometricChecking(false);
   }, [isBiometricChecking, isThrottled, exiting, unlockWithPasskey]);
 
-  // Fire the biometric prompt as soon as the lock screen appears — once per
-  // lock, never after a cancelled/failed attempt (the keypad is the fallback).
-  // Deferred a beat so the screen paints before the OS sheet slides in.
   useEffect(() => {
     if (!hasPasskey || isThrottled || exiting || autoPromptedBiometric.current) return;
     const id = window.setTimeout(() => {
@@ -308,7 +290,6 @@ function LockScreen({
 
   const canManualSubmit = !knownLength && pin.length >= MIN_PIN_LENGTH && !disabled;
   const dotCount = knownLength ? targetLength : Math.max(pin.length, MIN_PIN_LENGTH);
-  // Ring countdown: drain during a lockout and refill as the wait expires.
   const lockoutTotalMs = isThrottled ? getCurrentLockoutTotalMs() : 0;
   const ringProgress = lockoutTotalMs > 0 ? 1 - lockoutMs / lockoutTotalMs : 1;
 
@@ -324,7 +305,6 @@ function LockScreen({
         className="flex w-full max-w-76 flex-col items-center"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {/* Live padlock — the one element that carries through to the reveal. */}
         <div
           ref={markRef}
           className="transition-transform duration-620"
@@ -337,7 +317,6 @@ function LockScreen({
           />
         </div>
 
-        {/* Everything below the padlock fades away as the reveal begins. */}
         <div
           className={cn(
             "flex w-full flex-col items-center transition-opacity duration-300",
@@ -383,7 +362,6 @@ function LockScreen({
             })}
           </div>
 
-          {/* The alert glyph carries the failure, not the colour. */}
           <div className="mt-4 flex h-5 items-center justify-center gap-1.5 text-center text-xs">
             {isThrottled ? (
               <span className="flex items-center gap-1.5 text-destructive" role="status">
@@ -402,8 +380,6 @@ function LockScreen({
             ) : null}
           </div>
 
-          {/* The keypad holds its space from first paint and only fades, so
-              revealing it never shoves the dots above it. */}
           <div className="relative mt-6">
             {!showKeypad ? (
               <div className="absolute inset-0 z-10 grid place-items-center">
@@ -512,7 +488,6 @@ function Key({
     <button
       type="button"
       onClick={() => {
-        // A completed long-press already acted; swallow the trailing click.
         if (longPressFired.current) {
           longPressFired.current = false;
           return;

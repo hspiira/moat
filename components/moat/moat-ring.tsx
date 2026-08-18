@@ -9,14 +9,6 @@ const toneStroke: Record<MoatRingTone, string> = {
   neutral: "stroke-muted-foreground",
 };
 
-/**
- * The moat ring — Moat's signature. A concentric arc showing how much of a
- * buffer (emergency-fund coverage, goal progress) has been built. The name
- * made literal: your ring is the moat around your future self.
- *
- * Progress is announced via role="img" + aria-label; the visual value is
- * never the only channel.
- */
 export function MoatRing({
   value,
   label,

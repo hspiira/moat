@@ -31,8 +31,6 @@ export const accountTypeLabels: Record<AccountType, string> = {
   sacco: "SACCO",
   investment: "Investment",
   debt: "Debt / Obligation",
-  // Distinct from the "Money lent out" pool account, so a user adding their own
-  // per-borrower ledger cannot end up with two accounts of the same name.
   receivable: "Owed to you",
 };
 
@@ -116,12 +114,6 @@ export function accountOptions(accounts: Account[]): SelectFieldOption[] {
   return accounts.map((account) => ({ value: account.id, label: account.name }));
 }
 
-/**
- * Every category, grouped under its kind. Because the transaction type is
- * derived from the category, this one picker replaces the type dropdown as
- * well — so the headings have to carry the meaning the type used to.
- * Empty groups are dropped rather than rendered as bare headings.
- */
 export function categoryOptionGroups(
   categories: Category[],
   usage: Map<string, number> = new Map(),

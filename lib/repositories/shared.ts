@@ -48,10 +48,6 @@ import { createId } from "@/lib/ids";
 
 type SyncableRecord = { id: string; userId: string };
 
-/**
- * Stores whose records never leave the device, so a change to them must never
- * enqueue a hosted-sync mutation.
- */
 const unsyncedStoreNames = new Set<StoreName>([
   "captureEnvelopes",
   "captureReviewItems",
@@ -62,12 +58,6 @@ const unsyncedStoreNames = new Set<StoreName>([
   "syncOutbox",
 ]);
 
-/**
- * Materialize one stored record, skipping (with a warning) anything that can't
- * be read — corrupt, key-mismatched, or written by a misbehaving backend — so
- * a single bad record can never blank an entire list. `null` is a genuine
- * "not found" and is passed through silently.
- */
 async function hydrateOne<T>(
   adapter: StorageAdapter,
   store: StoreName,
@@ -254,9 +244,6 @@ function createCategoryRepository(adapter: StorageAdapter): CategoryRepository {
   return {
     ...repository,
     async listDefaults(userId) {
-      // Filter in JS rather than via the [userId, isDefault] index: plaintext
-      // records carry a raw boolean isDefault, which is not a valid IndexedDB
-      // key component, so those records never appear in that index at all.
       const categories = await hydrateMany<Category>(
         adapter,
         "categories",
@@ -383,11 +370,6 @@ function createTransactionLineItemRepository(
   };
 }
 
-/**
- * Assemble the full repository bundle for a backend from its storage adapter.
- * This is the single implementation of repository behavior; the IndexedDB and
- * SQLite entry points differ only in the adapter they pass in.
- */
 export function createRepositoryBundle(adapter: StorageAdapter): RepositoryBundle {
   return {
     userProfile: createUserProfileRepository(adapter),

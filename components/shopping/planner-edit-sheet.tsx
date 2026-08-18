@@ -23,12 +23,6 @@ export type PlannerEditPatch = {
   note?: string;
 };
 
-/**
- * Changing a plan used to mean dropping it and adding it again, which lost the
- * item's link and its place in the list. The item itself is deliberately not
- * editable here: the price history is keyed on it, so renaming would move one
- * item's history onto another.
- */
 export function PlannerEditSheet({
   purchase,
   item,

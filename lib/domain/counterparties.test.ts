@@ -106,7 +106,6 @@ describe("resolveCounterparty", () => {
       timestamp: TIMESTAMP,
     });
 
-    // Widening is a change: the stored record now needs writing back.
     expect(result.changed).toBe(true);
     expect(result.counterparty.kind).toBe("both");
   });

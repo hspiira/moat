@@ -41,16 +41,6 @@ export function groupPlannerRows(purchases: PlannedPurchase[], today: string): P
   return groups;
 }
 
-/**
- * Turns a plan into the line item on the expense that fulfilled it.
- *
- * `actual` is what was really paid, and it is never backfilled from the
- * estimate. The price memory ("what it cost last time") is derived from these
- * line items, so writing the estimate here made the planner quote your own
- * guess back at you as though it were history. An unknown price is recorded as
- * unknown; only the quantity may fall back to the plan, since an unstated
- * quantity is still what you intended to buy.
- */
 export function buildFulfillmentLineItem(
   purchase: PlannedPurchase,
   item: Item,
@@ -72,7 +62,6 @@ export function buildFulfillmentLineItem(
   };
 }
 
-/** What a set of check-off entries actually cost, for the expense total. */
 export function sumFulfillmentCost(
   entries: { quantity?: number; unitPrice?: number }[],
 ): number {

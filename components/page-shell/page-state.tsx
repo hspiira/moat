@@ -9,12 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-/**
- * Inline error notice. Compact enough to sit directly above a form's fields
- * without pushing them off screen, and it always pairs the tint with an icon —
- * colour alone is not an accessible error signal, and `text-destructive` on a
- * near-transparent wash reads as decorative text rather than a problem.
- */
 export function ErrorNotice({
   message,
   className,
@@ -38,8 +32,6 @@ export function ErrorNotice({
 
 export function ErrorStateCard({ message }: { message: string }) {
   return (
-    // py-0 on the Card: its default py-4 stacked with the content's own padding
-    // put 32px above and below a single line of text.
     <Card className="border-none bg-destructive/10 py-0">
       <CardContent className="flex items-start gap-3 px-4 py-3.5">
         <IconAlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
@@ -54,10 +46,6 @@ export function ErrorStateCard({ message }: { message: string }) {
   );
 }
 
-/**
- * Loading state as content-shaped skeletons rather than a text line, so the
- * page never flashes blank and the layout doesn't jump when data arrives.
- */
 export function LoadingStateCard({ message }: { message?: string }) {
   return (
     <Card aria-busy="true" aria-live="polite">
@@ -88,7 +76,6 @@ export function EmptyStateCard({
   href?: string;
   cta?: string;
   icon?: ReactNode;
-  /** Handles the call to action in place. Takes precedence over `href`. */
   onAction?: () => void;
 }) {
   return (

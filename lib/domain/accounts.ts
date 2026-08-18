@@ -38,8 +38,6 @@ export function normalizeOpeningBalance(
     return -Math.abs(amount);
   }
 
-  // A receivable opened with a balance is money already owed to the user
-  // before they started using the app — an asset, never negative.
   if (type === "receivable") {
     return Math.abs(amount);
   }
@@ -108,8 +106,6 @@ export function getAccountBalanceBreakdown(
     (transaction) => transaction.accountId === account.id,
   );
 
-  // A transaction classified as a transfer (by type or category) never also
-  // counts as income/expense/savings — mirrors excludeTransfers.
   const spendingTransactions = accountTransactions.filter(
     (transaction) => !isTransferTransaction(transaction),
   );

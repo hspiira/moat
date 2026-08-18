@@ -20,7 +20,6 @@ test("asks the browser to keep the ledger", async ({ page }) => {
   );
   calls.push(...seen);
 
-  // Either it was already granted, or we asked. Never neither.
   const persisted = await page.evaluate(() => navigator.storage.persisted());
   expect(persisted || calls.includes("persist")).toBe(true);
 });

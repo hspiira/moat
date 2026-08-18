@@ -1,16 +1,11 @@
 import { storeNames, type StoreName } from "@/lib/repositories/store-names";
 
-// Re-exported so existing IndexedDB-side import sites keep working; the
-// canonical definition lives in the backend-neutral store-names module.
 export { storeNames };
 export type { StoreName };
 
 const DATABASE_NAME = "moat-db";
 const DATABASE_VERSION = 10;
 
-// Single source of truth for the additive schema migrations. Both the
-// upgrade path (runMigrations) and the reporting helper below derive from it,
-// so a new version is added in exactly one place.
 const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9, 10] as const;
 
 type MetaRecord = {
@@ -113,9 +108,6 @@ function addAllKnownIndexes(transaction: IDBTransaction) {
   });
 }
 
-// Per-version schema steps, keyed by the versions in MIGRATION_VERSIONS.
-// Versions without a dedicated step still benefit from the catch-all store /
-// index reconciliation that runs after every upgrade.
 const migrationSteps: Partial<Record<number, (database: IDBDatabase) => void>> = {
   1: (database) => createBaseStores(database),
   4: (database) => {
@@ -208,11 +200,6 @@ export function getIndexedDbStoreIndexes(storeName: StoreName): string[] {
   return (storeIndexes[storeName] ?? []).map((index) => index.name);
 }
 
-/**
- * Resolve the index whose key path matches `keyPath` exactly, so the adapter
- * can translate a semantic query (by user, by user+field) into the concrete
- * index name without hard-coding the schema a second time.
- */
 export function getIndexedDbIndexName(storeName: StoreName, keyPath: string[]): string {
   const match = (storeIndexes[storeName] ?? []).find((index) => {
     const indexPath = Array.isArray(index.keyPath) ? index.keyPath : [index.keyPath];

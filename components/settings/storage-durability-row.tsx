@@ -14,7 +14,6 @@ function formatBytes(bytes: number) {
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.max(1, Math.round(mb))} MB`;
 }
 
-/** Says whether the browser has promised to keep the ledger, and how full it is. */
 export function StorageDurabilityRow() {
   const [durability, setDurability] = useState<StorageDurability | null>(null);
 

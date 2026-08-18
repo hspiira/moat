@@ -1,19 +1,3 @@
-/**
- * One-time migration of a device's records to cuid2 ids.
- *
- * Every record gets a new id and every reference is repointed in the same pass.
- * Seeded records take their derived id so they still converge across devices;
- * everything else gets a fresh random one.
- *
- * It refuses to run once a device has synced. The server would still hold the
- * old ids, and rewriting them locally would orphan every record already up
- * there rather than update it.
- *
- * Nothing is written until the whole graph has been rewritten and checked, so a
- * reference the map cannot resolve aborts the migration with the device
- * untouched rather than half-renumbered.
- */
-
 import type { RepositoryBundle } from "@/lib/repositories/types";
 import { storeNames, type StoreName } from "@/lib/repositories/store-names";
 import { createId, deriveSeededId, isValidId } from "@/lib/ids";
@@ -32,7 +16,6 @@ export type IdMigrationSummary = {
 
 export class IdMigrationError extends Error {}
 
-/** Stores holding user records, in dependency-free order. Resources are global. */
 const migratedStores: StoreName[] = [
   storeNames.userProfiles,
   storeNames.accounts,
@@ -82,12 +65,6 @@ function setPath(record: AnyRecord, path: string, next: string) {
   target[last] = next;
 }
 
-/**
- * The slug a seeded record derives from, or null when the user created it.
- *
- * Matched on the id the record already carries, which is what the old
- * deterministic scheme produced.
- */
 function seededSlugFor(store: StoreName, record: AnyRecord): string | null {
   if (store === storeNames.accounts) {
     const account = record as unknown as Account;
@@ -98,8 +75,6 @@ function seededSlugFor(store: StoreName, record: AnyRecord): string | null {
 
   if (store === storeNames.categories) {
     const category = record as unknown as Category;
-    // Only app-seeded categories derive; one the user made keeps a random id
-    // even if its name happens to match a default.
     return category.isDefault ? categorySlug(category.name) : null;
   }
 
@@ -140,8 +115,6 @@ async function readAll(
 
     const repository = bundle[store];
     const rows = repository?.listByUser ? await repository.listByUser(userId) : [];
-    // Copied: the write pass below mutates these stores, and a backend that
-    // hands back its own array would otherwise grow the list we are iterating.
     byStore.set(store, [...rows]);
   }
 
@@ -173,15 +146,12 @@ export async function migrateIdsToCuid2(params: {
     return { migrated: false, recordsRewritten: 0, referencesRewritten: 0, reason: "Already migrated." };
   }
 
-  // The profile id is the derivation input for every seeded record, so it has
-  // to be settled before anything else can be given an id.
   const profile = records.get(storeNames.userProfiles)?.[0];
   if (!profile) {
     return { migrated: false, recordsRewritten: 0, referencesRewritten: 0, reason: "No profile to migrate." };
   }
   const newUserId = isValidId(profile.id) ? profile.id : createId();
 
-  // old id -> new id, per store, so two stores can reuse an id without clashing.
   const idMap = new Map<StoreName, Map<string, string>>();
 
   for (const store of migratedStores) {
@@ -257,8 +227,6 @@ export async function migrateIdsToCuid2(params: {
     rewritten.set(store, next);
   }
 
-  // Everything resolved. Write the profile first so the new userId exists
-  // before records scoped to it land.
   await repositories.userProfile.save(
     rewritten.get(storeNames.userProfiles)![0] as unknown as UserProfile,
   );
@@ -289,8 +257,6 @@ export async function migrateIdsToCuid2(params: {
     }
   }
 
-  // Old rows are only dropped once their replacements are stored, so an
-  // interruption leaves duplicates rather than losing data.
   for (const store of migratedStores) {
     if (store === storeNames.userProfiles || store === storeNames.investmentProfiles) continue;
 

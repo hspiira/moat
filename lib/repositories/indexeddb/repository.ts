@@ -91,12 +91,6 @@ async function readByUserIndex(
   return readIndexRaw(storeName, indexName, query);
 }
 
-/**
- * IndexedDB storage adapter: translates the semantic read operations into
- * index lookups (blinded when encryption is active) and applies the
- * record-encryption layer on writes. Record materialization and the
- * skip-a-bad-record policy live in the shared layer.
- */
 export function createIndexedDbAdapter(): StorageAdapter {
   return {
     deserialize<T>(_store: StoreName, raw: unknown): Promise<T> {
@@ -121,13 +115,10 @@ export function createIndexedDbAdapter(): StorageAdapter {
     listByFieldPrefix(store, field, prefix, userId) {
       const indexName = getIndexedDbIndexName(store, ["userId", field]);
       if (hasActiveRecordCryptoKey()) {
-        // Blinded indexes store the exact hashed prefix (e.g. a transaction's
-        // month), so match it exactly rather than by range.
         return indexQueryKey(store, ["userId", field], [userId, prefix]).then((query) =>
           readIndexRaw(store, indexName, query),
         );
       }
-      // Plaintext mode: the field is an ordered ISO value, so range-match it.
       return readIndexRaw(
         store,
         indexName,

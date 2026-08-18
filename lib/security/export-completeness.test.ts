@@ -5,8 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { storeNames } from "@/lib/repositories/store-names";
 
-// Reads the source rather than calling it, so adding a store and forgetting the
-// export fails here.
 describe("export completeness", () => {
   const notUserOwned = new Set<string>([storeNames.meta, storeNames.resources]);
   const source = readFileSync(path.join(process.cwd(), "lib/security/data-export.ts"), "utf8");

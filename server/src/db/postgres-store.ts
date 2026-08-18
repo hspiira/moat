@@ -97,15 +97,6 @@ async function markOutboxApplied(client: pg.PoolClient, userId: string, outboxId
   );
 }
 
-/**
- * Whether the incoming write is based on what the server currently holds.
- *
- * When the client sends the version token it last saw, that answers it exactly.
- * Without one there is nothing to compare but the payload, which cannot tell a
- * newer version apart from a divergent one, so a device editing its own synced
- * record looks like a conflict. Clients are expected to start sending
- * baseVersionToken; see docs/plans/hosted-sync.md.
- */
 function isBasedOnCurrent(params: {
   baseVersionToken?: string;
   existing: StoredRecord;
@@ -121,8 +112,6 @@ function isBasedOnCurrent(params: {
 export async function applyPostgresSyncPush(
   request: SyncPushRequest,
 ): Promise<SyncPushResponse> {
-  // Locking in a stable order keeps two devices pushing overlapping sets from
-  // deadlocking against each other.
   const items = [...request.items].sort((left, right) =>
     toEntityKey(left.entityType, left.entityId) < toEntityKey(right.entityType, right.entityId)
       ? -1
@@ -140,7 +129,6 @@ export async function applyPostgresSyncPush(
     return collected;
   });
 
-  // Report results in the order the client sent them.
   const byOutboxId = new Map(results.map((result) => [result.outboxId, result]));
 
   return {
@@ -258,10 +246,6 @@ export async function pullPostgresSyncChanges(
   const rows = await withUserTransaction(request.userId, async (client) => {
     await ensureUser(client, request.userId);
 
-    // Keyset pagination, matching compareByCursorOrder, so records sharing an
-    // updated_at are split at an exact boundary instead of being dropped or
-    // replayed. A bare-timestamp cursor carries an empty entity key, and every
-    // real key sorts above "", so it stays inclusive of that instant.
     const result = await client.query<StoredRecord>(
       `select entity_type, entity_id, payload, deleted, updated_at, server_version_token
          from sync_records

@@ -103,8 +103,6 @@ describe("orderCategoriesForPicker", () => {
   });
 
   it("keeps a hidden category that is still in use", () => {
-    // Hiding must not remove the category a past transaction points at, or the
-    // form would show an empty box when you open that transaction.
     const hidden = category("category:tips", "Tips", { isArchived: true });
     const usage = new Map([["category:tips", 2]]);
 

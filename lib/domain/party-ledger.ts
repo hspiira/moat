@@ -8,51 +8,33 @@ import type {
   TransactionType,
 } from "@/lib/types";
 
-/**
- * One subsidiary ledger, keyed by the person on the other side of the money.
- *
- * Lending and borrowing are the same ledger read in opposite directions, so
- * they share this and differ only by a config. `sign` is what does the work:
- * multiplying a raw amount by it gives the movement in what is owed, whichever
- * way the money runs. A receivable is an asset (+1), a debt is a liability
- * (-1), and every comparison below is written against the signed value.
- */
-
 const BALANCE_EPSILON = 0.01;
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 export type PartyStatus = "outstanding" | "settled" | "cancelled" | "overpaid";
 
 export type PartyLedgerConfig = {
-  /** Derivation input for the pool account's id. Part of the data format. */
   poolAccountSlug: string;
   poolAccountName: string;
   poolAccountType: Account["type"];
-  /** +1 when the pool holds an asset, -1 when it holds a liability. */
   sign: 1 | -1;
   unnamedLabel: string;
   counterpartyKind: Exclude<CounterpartyKind, "both">;
-  /** Writes the balance off without money moving: an expense, or forgiveness. */
   cancelType: TransactionType;
-  /** Which accounts belong to this ledger, beyond the pool itself. */
   ownsAccount: (account: Account) => boolean;
 };
 
 export type PartyLedgerEntry = {
-  /** Stable grouping key: the dedicated account, or the counterparty. */
   partyKey: string;
   partyName: string;
   counterpartyId?: string;
-  /** Set only when the party has their own account rather than the pool. */
   accountId?: string;
   amountAdvanced: number;
   amountRepaid: number;
   amountCancelled: number;
-  /** Signed. Negative means more was repaid than was owed. */
   outstanding: number;
   advancedOn: string | null;
   lastRepaymentOn: string | null;
-  /** The soonest date agreed, across this party's loans. */
   expectedRepaymentDate?: string;
   isOverdue: boolean;
   status: PartyStatus;
@@ -64,7 +46,6 @@ export type PartyPortfolio = {
   totalRepaid: number;
   totalCancelled: number;
   totalOutstanding: number;
-  /** Parties with any activity, overdue first, then largest outstanding. */
   parties: PartyLedgerEntry[];
 };
 
@@ -118,12 +99,10 @@ type Bucket = {
   partyName: string;
   accountId?: string;
   counterpartyId?: string;
-  /** Already signed, so positive always means "owed". */
   openingBalance: number;
   transactions: Transaction[];
 };
 
-/** Rows written before counterparties existed fall back to the payee text. */
 function bucketFor(
   config: PartyLedgerConfig,
   account: Account,
@@ -235,9 +214,6 @@ export function buildPartyPortfolio(
 
   const buckets = new Map<string, Bucket>();
 
-  // Money owed before Moat was in use, attributed to the person rather than
-  // sitting unattributable on the pool. The pool's own opening balance holds
-  // the same total, so the two still agree.
   if ([...owned.values()].some((account) => isPoolAccount(config, account))) {
     for (const counterparty of counterparties) {
       if (!counterparty.openingBalance || counterparty.isArchived) {
@@ -253,7 +229,6 @@ export function buildPartyPortfolio(
     }
   }
 
-  // A dedicated account carries its opening balance even with no transactions.
   for (const account of owned.values()) {
     const opening = account.openingBalance * config.sign;
     if (isPoolAccount(config, account) || opening <= 0) {

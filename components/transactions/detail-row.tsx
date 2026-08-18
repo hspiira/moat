@@ -4,12 +4,6 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/**
- * A label and an amount, the amount right-aligned so digits line up against
- * the rows above and below. Numbers read right to left — units, tens,
- * hundreds — which is the whole reason that alignment exists. Text does not
- * read that way, so it uses DetailFact instead.
- */
 export function DetailRow({
   label,
   children,
@@ -27,7 +21,6 @@ export function DetailRow({
   );
 }
 
-/** A label and a short text value, both left-aligned. */
 export function DetailFact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
@@ -41,7 +34,6 @@ export function DetailFacts({ children }: { children: ReactNode }) {
   return <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">{children}</dl>;
 }
 
-/** Prose gets the full width and a left edge to return to. */
 export function DetailNote({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid gap-1">

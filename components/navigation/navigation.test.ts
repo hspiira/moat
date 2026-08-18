@@ -13,10 +13,6 @@ import {
 } from "./navigation-shared";
 
 describe("navigation reachability", () => {
-  // Regression guard: the desktop bar derives its overflow from navItems, but
-  // the mobile capsule and its More sheet read hardcoded lists. A route added
-  // to navItems alone reaches the desktop and is invisible on mobile — which
-  // is how /shopping shipped unreachable on phones.
   const mobileReachable = new Set<string>([...mobilePrimaryNav, ...mobileSecondaryNav]);
 
   it("gives every destination an icon", () => {
@@ -36,21 +32,15 @@ describe("navigation reachability", () => {
     }
   });
 
-  // The cadence sections used to be written straight into the drawer's JSX,
-  // where none of these checks could see them.
   const cadenceHrefs = mobileCadenceNav.flatMap((group) => [...group.hrefs]);
 
   it("lets the More pill name every route it opens", () => {
-    // The heading defers to the nav, so a route the pill cannot name has no
-    // wayfinding at all once you are on it.
     for (const href of [...mobileSecondaryNav, ...cadenceHrefs]) {
       expect(getMobileContextNavItem(href), `${href} is missing from mobileContextNav`).toBeDefined();
     }
   });
 
   it("gives each cadence row its own entry, not a parent's", () => {
-    // getMobileContextNavItem matches by prefix, so /settings/rules found the
-    // /settings entry and the drawer drew a second row labelled "Settings".
     for (const href of cadenceHrefs) {
       expect(getNavEntry(href)?.href, `${href} has no entry of its own`).toBe(href);
     }
@@ -67,8 +57,6 @@ describe("navigation reachability", () => {
   });
 
   it("keeps the capture actions off the cadence sections", () => {
-    // Capture is the plus button, not a More-sheet entry. Listing it twice
-    // gave the same action two homes with different labels.
     const capturePaths = mobileCaptureActions.map((action) => action.href.split("?")[0]);
     for (const href of cadenceHrefs) {
       expect(capturePaths, `${href} is already a capture action`).not.toContain(href);

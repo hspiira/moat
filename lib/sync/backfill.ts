@@ -1,13 +1,3 @@
-/**
- * First-sync backfill.
- *
- * `enqueueSyncMutation` skips the outbox unless hosted sync is already on, so
- * records written before opt-in have no outbox entry and would never be sent.
- * Turning sync on would upload new writes while the existing ledger stayed
- * stranded on the device. This walks every syncable store once and seeds the
- * outbox from what is already there.
- */
-
 import type { RepositoryBundle } from "@/lib/repositories/types";
 import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
 import {
@@ -35,10 +25,6 @@ export function hasBackfilled(profile: SyncProfile): boolean {
   return Boolean(profile.backfilledAt);
 }
 
-/**
- * Safe to re-run. Existing outbox entries are matched by entity key, so a
- * backfill interrupted halfway resumes rather than double-queueing.
- */
 export async function backfillSyncOutbox(params: {
   repositories: RepositoryBundle;
   profile: SyncProfile;

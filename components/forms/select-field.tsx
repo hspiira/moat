@@ -28,12 +28,9 @@ type Props = {
   label?: ReactNode;
   value: string;
   placeholder?: string;
-  /** Ignored when `groups` is set. */
   options?: SelectFieldOption[];
-  /** Headed sections, for lists long enough that a flat one is hard to scan. */
   groups?: SelectFieldOptionGroup[];
   onValueChange: (value: string) => void;
-  /** Field-level validation message. When set, the trigger is marked invalid. */
   error?: string | null;
 };
 

@@ -50,15 +50,6 @@ function labelFor(
   return String(value);
 }
 
-/**
- * The review surface for one captured item: read what was parsed, act on it,
- * and drop into the form only when something actually needs correcting.
- *
- * Rendering every open item as a form did not survive contact with real use —
- * parsing a batch of five messages produced five stacked forms to scroll past.
- * Reviewing is the common case and editing is the exception, so editing is now
- * a mode inside this sheet rather than the default presentation of the queue.
- */
 export function CaptureReviewDetailSheet({
   item,
   accounts,
@@ -89,10 +80,6 @@ export function CaptureReviewDetailSheet({
   const [draft, setDraft] = useState<CaptureReviewItem | null>(item);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Keyed on updatedAt as well as id so a save — which reloads the item with a
-  // new timestamp and possibly a new status — resets the sheet to show the saved
-  // result. Adjusted during render rather than in an effect, matching the
-  // "re-sync when a prop changes" pattern used elsewhere in this codebase.
   const itemKey = item ? `${item.id}:${item.updatedAt}` : null;
   const [seenItemKey, setSeenItemKey] = useState(itemKey);
   if (itemKey !== seenItemKey) {
@@ -139,10 +126,6 @@ export function CaptureReviewDetailSheet({
         {item && subject ? (
           <>
             <div className="grid gap-4 px-4 pb-4">
-              {/* Hidden while editing: the amount and the date · account ·
-                  category line restate four fields sitting directly below them,
-                  so in edit mode this block was 76px of duplication ahead of
-                  the first input. */}
               {isEditing ? null : (
                 <div className="grid gap-1">
                   <Money
