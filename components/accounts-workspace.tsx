@@ -8,7 +8,7 @@ import { defaultAccountTypes } from "@/lib/app-state/defaults";
 import { canDeleteAccount } from "@/lib/domain/account-cleanup";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { getAccountTotals } from "@/lib/domain/accounts";
+import { getAccountTotals, listedAccounts } from "@/lib/domain/accounts";
 import { useFormSheet } from "@/components/hooks/use-form-sheet";
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
@@ -58,6 +58,7 @@ export function AccountsWorkspace() {
   } = useAccountsWorkspace();
 
   const accountTotals = getAccountTotals(accounts);
+  const listedCount = listedAccounts(accounts).length;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -114,8 +115,7 @@ export function AccountsWorkspace() {
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                across {accountTotals.activeAccounts}{" "}
-                {accountTotals.activeAccounts === 1 ? "account" : "accounts"}
+                across {listedCount} {listedCount === 1 ? "account" : "accounts"}
               </p>
             </div>
             <div className="flex gap-2">

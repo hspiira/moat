@@ -297,7 +297,7 @@ function FlowTile({
       <span className="text-lg font-semibold">
         <Money amount={amount} tone={tone} signed />
       </span>
-      {count > 0 ? (
+      {count > 1 ? (
         <span className="text-xs text-muted-foreground">
           {formatMoney(Math.round(amount / count))} on average
         </span>

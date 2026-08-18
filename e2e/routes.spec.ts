@@ -7,6 +7,7 @@ const DESTINATIONS = [
   { path: "/month", heading: /Month check/i },
   { path: "/import", heading: /Import/i },
   { path: "/settings/rules", heading: /Rules/i },
+  { path: "/settings/categories", heading: /Categories/i },
 ];
 
 for (const { path, heading } of DESTINATIONS) {

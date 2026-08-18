@@ -145,26 +145,45 @@ export function BudgetManagerPanel({
   return (
     <div id="budgets" className="grid min-w-0 scroll-mt-20 gap-4">
       <div className="grid gap-1 pt-2">
-        <p className="text-sm text-muted-foreground">
-          {position.remaining < 0 ? "Over budget by" : "Left to spend"}
-        </p>
-        <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
-          <Money
-            amount={Math.abs(position.remaining)}
-            currency="UGX"
-            tone={position.remaining < 0 ? "negative" : "positive"}
-            className="font-display"
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {formatMoney(position.spent, "UGX")} spent of {formatMoney(position.allocated, "UGX")}{" "}
-          allocated
-          {position.unallocatedIncome > 0
-            ? ` · ${formatMoney(position.unallocatedIncome, "UGX")} income not yet allocated`
-            : position.unallocatedIncome < 0
-              ? ` · allocated ${formatMoney(Math.abs(position.unallocatedIncome), "UGX")} beyond income`
-              : ""}
-        </p>
+        {position.allocated === 0 ? (
+          <>
+            <p className="text-sm text-muted-foreground">Waiting to be given a job</p>
+            <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
+              <Money
+                amount={Math.max(position.unallocatedIncome, 0)}
+                currency="UGX"
+                tone="neutral"
+                className="font-display"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Nothing is budgeted this month yet, so there is no limit to spend against.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {position.remaining < 0 ? "Over budget by" : "Left to spend"}
+            </p>
+            <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
+              <Money
+                amount={Math.abs(position.remaining)}
+                currency="UGX"
+                tone={position.remaining < 0 ? "negative" : "positive"}
+                className="font-display"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {formatMoney(position.spent, "UGX")} spent of{" "}
+              {formatMoney(position.allocated, "UGX")} allocated
+              {position.unallocatedIncome > 0
+                ? ` · ${formatMoney(position.unallocatedIncome, "UGX")} income not yet allocated`
+                : position.unallocatedIncome < 0
+                  ? ` · allocated ${formatMoney(Math.abs(position.unallocatedIncome), "UGX")} beyond income`
+                  : ""}
+            </p>
+          </>
+        )}
         {position.overspentCount > 0 ? (
           <p className="flex items-center gap-1.5 text-sm text-neg">
             <IconAlertTriangle aria-hidden className="size-4 shrink-0" />

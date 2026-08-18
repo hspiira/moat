@@ -42,7 +42,7 @@ export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: 
                   : undefined
               }
               className={cn(
-                "grid min-h-11 content-center justify-items-center gap-0.5 rounded-md px-0.5 py-1",
+                "grid min-h-12 content-center justify-items-center gap-0.5 rounded-md px-0.5 py-1.5",
                 positive && "bg-pos/12",
                 negative && "bg-neg/12",
                 !cell.hasActivity && "opacity-45",
@@ -52,7 +52,7 @@ export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: 
               {cell.hasActivity ? (
                 <span
                   className={cn(
-                    "text-[10px] leading-none tabular-nums",
+                    "text-[11px] leading-none tabular-nums",
                     positive ? "text-pos" : negative ? "text-neg" : "text-muted-foreground",
                   )}
                 >

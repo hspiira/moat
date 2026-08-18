@@ -34,6 +34,7 @@ const APP_SHELL_URLS = [
   "/inbox",
   "/month",
   "/settings/rules",
+  "/settings/categories",
   "/transactions",
   "/transactions/capture",
   // Old paths, kept as redirects so bookmarks and installed shortcuts still work.

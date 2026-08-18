@@ -11,6 +11,7 @@ export function TransactionsCaptureReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Capture review"
+      srOnlyTitle
       description="Resolve captured items before they reach the ledger."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

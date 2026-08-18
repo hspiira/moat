@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { IconArchiveOff, IconTrash } from "@tabler/icons-react";
 
-import type { Account, AccountType, Transaction } from "@/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 import { canDeleteAccount } from "@/lib/domain/account-cleanup";
+import { CLAIM_TYPES, listedAccounts } from "@/lib/domain/accounts";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 
-const CLAIM_TYPES: AccountType[] = ["debt", "receivable"];
 
 type Props = {
   accounts: Account[];
@@ -46,6 +46,7 @@ export function AccountList({
   onArchive,
   onDelete,
 }: Props) {
+  const listed = listedAccounts(accounts);
   const active = accounts.filter((a) => !a.isArchived);
   const archived = accounts.filter((a) => a.isArchived);
 
@@ -61,13 +62,11 @@ export function AccountList({
     );
   }, [accounts, transactions]);
 
-  const holdings = active
+  const holdings = listed
     .filter((account) => !CLAIM_TYPES.includes(account.type))
     .sort((left, right) => right.balance - left.balance || left.name.localeCompare(right.name));
 
-  const activeClaims = active.filter(
-    (account) => CLAIM_TYPES.includes(account.type) && account.balance !== 0,
-  );
+  const activeClaims = listed.filter((account) => CLAIM_TYPES.includes(account.type));
 
   return (
     <section className="grid gap-5">

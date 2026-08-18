@@ -13,6 +13,7 @@ function BreakdownAmount({
   positiveNeutral = false,
 }: {
   amount: number;
+  /** A balance is a position, not a movement, so it carries no leading plus. */
   positiveNeutral?: boolean;
 }) {
   return (
@@ -20,7 +21,7 @@ function BreakdownAmount({
       tone={
         amount < 0 ? "negative" : amount > 0 && !positiveNeutral ? "positive" : "neutral"
       }
-      sign={amount < 0 ? "negative" : amount > 0 ? "positive" : "none"}
+      sign={amount < 0 ? "negative" : amount > 0 && !positiveNeutral ? "positive" : "none"}
       value={formatMoney(Math.abs(amount))}
       className="text-[11px] font-medium"
     />
@@ -67,22 +68,21 @@ export function AccountBalanceBreakdown({
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="flex items-start justify-between gap-3">
-          <span className="shrink-0 text-muted-foreground">Inflow</span>
-          <BreakdownAmount amount={breakdown.inflow} />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <span className="shrink-0 text-muted-foreground">Outflow</span>
-          <BreakdownAmount amount={-breakdown.outflow} />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <span className="shrink-0 text-muted-foreground">Savings alloc.</span>
-          <BreakdownAmount amount={-breakdown.savingsAllocations} />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <span className="shrink-0 text-muted-foreground">Transfers</span>
-          <BreakdownAmount amount={breakdown.transfers} />
-        </div>
+        {(
+          [
+            ["Inflow", breakdown.inflow],
+            ["Outflow", -breakdown.outflow],
+            ["Moved to savings", -breakdown.savingsAllocations],
+            ["Transfers", breakdown.transfers],
+          ] as const
+        )
+          .filter(([, amount]) => amount !== 0)
+          .map(([label, amount]) => (
+            <div key={label} className="flex items-start justify-between gap-3">
+              <span className="shrink-0 text-muted-foreground">{label}</span>
+              <BreakdownAmount amount={amount} />
+            </div>
+          ))}
       </div>
       <div className="flex items-center justify-between gap-3 pt-2">
         <span className="shrink-0 text-muted-foreground">Net movement</span>

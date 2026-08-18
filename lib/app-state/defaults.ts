@@ -1,4 +1,5 @@
 import type { AccountType, Category, GoalType, ResourceLink } from "@/lib/types";
+import { categoryIdentity, categoryMatchKey } from "@/lib/domain/category-merge";
 import { categorySlug, feesCategoryId, seededCategoryId } from "@/lib/domain/seeded-ids";
 
 const DEFAULT_DATE = "2026-01-01T00:00:00.000Z";
@@ -97,8 +98,23 @@ export function reconcileDefaultCategories(
 ): Category[] {
   const byId = new Map(stored.map((category) => [category.id, category]));
 
+  // Matching the name as well as the id is what stops a seed landing twice when
+  // the stored copy was written under an id from an older scheme or another device.
+  const byIdentity = new Map<string, Category>();
+  const defaultsByName = new Map<string, Category>();
+  for (const category of stored) {
+    const identity = categoryIdentity(category);
+    if (!byIdentity.has(identity)) byIdentity.set(identity, category);
+    const name = categoryMatchKey(category.name);
+    if (category.isDefault && !defaultsByName.has(name)) defaultsByName.set(name, category);
+  }
+
   return buildDefaultCategories(userId).flatMap((seed) => {
-    const existing = byId.get(seed.id) ?? byId.get(categorySlug(seed.name));
+    const existing =
+      byId.get(seed.id) ??
+      byId.get(categorySlug(seed.name)) ??
+      byIdentity.get(categoryIdentity(seed)) ??
+      defaultsByName.get(categoryMatchKey(seed.name));
 
     if (!existing) {
       return [seed];

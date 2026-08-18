@@ -22,6 +22,7 @@ function ChangeBadge({ change, label }: { change: ChangeMetric; label: string })
         direction="up"
         showIcon
         value="New"
+        aria-label={`${label}: no previous period to compare with`}
         className="text-[0.7rem] font-medium text-muted-foreground"
         iconClassName="h-3 w-3"
       />
@@ -31,7 +32,7 @@ function ChangeBadge({ change, label }: { change: ChangeMetric; label: string })
   const value = change.value ?? 0;
 
   return (
-    <span title={`${label} vs previous period`}>
+    <span aria-label={`${label}: ${Math.abs(value).toFixed(0)}% ${value >= 0 ? "up on" : "down on"} the previous period`}>
       <AmountIndicator
         tone="neutral"
         direction={value === 0 ? "flat" : value > 0 ? "up" : "down"}

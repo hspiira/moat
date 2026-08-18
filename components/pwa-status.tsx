@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { IconShare, IconSquareRoundedPlus } from "@tabler/icons-react";
+import { IconShare, IconSquareRoundedPlus, IconX } from "@tabler/icons-react";
 
 import { getLocalSaveEventName, type LocalSaveDetail } from "@/lib/local-save";
 import { useHasProfile } from "@/components/hooks/use-has-profile";
@@ -13,6 +13,11 @@ import {
   isRunningLowOnSpace,
   type StorageDurability,
 } from "@/lib/storage-durability";
+import {
+  dismissStorageNotice,
+  isStorageNoticeDismissed,
+  type StorageNoticeKind,
+} from "@/lib/preferences/storage-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +67,7 @@ export function PwaStatus() {
   const [isInstalling, setIsInstalling] = useState(false);
   const [lastLocalSave, setLastLocalSave] = useState<LocalSaveDetail | null>(null);
   const [durability, setDurability] = useState<StorageDurability | null>(null);
+  const [dismissed, setDismissed] = useState<StorageNoticeKind[]>([]);
 
   useEffect(() => {
     setIsOnline(window.navigator.onLine);
@@ -69,6 +75,9 @@ export function PwaStatus() {
     setIsIos(isIosDevice());
     setHasBackup(Boolean(readGoogleDriveBackupPreferences().lastBackupAt));
     void ensurePersistentStorage().then(setDurability);
+    setDismissed(
+      (["evictable", "low-space", "no-backup"] as const).filter(isStorageNoticeDismissed),
+    );
 
     function handleOnline() {
       setIsOnline(true);
@@ -136,13 +145,29 @@ export function PwaStatus() {
   const isAtRisk = Boolean(durability && isEvictable(durability)) && hasProfile && !hasBackup;
   const isLowOnSpace = Boolean(durability && isRunningLowOnSpace(durability)) && hasProfile;
 
-  const storageWarning = isLowOnSpace
-    ? "Device storage is nearly full, which is when a browser starts clearing app data."
+  const notice: { kind: StorageNoticeKind; text: string } | null = isLowOnSpace
+    ? {
+        kind: "low-space",
+        text: "Device storage is nearly full, which is when a browser starts clearing app data.",
+      }
     : isAtRisk
-      ? "This browser has not promised to keep your records, so it may clear them to free space."
+      ? {
+          kind: "evictable",
+          text: "This browser has not promised to keep your records, so it may clear them to free space.",
+        }
       : shouldShowBackupNudge
-        ? "No backup yet, and iOS can clear app storage under low disk space."
+        ? {
+            kind: "no-backup",
+            text: "No backup yet, and iOS can clear app storage under low disk space.",
+          }
         : null;
+
+  const storageWarning = notice && !dismissed.includes(notice.kind) ? notice : null;
+
+  function dismiss(kind: StorageNoticeKind) {
+    dismissStorageNotice(kind);
+    setDismissed((current) => [...current, kind]);
+  }
 
   const shouldShowStatus =
     !isOnline ||
@@ -165,11 +190,21 @@ export function PwaStatus() {
           <span className="text-xs text-muted-foreground">{lastLocalSave.message}</span>
         ) : null}
         {storageWarning ? (
-          <span className="text-xs text-muted-foreground">
-            {storageWarning}{" "}
-            <Link href="/settings" className="text-foreground underline underline-offset-2">
-              Back up now
-            </Link>
+          <span className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <span>
+              {storageWarning.text}{" "}
+              <Link href="/settings" className="text-foreground underline underline-offset-2">
+                Back up now
+              </Link>
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss storage warning"
+              className="-mt-0.5 shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              onClick={() => dismiss(storageWarning.kind)}
+            >
+              <IconX className="size-3.5" />
+            </button>
           </span>
         ) : null}
       </div>

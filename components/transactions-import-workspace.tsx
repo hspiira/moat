@@ -10,6 +10,7 @@ export function TransactionsImportWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Import"
+      srOnlyTitle
       description="Bring in transactions from a bank or mobile-money statement (CSV)."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

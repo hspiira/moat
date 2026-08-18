@@ -24,6 +24,7 @@ import {
   IconShoppingCart,
   IconWallet,
   IconSun,
+  IconTags,
   IconTransfer,
   type Icon,
 } from "@tabler/icons-react";
@@ -57,6 +58,7 @@ export const navIcons: Record<string, Icon> = {
   "/month": IconCalendarCheck,
   "/import": IconFileImport,
   "/settings/rules": IconAdjustmentsHorizontal,
+  "/settings/categories": IconTags,
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
@@ -141,12 +143,17 @@ const mobileContextNav = [
     label: "Rules & corrections",
     description: "Rules that fill in details for you, and the corrections you have made.",
   },
+  {
+    href: "/settings/categories",
+    label: "Categories",
+    description: "What each category has cost you, and where duplicates crept in.",
+  },
 ] as const;
 
 export const mobileCadenceNav = [
   { title: "As things arrive", hrefs: ["/inbox"] },
   { title: "Every month", hrefs: ["/month", "/import"] },
-  { title: "Set up once", hrefs: ["/settings/rules"] },
+  { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories"] },
 ] as const;
 export const mobileCaptureActions = [
   {

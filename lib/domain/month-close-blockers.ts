@@ -87,3 +87,69 @@ export function getMonthCloseBlockers({
     total: groups.reduce((sum, group) => sum + group.count, 0),
   };
 }
+
+export type MonthCloseCheck = {
+  id: string;
+  label: string;
+  detail: string;
+  passed: boolean;
+};
+
+/**
+ * Every check the month runs, passed or not. "Everything looks complete" on its
+ * own asks to be trusted; the list is what earns it.
+ */
+export function getMonthCloseChecks({
+  evaluation,
+  recurringEvaluations,
+}: {
+  evaluation: MonthCloseEvaluation;
+  recurringEvaluations: RecurringEvaluation[];
+}): MonthCloseCheck[] {
+  const unpaid = recurringEvaluations.filter((entry) => entry.state !== "paid").length;
+  const expected = recurringEvaluations.length;
+
+  const count = (n: number, one: string, many: string) =>
+    `${n} ${n === 1 ? one : many}`;
+
+  return [
+    {
+      id: "unresolved",
+      label: "Everything confirmed",
+      detail:
+        evaluation.unresolvedTransactions.length === 0
+          ? "Nothing is waiting on you"
+          : `${count(evaluation.unresolvedTransactions.length, "record", "records")} still unconfirmed`,
+      passed: evaluation.unresolvedTransactions.length === 0,
+    },
+    {
+      id: "duplicate",
+      label: "No duplicates",
+      detail:
+        evaluation.duplicateGroups.length === 0
+          ? "No money looks recorded twice"
+          : `${count(evaluation.duplicateGroups.length, "pair", "pairs")} look the same`,
+      passed: evaluation.duplicateGroups.length === 0,
+    },
+    {
+      id: "categorised",
+      label: "Everything filed",
+      detail:
+        evaluation.missingCategoryTransactions.length === 0
+          ? "Every transaction has a category"
+          : `${count(evaluation.missingCategoryTransactions.length, "transaction", "transactions")} without a category`,
+      passed: evaluation.missingCategoryTransactions.length === 0,
+    },
+    {
+      id: "obligations",
+      label: "Bills accounted for",
+      detail:
+        expected === 0
+          ? "No recurring bills set up"
+          : unpaid === 0
+            ? `All ${expected} seen this month`
+            : `${unpaid} of ${expected} with no payment`,
+      passed: unpaid === 0,
+    },
+  ];
+}

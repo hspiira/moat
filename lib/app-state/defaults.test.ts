@@ -136,6 +136,49 @@ describe("lending and giving seeds", () => {
   });
 });
 
+describe("ids that do not match the current scheme", () => {
+  it("adopts a stored default that carries a foreign id rather than seeding a second copy", () => {
+    const foreign = buildDefaultCategories("user:1").map((category, index) => ({
+      ...category,
+      id: `foreign-${index}`,
+    }));
+
+    expect(reconcileDefaultCategories(foreign, "user:1")).toEqual([]);
+  });
+
+  it("still corrects the kind on a default stored under a foreign id", () => {
+    const foreign = buildDefaultCategories("user:1").map((category, index) => ({
+      ...category,
+      id: `foreign-${index}`,
+      kind:
+        category.id === deriveSeededId("user:1", "category:debt-repayment")
+          ? ("expense" as const)
+          : category.kind,
+    }));
+
+    const fixes = reconcileDefaultCategories(foreign, "user:1");
+
+    expect(fixes).toHaveLength(1);
+    expect(fixes[0].kind).toBe("debt_repayment");
+    expect(fixes[0].id).toMatch(/^foreign-/);
+  });
+
+  it("adopts a user-made category that already carries the seed name", () => {
+    const own = [
+      {
+        id: "category:my-own",
+        userId: "user:1",
+        name: "tips",
+        kind: "expense" as const,
+        isDefault: false,
+        createdAt: "2026-05-01T00:00:00.000Z",
+      },
+    ];
+
+    expect(reconcileDefaultCategories(own, "user:1").some((c) => c.name === "Tips")).toBe(false);
+  });
+});
+
 describe("legacy seeded ids", () => {
   it("does not re-seed a default already stored under its slug", () => {
     const legacy = buildDefaultCategories("user:1").map((category) => ({

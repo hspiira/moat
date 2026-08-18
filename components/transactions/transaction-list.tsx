@@ -23,12 +23,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDate } from "@/lib/format-date";
+import { formatDayHeading } from "@/lib/format-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { transactionTypeLabels } from "./transaction-form";
-import { isEditableTransaction } from "@/lib/domain/transaction-cascade";
+import { isEditableTransaction, transferLegs } from "@/lib/domain/transaction-cascade";
 
 type Props = {
   accounts: Account[];
@@ -62,7 +62,7 @@ const presentationByType: Record<TransactionType, RowPresentation> = {
     icon: IconArrowsExchange,
     iconClass: "bg-muted text-muted-foreground",
     tone: "neutral",
-    signed: false,
+    signed: true,
   },
 };
 
@@ -103,13 +103,19 @@ export function TransactionList({
             {groupByDay(transactions).map(([day, dayTransactions]) => (
               <section key={day} className="min-w-0">
                 <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
-                  {formatDate(day)}
+                  {formatDayHeading(day)}
                 </h3>
                 <ul className="divide-y divide-border/50">
                   {dayTransactions.map((transaction) => {
               const account = accounts.find((a) => a.id === transaction.accountId);
               const category = categories.find((c) => c.id === transaction.categoryId);
               const isTransfer = transaction.type === "transfer";
+              const legs = isTransfer ? transferLegs(transaction, transactions) : null;
+              const route = legs
+                ? `${accounts.find((a) => a.id === legs.source.accountId)?.name ?? "Unknown"} → ${
+                    accounts.find((a) => a.id === legs.destination.accountId)?.name ?? "Unknown"
+                  }`
+                : null;
               const isLinkedFee = Boolean(transaction.feeParentId);
               const canEdit = isEditableTransaction(transaction, transactions);
               const presentation = presentationByType[transaction.type];
@@ -141,7 +147,7 @@ export function TransactionList({
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="truncate text-sm font-medium text-foreground">{title}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {account?.name ?? "—"}
+                        {route ?? account?.name ?? "—"}
                         {category && !isTransfer ? ` · ${category.name}` : ""}
                         {transaction.currency !== "UGX" ? ` · ${transaction.currency}` : ""}
                         {isLinkedFee ? " · Fee" : ""}
