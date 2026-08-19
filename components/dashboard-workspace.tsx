@@ -135,6 +135,7 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
 
           <DashboardTopSpendingCategories
             categories={summary.topCategories}
+            totalOutflow={summary.outflow}
             onAddTransaction={record.open}
           />
         </>

@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import {
+  buildSpendingShare,
+  type SpendingCategory,
+} from "@/lib/domain/spending-share";
 import { useMemo } from "react";
 import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 
@@ -254,18 +258,23 @@ export function DashboardCashFlowSection({
   );
 }
 
+const SEGMENT_OPACITY = [0.92, 0.74, 0.58, 0.44, 0.32, 0.2];
+
+function segmentOpacity(index: number, isRemainder: boolean): number {
+  if (isRemainder) return 0.16;
+  return SEGMENT_OPACITY[Math.min(index, SEGMENT_OPACITY.length - 1)];
+}
+
 export function DashboardTopSpendingCategories({
   categories,
+  totalOutflow,
   onAddTransaction,
 }: {
   onAddTransaction?: () => void;
-  categories: {
-    categoryId: string;
-    categoryName: string;
-    amount: number;
-    count: number;
-  }[];
+  totalOutflow: number;
+  categories: SpendingCategory[];
 }) {
+  const { segments } = buildSpendingShare(categories, totalOutflow);
   return (
     <Card className="shadow-none">
       <CardHeader>
@@ -281,7 +290,7 @@ export function DashboardTopSpendingCategories({
         </CardAction>
       </CardHeader>
       <CardContent className="grid gap-2">
-        {categories.length === 0 ? (
+        {segments.length === 0 ? (
           <EmptyState>
             No spending recorded in this period.{" "}
             <button
@@ -293,33 +302,52 @@ export function DashboardTopSpendingCategories({
             </button>
           </EmptyState>
         ) : (
-          (() => {
-            const maxAmount = Math.max(...categories.map((c) => c.amount), 1);
-            return categories.map((category) => (
-              <div key={category.categoryId} className="grid gap-1.5 py-1">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                    {category.categoryName}
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
-                      {category.count}×
+          <>
+            <div
+              aria-hidden
+              className="flex h-2.5 gap-px overflow-hidden rounded-full bg-muted"
+            >
+              {segments.map((segment, index) => (
+                <div
+                  key={segment.key}
+                  className="h-full bg-neg"
+                  style={{
+                    width: `${segment.share * 100}%`,
+                    minWidth: segment.share > 0 ? "3px" : undefined,
+                    opacity: segmentOpacity(index, segment.isRemainder),
+                  }}
+                />
+              ))}
+            </div>
+
+            <ul className="grid gap-2 pt-1">
+              {segments.map((segment, index) => (
+                <li key={segment.key} className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="size-2.5 shrink-0 rounded-[3px] bg-neg"
+                      style={{ opacity: segmentOpacity(index, segment.isRemainder) }}
+                    />
+                    <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                      {segment.label}
+                      {segment.count === null ? null : (
+                        <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
+                          {segment.count}×
+                        </span>
+                      )}
                     </span>
                   </span>
                   <AmountIndicator
                     tone="negative"
                     sign="negative"
-                    value={formatMoney(category.amount)}
+                    value={formatMoney(segment.amount)}
                     className="shrink-0 text-sm font-semibold tabular-nums"
                   />
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-neg/45"
-                    style={{ width: `${Math.max(6, (category.amount / maxAmount) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ));
-          })()
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </CardContent>
     </Card>
