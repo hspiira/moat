@@ -2,18 +2,23 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.2 |
-| Status | Active contract — **authentication is still dev-only** |
+| Document Version | 1.3 |
+| Status | Active contract — **payloads are still plaintext** |
 | Owner | Piira |
-| Last Updated | 2026-08-17 |
+| Last Updated | 2026-08-19 |
 
-> **⚠️ Authentication is not real yet.** The server (`server/`) now runs on
-> Postgres with row-level tenancy, but it authenticates with a single shared
-> bearer token, so `userId` is still trusted from the request body and any
-> caller holding the token can act as any user. Endpoints fail closed (503)
-> when `MOAT_SYNC_BEARER_TOKEN` is unset. Before hosted sync is offered to
-> anyone: per-user auth, rate limiting, and a threat-model review are
-> prerequisites.
+> **⚠️ Payloads are still plaintext.** `sync_records.payload` holds the record
+> as JSON, so the server reads every transaction, payee and amount. That is the
+> remaining blocker and hosted sync stays behind
+> `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until it is closed.
+>
+> Tenancy is no longer self-asserted. The bearer token is bound to one user id
+> server-side (`MOAT_SYNC_BEARER_USER_ID`); the authenticated user is the only
+> one a request may act as, and a body claiming another user gets a 403. Both
+> variables are required, and the server fails closed (503) without them
+> rather than letting an unauthenticated caller through. Token comparison is
+> constant-time. Rate limiting and a threat-model review are still
+> prerequisites before this is offered to anyone else.
 
 ## Purpose
 

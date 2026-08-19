@@ -76,25 +76,59 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
   };
 }
 
-export function validateSyncBearerToken(headerValue: string | null) {
-  const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
-  if (!expectedToken) {
-    return;
+const COMPARISON_FLOOR = 64;
+
+export function constantTimeEquals(left: string, right: string): boolean {
+  const encoder = new TextEncoder();
+  const a = encoder.encode(left);
+  const b = encoder.encode(right);
+  const width = Math.max(a.length, b.length, COMPARISON_FLOOR);
+
+  let difference = a.length ^ b.length;
+  for (let index = 0; index < width; index += 1) {
+    difference |= (a[index] ?? 0) ^ (b[index] ?? 0);
   }
 
+  return difference === 0;
+}
+
+export function bearerTokenFrom(headerValue: string | null): string {
   const value = headerValue?.trim();
   if (!value?.startsWith("Bearer ")) {
     throw new Error("Hosted sync requires a bearer token.");
   }
+  return value.slice("Bearer ".length).trim();
+}
 
-  const token = value.slice("Bearer ".length).trim();
-  if (token !== expectedToken) {
+export type SyncPrincipal = { userId: string };
+
+export function resolveSyncPrincipal(headerValue: string | null): SyncPrincipal {
+  const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
+  const boundUserId = process.env.MOAT_SYNC_BEARER_USER_ID?.trim();
+
+  if (!expectedToken || !boundUserId) {
+    throw new Error(
+      "Hosted sync needs MOAT_SYNC_BEARER_TOKEN and MOAT_SYNC_BEARER_USER_ID set together.",
+    );
+  }
+
+  if (!constantTimeEquals(bearerTokenFrom(headerValue), expectedToken)) {
     throw new Error("Hosted sync bearer token is invalid.");
+  }
+
+  return { userId: boundUserId };
+}
+
+export function assertPrincipalOwns(principal: SyncPrincipal, claimedUserId: string) {
+  if (!constantTimeEquals(principal.userId, claimedUserId)) {
+    throw new Error("This token cannot read or write another user's records.");
   }
 }
 
 export function isHostedBackendUsable(): boolean {
-  return Boolean(process.env.MOAT_SYNC_BEARER_TOKEN?.trim());
+  return Boolean(
+    process.env.MOAT_SYNC_BEARER_TOKEN?.trim() && process.env.MOAT_SYNC_BEARER_USER_ID?.trim(),
+  );
 }
 
 export function createSyncStubResponse(request: SyncPushRequest): SyncPushResponse {
