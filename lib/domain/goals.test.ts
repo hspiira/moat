@@ -5,7 +5,18 @@ import {
   getGoalContributionPlan,
   withDerivedGoalProgress,
 } from "@/lib/domain/goals";
-import type { Goal, Transaction } from "@/lib/types";
+import type { Category, Goal, Transaction } from "@/lib/types";
+
+const SAVINGS_CATEGORIES: Category[] = [
+  {
+    id: "category:savings",
+    userId: "user:default",
+    name: "Savings",
+    kind: "savings",
+    isDefault: true,
+    createdAt: "2026-04-01T00:00:00.000Z",
+  },
+];
 
 function buildTransaction(overrides: Partial<Transaction>): Transaction {
   return {
@@ -87,6 +98,44 @@ describe("derived goal progress", () => {
     const unlinkedGoal = { ...goal, linkedAccountId: undefined, currentAmount: 500_000 };
 
     expect(deriveGoalCurrentAmount(unlinkedGoal, [buildTransaction({})])).toBe(500_000);
+  });
+
+  it("counts the leg that arrives in the linked account", () => {
+    const transactions = [
+      buildTransaction({
+        id: "tx:out",
+        accountId: "account:bank",
+        type: "transfer",
+        amount: -120_000,
+        transferGroupId: "g1",
+      }),
+      buildTransaction({
+        id: "tx:in",
+        accountId: "account:savings",
+        type: "transfer",
+        amount: 120_000,
+        transferGroupId: "g1",
+      }),
+    ];
+
+    expect(
+      deriveGoalCurrentAmount({ ...goal, currentAmount: 0 }, transactions, SAVINGS_CATEGORIES),
+    ).toBe(120_000);
+  });
+
+  it("leaves an ordinary transfer into the linked account out of goal progress", () => {
+    const transactions = [
+      buildTransaction({
+        accountId: "account:savings",
+        type: "transfer",
+        amount: 90_000,
+        categoryId: "category:transfers",
+      }),
+    ];
+
+    expect(
+      deriveGoalCurrentAmount({ ...goal, currentAmount: 0 }, transactions, SAVINGS_CATEGORIES),
+    ).toBe(0);
   });
 
   it("maps a goal list without mutating stored goals", () => {

@@ -19,7 +19,7 @@ type GoalFieldErrors = {
 };
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
-import type { Account, Goal, Transaction, UserProfile } from "@/lib/types";
+import type { Account, Category, Goal, Transaction, UserProfile } from "@/lib/types";
 import { createId } from "@/lib/ids";
 import { currentMonthIso } from "@/lib/today";
 
@@ -33,6 +33,7 @@ export function useGoalsWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [goalForm, setGoalForm] = useState<GoalFormState>(defaultGoalForm);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,11 +58,13 @@ export function useGoalsWorkspace() {
         return;
       }
 
-      const [storedAccounts, storedGoals, storedTransactions] = await Promise.all([
-        repositories.accounts.listByUser(nextProfile.id),
-        repositories.goals.listByUser(nextProfile.id),
-        repositories.transactions.listByUser(nextProfile.id),
-      ]);
+      const [storedAccounts, storedGoals, storedTransactions, storedCategories] =
+        await Promise.all([
+          repositories.accounts.listByUser(nextProfile.id),
+          repositories.goals.listByUser(nextProfile.id),
+          repositories.transactions.listByUser(nextProfile.id),
+          repositories.categories.listByUser(nextProfile.id),
+        ]);
 
       const reconciledAccounts = reconcileAccountBalances(storedAccounts, storedTransactions);
       const hydratedGoals = sortGoals(storedGoals);
@@ -69,6 +72,7 @@ export function useGoalsWorkspace() {
       setAccounts(reconciledAccounts);
       setGoals(hydratedGoals);
       setTransactions(storedTransactions);
+      setCategories(storedCategories);
       setGoalForm((current) => ({
         ...current,
         linkedAccountId: current.linkedAccountId || reconciledAccounts[0]?.id || "",
@@ -88,12 +92,12 @@ export function useGoalsWorkspace() {
 
   const currentMonth = currentMonthIso();
   const monthlySummary = useMemo(
-    () => getMonthSummary(transactions, [], currentMonth),
-    [currentMonth, transactions],
+    () => getMonthSummary(transactions, categories, currentMonth),
+    [categories, currentMonth, transactions],
   );
   const goalsWithProgress = useMemo(
-    () => withDerivedGoalProgress(goals, transactions),
-    [goals, transactions],
+    () => withDerivedGoalProgress(goals, transactions, categories),
+    [categories, goals, transactions],
   );
   const emergencyFundSuggestion = monthlySummary.outflow * 3;
   const emergencyFundGoal =

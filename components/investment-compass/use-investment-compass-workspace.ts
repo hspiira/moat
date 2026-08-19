@@ -9,6 +9,7 @@ import { announceLocalSave } from "@/lib/local-save";
 import { getMonthSummary } from "@/lib/domain/summaries";
 import { repositories } from "@/lib/repositories/instance";
 import type {
+  Category,
   Goal,
   InvestmentProfile,
   LiquidityNeed,
@@ -56,12 +57,15 @@ function buildProfileForm(profile: InvestmentProfile): InvestmentProfileFormStat
 function getEmergencyFundMonthsCovered(
   goals: Goal[],
   transactions: Transaction[],
+  categories: Category[],
   month: string,
 ) {
   const emergencyGoal = goals.find((goal) => goal.goalType === "emergency_fund") ?? null;
-  const monthSummary = getMonthSummary(transactions, [], month);
+  const monthSummary = getMonthSummary(transactions, categories, month);
   if (!emergencyGoal || monthSummary.outflow <= 0) return 0;
-  return deriveGoalCurrentAmount(emergencyGoal, transactions) / monthSummary.outflow;
+  return (
+    deriveGoalCurrentAmount(emergencyGoal, transactions, categories) / monthSummary.outflow
+  );
 }
 
 function hasHighCostDebt(transactions: Transaction[]) {
@@ -73,6 +77,7 @@ export function useInvestmentCompassWorkspace() {
   const [investmentProfile, setInvestmentProfile] = useState<InvestmentProfile | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [resources, setResources] = useState<ResourceLink[]>([]);
   const [form, setForm] = useState<InvestmentProfileFormState>(defaultInvestmentProfileForm);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,11 +103,13 @@ export function useInvestmentCompassWorkspace() {
         return;
       }
 
-      const [storedInvestmentProfile, storedGoals, storedTransactions] = await Promise.all([
-        repositories.investmentProfiles.getByUser(nextProfile.id),
-        repositories.goals.listByUser(nextProfile.id),
-        repositories.transactions.listByUser(nextProfile.id),
-      ]);
+      const [storedInvestmentProfile, storedGoals, storedTransactions, storedCategories] =
+        await Promise.all([
+          repositories.investmentProfiles.getByUser(nextProfile.id),
+          repositories.goals.listByUser(nextProfile.id),
+          repositories.transactions.listByUser(nextProfile.id),
+          repositories.categories.listByUser(nextProfile.id),
+        ]);
 
       const fallbackProfile = createBootstrapState(nextProfile).investmentProfile;
       const activeProfile = storedInvestmentProfile ?? fallbackProfile;
@@ -111,6 +118,7 @@ export function useInvestmentCompassWorkspace() {
       setForm(buildProfileForm(activeProfile));
       setGoals(storedGoals);
       setTransactions(storedTransactions);
+      setCategories(storedCategories);
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Couldn't load Investment Compass. Please try again.",
@@ -128,12 +136,12 @@ export function useInvestmentCompassWorkspace() {
 
   const currentMonth = getCurrentMonth();
   const monthlyOutflow = useMemo(
-    () => getMonthSummary(transactions, [], currentMonth).outflow,
-    [currentMonth, transactions],
+    () => getMonthSummary(transactions, categories, currentMonth).outflow,
+    [categories, currentMonth, transactions],
   );
   const emergencyFundMonthsCovered = useMemo(
-    () => getEmergencyFundMonthsCovered(goals, transactions, currentMonth),
-    [currentMonth, goals, transactions],
+    () => getEmergencyFundMonthsCovered(goals, transactions, categories, currentMonth),
+    [categories, currentMonth, goals, transactions],
   );
 
   const guidance = useMemo(() => {

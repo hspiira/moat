@@ -34,6 +34,7 @@ export const ACCOUNTS = {
   cash: account("e2e-account-cash", "Pocket Cash", "cash", 400_000),
   momo: account("e2e-account-momo", "Momo Wallet", "mobile_money", 250_000),
   bank: account("e2e-account-bank", "Town Bank", "bank", 3_400_000),
+  savingsPot: account("e2e-account-savings-pot", "Savings Pot", "sacco", 1_200_000),
   lendingPool: account(
     deriveSeededId(USER_ID, SEEDED_SLUGS.lendingPool),
     "Money lent out",
@@ -58,6 +59,7 @@ export const CATEGORIES: Category[] = [
   { ...category("Transfers", "transfer"), id: transfersCategoryId(USER_ID) },
   { ...category("Fees & charges", "expense"), id: feesCategoryId(USER_ID) },
   { ...category("Lending", "transfer"), id: seededCategoryId(USER_ID, "Lending") },
+  category("Savings", "savings"),
 ];
 
 const CATEGORY = Object.fromEntries(CATEGORIES.map((entry) => [entry.name, entry.id])) as Record<

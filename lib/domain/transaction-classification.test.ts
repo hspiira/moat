@@ -32,10 +32,15 @@ const catalogue: Category[] = [
 ];
 
 describe("allowedCategoryKinds", () => {
-  it("gives every transaction type at least one kind", () => {
+  it("gives every type a user can still create at least one kind", () => {
     for (const [type, kinds] of Object.entries(allowedCategoryKinds)) {
+      if (type === "savings_contribution") continue;
       expect(kinds.length, `${type} has no allowed category kind`).toBeGreaterThan(0);
     }
+  });
+
+  it("leaves savings_contribution unreachable, because savings is now a transfer", () => {
+    expect(allowedCategoryKinds.savings_contribution).toEqual([]);
   });
 
   it("never lets a purpose kind be reachable from more than one type", () => {
@@ -56,7 +61,7 @@ describe("transactionTypeForCategory", () => {
     const cases: [string, CategoryKind, TransactionType][] = [
       ["salary", "income", "income"],
       ["food", "expense", "expense"],
-      ["savings", "savings", "savings_contribution"],
+      ["savings", "savings", "transfer"],
       ["transfers", "transfer", "transfer"],
       ["debt-repayment", "debt_repayment", "debt_payment"],
       ["lending", "lending", "transfer"],
@@ -108,7 +113,6 @@ describe("categoryMatchesType", () => {
     const cases: [TransactionType, string][] = [
       ["income", "category:salary"],
       ["expense", "category:food"],
-      ["savings_contribution", "category:savings"],
       ["transfer", "category:transfers"],
       ["debt_payment", "category:debt-repayment"],
     ];

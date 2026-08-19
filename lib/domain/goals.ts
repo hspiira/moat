@@ -1,25 +1,40 @@
-import type { Goal, GoalContributionPlan, Transaction } from "@/lib/types";
+import {
+  isLegacySavingsContribution,
+  isSavingsDeposit,
+  savingsCategoryIds,
+} from "@/lib/domain/savings";
+import type { Category, Goal, GoalContributionPlan, Transaction } from "@/lib/types";
 
-export function deriveGoalCurrentAmount(goal: Goal, transactions: Transaction[]): number {
+export function deriveGoalCurrentAmount(
+  goal: Goal,
+  transactions: Transaction[],
+  categories: Category[] = [],
+): number {
   if (!goal.linkedAccountId) {
     return goal.currentAmount;
   }
 
+  const savingsIds = savingsCategoryIds(categories);
   const contributed = transactions
     .filter(
       (transaction) =>
-        transaction.type === "savings_contribution" &&
-        transaction.accountId === goal.linkedAccountId,
+        transaction.accountId === goal.linkedAccountId &&
+        (isLegacySavingsContribution(transaction) ||
+          isSavingsDeposit(transaction, savingsIds)),
     )
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
   return goal.currentAmount + contributed;
 }
 
-export function withDerivedGoalProgress(goals: Goal[], transactions: Transaction[]): Goal[] {
+export function withDerivedGoalProgress(
+  goals: Goal[],
+  transactions: Transaction[],
+  categories: Category[] = [],
+): Goal[] {
   return goals.map((goal) => ({
     ...goal,
-    currentAmount: deriveGoalCurrentAmount(goal, transactions),
+    currentAmount: deriveGoalCurrentAmount(goal, transactions, categories),
   }));
 }
 

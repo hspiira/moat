@@ -80,13 +80,14 @@ describe("findTransactionTypeDrift", () => {
     expect(drift).toEqual({ repaired: [], needsReview: [] });
   });
 
-  it("keeps savings and expense interchangeable, since both reduce the balance", () => {
+  it("sends an expense carrying a savings category to review rather than repairing it", () => {
     const drift = findTransactionTypeDrift(
       [transaction({ id: "t:1", type: "expense", categoryId: "category:savings" })],
       [category("category:savings", "savings")],
       TIMESTAMP,
     );
 
-    expect(drift.repaired[0].type).toBe("savings_contribution");
+    expect(drift.repaired).toEqual([]);
+    expect(drift.needsReview.map((entry) => entry.id)).toEqual(["t:1"]);
   });
 });
