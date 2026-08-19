@@ -25,6 +25,6 @@ export function getTransactionDetail(
     subject,
     fee: fee ?? null,
     parent,
-    totalOffAccount: subject.amount + (fee?.amount ?? 0),
+    totalOffAccount: Math.abs(subject.amount) + Math.abs(fee?.amount ?? 0),
   };
 }

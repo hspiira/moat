@@ -182,18 +182,6 @@
   samp {
     letter-spacing: normal;
     }
-  /* On a phone a card reaches the screen edge, so its own 16px padding is the
-     only inset. The shell gutter and the card padding were both 16px, which
-     cost every row 32px of width. Cards nested inside another card, a sheet or
-     a popover keep their margins, since those bring their own padding. */
-  @media (width < 40rem) {
-    [data-slot="card"]:not([data-slot="card"] *):not([data-slot="sheet-content"] *):not(
-        [data-slot="popover-content"] *
-      ) {
-      margin-inline: calc(var(--spacing) * -4);
-      border-radius: 0;
-    }
-  }
   html {
     @apply font-sans;
     }
@@ -246,4 +234,25 @@
   0% { opacity: 0; transform: scale(0.5); }
   45% { opacity: 0.55; transform: scale(1.05); }
   100% { opacity: 0; transform: scale(1.7); }
+}
+
+/* When to colour a component and when to let the page show through.
+ A surface only reads as one when something bounds it. Inset and rounded,
+ a card is bounded by its own edges, so it carries --card. Spanning the
+ whole viewport it has no edges to speak of, and --card sits 0.015 from
+ --background in light mode, so the fill says nothing and the rows float.
+ So: at the sm breakpoint and up a card is a surface; below it, it is a
+ section on the page, marked by a hairline top and bottom instead.
+ One rule, no per-component decision, and nothing to tune per page.
+ Cards inside another card, a sheet or a popover are excluded, since those
+ bring their own bounds. */
+@layer utilities {
+  @media (width < 40rem) {
+    [data-slot="card"]:not([data-slot="card"] *):not([data-slot="sheet-content"] *):not([data-slot="popover-content"] *) {
+      margin-inline: calc(var(--spacing) * -4);
+      border-radius: 0;
+      background-color: transparent;
+      border-block: 1px solid var(--border);
+    }
+  }
 }

@@ -34,7 +34,39 @@ const fee = transaction({
   feeParentId: "transaction:1",
 });
 
+const transferOut = transaction({
+  id: "transaction:2",
+  type: "transfer",
+  amount: -200_000,
+  originalAmount: 200_000,
+  categoryId: "cat-transfers",
+  payee: "Suzan",
+  transferGroupId: "group:1",
+});
+
+const transferFee = transaction({
+  id: "transaction:2:fee",
+  amount: 1_725,
+  originalAmount: 1_725,
+  categoryId: "category:fees",
+  note: "Fee / charges",
+  feeParentId: "transaction:2",
+});
+
 describe("getTransactionDetail", () => {
+  it("charges a transfer fee on top of the amount sent, not out of it", () => {
+    const detail = getTransactionDetail(transferOut, [transferOut, transferFee]);
+
+    expect(detail.totalOffAccount).toBe(201_725);
+  });
+
+  it("reads the same total when the fee itself is opened", () => {
+    const detail = getTransactionDetail(transferFee, [transferOut, transferFee]);
+
+    expect(detail.subject).toBe(transferOut);
+    expect(detail.totalOffAccount).toBe(201_725);
+  });
+
   it("attaches the fee charged against a payment", () => {
     const detail = getTransactionDetail(payment, [payment, fee]);
     expect(detail.subject).toBe(payment);
