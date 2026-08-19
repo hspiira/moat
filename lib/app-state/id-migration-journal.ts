@@ -73,7 +73,7 @@ export function createLocalStorageJournalStore(): IdMigrationJournalStore {
       try {
         window.localStorage.removeItem(JOURNAL_KEY);
       } catch {
-        // A journal that cannot be cleared reads as an interrupted run and resumes harmlessly.
+        // A journal left behind just makes the next run resume. That is safe.
       }
     },
   };

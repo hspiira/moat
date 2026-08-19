@@ -53,7 +53,7 @@ export async function applyTransactionWrite(
     try {
       await restoreTransactions(snapshot);
     } catch {
-      // A rollback that cannot write leaves the original failure as the one worth reporting.
+      // If the rollback also fails, report the first error, not this one.
     }
     throw error;
   }

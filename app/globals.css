@@ -63,13 +63,11 @@
    a near-black pill on white here, a white pill on near-black in .dark. There
    is no brand hue, which is why brand can never again be mistaken for "you
    gained money" the way --primary and --pos were.
-   Colour is never the only signal: every signal has a sign, glyph or shape
-   carrying it too. --pos and --neg used to be held 0.15 apart in lightness so
-   in/out stayed apart in greyscale as well; an axe audit put contrast ahead of
-   that. Each is now pinned by its own worst background — 11px text on the
-   matching 12% tint behind it in the money calendar — which pulls --pos down
-   to a 0.05 gap from --neg. The sign printed beside every amount is what still
-   separates them without colour. Raising --pos fails WCAG AA on that tint. */
+   Colour is never the only signal: every amount also carries a sign.
+   --pos and --neg used to sit 0.15 apart in lightness so they stayed apart in
+   greyscale. Contrast won instead: both are now set by their worst
+   background, which is 11px text on its own tint in the money calendar. That
+   leaves them only 0.05 apart. Making --pos lighter fails WCAG AA there. */
 :root {
     color-scheme: light;
     --radius: 0.5rem;
