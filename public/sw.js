@@ -180,8 +180,12 @@ self.addEventListener("fetch", (event) => {
 
         return fetch(request)
           .then((response) => {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+            // Only cache a hit. A font that has not been added yet 404s, and
+            // caching that would keep serving the miss after the file arrives.
+            if (response.ok) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+            }
             return response;
           })
           // Offline and never cached: return a network error instead of leaving

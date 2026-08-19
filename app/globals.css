@@ -6,11 +6,10 @@
 
 /* One typeface everywhere: headings, figures and the JSON blocks in sync
    conflicts. Where figures must line up, tabular-nums does the job a monospace
-   used to. Helvetica Now is licensed and cannot be checked in, so this falls
-   back to Helvetica until the files are dropped in. See app/fonts/README.md. */
+   used to. Geist is one variable file covering every weight the app uses. */
+
 @theme inline {
-    --font-sans: "Helvetica Now", "Helvetica Now Text", "Helvetica Neue", Helvetica,
-      Arial, sans-serif;
+    --font-sans: var(--font-sans);
     --font-heading: var(--font-sans);
     --font-display: var(--font-sans);
     --font-mono: var(--font-sans);

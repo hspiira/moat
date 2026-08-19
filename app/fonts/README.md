@@ -1,46 +1,43 @@
 # Fonts
 
-The app uses one typeface, Helvetica Now, for everything: body, headings, and
-the JSON blocks in sync conflicts. There is no second family and no monospace.
-Where figures have to line up, `tabular-nums` does that job.
+One typeface, Geist Sans, for everything: body, headings, and the JSON blocks
+in sync conflicts. There is no separate display or monospace family. Where
+figures have to line up, `tabular-nums` does that job.
 
-## The files are not here, and cannot be
+`geist-latin.woff2` is the latin subset of the variable font, covering
+`wght 100..900`, so one file serves every weight the app uses.
 
-Helvetica Now is a commercial Monotype typeface. Unlike the fonts that used to
-live here — Geist and Bricolage Grotesque, both SIL Open Font License, which
-permits redistribution — its licence does not allow checking the files into a
-repository. It is also not on Google Fonts, so there is nothing to fetch at
-build time.
+Checked in rather than fetched at build time. `next/font/google` downloads
+during `next build`, which makes a production build depend on a live request to
+Google. That broke CI on 2026-08-17 with twelve unresolved font modules. An
+offline-first app should not need the network to build.
 
-A **web** licence is a separate purchase from a desktop one, and Monotype meters
-web use. Buying the desktop font does not license the `.woff2`.
+Geist is licensed under the SIL Open Font License 1.1, which permits
+redistribution: https://github.com/vercel/geist-font
 
-Until the files are added, `--font-sans` in `app/globals.css` falls back to
-Helvetica, then Arial. That is close enough to judge spacing and layout against,
-and it is not the real typeface. macOS and iOS have Helvetica; Windows and
-Android will land on Arial or their own substitute.
+## Replacing it
 
-## Adding them
+Drop the `.woff2` in here under the same name. `app/layout.tsx` refers to this
+path and nothing else needs changing.
 
-1. Put the licensed web files here, ideally one variable file:
-   `helvetica-now-latin.woff2`.
-2. Declare it in `app/layout.tsx` with `next/font/local`, the way the previous
-   fonts were, exposing `--font-sans`:
+## Helvetica Now, parked
 
-   ```ts
-   const helveticaNow = localFont({
-     src: "./fonts/helvetica-now-latin.woff2",
-     variable: "--font-sans",
-     display: "swap",
-     weight: "100 900",
-   });
-   ```
+Moving to Helvetica Now was tried on 2026-08-20 and backed out. What was
+learned, so it does not have to be learned twice:
 
-   Then put `helveticaNow.variable` back on the `<html>` element, and drop the
-   literal stack from `--font-sans` in `app/globals.css` so the variable wins.
-3. Re-judge `--tracking-snug`. It is `-0.008em`, tuned for Geist to make it read
-   tighter. Helvetica Now sets differently and probably does not want it.
+- It is a commercial Monotype typeface. A **web** licence is a separate
+  purchase from a desktop one, and it cannot be committed here the way an OFL
+  font can. `.gitignore` keeps any `helvetica-now-*.woff2` out of git.
+- The files tried were **Helvetica Now Micro**, which is drawn for very small
+  type. At the 14–16px this UI uses it set 28.6% wider than Helvetica — 378px
+  against 294px for the same string — which wrapped headings onto two lines and
+  truncated the search placeholder. The optical size this UI wants is **Text**.
+- Their name tables were malformed: an empty family name and a `☞` subfamily.
+  Legitimate releases do not look like that, so check where any files came from.
+- Only Light, Regular and Bold were available. The app leans on 500
+  (`font-medium`, 116 uses) and 600 (`font-semibold`, 52 uses), so both would
+  have collapsed into Regular and Bold by CSS weight matching.
 
-If the licence forbids self-hosting and requires Monotype's CDN, that conflicts
-with this being an offline-first app that must build and run without the
-network. Check before buying.
+To try again: get Helvetica Now Text in at least Regular, Medium and Bold, and
+re-judge `--tracking-snug` in `app/globals.css`, which is `-0.008em` tuned for
+Geist.

@@ -33,3 +33,7 @@ server/dist/
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Licensed font files, kept out of git. See app/fonts/README.md.
+/app/fonts/helvetica-now-*.woff2
+/app/fonts/NeueMachina-*.woff2
