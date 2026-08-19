@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { IconSearch, IconX } from "@tabler/icons-react";
 
+import { partyByTransferGroup } from "@/lib/domain/party-name";
 import { searchTransactions } from "@/lib/domain/transaction-search";
 
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,10 @@ export function TransactionsLedgerWorkspace() {
     sentinelRef,
     showMore,
   } = useIncrementalList(visibleTransactions, { pageSize: LEDGER_PAGE_SIZE, resetKey: query });
+  const partyByGroup = useMemo(
+    () => partyByTransferGroup(workspace.transactions),
+    [workspace.transactions],
+  );
   const isEditing = Boolean(workspace.editingTransactionId);
   const detailTransaction =
     workspace.transactions.find((transaction) => transaction.id === detailTransactionId) ?? null;
@@ -144,6 +149,8 @@ export function TransactionsLedgerWorkspace() {
         <TransactionList
           accounts={workspace.accounts}
           categories={workspace.categories}
+          counterparties={workspace.counterparties}
+          partyByGroup={partyByGroup}
           transactions={pageTransactions}
           pendingSyncIds={workspace.pendingSyncTransactionIds}
           isSubmitting={workspace.isSubmitting}
@@ -166,6 +173,8 @@ export function TransactionsLedgerWorkspace() {
       </div>
 
       <TransactionDetailSheet
+        counterparties={workspace.counterparties}
+        partyByGroup={partyByGroup}
         transaction={detailTransaction}
         transactions={workspace.transactions}
         accounts={workspace.accounts}

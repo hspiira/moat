@@ -7,7 +7,7 @@ import {
   getBorrowingPortfolio,
   isInformalDebt,
 } from "@/lib/domain/borrowing";
-import type { Account, Transaction } from "@/lib/types";
+import type { Account, Counterparty, Transaction } from "@/lib/types";
 
 const ASOF = new Date("2026-07-29T00:00:00.000Z");
 
@@ -66,6 +66,98 @@ function forgiven(amount: number, occurredOn: string, payee?: string): Transacti
     amount,
   };
 }
+
+function lender(id: string, name: string, overrides: Partial<Counterparty> = {}): Counterparty {
+  return {
+    id,
+    userId: "user:default",
+    name,
+    kind: "lender",
+    isArchived: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function withCounterparty(transaction: Transaction, counterpartyId: string): Transaction {
+  return { ...transaction, counterpartyId, id: `${transaction.id}:${counterpartyId}` };
+}
+
+describe("party identity", () => {
+  it("puts a stamped row and a bare payee row on the same person", () => {
+    const grace = lender("counterparty:grace", "Auntie Grace");
+    const portfolio = getBorrowingPortfolio(
+      [pool],
+      [
+        withCounterparty(leg(-200_000, "2026-05-01"), grace.id),
+        leg(-100_000, "2026-06-01", { payee: "auntie grace " }),
+      ],
+      ASOF,
+      [grace],
+    );
+
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyKey).toBe("counterparty:counterparty:grace");
+    expect(portfolio.parties[0].partyName).toBe("Auntie Grace");
+    expect(portfolio.parties[0].outstanding).toBe(300_000);
+  });
+
+  it("collapses spacing as well as case when matching a payee to a person", () => {
+    const grace = lender("counterparty:grace", "Auntie Grace");
+    const portfolio = getBorrowingPortfolio(
+      [pool],
+      [
+        leg(-200_000, "2026-05-01", { payee: "Auntie  Grace" }),
+        leg(-100_000, "2026-06-01", { payee: "AUNTIE GRACE" }),
+      ],
+      ASOF,
+      [grace],
+    );
+
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].counterpartyId).toBe(grace.id);
+  });
+
+  it("never promotes a payee who is not already a person", () => {
+    const portfolio = getBorrowingPortfolio(
+      [pool],
+      [leg(-80_000, "2026-06-10", { payee: "Musa" })],
+      ASOF,
+      [lender("counterparty:grace", "Auntie Grace")],
+    );
+
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].partyKey).toBe("payee:musa");
+    expect(portfolio.parties[0].counterpartyId).toBeUndefined();
+  });
+
+  it("prefers a live person over an archived namesake", () => {
+    const archived = lender("counterparty:old", "Auntie Grace", { isArchived: true });
+    const live = lender("counterparty:new", "Auntie Grace");
+    const portfolio = getBorrowingPortfolio(
+      [pool],
+      [leg(-200_000, "2026-05-01", { payee: "Auntie Grace" })],
+      ASOF,
+      [archived, live],
+    );
+
+    expect(portfolio.parties[0].counterpartyId).toBe(live.id);
+  });
+
+  it("does not double count the opening balance of a person a payee row resolves to", () => {
+    const grace = lender("counterparty:grace", "Auntie Grace", { openingBalance: 120_000 });
+    const portfolio = getBorrowingPortfolio(
+      [pool],
+      [leg(-80_000, "2026-05-01", { payee: "Auntie Grace" })],
+      ASOF,
+      [grace],
+    );
+
+    expect(portfolio.parties).toHaveLength(1);
+    expect(portfolio.parties[0].amountAdvanced).toBe(200_000);
+  });
+});
 
 describe("borrowing portfolio", () => {
   it("groups pooled borrowing by lender, case-insensitively", () => {
