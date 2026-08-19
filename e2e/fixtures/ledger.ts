@@ -201,7 +201,7 @@ const PROFILE: UserProfile = {
 };
 
 export function buildLedgerFixture() {
-  return {
+  return structuredClone({
     exportedAt: STAMP,
     schemaVersion: 3,
     userProfile: PROFILE,
@@ -215,5 +215,5 @@ export function buildLedgerFixture() {
     imports: [],
     syncProfiles: [],
     syncOutbox: [],
-  };
+  });
 }

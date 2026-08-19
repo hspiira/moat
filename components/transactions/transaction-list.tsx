@@ -102,9 +102,9 @@ export function TransactionList({
           <div className="grid gap-4">
             {groupByDay(transactions).map(([day, dayTransactions]) => (
               <section key={day} className="min-w-0">
-                <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
+                <h2 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
                   {formatDayHeading(day)}
-                </h3>
+                </h2>
                 <ul className="divide-y divide-border/50">
                   {dayTransactions.map((transaction) => {
               const account = accounts.find((a) => a.id === transaction.accountId);

@@ -45,10 +45,16 @@ export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: 
                 "grid min-h-12 content-center justify-items-center gap-0.5 rounded-md px-0.5 py-1.5",
                 positive && "bg-pos/12",
                 negative && "bg-neg/12",
-                !cell.hasActivity && "opacity-45",
               )}
             >
-              <span className="text-xs leading-none tabular-nums text-foreground">{cell.day}</span>
+              <span
+                className={cn(
+                  "text-xs leading-none tabular-nums",
+                  cell.hasActivity ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {cell.day}
+              </span>
               {cell.hasActivity ? (
                 <span
                   className={cn(

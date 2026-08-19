@@ -63,9 +63,13 @@
    a near-black pill on white here, a white pill on near-black in .dark. There
    is no brand hue, which is why brand can never again be mistaken for "you
    gained money" the way --primary and --pos were.
-   Colour is never the only signal: --pos and --neg are 0.15 apart in lightness
-   so in/out stay apart in greyscale, and every signal has a sign, glyph or
-   shape carrying it too. */
+   Colour is never the only signal: every signal has a sign, glyph or shape
+   carrying it too. --pos and --neg used to be held 0.15 apart in lightness so
+   in/out stayed apart in greyscale as well; an axe audit put contrast ahead of
+   that. Each is now pinned by its own worst background — 11px text on the
+   matching 12% tint behind it in the money calendar — which pulls --pos down
+   to a 0.05 gap from --neg. The sign printed beside every amount is what still
+   separates them without colour. Raising --pos fails WCAG AA on that tint. */
 :root {
     color-scheme: light;
     --radius: 0.5rem;
@@ -90,7 +94,7 @@
     --input: oklch(0.9 0 0);
     --ring: oklch(0.5 0 0);
     /* The only colour in the system. Hues ≥45° apart, lightness separated. */
-    --pos: oklch(0.55 0.14 150);
+    --pos: oklch(0.5 0.14 150);
     --pos-foreground: oklch(0.985 0 0);
     --neg: oklch(0.45 0.19 25);
     --neg-foreground: oklch(0.985 0 0);
@@ -136,7 +140,7 @@
     --ring: oklch(0.708 0 0);
     --pos: oklch(0.8 0.16 150);
     --pos-foreground: oklch(0.205 0 0);
-    --neg: oklch(0.65 0.19 25);
+    --neg: oklch(0.67 0.19 25);
     --neg-foreground: oklch(0.205 0 0);
     --clay: oklch(0.72 0.15 75);
     --clay-foreground: oklch(0.205 0 0);
