@@ -13,6 +13,7 @@ import {
   saveGoogleDriveBackupPreferences,
   type GoogleDriveBackupPreferences,
 } from "@/lib/preferences/google-drive-backup";
+import { clearStorageNotice } from "@/lib/preferences/storage-notice";
 import {
   createEncryptedBackupBlob,
   restoreEncryptedBackupPayload,
@@ -78,6 +79,9 @@ export function BackupPanel() {
     setDrivePreferences((current) => {
       const next = updater(current);
       saveGoogleDriveBackupPreferences(next);
+      if (next.lastBackupAt !== current.lastBackupAt) {
+        clearStorageNotice("stale-backup");
+      }
       return next;
     });
   }

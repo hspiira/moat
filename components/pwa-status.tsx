@@ -8,6 +8,10 @@ import { getLocalSaveEventName, type LocalSaveDetail } from "@/lib/local-save";
 import { useHasProfile } from "@/components/hooks/use-has-profile";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import {
+  readBackupStaleness,
+  type BackupStaleness,
+} from "@/lib/domain/backup-staleness";
+import {
   ensurePersistentStorage,
   isEvictable,
   isRunningLowOnSpace,
@@ -61,6 +65,7 @@ export function PwaStatus() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [hasBackup, setHasBackup] = useState(true);
+  const [staleness, setStaleness] = useState<BackupStaleness | null>(null);
   const profilePresence = useHasProfile();
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -73,10 +78,14 @@ export function PwaStatus() {
     setIsOnline(window.navigator.onLine);
     setIsInstalled(isStandaloneDisplay());
     setIsIos(isIosDevice());
-    setHasBackup(Boolean(readGoogleDriveBackupPreferences().lastBackupAt));
+    const { lastBackupAt } = readGoogleDriveBackupPreferences();
+    setHasBackup(Boolean(lastBackupAt));
+    setStaleness(readBackupStaleness(lastBackupAt, new Date()));
     void ensurePersistentStorage().then(setDurability);
     setDismissed(
-      (["evictable", "low-space", "no-backup"] as const).filter(isStorageNoticeDismissed),
+      (["evictable", "low-space", "no-backup", "stale-backup"] as const).filter(
+        isStorageNoticeDismissed,
+      ),
     );
 
     function handleOnline() {
@@ -144,6 +153,13 @@ export function PwaStatus() {
 
   const isAtRisk = Boolean(durability && isEvictable(durability)) && hasProfile && !hasBackup;
   const isLowOnSpace = Boolean(durability && isRunningLowOnSpace(durability)) && hasProfile;
+  const staleBackupNotice: { kind: StorageNoticeKind; text: string } | null =
+    hasProfile && staleness?.state === "stale"
+      ? {
+          kind: "stale-backup",
+          text: `Your last backup was ${staleness.days} days ago.`,
+        }
+      : null;
 
   const notice: { kind: StorageNoticeKind; text: string } | null = isLowOnSpace
     ? {
@@ -160,7 +176,7 @@ export function PwaStatus() {
             kind: "no-backup",
             text: "No backup yet, and iOS can clear app storage under low disk space.",
           }
-        : null;
+        : staleBackupNotice;
 
   const storageWarning = notice && !dismissed.includes(notice.kind) ? notice : null;
 
