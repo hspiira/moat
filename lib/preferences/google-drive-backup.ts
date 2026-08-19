@@ -5,8 +5,10 @@ const GOOGLE_DRIVE_BACKUP_PREFERENCES_KEY = "moat.google-drive-backup";
 export type GoogleDriveBackupPreferences = {
   provider: "google_drive";
   wasConnected: boolean;
+  autoBackupEnabled: boolean;
   lastBackupAt?: string;
   lastBackupName?: string;
+  lastAutoBackupAt?: string;
   lastRestoredAt?: string;
   lastRestoredName?: string;
 };
@@ -14,6 +16,7 @@ export type GoogleDriveBackupPreferences = {
 const defaultPreferences: GoogleDriveBackupPreferences = {
   provider: "google_drive",
   wasConnected: false,
+  autoBackupEnabled: false,
 };
 
 export function readGoogleDriveBackupPreferences(): GoogleDriveBackupPreferences {
@@ -31,8 +34,11 @@ export function readGoogleDriveBackupPreferences(): GoogleDriveBackupPreferences
     return {
       provider: "google_drive",
       wasConnected: parsed.wasConnected === true,
+      autoBackupEnabled: parsed.autoBackupEnabled === true,
       lastBackupAt: typeof parsed.lastBackupAt === "string" ? parsed.lastBackupAt : undefined,
       lastBackupName: typeof parsed.lastBackupName === "string" ? parsed.lastBackupName : undefined,
+      lastAutoBackupAt:
+        typeof parsed.lastAutoBackupAt === "string" ? parsed.lastAutoBackupAt : undefined,
       lastRestoredAt:
         typeof parsed.lastRestoredAt === "string" ? parsed.lastRestoredAt : undefined,
       lastRestoredName:

@@ -1,4 +1,4 @@
-import { formatMoney } from "@/lib/currency";
+import { formatMoney, formatMoneyShort } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { SupportedCurrency } from "@/lib/types";
 
@@ -9,12 +9,14 @@ export function Money({
   currency = "UGX",
   tone = "neutral",
   signed = false,
+  symbol = "full",
   className,
 }: {
   amount: number;
   currency?: SupportedCurrency;
   tone?: MoneyTone;
   signed?: boolean;
+  symbol?: "full" | "short";
   className?: string;
 }) {
   const resolvedTone: Exclude<MoneyTone, "auto"> =
@@ -28,7 +30,10 @@ export function Money({
     muted: "text-muted-foreground",
   }[resolvedTone];
 
-  const magnitude = formatMoney(Math.abs(amount), currency);
+  const magnitude =
+    symbol === "short"
+      ? formatMoneyShort(Math.abs(amount), currency)
+      : formatMoney(Math.abs(amount), currency);
   const sign =
     resolvedTone === "positive"
       ? "+"

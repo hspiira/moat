@@ -1,33 +1,38 @@
 # Fonts
 
-Checked in rather than loaded through `next/font/google`.
+One typeface, Geist Sans, for everything: body, headings, and the JSON blocks
+in sync conflicts. No separate display or monospace family. Where figures have
+to line up, `tabular-nums` does that job.
 
-`next/font/google` downloads the font files during `next build`, which makes a
-production build depend on a live request to Google. That broke CI on
-2026-08-17: the runner received CSS pointing at `bricolagegrotesque/v9` files
-that returned 404, and the build failed with twelve unresolved font modules.
-The same URLs resolved fine elsewhere at the same moment, so it was CDN
-staleness rather than an outage — which is exactly the kind of failure that
-recurs. An offline-first app should not need the network to build.
+It comes from the `geist` npm package (`geist/font/sans`), which wraps
+`next/font/local` around a variable file shipped inside the package. Nothing is
+fetched at build time, so this keeps the property that made the fonts checked-in
+before: `next/font/google` downloads during `next build`, and that broke CI on
+2026-08-17 with twelve unresolved font modules. A package resolved at install
+time does not have that failure mode, and it updates with `pnpm up geist`.
 
-| File | Family | Axis range served |
-| --- | --- | --- |
-| `geist-latin.woff2` | Geist | `wght 100..900` |
-| `geist-mono-latin.woff2` | Geist Mono | `wght 100..900` |
-| `bricolage-grotesque-latin.woff2` | Bricolage Grotesque | `opsz 12..96, wdth 75..100, wght 400..700` |
+The trade: the package ships the full variable font at ~69KB where the
+hand-subset latin file was ~29KB. It is served from `/_next/static/`, which the
+service worker caches, so it is a first-load cost only.
 
-All three are the latin subset, matching the `subsets: ["latin"]` the Google
-loader was configured with. They are variable fonts, so one file covers every
-weight the app uses.
+## Helvetica Now, parked
 
-Both families are licensed under the SIL Open Font License 1.1, which permits
-redistribution:
+Tried on 2026-08-20 and backed out. What was learned, so it does not have to be
+learned twice:
 
-- Geist and Geist Mono — https://github.com/vercel/geist-font
-- Bricolage Grotesque — https://github.com/ateliertriay/bricolage
+- It is a commercial Monotype typeface. A **web** licence is a separate
+  purchase from a desktop one, and it cannot be committed here the way an OFL
+  font can. `.gitignore` keeps `helvetica-now-*.woff2` out of git.
+- The files tried were **Helvetica Now Micro**, drawn for very small type. At
+  the 14–16px this UI uses it set 28.6% wider than Helvetica — 378px against
+  294px for the same string — wrapping headings onto two lines and truncating
+  the search placeholder. The optical size a UI wants is **Text**.
+- Their name tables were malformed: empty family name, a `☞` subfamily.
+  Legitimate releases do not look like that, so check where any files came from.
+- Only Light, Regular and Bold were available. The app leans on 500
+  (`font-medium`) and 600 (`font-semibold`), so both would have collapsed into
+  Regular and Bold by CSS weight matching.
 
-## Replacing them
-
-Fetch the latin block from the Google CSS for the family and axis range in the
-table above, then drop the `.woff2` in here under the same name. Nothing else
-needs changing; `app/layout.tsx` refers to these paths.
+To try again: get Helvetica Now Text in at least Regular, Medium and Bold, and
+re-judge `--tracking-snug` in `app/globals.css`, which is `-0.008em` tuned for
+Geist.

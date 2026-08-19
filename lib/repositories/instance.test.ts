@@ -14,6 +14,7 @@ function createBundleMock() {
     userProfile: {
       get: vi.fn().mockResolvedValue({ id: "u1" }),
       save: vi.fn().mockImplementation(async (profile) => profile),
+      replaceAll: vi.fn().mockImplementation(async (profile) => profile),
     },
     accounts: createCrudRepository(),
     transactions: {
@@ -111,5 +112,24 @@ describe("repository instance", () => {
     expect(indexedDbBundle.userProfile.get).toHaveBeenCalledTimes(1);
     expect(instance.getRepositoryBackend()).toBe("indexeddb");
     expect(instance.getRepositoryBackendWarning()).toContain("bridge init failed");
+  });
+
+  // The proxy forwards a fixed list of method names, so one left off it is a
+  // method that exists everywhere except where the app calls it. Restoring a
+  // backup died on exactly that.
+  it("forwards replaceAll, which restoring a backup depends on", async () => {
+    const indexedDbBundle = createBundleMock();
+
+    vi.doMock("@/lib/native/storage-bridge", () => ({
+      hasNativeStorageBridge: () => false,
+    }));
+    vi.doMock("@/lib/repositories/indexeddb", () => ({
+      createIndexedDbRepositories: () => indexedDbBundle,
+    }));
+
+    const instance = await import("@/lib/repositories/instance");
+    await instance.repositories.userProfile.replaceAll({ id: "u1" } as never);
+
+    expect(indexedDbBundle.userProfile.replaceAll).toHaveBeenCalledTimes(1);
   });
 });

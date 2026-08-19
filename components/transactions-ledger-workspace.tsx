@@ -153,9 +153,6 @@ export function TransactionsLedgerWorkspace() {
           partyByGroup={partyByGroup}
           transactions={pageTransactions}
           pendingSyncIds={workspace.pendingSyncTransactionIds}
-          isSubmitting={workspace.isSubmitting}
-          onEdit={workspace.beginTransactionEdit}
-          onDelete={(transaction) => void workspace.handleDeleteTransaction(transaction)}
           onOpenDetail={(transaction) => setDetailTransactionId(transaction.id)}
         />
 
@@ -175,6 +172,15 @@ export function TransactionsLedgerWorkspace() {
       <TransactionDetailSheet
         counterparties={workspace.counterparties}
         partyByGroup={partyByGroup}
+        onEdit={(transaction) => {
+          setDetailTransactionId(null);
+          workspace.beginTransactionEdit(transaction);
+        }}
+        onDelete={(transaction) => {
+          setDetailTransactionId(null);
+          void workspace.handleDeleteTransaction(transaction);
+        }}
+        onOpenTransaction={(transaction) => setDetailTransactionId(transaction.id)}
         transaction={detailTransaction}
         transactions={workspace.transactions}
         accounts={workspace.accounts}

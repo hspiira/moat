@@ -3,11 +3,17 @@
 import { formatDistanceToNow } from "date-fns";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { runDailyDriveBackup } from "@/lib/integrations/auto-backup";
+import {
+  loadKeyVaultFromDrive,
+  publishKeyVaultToDrive,
+} from "@/lib/integrations/drive-key-vault";
 import {
   createGoogleDriveBackupClient,
   isGoogleDriveConfigured,
   type GoogleDriveBackupFile,
 } from "@/lib/integrations/google-drive-backup";
+import { repositories } from "@/lib/repositories/instance";
 import {
   readGoogleDriveBackupPreferences,
   saveGoogleDriveBackupPreferences,
@@ -16,13 +22,30 @@ import {
 import { clearStorageNotice } from "@/lib/preferences/storage-notice";
 import {
   createEncryptedBackupBlob,
-  restoreEncryptedBackupPayload,
+  decryptEncryptedBackupPayload,
 } from "@/lib/security/encrypted-backup";
 import { detectBackupFormat } from "@/lib/security/backup-format";
+import { planBackupRestore } from "@/lib/domain/backup-restore-plan";
 import { restoreFullExport } from "@/lib/security/data-export";
 import { downloadBlob } from "@/lib/security/data-export";
+import {
+  RECOVERY_PASSPHRASE_REQUIREMENT,
+  isValidRecoveryPassphrase,
+} from "@/lib/security/key-vault";
+import { recordKeyVaultPublished } from "@/lib/preferences/key-vault-state";
+import { readStoredPasskeyMaterial } from "@/lib/security/pin-lock-context";
+import {
+  SealedBackupError,
+  isSealedBackupFilename,
+  restoreSealedBackup,
+} from "@/lib/security/sealed-backup";
+import type { KeyVault } from "@/lib/security/key-vault";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
+import { getActiveRecordCryptoKey } from "@/lib/security/record-crypto";
+import { InputField } from "@/components/forms/input-field";
 import { PinInputField } from "@/components/forms/pin-input-field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DriveRecoverySection, type VaultState } from "./drive-recovery-section";
 import { ErrorNotice } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +76,16 @@ export function BackupPanel() {
     () => readGoogleDriveBackupPreferences(),
   );
   const [isDriveHydrating, setIsDriveHydrating] = useState(true);
+  // "unreadable" is deliberately not "absent": a vault this build cannot parse
+  // may still be the only thing another device can open, so it must not be
+  // overwritten on a guess.
+  const [vaultState, setVaultState] = useState<VaultState>("checking");
+  const [vault, setVault] = useState<KeyVault | null>(null);
+  const [wantsDailyBackup, setWantsDailyBackup] = useState(true);
+  const [recoveryPassphrase, setRecoveryPassphrase] = useState("");
+  const [recoveryConfirm, setRecoveryConfirm] = useState("");
+  const [isReplacingRecovery, setIsReplacingRecovery] = useState(false);
+  const [hasDeviceKey, setHasDeviceKey] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reset() {
@@ -61,6 +94,9 @@ export function BackupPanel() {
     setRestorePin("");
     setDriveBackupPin("");
     setDriveRestorePin("");
+    setRecoveryPassphrase("");
+    setRecoveryConfirm("");
+    setIsReplacingRecovery(false);
     setError(null);
     setIsWorking(false);
     if (fileInputRef.current) {
@@ -71,6 +107,21 @@ export function BackupPanel() {
   const refreshDriveFiles = useCallback(async () => {
     const files = await driveClient.listBackups();
     setDriveFiles(files);
+  }, [driveClient]);
+
+  useEffect(() => {
+    setHasDeviceKey(getActiveRecordCryptoKey() !== null);
+  }, [mode]);
+
+  const refreshVaultState = useCallback(async () => {
+    try {
+      const stored = await loadKeyVaultFromDrive(driveClient);
+      setVault(stored);
+      setVaultState(stored ? "present" : "absent");
+    } catch {
+      setVault(null);
+      setVaultState("unreadable");
+    }
   }, [driveClient]);
 
   function updateDrivePreferences(
@@ -107,6 +158,7 @@ export function BackupPanel() {
       if (restored) {
         try {
           await refreshDriveFiles();
+          await refreshVaultState();
         } catch {
         }
       }
@@ -117,7 +169,7 @@ export function BackupPanel() {
     return () => {
       cancelled = true;
     };
-  }, [driveClient, refreshDriveFiles]);
+  }, [driveClient, refreshDriveFiles, refreshVaultState]);
 
   async function handleBackup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -164,12 +216,17 @@ export function BackupPanel() {
       const text = await file.text();
       const format = detectBackupFormat(text);
 
-      if (format.kind === "unrecognised") {
-        setError(format.reason);
+      const plan = planBackupRestore(format, {
+        hasDeviceKey: getActiveRecordCryptoKey() !== null,
+        pinLength: restorePin.length,
+      });
+
+      if (plan.action === "refuse") {
+        setError(plan.reason);
         return;
       }
 
-      if (format.kind === "plain") {
+      if (plan.action === "plain" && format.kind === "plain") {
         await restoreFullExport(format.payload);
         updateDrivePreferences((current) => ({
           ...current,
@@ -183,12 +240,37 @@ export function BackupPanel() {
         return;
       }
 
-      if (restorePin.length < 4) {
-        setError("This backup is encrypted. Enter the PIN used to create it.");
+      if (plan.action === "sealed" && format.kind === "sealed") {
+        const dek = getActiveRecordCryptoKey() as CryptoKey;
+
+        try {
+          await restoreSealedBackup({ payload: format.payload, dek });
+        } catch {
+          setError(
+            "That sealed backup was not made with this device's key. Open the ledger on this device first, using your recovery passphrase.",
+          );
+          return;
+        }
+
+        updateDrivePreferences((current) => ({
+          ...current,
+          lastRestoredAt: new Date().toISOString(),
+          lastRestoredName: file.name,
+        }));
+        setSuccess("Backup restored successfully. Reload the app to see your data.");
+        reset();
         return;
       }
 
-      await restoreEncryptedBackupPayload({ payloadText: text, pin: restorePin });
+      let decrypted;
+      try {
+        decrypted = await decryptEncryptedBackupPayload({ payloadText: text, pin: restorePin });
+      } catch {
+        setError("Could not decrypt this backup. Check the PIN used when it was created.");
+        return;
+      }
+
+      await restoreFullExport(decrypted);
       updateDrivePreferences((current) => ({
         ...current,
         lastRestoredAt: new Date().toISOString(),
@@ -197,8 +279,10 @@ export function BackupPanel() {
 
       setSuccess("Backup restored successfully. Reload the app to see your data.");
       reset();
-    } catch {
-      setError("Could not decrypt this backup. Check the PIN used when it was created.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? `Restore failed: ${err.message}` : "Restore failed.",
+      );
     } finally {
       setIsWorking(false);
     }
@@ -217,6 +301,7 @@ export function BackupPanel() {
         wasConnected: true,
       }));
       await refreshDriveFiles();
+      await refreshVaultState();
       setSuccess("Google Drive connected. Your encrypted backups can now be uploaded or restored.");
     } catch (err) {
       setError(err instanceof Error ? `Google sign-in failed: ${err.message}` : "Google sign-in failed.");
@@ -225,10 +310,96 @@ export function BackupPanel() {
     }
   }
 
+  function checkRecoveryInput(): string | null {
+    if (!isValidRecoveryPassphrase(recoveryPassphrase)) {
+      return RECOVERY_PASSPHRASE_REQUIREMENT;
+    }
+    if (recoveryPassphrase !== recoveryConfirm) {
+      return "Those two recovery passphrases do not match.";
+    }
+    return null;
+  }
+
+  async function storeKeyVault(dek: CryptoKey) {
+    const user = await repositories.userProfile.get();
+    if (!user) {
+      throw new Error("This device has no profile yet, so there is no key to store.");
+    }
+
+    const published = await publishKeyVaultToDrive({
+      client: driveClient,
+      dek,
+      userId: user.id,
+      passphrase: recoveryPassphrase,
+      passkey: readStoredPasskeyMaterial(),
+    });
+
+    recordKeyVaultPublished(published.updatedAt);
+    setVault(published);
+    setVaultState("present");
+    setRecoveryPassphrase("");
+    setRecoveryConfirm("");
+    setIsReplacingRecovery(false);
+  }
+
+  async function handleSealedUploadNow() {
+    const dek = getActiveRecordCryptoKey();
+    if (!dek) {
+      setError("Unlock Moat first.");
+      return;
+    }
+
+    setIsWorking(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const { filename, pruned } = await runDailyDriveBackup({ client: driveClient, dek });
+      await refreshDriveFiles();
+      const now = new Date().toISOString();
+      updateDrivePreferences((current) => ({
+        ...current,
+        wasConnected: true,
+        lastBackupAt: now,
+        lastBackupName: filename,
+        lastAutoBackupAt: now,
+      }));
+      setSuccess(
+        pruned > 0
+          ? `Backup uploaded, and ${pruned} older automatic backups were removed.`
+          : "Backup uploaded. It opens with your recovery passphrase on any device.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? `Drive upload failed: ${err.message}` : "Drive upload failed.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  function handleToggleAutoBackup(next: boolean) {
+    updateDrivePreferences((current) => ({ ...current, autoBackupEnabled: next }));
+    setSuccess(
+      next
+        ? "Moat will upload a sealed backup once a day while it is unlocked."
+        : "Automatic daily backups are off.",
+    );
+  }
+
   async function handleDriveUpload() {
     if (driveBackupPin.length < MIN_PIN_LENGTH) {
       setError(`Backup PIN must be at least ${MIN_PIN_LENGTH} digits before uploading to Google Drive.`);
       return;
+    }
+
+    const dek = getActiveRecordCryptoKey();
+    const shouldStoreVault = dek !== null && vaultState === "absent";
+
+    if (shouldStoreVault) {
+      const problem = checkRecoveryInput();
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
 
     setIsWorking(true);
@@ -246,6 +417,29 @@ export function BackupPanel() {
         lastBackupName: filename,
       }));
       setDriveBackupPin("");
+
+      // The backup is already safe at this point, so a failure to store the key
+      // must not read as a failed backup.
+      if (shouldStoreVault && dek) {
+        try {
+          await storeKeyVault(dek);
+          if (wantsDailyBackup) {
+            updateDrivePreferences((current) => ({ ...current, autoBackupEnabled: true }));
+          }
+          setSuccess(
+            "Encrypted backup uploaded, and your recovery key is now in your Drive app folder. A new device can open this backup with your recovery passphrase.",
+          );
+          return;
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? `Backup uploaded, but the recovery key was not stored: ${err.message}`
+              : "Backup uploaded, but the recovery key was not stored.",
+          );
+          return;
+        }
+      }
+
       setSuccess("Encrypted backup uploaded to your Google Drive app folder.");
     } catch (err) {
       setError(err instanceof Error ? `Drive upload failed: ${err.message}` : "Drive upload failed.");
@@ -254,8 +448,48 @@ export function BackupPanel() {
     }
   }
 
+  async function handleReplaceRecoveryPassphrase() {
+    const dek = getActiveRecordCryptoKey();
+    if (!dek) {
+      setError("Unlock Moat first, then set a recovery passphrase.");
+      return;
+    }
+
+    const problem = checkRecoveryInput();
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setIsWorking(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await storeKeyVault(dek);
+      setSuccess("Recovery passphrase saved. The previous one no longer opens your data.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Could not store the recovery key: ${err.message}`
+          : "Could not store the recovery key.",
+      );
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   async function handleDriveRestore(fileId: string) {
-    if (driveRestorePin.length < 4) {
+    const restoredFile = driveFiles.find((file) => file.fileId === fileId) ?? null;
+    const isSealed = restoredFile ? isSealedBackupFilename(restoredFile.name) : false;
+    const dek = getActiveRecordCryptoKey();
+
+    if (isSealed && !dek) {
+      setError("Unlock Moat first — a sealed backup opens with this device's key.");
+      return;
+    }
+
+    if (!isSealed && driveRestorePin.length < 4) {
       setError("Enter the backup PIN used for the selected Google Drive backup.");
       return;
     }
@@ -266,11 +500,35 @@ export function BackupPanel() {
 
     try {
       const payloadText = await driveClient.downloadBackup(fileId);
-      const restoredFile = driveFiles.find((file) => file.fileId === fileId) ?? null;
-      await restoreEncryptedBackupPayload({
-        payloadText,
-        pin: driveRestorePin,
-      });
+
+      if (isSealed && dek) {
+        const format = detectBackupFormat(payloadText);
+
+        if (format.kind !== "sealed") {
+          setError("That file is named as a sealed backup but is not one.");
+          return;
+        }
+
+        await restoreSealedBackup({ payload: format.payload, dek });
+        updateDrivePreferences((current) => ({
+          ...current,
+          wasConnected: true,
+          lastRestoredAt: new Date().toISOString(),
+          lastRestoredName: restoredFile?.name,
+        }));
+        setSuccess("Backup restored successfully. Reload the app to see your data.");
+        return;
+      }
+
+      let decrypted;
+      try {
+        decrypted = await decryptEncryptedBackupPayload({ payloadText, pin: driveRestorePin });
+      } catch {
+        setError("Could not decrypt that backup. Check the PIN used when it was created.");
+        return;
+      }
+
+      await restoreFullExport(decrypted);
       updateDrivePreferences((current) => ({
         ...current,
         wasConnected: true,
@@ -281,9 +539,11 @@ export function BackupPanel() {
       setDriveRestorePin("");
     } catch (err) {
       setError(
-        err instanceof Error
-          ? `Drive restore failed: ${err.message}`
-          : "Drive restore failed.",
+        err instanceof SealedBackupError
+          ? "That sealed backup was not made with this device's key. Open the ledger on this device first, using your recovery passphrase."
+          : err instanceof Error
+            ? `Drive restore failed: ${err.message}`
+            : "Drive restore failed.",
       );
     } finally {
       setIsWorking(false);
@@ -482,10 +742,142 @@ export function BackupPanel() {
                     placeholder="PIN used to encrypt this backup"
                     autoComplete="new-password"
                   />
-                  <div className="flex gap-2">
+
+                  {hasDeviceKey && (vaultState === "absent" || isReplacingRecovery) ? (
+                    <>
+                      <InputField
+                        id="drive-recovery-passphrase"
+                        type="password"
+                        label="Recovery passphrase"
+                        hint={RECOVERY_PASSPHRASE_REQUIREMENT}
+                        value={recoveryPassphrase}
+                        onChange={(event) => setRecoveryPassphrase(event.target.value)}
+                        placeholder="Words you will still remember next year"
+                        autoComplete="new-password"
+                      />
+                      <InputField
+                        id="drive-recovery-confirm"
+                        type="password"
+                        label="Confirm recovery passphrase"
+                        value={recoveryConfirm}
+                        onChange={(event) => setRecoveryConfirm(event.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your key is stored in the same Drive app folder, wrapped so only this
+                        passphrase — or a passkey, on a device that carries one — opens it. Neither
+                        Moat nor Google can read your records with it. If you forget it and lose
+                        your devices, nobody can recover the data.
+                      </p>
+                      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Checkbox
+                          checked={wantsDailyBackup}
+                          onCheckedChange={(checked) => setWantsDailyBackup(checked === true)}
+                        />
+                        <span>
+                          Back up automatically once a day while Moat is unlocked. These uploads
+                          need no PIN — they are sealed with your key — and Moat keeps the most
+                          recent ones, removing older automatic backups.
+                        </span>
+                      </label>
+                    </>
+                  ) : null}
+
+                  {hasDeviceKey && vaultState === "present" && !isReplacingRecovery ? (
+                    <p className="text-xs text-muted-foreground">
+                      A recovery key is already in your Drive app folder, so a new device needs
+                      only your recovery passphrase.{" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="xs"
+                        className="px-0"
+                        onClick={() => {
+                          setIsReplacingRecovery(true);
+                          setError(null);
+                          setSuccess(null);
+                        }}
+                      >
+                        Replace it
+                      </Button>
+                    </p>
+                  ) : null}
+
+                  {vaultState === "present" ? (
+                    <div className="grid gap-2">
+                      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Checkbox
+                          checked={drivePreferences.autoBackupEnabled}
+                          onCheckedChange={(checked) => handleToggleAutoBackup(checked === true)}
+                        />
+                        <span>Back up automatically once a day while Moat is unlocked.</span>
+                      </label>
+                      {drivePreferences.lastAutoBackupAt ? (
+                        <p className="text-xs text-muted-foreground">
+                          Last automatic backup{" "}
+                          {formatDistanceToNow(new Date(drivePreferences.lastAutoBackupAt), {
+                            addSuffix: true,
+                          })}
+                          .
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isWorking}
+                          onClick={() => void handleSealedUploadNow()}
+                        >
+                          {isWorking ? "Uploading..." : "Back up now, without a PIN"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {vaultState === "unreadable" ? (
+                    <p className="text-xs text-muted-foreground">
+                      There is a recovery file in your Drive app folder that this version cannot
+                      read. It has been left alone rather than overwritten.
+                    </p>
+                  ) : null}
+
+                  {!hasDeviceKey ? (
+                    <p className="text-xs text-muted-foreground">
+                      Set a PIN lock to also store a recovery key, which is what lets another
+                      device open this backup without the file being handed over by hand.
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" onClick={() => void handleDriveUpload()} disabled={isWorking}>
                       {isWorking ? "Uploading..." : "Upload encrypted backup"}
                     </Button>
+                    {isReplacingRecovery ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isWorking}
+                          onClick={() => void handleReplaceRecoveryPassphrase()}
+                        >
+                          {isWorking ? "Saving..." : "Save recovery passphrase"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setIsReplacingRecovery(false);
+                            setRecoveryPassphrase("");
+                            setRecoveryConfirm("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
 
@@ -516,6 +908,9 @@ export function BackupPanel() {
                             <div className="text-xs text-muted-foreground">
                               Updated {formatDistanceToNow(new Date(file.modifiedTime), { addSuffix: true })}
                               {file.size ? ` · ${file.size} bytes` : ""}
+                              {isSealedBackupFilename(file.name)
+                                ? " · opens with this device's key"
+                                : " · needs its backup PIN"}
                             </div>
                           </div>
                           <Button
@@ -532,6 +927,13 @@ export function BackupPanel() {
                     </div>
                   )}
                 </div>
+
+                <DriveRecoverySection
+                  client={driveClient}
+                  vault={vault}
+                  vaultState={vaultState}
+                  onVaultChanged={refreshVaultState}
+                />
 
                 <div className="flex gap-2">
                   <Button type="button" size="sm" variant="ghost" onClick={reset}>

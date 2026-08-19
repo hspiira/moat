@@ -1,56 +1,36 @@
 # Moat
 
-Moat is a local-first money app for people in Uganda managing cash, mobile money, bank, and SACCO accounts: spending visibility, goal-based savings, and rule-based investment guidance. Data lives on the device (IndexedDB on web, SQLite via a native bridge inside the Android shell), protected by a PIN-derived encryption key, with optional encrypted backups.
+A local-first money app for Uganda. Cash, mobile money, bank and SACCO accounts
+in one ledger, on your own device.
 
-## Status
+Data lives on the phone — IndexedDB on web, SQLite in the Android shell —
+encrypted with a key derived from your PIN. Backups are encrypted too. Nothing
+leaves the device unless you turn on sync, which is not finished yet.
 
-Active development, pre-pilot. Built and working:
-
-- Onboarding (profile, first account, first goal, PIN + encryption by default) at `/onboarding`, with encrypted backup restore
-- Accounts with running ledgers and balance reconciliation at `/accounts`
-- Transactions — manual entry, transfers, CSV import, rules, recurring obligations, budgets, and month close at `/transactions`
-- Capture platform — paste/share/file intake, parser packs (MTN, Airtel, generic bank), confidence scoring, dedupe, and a review-first inbox at `/transactions/review/capture`
-- Goals with contribution plans and progress derived from savings transactions at `/goals`
-- Rule-based Investment Compass at `/investment-compass` and curated learning resources at `/learn`
-- PIN lock (min 6 digits, throttled unlock) with at-rest record encryption; encrypted backup/restore to file or Google Drive
-- PWA install + offline support; a native Android WebView shell with share-to-app capture (in `native/android`, not yet device-verified)
-
-Not built yet: hosted multi-device sync (the client engine and contract exist; the server is a dev-only stub), PDF statement parsing, Android notification-listener rollout, push reminders.
-
-See [docs/tracker.md](docs/tracker.md) for the authoritative, up-to-date status.
-
-## Getting started
+## Run it
 
 ```bash
 pnpm install
-cp .env.example .env.local   # optional; defaults are fine for local use
-pnpm dev        # run the app at http://localhost:3000
-pnpm typecheck  # TypeScript
-pnpm lint       # ESLint
-pnpm test       # Vitest (domain, sync, capture, security, PWA)
-pnpm build      # production build
-pnpm verify     # all of the above, the same command CI runs
+pnpm dev        # http://localhost:3000
+pnpm verify     # typecheck, lint, build, tests, browser journeys — what CI runs
 ```
 
-All four checks run in CI on every push and pull request.
+## Where things are
 
-## Repository layout
+| Path | What |
+|------|------|
+| `app/` | Routes |
+| `components/` | Screens and UI |
+| `lib/domain/` | Money logic, pure and tested |
+| `lib/repositories/` | Storage, IndexedDB and SQLite |
+| `lib/capture/` | Reading transactions out of messages |
+| `lib/sync/` | Offline outbox and conflict rules |
+| `lib/security/` | PIN, encryption, backups |
+| `server/` | Sync server |
+| `native/android/` | Android shell |
+| `e2e/` | Browser journeys |
 
-| Path | Purpose |
-|------|---------|
-| `app/` | Next.js App Router routes (thin server shells over client workspaces) |
-| `components/` | UI workspaces, forms, and shadcn/ui primitives |
-| `lib/domain/` | Pure, tested financial logic (ledgers, summaries, goals, rules, reconciliation) |
-| `lib/repositories/` | Storage abstraction with parallel IndexedDB and SQLite backends |
-| `lib/capture/` | Capture pipeline: source adapters, parser packs, confidence, dedupe |
-| `lib/sync/` | Offline outbox sync engine and conflict rules (server side is dev-only) |
-| `lib/security/` | PIN policy, PIN lock, record encryption, encrypted backups |
-| `native/android/` | Kotlin WebView host shell with capture and storage bridges |
-| `docs/` | Product, architecture, plans, research, and testing docs — see [docs/README.md](docs/README.md) |
+## Docs
 
-## Documentation
-
-- [docs/README.md](docs/README.md) — documentation map
-- [docs/tracker.md](docs/tracker.md) — single source of truth for status and decisions
-- [docs/product/prd.md](docs/product/prd.md) — product requirements
-- [docs/architecture/overview.md](docs/architecture/overview.md) — how the system actually works
+[docs/tracker.md](docs/tracker.md) is the status of record. Start there.
+[docs/README.md](docs/README.md) maps the rest.

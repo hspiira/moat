@@ -1,6 +1,11 @@
 "use client";
 
+import { IconChevronRight, IconPencil, IconTrash } from "@tabler/icons-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
 import { Money } from "@/components/ui/money";
 import {
   Sheet,
@@ -11,7 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import { formatDate } from "@/lib/format-date";
 import { getTransactionDetail } from "@/lib/domain/transaction-detail";
-import { transferLegs } from "@/lib/domain/transaction-cascade";
+import { isEditableTransaction, transferLegs } from "@/lib/domain/transaction-cascade";
 import { transactionTypeLabels } from "@/lib/select-options";
 import { counterpartiesById, partyNameFor } from "@/lib/domain/party-name";
 import type {
@@ -49,6 +54,9 @@ export function TransactionDetailSheet({
   categories,
   counterparties = [],
   partyByGroup,
+  onEdit,
+  onDelete,
+  onOpenTransaction,
   lineItems,
   isSubmitting,
   onOpenChange,
@@ -61,6 +69,9 @@ export function TransactionDetailSheet({
   categories: Category[];
   counterparties?: Counterparty[];
   partyByGroup?: Map<string, string>;
+  onEdit?: (transaction: Transaction) => void;
+  onDelete?: (transaction: Transaction) => void;
+  onOpenTransaction?: (transaction: Transaction) => void;
   lineItems?: TransactionLineItem[];
   isSubmitting?: boolean;
   onOpenChange: (open: boolean) => void;
@@ -86,6 +97,12 @@ export function TransactionDetailSheet({
   const accountLabel = legs
     ? `${accountName(legs.source.accountId) ?? "Unknown"} → ${accountName(legs.destination.accountId) ?? "Unknown"}`
     : (account?.name ?? "Unknown account");
+  const del = useConfirmDelete((entry: Transaction) => onDelete?.(entry));
+  const partner =
+    legs && subject
+      ? [legs.source, legs.destination].find((leg) => leg.id !== subject.id) ?? null
+      : null;
+  const canEdit = subject ? isEditableTransaction(subject, transactions) : false;
   const title = subject
     ? (partyNameFor(subject, counterpartiesById(counterparties), partyByGroup) ??
       category?.name ??
@@ -191,6 +208,38 @@ export function TransactionDetailSheet({
               <span>Recorded {formatDate(subject.createdAt, { alwaysYear: true })}</span>
             </p>
 
+            {partner && onOpenTransaction ? (
+              <DetailSection>
+                <p className="pb-1 text-xs font-medium text-muted-foreground">
+                  The other side of this transfer
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onOpenTransaction(partner)}
+                  className="flex w-full items-center justify-between gap-3 rounded-md py-2 text-left hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-foreground">
+                      {accountName(partner.accountId) ?? "Unknown account"}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {formatDate(partner.occurredOn, { alwaysYear: true })}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Money
+                      amount={partner.amount}
+                      currency="UGX"
+                      tone={partner.amount < 0 ? "negative" : "positive"}
+                      signed
+                      className="text-sm"
+                    />
+                    <IconChevronRight aria-hidden className="size-4 text-muted-foreground" />
+                  </span>
+                </button>
+              </DetailSection>
+            ) : null}
+
             {subject && subject.type === "expense" && onSaveLineItem && onDeleteLineItem ? (
               <LineItemsSection
                 transaction={subject}
@@ -200,8 +249,40 @@ export function TransactionDetailSheet({
                 onDelete={onDeleteLineItem}
               />
             ) : null}
+
+            {onEdit || onDelete ? (
+              <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
+                {onEdit && canEdit ? (
+                  <Button variant="outline" size="sm" onClick={() => onEdit(subject)}>
+                    <IconPencil className="size-4" /> Edit
+                  </Button>
+                ) : null}
+                {onDelete ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => del.request(subject, title)}
+                  >
+                    <IconTrash className="size-4" /> Delete
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
+        <ConfirmDialog
+          {...del.dialogProps}
+          title="Delete this transaction?"
+          description={
+            <>
+              <span className="font-medium text-foreground">{del.label}</span>{" "}
+              will be permanently removed. This can&apos;t be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          destructive
+        />
       </SheetContent>
     </Sheet>
   );

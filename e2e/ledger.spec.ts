@@ -8,14 +8,14 @@ type Page = import("@playwright/test").Page;
 async function openRow(page: Page, payee: string) {
   await page.getByRole("searchbox").first().fill(payee);
   await page.waitForTimeout(1000);
-  await page.getByRole("button", { name: new RegExp(`^Actions for ${payee}`) }).first().click();
+  await page.getByRole("button", { name: new RegExp(`^Details for ${payee}`) }).first().click();
 }
 
 test("the ledger opens clean on a phone", async ({ page }) => {
   const { errors } = await openSeededApp(page);
 
   await expect(page.getByText("Ledger")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Actions for / }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Details for / }).first()).toBeVisible();
   await expectNoSidewaysScroll(page);
   await expectLedgerIntact(page);
   expect(errors).toEqual([]);

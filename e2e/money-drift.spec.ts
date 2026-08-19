@@ -59,7 +59,7 @@ test("refuses a fractional amount at the form", async ({ page }) => {
 
   await page.getByRole("searchbox").first().fill("Market Stall");
   await page.waitForTimeout(1000);
-  await page.getByRole("button", { name: /^Actions for Market Stall/ }).first().click();
+  await page.getByRole("button", { name: /^Details for Market Stall/ }).first().click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
 
   await page.locator("#tx-amount").fill("1110.19");

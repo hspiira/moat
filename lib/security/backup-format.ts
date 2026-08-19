@@ -1,8 +1,13 @@
 import type { EncryptedPayload } from "@/lib/security/pin-crypto";
 import type { FullExport } from "@/lib/security/data-export";
+import {
+  SEALED_BACKUP_FORMAT,
+  type SealedBackupPayload,
+} from "@/lib/security/sealed-backup";
 
 export type BackupFormat =
   | { kind: "encrypted"; payload: EncryptedPayload }
+  | { kind: "sealed"; payload: SealedBackupPayload }
   | { kind: "plain"; payload: FullExport }
   | { kind: "unrecognised"; reason: string };
 
@@ -27,6 +32,15 @@ export function detectBackupFormat(text: string): BackupFormat {
       kind: "unrecognised",
       reason: "That file isn't a Moat backup.",
     };
+  }
+
+  if (
+    parsed.format === SEALED_BACKUP_FORMAT &&
+    typeof parsed.version === "number" &&
+    typeof parsed.iv === "string" &&
+    typeof parsed.ciphertext === "string"
+  ) {
+    return { kind: "sealed", payload: parsed as unknown as SealedBackupPayload };
   }
 
   if (

@@ -41,11 +41,17 @@ export async function createEncryptedBackupBlob(params: {
   };
 }
 
+export async function decryptEncryptedBackupPayload(params: {
+  payloadText: string;
+  pin: string;
+}): Promise<FullExport> {
+  const payload = JSON.parse(params.payloadText) as EncryptedPayload;
+  return decryptWithPin<FullExport>(payload, params.pin);
+}
+
 export async function restoreEncryptedBackupPayload(params: {
   payloadText: string;
   pin: string;
 }): Promise<void> {
-  const payload = JSON.parse(params.payloadText) as EncryptedPayload;
-  const data = await decryptWithPin<FullExport>(payload, params.pin);
-  await restoreFullExport(data);
+  await restoreFullExport(await decryptEncryptedBackupPayload(params));
 }

@@ -68,7 +68,10 @@ function lazyRepository<K extends keyof RepositoryBundle>(
 
 function createBundleProxy(): RepositoryBundle {
   return {
-    userProfile: lazyDelegate(async () => (await getBundlePromise()).userProfile, ["get", "save"]),
+    userProfile: lazyDelegate(
+      async () => (await getBundlePromise()).userProfile,
+      ["get", "save", "replaceAll"],
+    ),
     accounts: lazyRepository("accounts"),
     transactions: lazyRepository("transactions", ["listByMonth"]),
     captureEnvelopes: lazyRepository("captureEnvelopes"),
