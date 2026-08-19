@@ -28,7 +28,7 @@ test("a write that dies halfway leaves no half-written transfer", async ({ page 
 
   await page.getByRole("searchbox").first().fill("Own Transfer");
   await page.waitForTimeout(1000);
-  await page.getByRole("button", { name: /^Actions for Own Transfer/ }).first().click();
+  await page.getByRole("button", { name: /^Details for Own Transfer/ }).first().click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
 
   await page.evaluate(() => {
@@ -138,7 +138,7 @@ test("one unreadable record does not take the ledger down with it", async ({ pag
   await page.waitForTimeout(2500);
 
   await expect(page.getByText("Ledger")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Actions for / }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Details for / }).first()).toBeVisible();
   await expect(page.getByText(`${readable}`, { exact: true }).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
