@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeAmountToUgx } from "@/lib/currency";
+import { formatMoney, formatMoneyShort, normalizeAmountToUgx } from "@/lib/currency";
 
 describe("normalizeAmountToUgx", () => {
   it("passes UGX through as a magnitude", () => {
@@ -26,5 +26,27 @@ describe("normalizeAmountToUgx", () => {
     expect(normalizeAmountToUgx(10, "USD", 0)).toBeNaN();
     expect(normalizeAmountToUgx(10, "USD", -5)).toBeNaN();
     expect(normalizeAmountToUgx(10, "USD", Number.NaN)).toBeNaN();
+  });
+});
+
+describe("formatMoneyShort", () => {
+  it("shortens the symbol for a list of transactions", () => {
+    expect(formatMoneyShort(154_500)).toBe("Sh\u00a0154,500");
+  });
+
+  it("groups thousands exactly as the full form does", () => {
+    expect(formatMoneyShort(3_000_000)).toBe("Sh\u00a03,000,000");
+  });
+
+  it("differs from the full form by one character, and only that", () => {
+    expect(`U${formatMoneyShort(154_500)}`).toBe(formatMoney(154_500));
+  });
+
+  it("keeps UGX whole, matching how it is stored", () => {
+    expect(formatMoneyShort(500)).toBe("Sh\u00a0500");
+  });
+
+  it("leaves a currency with no short form alone", () => {
+    expect(formatMoneyShort(20, "USD")).toBe(formatMoney(20, "USD"));
   });
 });

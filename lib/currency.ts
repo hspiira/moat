@@ -18,6 +18,15 @@ export function formatMoney(amount: number, currency: SupportedCurrency = "UGX")
   }).format(amount);
 }
 
+// "Sh" for a list of transactions, where the symbol repeats on every row and
+// the page has already said which currency it is. Balances keep the full "USh".
+// Derived from formatMoney so grouping and the non-breaking space cannot drift
+// apart from it. Only UGX has a short form; anything else keeps its symbol.
+export function formatMoneyShort(amount: number, currency: SupportedCurrency = "UGX") {
+  const full = formatMoney(amount, currency);
+  return currency === "UGX" ? full.replace("USh", "Sh") : full;
+}
+
 export function normalizeAmountToUgx(
   originalAmount: number,
   currency: SupportedCurrency,

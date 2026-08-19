@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  IconArrowDownLeft,
+  IconArrowDownRight,
   IconArrowsExchange,
   IconArrowUpRight,
   IconClock,
@@ -45,15 +45,15 @@ type Props = {
 };
 
 type RowPresentation = {
-  icon: typeof IconArrowDownLeft;
+  icon: typeof IconArrowUpRight;
   iconClass: string;
   tone: "positive" | "negative" | "neutral";
   signed: boolean;
 };
 
 const presentationByType: Record<TransactionType, RowPresentation> = {
-  income: { icon: IconArrowDownLeft, iconClass: "bg-pos/12 text-pos", tone: "positive", signed: true },
-  expense: { icon: IconArrowUpRight, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
+  income: { icon: IconArrowUpRight, iconClass: "bg-pos/12 text-pos", tone: "positive", signed: true },
+  expense: { icon: IconArrowDownRight, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
   debt_payment: { icon: IconReceipt2, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
   savings_contribution: {
     icon: IconPigMoney,
@@ -170,6 +170,7 @@ export function TransactionList({
                       <Money
                         amount={transaction.amount}
                         currency="UGX"
+                        symbol="short"
                         tone={presentation.tone}
                         signed={presentation.signed}
                         className="text-sm font-semibold tabular-nums sm:text-base"
