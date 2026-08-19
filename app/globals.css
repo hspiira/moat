@@ -9,7 +9,7 @@
    used to. Geist is one variable file covering every weight the app uses. */
 
 @theme inline {
-    --font-sans: var(--font-sans);
+    --font-sans: var(--font-geist-sans);
     --font-heading: var(--font-sans);
     --font-display: var(--font-sans);
     --font-mono: var(--font-sans);
@@ -182,6 +182,18 @@
   samp {
     letter-spacing: normal;
     }
+  /* On a phone a card reaches the screen edge, so its own 16px padding is the
+     only inset. The shell gutter and the card padding were both 16px, which
+     cost every row 32px of width. Cards nested inside another card, a sheet or
+     a popover keep their margins, since those bring their own padding. */
+  @media (width < 40rem) {
+    [data-slot="card"]:not([data-slot="card"] *):not([data-slot="sheet-content"] *):not(
+        [data-slot="popover-content"] *
+      ) {
+      margin-inline: calc(var(--spacing) * -4);
+      border-radius: 0;
+    }
+  }
   html {
     @apply font-sans;
     }

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import localFont from "next/font/local";
+import { GeistSans } from "geist/font/sans";
 import { PinLockProvider } from "@/lib/security/pin-lock-context";
 import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -10,13 +10,6 @@ import { DailyDriveBackup } from "@/components/daily-drive-backup";
 import { AppSelfHeal } from "@/components/app-self-heal";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
-
-const geist = localFont({
-  src: "./fonts/geist-latin.woff2",
-  variable: "--font-sans",
-  display: "swap",
-  weight: "100 900",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://moat.local"),
@@ -56,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geist.variable} suppressHydrationWarning>
+    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
