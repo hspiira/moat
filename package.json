@@ -11,7 +11,8 @@
     "test": "vitest run",
     "build:server": "pnpm --filter @moat/sync-server build",
     "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:e2e",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:server": "vitest run --no-file-parallelism server/"
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.3.0",

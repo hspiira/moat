@@ -9,7 +9,8 @@
     "vercel-build": "node build.mjs",
     "start": "node server.js",
     "dev": "node build.mjs --watch",
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "mint": "node mint-token.js"
   },
   "dependencies": {
     "pg": "^8.23.0"

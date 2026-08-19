@@ -102,33 +102,10 @@ export function bearerTokenFrom(headerValue: string | null): string {
 
 export type SyncPrincipal = { userId: string };
 
-export function resolveSyncPrincipal(headerValue: string | null): SyncPrincipal {
-  const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
-  const boundUserId = process.env.MOAT_SYNC_BEARER_USER_ID?.trim();
-
-  if (!expectedToken || !boundUserId) {
-    throw new Error(
-      "Hosted sync needs MOAT_SYNC_BEARER_TOKEN and MOAT_SYNC_BEARER_USER_ID set together.",
-    );
-  }
-
-  if (!constantTimeEquals(bearerTokenFrom(headerValue), expectedToken)) {
-    throw new Error("Hosted sync bearer token is invalid.");
-  }
-
-  return { userId: boundUserId };
-}
-
 export function assertPrincipalOwns(principal: SyncPrincipal, claimedUserId: string) {
   if (!constantTimeEquals(principal.userId, claimedUserId)) {
     throw new Error("This token cannot read or write another user's records.");
   }
-}
-
-export function isHostedBackendUsable(): boolean {
-  return Boolean(
-    process.env.MOAT_SYNC_BEARER_TOKEN?.trim() && process.env.MOAT_SYNC_BEARER_USER_ID?.trim(),
-  );
 }
 
 export function createSyncStubResponse(request: SyncPushRequest): SyncPushResponse {

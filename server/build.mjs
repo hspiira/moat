@@ -10,6 +10,7 @@ const options = {
   entryPoints: [
     path.join(here, "src/server.ts"),
     path.join(here, "src/migrate.ts"),
+    path.join(here, "src/mint-token.ts"),
   ],
   outdir: path.join(here, "dist"),
   bundle: true,

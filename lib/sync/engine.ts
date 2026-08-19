@@ -10,6 +10,7 @@ import {
 } from "@/lib/sync/cursor";
 import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
+import { canSealSyncPayloads, openSyncPayload } from "@/lib/sync/payload-crypto";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
 
 const MAX_PULL_PAGES = 1000;
@@ -27,7 +28,14 @@ function withOutboxUpdate(
   };
 }
 
-function mapResultForItem(item: SyncOutboxItem, result?: SyncPushResult): SyncOutboxItem {
+async function openServerRecord(record: SyncPullRecord): Promise<SyncPullRecord> {
+  return openPulledRecord(record);
+}
+
+async function mapResultForItem(
+  item: SyncOutboxItem,
+  result?: SyncPushResult,
+): Promise<SyncOutboxItem> {
   if (!result) {
     return withOutboxUpdate(item, {
       status: "failed",
@@ -36,10 +44,14 @@ function mapResultForItem(item: SyncOutboxItem, result?: SyncPushResult): SyncOu
   }
 
   if (result.status === "conflict") {
+    const serverRecord = result.serverRecord
+      ? await openServerRecord(result.serverRecord)
+      : undefined;
+
     return withOutboxUpdate(item, {
       status: "conflict",
       lastError: result.error,
-      conflictPayload: result.serverRecord ? JSON.stringify(result.serverRecord) : undefined,
+      conflictPayload: serverRecord ? JSON.stringify(serverRecord) : undefined,
     });
   }
 
@@ -48,6 +60,13 @@ function mapResultForItem(item: SyncOutboxItem, result?: SyncPushResult): SyncOu
     lastError: result.error,
     conflictPayload: undefined,
   });
+}
+
+async function openPulledRecord(record: SyncPullRecord): Promise<SyncPullRecord> {
+  if (record.payload === null) {
+    return record;
+  }
+  return { ...record, payload: await openSyncPayload(record.payload) };
 }
 
 function lastCursorOf(records: SyncPullRecord[]): string | undefined {
@@ -78,7 +97,7 @@ async function pullAllPages(params: {
 
     await applyPulledRecords({
       repositories: params.repositories,
-      records: response.records,
+      records: await Promise.all(response.records.map(openPulledRecord)),
       conflictedEntityKeys: params.conflictedEntityKeys,
     });
 
@@ -143,6 +162,16 @@ export async function runHostedSync(params: {
     return { attempted: 0, synced: 0, failed: 0, conflicts: 0, error: "Device is offline." };
   }
 
+  if (!canSealSyncPayloads()) {
+    return {
+      attempted: 0,
+      synced: 0,
+      failed: 0,
+      conflicts: 0,
+      error: "Hosted sync needs a PIN. Records are encrypted before they leave this device.",
+    };
+  }
+
   const pendingItems = await params.repositories.syncOutbox.listPendingByUser(params.profile.userId);
 
   await Promise.all(
@@ -167,7 +196,7 @@ export async function runHostedSync(params: {
 
       const response = await pushSyncBatch({
         endpoint: params.profile.postgresSyncUrl,
-        request: createSyncPushRequest({
+        request: await createSyncPushRequest({
           userId: params.profile.userId,
           items: batch,
           platform: params.platform,
@@ -176,10 +205,12 @@ export async function runHostedSync(params: {
         authToken: params.profile.syncAuthToken,
       });
 
-      const nextItems = batch.map((item) =>
-        mapResultForItem(
-          item,
-          response.results.find((result) => result.outboxId === item.id),
+      const nextItems = await Promise.all(
+        batch.map((item) =>
+          mapResultForItem(
+            item,
+            response.results.find((result) => result.outboxId === item.id),
+          ),
         ),
       );
 

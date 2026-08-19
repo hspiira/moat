@@ -7,18 +7,22 @@
 | Owner | Piira |
 | Last Updated | 2026-08-19 |
 
-> **⚠️ Payloads are still plaintext.** `sync_records.payload` holds the record
-> as JSON, so the server reads every transaction, payee and amount. That is the
-> remaining blocker and hosted sync stays behind
-> `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until it is closed.
+> **Where this stands.** Tenancy and payload privacy are both closed. What is
+> left before hosting this for anyone else is sign-in (see
+> [hosted-sync-identity.md](../plans/hosted-sync-identity.md)), rate limiting,
+> and a threat-model review. The feature stays behind
+> `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until then.
 >
-> Tenancy is no longer self-asserted. The bearer token is bound to one user id
-> server-side (`MOAT_SYNC_BEARER_USER_ID`); the authenticated user is the only
-> one a request may act as, and a body claiming another user gets a 403. Both
-> variables are required, and the server fails closed (503) without them
-> rather than letting an unauthenticated caller through. Token comparison is
-> constant-time. Rate limiting and a threat-model review are still
-> prerequisites before this is offered to anyone else.
+> **Tenancy.** Tokens live in `sync_credentials`, hashed with SHA-256, one row
+> per user per device. The server looks up the presented token, and the user it
+> resolves to is the only user that request can act for; a body claiming
+> anyone else gets a 403. One deployment serves any number of users. Mint a
+> token with `pnpm --filter @moat/sync-server mint mint <userId> [label]`.
+>
+> **Payloads.** `payload` is sealed with AES-GCM before it leaves the device,
+> under a key derived from the device key with HKDF. The server stores and
+> orders records without being able to read one. It still sees entity type,
+> entity id and timestamps, which are what it needs to store and page.
 
 ## Purpose
 

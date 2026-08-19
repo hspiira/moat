@@ -3,14 +3,16 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getPool } from "./db/pool.js";
+import { mintSyncCredential } from "./db/credentials.js";
+import { SCHEMA_SQL } from "./db/schema.js";
+
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
 const describeServer = hasDatabase ? describe : describe.skip;
 
 const OWNER = "server-test-owner";
 const INTRUDER = "server-test-intruder";
-const TOKEN = "a-long-shared-secret-token";
-const BOUND_PORT = 8791;
-const UNBOUND_PORT = 8792;
+const PORT = 8791;
 
 function pushBody(userId: string) {
   return {
@@ -73,11 +75,22 @@ function post(port: number, pathname: string, body: unknown, token: string | nul
 
 describeServer("sync server tenancy", () => {
   let child: ChildProcess;
+  let ownerToken: string;
+  let intruderToken: string;
 
   beforeAll(async () => {
-    child = await start(BOUND_PORT, {
-      MOAT_SYNC_BEARER_TOKEN: TOKEN,
-      MOAT_SYNC_BEARER_USER_ID: OWNER,
+    await getPool().query(`
+      drop table if exists sync_applied_outbox;
+      drop table if exists sync_records;
+      drop table if exists sync_users;
+      drop table if exists sync_credentials;
+    `);
+    await getPool().query(SCHEMA_SQL);
+
+    ownerToken = await mintSyncCredential(OWNER, "owner device");
+    intruderToken = await mintSyncCredential(INTRUDER, "intruder device");
+
+    child = await start(PORT, {
       DATABASE_SSL: process.env.DATABASE_SSL ?? "disable",
     });
   });
@@ -87,12 +100,12 @@ describeServer("sync server tenancy", () => {
   });
 
   it("accepts a push for the user the token is bound to", async () => {
-    const response = await post(BOUND_PORT, "/v1/sync/push", pushBody(OWNER), TOKEN);
+    const response = await post(PORT, "/v1/sync/push", pushBody(OWNER), ownerToken);
     expect(response.status).toBe(200);
   });
 
   it("refuses a push that claims another user", async () => {
-    const response = await post(BOUND_PORT, "/v1/sync/push", pushBody(INTRUDER), TOKEN);
+    const response = await post(PORT, "/v1/sync/push", pushBody(INTRUDER), ownerToken);
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
       error: "This token cannot read or write another user's records.",
@@ -100,44 +113,23 @@ describeServer("sync server tenancy", () => {
   });
 
   it("refuses a pull that claims another user", async () => {
-    const response = await post(BOUND_PORT, "/v1/sync/pull", { userId: INTRUDER }, TOKEN);
+    const response = await post(PORT, "/v1/sync/pull", { userId: INTRUDER }, ownerToken);
     expect(response.status).toBe(403);
   });
 
+  it("lets a second user push their own records with their own token", async () => {
+    const response = await post(PORT, "/v1/sync/push", pushBody(INTRUDER), intruderToken);
+    expect(response.status).toBe(200);
+  });
+
   it("refuses a wrong token", async () => {
-    const response = await post(BOUND_PORT, "/v1/sync/push", pushBody(OWNER), "not-the-token");
+    const response = await post(PORT, "/v1/sync/push", pushBody(OWNER), "not-a-real-token");
     expect(response.status).toBe(401);
   });
 
   it("refuses a request with no token at all", async () => {
-    const response = await post(BOUND_PORT, "/v1/sync/push", pushBody(OWNER), null);
+    const response = await post(PORT, "/v1/sync/push", pushBody(OWNER), null);
     expect(response.status).toBe(401);
   });
 });
 
-describeServer("sync server without a bound user", () => {
-  let child: ChildProcess;
-
-  beforeAll(async () => {
-    child = await start(UNBOUND_PORT, {
-      MOAT_SYNC_BEARER_TOKEN: TOKEN,
-      MOAT_SYNC_BEARER_USER_ID: "",
-      DATABASE_SSL: process.env.DATABASE_SSL ?? "disable",
-    });
-  });
-
-  afterAll(() => {
-    child?.kill();
-  });
-
-  it("reports itself unhealthy rather than accepting self-asserted tenancy", async () => {
-    const response = await fetch(`http://127.0.0.1:${UNBOUND_PORT}/health`);
-    expect(response.status).toBe(503);
-    expect(JSON.stringify(await response.json())).toContain("self-asserted");
-  });
-
-  it("refuses to serve sync at all", async () => {
-    const response = await post(UNBOUND_PORT, "/v1/sync/push", pushBody(OWNER), TOKEN);
-    expect(response.status).toBe(503);
-  });
-});

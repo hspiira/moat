@@ -1,3 +1,4 @@
+import { sealSyncPayload } from "@/lib/sync/payload-crypto";
 import type { SyncOutboxItem } from "@/lib/types";
 
 import type {
@@ -11,12 +12,23 @@ function normalizeEndpoint(endpoint: string) {
   return endpoint.replace(/\/+$/, "");
 }
 
-export function createSyncPushRequest(params: {
+export async function createSyncPushRequest(params: {
   userId: string;
   items: SyncOutboxItem[];
   platform?: "web" | "android" | "ios";
   deviceId?: string;
-}): SyncPushRequest {
+}): Promise<SyncPushRequest> {
+  const items = await Promise.all(
+    params.items.map(async (item) => ({
+      outboxId: item.id,
+      entityType: item.entityType,
+      entityId: item.entityId,
+      operation: item.operation,
+      payload: await sealSyncPayload(item.payload),
+      queuedAt: item.queuedAt,
+    })),
+  );
+
   return {
     userId: params.userId,
     device: {
@@ -24,14 +36,7 @@ export function createSyncPushRequest(params: {
       platform: params.platform ?? "web",
       id: params.deviceId,
     },
-    items: params.items.map((item) => ({
-      outboxId: item.id,
-      entityType: item.entityType,
-      entityId: item.entityId,
-      operation: item.operation,
-      payload: item.payload,
-      queuedAt: item.queuedAt,
-    })),
+    items,
   };
 }
 

@@ -3,26 +3,17 @@ import { createServer } from "node:http";
 import { validateSyncPullRequest } from "@/lib/sync/hosted-store";
 import {
   assertPrincipalOwns,
-  isHostedBackendUsable,
-  resolveSyncPrincipal,
   validateSyncPushRequest,
   type SyncPrincipal,
 } from "@/lib/sync/server-contract";
+
+import { authenticateSyncRequest } from "./auth.js";
 
 import { getPool } from "./db/pool.js";
 import { applyPostgresSyncPush, pullPostgresSyncChanges } from "./db/postgres-store.js";
 import { HttpError, applyCors, readJsonBody, sendJson } from "./http.js";
 
 const port = Number(process.env.PORT ?? 8787);
-
-function requireCredentials() {
-  if (!isHostedBackendUsable()) {
-    throw new HttpError(
-      503,
-      "Sync server requires MOAT_SYNC_BEARER_TOKEN and MOAT_SYNC_BEARER_USER_ID to be set.",
-    );
-  }
-}
 
 function validate<T>(run: () => T): T {
   try {
@@ -35,16 +26,14 @@ function validate<T>(run: () => T): T {
 async function checkHealth(): Promise<[number, unknown]> {
   const problems: string[] = [];
 
-  if (!process.env.MOAT_SYNC_BEARER_TOKEN?.trim()) {
-    problems.push("MOAT_SYNC_BEARER_TOKEN is not set.");
-  }
-
-  if (!process.env.MOAT_SYNC_BEARER_USER_ID?.trim()) {
-    problems.push("MOAT_SYNC_BEARER_USER_ID is not set, so tenancy would be self-asserted.");
-  }
-
   try {
     await getPool().query("select 1");
+    const credentials = await getPool().query<{ count: string }>(
+      "select count(*)::text as count from sync_credentials",
+    );
+    if (credentials.rows[0]?.count === "0") {
+      problems.push("No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.");
+    }
   } catch (error) {
     problems.push(error instanceof Error ? error.message : "Database is unreachable.");
   }
@@ -52,9 +41,9 @@ async function checkHealth(): Promise<[number, unknown]> {
   return problems.length > 0 ? [503, { status: "unhealthy", problems }] : [200, { status: "ok" }];
 }
 
-function authenticate(authorization: string | undefined): SyncPrincipal {
+async function authenticate(authorization: string | undefined): Promise<SyncPrincipal> {
   try {
-    return resolveSyncPrincipal(authorization ?? null);
+    return await authenticateSyncRequest(authorization);
   } catch (error) {
     throw new HttpError(401, error instanceof Error ? error.message : "Unauthorized.");
   }
@@ -85,8 +74,7 @@ const server = createServer(async (request, response) => {
       throw new HttpError(405, "Method not allowed.");
     }
 
-    requireCredentials();
-    const principal = authenticate(request.headers.authorization);
+    const principal = await authenticate(request.headers.authorization);
 
     if (url.pathname === "/v1/sync/push") {
       const body = await readJsonBody(request);
