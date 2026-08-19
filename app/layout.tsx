@@ -1,36 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import localFont from "next/font/local";
-import { cn } from "@/lib/utils";
 import { PinLockProvider } from "@/lib/security/pin-lock-context";
 import { PinLockGate } from "@/components/pin-lock-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import { SyncOutboxDrain } from "@/components/sync-outbox-drain";
+import { DailyDriveBackup } from "@/components/daily-drive-backup";
 import { AppSelfHeal } from "@/components/app-self-heal";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
-
-const geist = localFont({
-  src: "./fonts/geist-latin.woff2",
-  variable: "--font-sans",
-  display: "swap",
-  weight: "100 900",
-});
-
-const geistMono = localFont({
-  src: "./fonts/geist-mono-latin.woff2",
-  variable: "--font-mono",
-  display: "swap",
-  weight: "100 900",
-});
-
-const display = localFont({
-  src: "./fonts/bricolage-grotesque-latin.woff2",
-  variable: "--font-display",
-  display: "swap",
-  weight: "400 700",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://moat.local"),
@@ -70,11 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={cn(geist.variable, geistMono.variable, display.variable)}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
@@ -86,6 +60,7 @@ export default function RootLayout({
             <PinLockProvider>
               <PwaRegister />
               <SyncOutboxDrain />
+              <DailyDriveBackup />
               <AppSelfHeal />
               <NativeCaptureBridgeRegister />
               <PinLockGate>{children}</PinLockGate>

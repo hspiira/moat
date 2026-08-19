@@ -1,33 +1,46 @@
 # Fonts
 
-Checked in rather than loaded through `next/font/google`.
+The app uses one typeface, Helvetica Now, for everything: body, headings, and
+the JSON blocks in sync conflicts. There is no second family and no monospace.
+Where figures have to line up, `tabular-nums` does that job.
 
-`next/font/google` downloads the font files during `next build`, which makes a
-production build depend on a live request to Google. That broke CI on
-2026-08-17: the runner received CSS pointing at `bricolagegrotesque/v9` files
-that returned 404, and the build failed with twelve unresolved font modules.
-The same URLs resolved fine elsewhere at the same moment, so it was CDN
-staleness rather than an outage — which is exactly the kind of failure that
-recurs. An offline-first app should not need the network to build.
+## The files are not here, and cannot be
 
-| File | Family | Axis range served |
-| --- | --- | --- |
-| `geist-latin.woff2` | Geist | `wght 100..900` |
-| `geist-mono-latin.woff2` | Geist Mono | `wght 100..900` |
-| `bricolage-grotesque-latin.woff2` | Bricolage Grotesque | `opsz 12..96, wdth 75..100, wght 400..700` |
+Helvetica Now is a commercial Monotype typeface. Unlike the fonts that used to
+live here — Geist and Bricolage Grotesque, both SIL Open Font License, which
+permits redistribution — its licence does not allow checking the files into a
+repository. It is also not on Google Fonts, so there is nothing to fetch at
+build time.
 
-All three are the latin subset, matching the `subsets: ["latin"]` the Google
-loader was configured with. They are variable fonts, so one file covers every
-weight the app uses.
+A **web** licence is a separate purchase from a desktop one, and Monotype meters
+web use. Buying the desktop font does not license the `.woff2`.
 
-Both families are licensed under the SIL Open Font License 1.1, which permits
-redistribution:
+Until the files are added, `--font-sans` in `app/globals.css` falls back to
+Helvetica, then Arial. That is close enough to judge spacing and layout against,
+and it is not the real typeface. macOS and iOS have Helvetica; Windows and
+Android will land on Arial or their own substitute.
 
-- Geist and Geist Mono — https://github.com/vercel/geist-font
-- Bricolage Grotesque — https://github.com/ateliertriay/bricolage
+## Adding them
 
-## Replacing them
+1. Put the licensed web files here, ideally one variable file:
+   `helvetica-now-latin.woff2`.
+2. Declare it in `app/layout.tsx` with `next/font/local`, the way the previous
+   fonts were, exposing `--font-sans`:
 
-Fetch the latin block from the Google CSS for the family and axis range in the
-table above, then drop the `.woff2` in here under the same name. Nothing else
-needs changing; `app/layout.tsx` refers to these paths.
+   ```ts
+   const helveticaNow = localFont({
+     src: "./fonts/helvetica-now-latin.woff2",
+     variable: "--font-sans",
+     display: "swap",
+     weight: "100 900",
+   });
+   ```
+
+   Then put `helveticaNow.variable` back on the `<html>` element, and drop the
+   literal stack from `--font-sans` in `app/globals.css` so the variable wins.
+3. Re-judge `--tracking-snug`. It is `-0.008em`, tuned for Geist to make it read
+   tighter. Helvetica Now sets differently and probably does not want it.
+
+If the licence forbids self-hosting and requires Monotype's CDN, that conflicts
+with this being an offline-first app that must build and run without the
+network. Check before buying.
