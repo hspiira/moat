@@ -2,14 +2,38 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.0 |
-| Status | Plan, not started |
+| Document Version | 1.2 |
+| Status | Plan — key vault landed 2026-08-19, sign-in not started |
 | Owner | Piira |
 | Last Updated | 2026-08-19 |
 | Scope | How a user gets a sync account without being handed a token by hand |
 
 Today the only way onto hosted sync is a token minted on the server and pasted
 into settings. That is fine for one developer and no good for anyone else.
+
+## Decided 2026-08-19: how a new device gets the key
+
+Seamless on any device and a server that cannot read the ledger only fit
+together if the key reaches the new device by a route that is not the server.
+Three ways were on the table; **passkey first, recovery passphrase as the
+fallback** was chosen. Letting the server hold the key was rejected.
+
+Both wrap the same device key, and either one opens it:
+
+- **Passkey.** A passkey synced by the platform gives the same PRF secret on the
+  new device, so signing in and touching the sensor is the whole flow. No
+  typing and no file. This needs platform PRF support, which is why it cannot
+  be the only way in.
+- **Recovery passphrase.** Typed once per new device, works everywhere. It is
+  deliberately not the unlock PIN: six digits is a million guesses, and the
+  wrapped key has to be somewhere a new device can fetch it, so an offline
+  attack on it is the threat to design against. At least 12 characters and not
+  all digits.
+
+`lib/security/key-vault.ts` holds both wraps in one small file. Where that file
+lives is the next decision, and Drive `appdata` is the candidate: every user on
+either path already has a Google account, and it keeps key material off the
+sync server entirely.
 
 ## The rule that decides the design
 
@@ -96,9 +120,9 @@ transactions are the same event, and there is no honest way to do that
 automatically. A wrong guess either doubles someone's spending or hides it.
 
 **Linking does not move the key.** After signing in on a second device the
-records arrive sealed and stay unreadable until the backup is restored. This is
-the same cost named at the top of this document, and it is where it will be
-felt.
+records arrive sealed. What opens them is the key vault: the passkey if the
+platform carries one, the recovery passphrase otherwise. A full backup restore
+is no longer the only way through, but something the user holds still is.
 
 ## Match on subject, never on email
 
@@ -175,16 +199,19 @@ Sign-out on a device should revoke that device's token, not every token.
 
 ## Ordering
 
-1. `sync_identities` table, the `(iss, sub)` mapping, and the unclaimed check
+1. ~~Key vault: both wraps, the passphrase policy, and the file format.~~ Done.
+2. Store and fetch the vault from Drive `appdata`, and the setup screen that
+   asks for a recovery passphrase once.
+3. `sync_identities` table, the `(iss, sub)` mapping, and the unclaimed check
    that cases A, B and C turn on.
-2. ID token verification against a JWKS, with cached keys.
-3. `POST /v1/auth/callback`, Google only.
-4. Sign-in screen and the second-device story, which is the part that needs
+4. ID token verification against a JWKS, with cached keys.
+5. `POST /v1/auth/callback`, Google only.
+6. Sign-in screen and the second-device story, which is the part that needs
    design work rather than plumbing: sign in, then restore the backup.
    Case C's wall needs wording a person can act on.
-5. Rate limiting on the callback and on push and pull.
-6. Microsoft.
-7. Apple, only if wanted, budgeting for the key rotation.
+7. Rate limiting on the callback and on push and pull.
+8. Microsoft.
+9. Apple, only if wanted, budgeting for the key rotation.
 
 ## What is not decided
 
