@@ -1,4 +1,5 @@
 import { isBackupFilename } from "@/lib/security/encrypted-backup";
+import { KEY_VAULT_FILENAME } from "@/lib/security/key-vault";
 
 const GOOGLE_GIS_SCRIPT_ID = "moat-google-gis-script";
 const GOOGLE_GIS_SRC = "https://accounts.google.com/gsi/client";
@@ -19,6 +20,8 @@ export interface GoogleDriveBackupClient {
   uploadBackup(params: { filename: string; blob: Blob }): Promise<{ fileId: string }>;
   listBackups(): Promise<GoogleDriveBackupFile[]>;
   downloadBackup(fileId: string): Promise<string>;
+  saveKeyVault(vaultText: string): Promise<{ fileId: string }>;
+  loadKeyVault(): Promise<string | null>;
 }
 
 type ScriptLoader = () => Promise<void>;
@@ -198,6 +201,61 @@ export function createGoogleDriveBackupClient(params?: {
     return response;
   }
 
+  async function findAppDataFile(name: string): Promise<GoogleDriveBackupFile | null> {
+    const query = encodeURIComponent(`name = '${name}' and trashed = false`);
+    const response = await authorizedFetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime,size)&orderBy=modifiedTime desc`,
+    );
+    const payload = (await response.json()) as {
+      files?: Array<{ id: string; name: string; modifiedTime: string; size?: string }>;
+    };
+
+    const found = payload.files?.[0];
+    return found
+      ? {
+          fileId: found.id,
+          name: found.name,
+          modifiedTime: found.modifiedTime,
+          size: found.size,
+        }
+      : null;
+  }
+
+  async function createAppDataFile(params: {
+    filename: string;
+    body: Blob;
+  }): Promise<{ fileId: string }> {
+    const metadata = {
+      name: params.filename,
+      parents: ["appDataFolder"],
+    };
+
+    const formData = new FormData();
+    formData.append(
+      "metadata",
+      new Blob([JSON.stringify(metadata)], { type: "application/json" }),
+    );
+    formData.append("file", params.body, params.filename);
+
+    const response = await authorizedFetch(
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+
+    const payload = (await response.json()) as { id: string };
+    return { fileId: payload.id };
+  }
+
+  async function downloadAppDataFile(fileId: string): Promise<string> {
+    const response = await authorizedFetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+    );
+    return response.text();
+  }
+
   return {
     async signIn() {
       await requestAccessToken(signInAttempted ? "" : "consent");
@@ -222,28 +280,7 @@ export function createGoogleDriveBackupClient(params?: {
       return Boolean(accessToken);
     },
     async uploadBackup({ filename, blob }) {
-      const metadata = {
-        name: filename,
-        parents: ["appDataFolder"],
-      };
-
-      const formData = new FormData();
-      formData.append(
-        "metadata",
-        new Blob([JSON.stringify(metadata)], { type: "application/json" }),
-      );
-      formData.append("file", blob, filename);
-
-      const response = await authorizedFetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const payload = (await response.json()) as { id: string };
-      return { fileId: payload.id };
+      return createAppDataFile({ filename, body: blob });
     },
     async listBackups() {
       const response = await authorizedFetch(
@@ -264,10 +301,33 @@ export function createGoogleDriveBackupClient(params?: {
         }));
     },
     async downloadBackup(fileId) {
+      return downloadAppDataFile(fileId);
+    },
+    // One vault, updated in place. A pile of dated vault files would leave the
+    // newest device guessing which one still wraps the current key.
+    async saveKeyVault(vaultText) {
+      const body = new Blob([vaultText], { type: "application/json" });
+      const existing = await findAppDataFile(KEY_VAULT_FILENAME);
+
+      if (!existing) {
+        return createAppDataFile({ filename: KEY_VAULT_FILENAME, body });
+      }
+
       const response = await authorizedFetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+        `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(existing.fileId)}?uploadType=media&fields=id`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body,
+        },
       );
-      return response.text();
+
+      const payload = (await response.json()) as { id: string };
+      return { fileId: payload.id };
+    },
+    async loadKeyVault() {
+      const existing = await findAppDataFile(KEY_VAULT_FILENAME);
+      return existing ? downloadAppDataFile(existing.fileId) : null;
     },
   };
 }

@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.2 |
-| Status | Plan — key vault landed 2026-08-19, sign-in not started |
+| Document Version | 1.3 |
+| Status | Plan — key vault in Drive landed 2026-08-19, sign-in not started |
 | Owner | Piira |
 | Last Updated | 2026-08-19 |
 | Scope | How a user gets a sync account without being handed a token by hand |
@@ -30,10 +30,28 @@ Both wrap the same device key, and either one opens it:
   attack on it is the threat to design against. At least 12 characters and not
   all digits.
 
-`lib/security/key-vault.ts` holds both wraps in one small file. Where that file
-lives is the next decision, and Drive `appdata` is the candidate: every user on
-either path already has a Google account, and it keeps key material off the
-sync server entirely.
+`lib/security/key-vault.ts` holds both wraps in one small file.
+
+**The vault lives in Drive `appdata`, and the passphrase is asked for at backup
+time.** Every user on either path already has a Google account, so Drive reaches
+both, and it keeps key material off the sync server entirely — a sync server
+breach yields ciphertext and no wrapped key to attack. The cost is that losing
+the Google account loses the vault, so the vault is also worth exporting to a
+file; that is not built yet.
+
+Asking at backup time rather than at onboarding means the question arrives when
+the user has already decided they want their data to survive this device, which
+is the only moment the answer is worth anything to them. It also means a purely
+local user is never asked at all.
+
+The file is one `moat-key-vault.json`, updated in place. Dated vault files would
+leave a new device guessing which one still wraps the current key. A vault this
+build cannot parse is left alone rather than overwritten, since it may be the
+only thing another device can open.
+
+The passkey wrap is copied from the device's own stored material rather than
+re-derived: it already wraps this DEK under the PRF-derived KEK, so copying it
+makes the wrap portable without a second biometric prompt.
 
 ## The rule that decides the design
 
@@ -46,9 +64,10 @@ then Google, or anyone who takes over that Google account, could read every
 transaction. Sign-in is for *who you are*, not *what you can read*.
 
 The cost is real and worth stating up front: signing in on a second device
-gets you your synced records but not the key to open them. The user still
-needs their PIN and their backup file. Anything that removes that step also
-removes the encryption.
+gets you your synced records but not the key to open them. The key comes from
+the vault, which means a passkey the platform carries or a recovery passphrase
+the user remembers. Anything that removes that step also removes the
+encryption.
 
 ## What shapes the flow
 
@@ -200,8 +219,10 @@ Sign-out on a device should revoke that device's token, not every token.
 ## Ordering
 
 1. ~~Key vault: both wraps, the passphrase policy, and the file format.~~ Done.
-2. Store and fetch the vault from Drive `appdata`, and the setup screen that
-   asks for a recovery passphrase once.
+2. ~~Store and fetch the vault from Drive `appdata`, and ask for a recovery
+   passphrase at backup time.~~ Done. What is not built yet: opening a vault on
+   a second device, which is step 6's screen, and exporting the vault to a file
+   for someone who loses their Google account.
 3. `sync_identities` table, the `(iss, sub)` mapping, and the unclaimed check
    that cases A, B and C turn on.
 4. ID token verification against a JWKS, with cached keys.

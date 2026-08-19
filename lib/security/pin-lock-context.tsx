@@ -139,6 +139,15 @@ async function adoptLegacyKeyAsDek(pin: string, legacy: LegacyPinRecord): Promis
   return importDekBytes(bytes);
 }
 
+// The key vault needs this device's passkey wrap so it can travel to Drive,
+// and the vault lives outside the provider's tree.
+export function readStoredPasskeyMaterial(): PasskeyKeyMaterial | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return readKeyMaterial()?.passkey ?? null;
+}
+
 export function usePinLock(): PinLockContextValue {
   const ctx = useContext(PinLockContext);
   if (!ctx) {

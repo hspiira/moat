@@ -73,6 +73,18 @@ export async function withPasskey(
   };
 }
 
+// The device's own passkey material already wraps this same DEK under a KEK
+// derived from the PRF output, and a platform-synced passkey reproduces that
+// output elsewhere. Copying it is what makes the wrap portable, and it spares
+// the user a second biometric prompt for a value we already hold.
+export function withPasskeyMaterial(
+  vault: KeyVault,
+  passkey: PasskeyKeyMaterial,
+  now: Date = new Date(),
+): KeyVault {
+  return { ...vault, updatedAt: now.toISOString(), passkey };
+}
+
 export function withoutPasskey(vault: KeyVault, now: Date = new Date()): KeyVault {
   return {
     version: vault.version,
