@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inferCapturePayee, parseStatedBalance } from "./normalizers";
+import { inferCapturePayee, inferCaptureType, parseStatedBalance } from "./normalizers";
 
 describe("parseStatedBalance", () => {
   it("reads the balance MTN/Airtel/Centenary print", () => {
@@ -37,5 +37,12 @@ describe("inferCapturePayee", () => {
 
   it("returns nothing when no party is named", () => {
     expect(inferCapturePayee("Your balance is UGX 4,243")).toBe("");
+  });
+});
+
+describe("captured savings", () => {
+  it("reads as spending, because a capture cannot say where the money went", () => {
+    expect(inferCaptureType("Moved UGX 50,000 to savings")).toBe("expense");
+    expect(inferCaptureType("SACCO contribution UGX 50,000")).toBe("expense");
   });
 });

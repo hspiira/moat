@@ -13,7 +13,14 @@ import { formatDate } from "@/lib/format-date";
 import { getTransactionDetail } from "@/lib/domain/transaction-detail";
 import { transferLegs } from "@/lib/domain/transaction-cascade";
 import { transactionTypeLabels } from "@/lib/select-options";
-import type { Account, Category, Transaction, TransactionLineItem } from "@/lib/types";
+import { counterpartiesById, partyNameFor } from "@/lib/domain/party-name";
+import type {
+  Account,
+  Category,
+  Counterparty,
+  Transaction,
+  TransactionLineItem,
+} from "@/lib/types";
 
 import { DetailNote, DetailRow, DetailSection } from "./detail-row";
 import { LineItemsSection } from "./line-items-section";
@@ -40,6 +47,8 @@ export function TransactionDetailSheet({
   transactions,
   accounts,
   categories,
+  counterparties = [],
+  partyByGroup,
   lineItems,
   isSubmitting,
   onOpenChange,
@@ -50,6 +59,8 @@ export function TransactionDetailSheet({
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  counterparties?: Counterparty[];
+  partyByGroup?: Map<string, string>;
   lineItems?: TransactionLineItem[];
   isSubmitting?: boolean;
   onOpenChange: (open: boolean) => void;
@@ -76,7 +87,9 @@ export function TransactionDetailSheet({
     ? `${accountName(legs.source.accountId) ?? "Unknown"} → ${accountName(legs.destination.accountId) ?? "Unknown"}`
     : (account?.name ?? "Unknown account");
   const title = subject
-    ? (subject.payee ?? subject.rawPayee ?? category?.name ?? transactionTypeLabels[subject.type])
+    ? (partyNameFor(subject, counterpartiesById(counterparties), partyByGroup) ??
+      category?.name ??
+      transactionTypeLabels[subject.type])
     : "";
 
   return (

@@ -2,18 +2,27 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.2 |
-| Status | Active contract — **authentication is still dev-only** |
+| Document Version | 1.3 |
+| Status | Active contract — **payloads are still plaintext** |
 | Owner | Piira |
-| Last Updated | 2026-08-17 |
+| Last Updated | 2026-08-19 |
 
-> **⚠️ Authentication is not real yet.** The server (`server/`) now runs on
-> Postgres with row-level tenancy, but it authenticates with a single shared
-> bearer token, so `userId` is still trusted from the request body and any
-> caller holding the token can act as any user. Endpoints fail closed (503)
-> when `MOAT_SYNC_BEARER_TOKEN` is unset. Before hosted sync is offered to
-> anyone: per-user auth, rate limiting, and a threat-model review are
-> prerequisites.
+> **Where this stands.** Tenancy and payload privacy are both closed. What is
+> left before hosting this for anyone else is sign-in (see
+> [hosted-sync-identity.md](../plans/hosted-sync-identity.md)), rate limiting,
+> and a threat-model review. The feature stays behind
+> `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until then.
+>
+> **Tenancy.** Tokens live in `sync_credentials`, hashed with SHA-256, one row
+> per user per device. The server looks up the presented token, and the user it
+> resolves to is the only user that request can act for; a body claiming
+> anyone else gets a 403. One deployment serves any number of users. Mint a
+> token with `pnpm --filter @moat/sync-server mint mint <userId> [label]`.
+>
+> **Payloads.** `payload` is sealed with AES-GCM before it leaves the device,
+> under a key derived from the device key with HKDF. The server stores and
+> orders records without being able to read one. It still sees entity type,
+> entity id and timestamps, which are what it needs to store and page.
 
 ## Purpose
 

@@ -1,4 +1,5 @@
 import { deriveSeededId } from "@/lib/ids";
+import { counterpartyMatchKey } from "@/lib/domain/counterparties";
 import { isTransferTransaction } from "@/lib/domain/transfers";
 import type {
   Account,
@@ -108,14 +109,17 @@ function bucketFor(
   account: Account,
   transaction: Transaction,
   counterparties: Map<string, Counterparty>,
+  byName: Map<string, Counterparty>,
 ): { key: string; name: string; counterpartyId?: string } {
   if (!isPoolAccount(config, account)) {
     return { key: `account:${account.id}`, name: account.name };
   }
 
-  const counterparty = transaction.counterpartyId
-    ? counterparties.get(transaction.counterpartyId)
-    : undefined;
+  const payee = transaction.payee?.trim();
+  const counterparty =
+    (transaction.counterpartyId ? counterparties.get(transaction.counterpartyId) : undefined) ??
+    (payee ? byName.get(counterpartyMatchKey(payee)) : undefined);
+
   if (counterparty) {
     return {
       key: `counterparty:${counterparty.id}`,
@@ -124,12 +128,11 @@ function bucketFor(
     };
   }
 
-  const payee = transaction.payee?.trim();
   if (!payee) {
     return { key: "payee:", name: config.unnamedLabel };
   }
 
-  return { key: `payee:${payee.toLowerCase()}`, name: payee };
+  return { key: `payee:${counterpartyMatchKey(payee)}`, name: payee };
 }
 
 function summarise(config: PartyLedgerConfig, bucket: Bucket, asOf: Date): PartyLedgerEntry {
@@ -206,6 +209,14 @@ export function buildPartyPortfolio(
   counterparties: Counterparty[] = [],
 ): PartyPortfolio {
   const byId = new Map(counterparties.map((entry) => [entry.id, entry]));
+  const byName = new Map<string, Counterparty>();
+  for (const entry of counterparties) {
+    const key = counterpartyMatchKey(entry.name);
+    const held = byName.get(key);
+    if (!held || (held.isArchived && !entry.isArchived)) {
+      byName.set(key, entry);
+    }
+  }
   const owned = new Map(
     accounts
       .filter((account) => config.ownsAccount(account) && !account.isArchived)
@@ -252,7 +263,7 @@ export function buildPartyPortfolio(
       continue;
     }
 
-    const { key, name, counterpartyId } = bucketFor(config, account, transaction, byId);
+    const { key, name, counterpartyId } = bucketFor(config, account, transaction, byId, byName);
     const existing = buckets.get(key);
 
     if (existing) {

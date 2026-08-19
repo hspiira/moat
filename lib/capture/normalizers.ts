@@ -46,10 +46,6 @@ export function inferCaptureType(text: string): Exclude<TransactionType, "transf
     return "debt_payment";
   }
 
-  if (/(save|savings|deposit to savings|sacco contribution)/.test(normalized)) {
-    return "savings_contribution";
-  }
-
   return "expense";
 }
 

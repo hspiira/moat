@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertPrincipalOwns,
+  constantTimeEquals,
   createSyncStubResponse,
-  validateSyncBearerToken,
   validateSyncPushRequest,
 } from "@/lib/sync/server-contract";
 import { applyHostedSyncPush, pullHostedSyncChanges } from "@/lib/sync/hosted-store";
@@ -137,18 +138,32 @@ describe("hosted sync store", () => {
   });
 });
 
-describe("validateSyncBearerToken", () => {
-  it("allows requests when no bearer token is configured", () => {
-    validateSyncBearerToken(null);
+describe("constantTimeEquals", () => {
+  it("matches identical secrets", () => {
+    expect(constantTimeEquals("a-long-shared-secret", "a-long-shared-secret")).toBe(true);
   });
 
-  it("rejects invalid bearer tokens when configured", () => {
-    process.env.MOAT_SYNC_BEARER_TOKEN = "secret";
+  it("separates secrets that differ only in the last byte", () => {
+    expect(constantTimeEquals("a-long-shared-secretA", "a-long-shared-secretB")).toBe(false);
+  });
 
-    expect(() => validateSyncBearerToken("Bearer wrong")).toThrow(
-      "Hosted sync bearer token is invalid.",
+  it("separates a secret from its own prefix", () => {
+    expect(constantTimeEquals("a-long-shared-secret", "a-long-shared-secre")).toBe(false);
+  });
+
+  it("separates a secret from a longer string that starts with it", () => {
+    expect(constantTimeEquals("a-long-shared-secret", "a-long-shared-secret-plus")).toBe(false);
+  });
+});
+
+describe("assertPrincipalOwns", () => {
+  it("lets a token act for its own user", () => {
+    assertPrincipalOwns({ userId: "user:owner" }, "user:owner");
+  });
+
+  it("stops a token reading somebody else's records", () => {
+    expect(() => assertPrincipalOwns({ userId: "user:owner" }, "user:someone-else")).toThrow(
+      "This token cannot read or write another user's records.",
     );
-
-    delete process.env.MOAT_SYNC_BEARER_TOKEN;
   });
 });

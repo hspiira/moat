@@ -13,7 +13,8 @@ import {
 } from "@tabler/icons-react";
 
 import { Money } from "@/components/ui/money";
-import type { Account, Category, Transaction, TransactionType } from "@/lib/types";
+import { counterpartiesById, partyNameFor } from "@/lib/domain/party-name";
+import type { Account, Category, Counterparty, Transaction, TransactionType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +34,8 @@ import { isEditableTransaction, transferLegs } from "@/lib/domain/transaction-ca
 type Props = {
   accounts: Account[];
   categories: Category[];
+  counterparties?: Counterparty[];
+  partyByGroup?: Map<string, string>;
   transactions: Transaction[];
   pendingSyncIds?: Set<string>;
   isSubmitting: boolean;
@@ -79,6 +82,8 @@ function groupByDay(transactions: Transaction[]): [string, Transaction[]][] {
 export function TransactionList({
   accounts,
   categories,
+  counterparties = [],
+  partyByGroup,
   transactions,
   pendingSyncIds,
   isSubmitting,
@@ -87,6 +92,7 @@ export function TransactionList({
   onOpenDetail,
 }: Props) {
   const del = useConfirmDelete(onDelete);
+  const partyById = counterpartiesById(counterparties);
   return (
     <Card>
       <CardHeader>
@@ -102,9 +108,9 @@ export function TransactionList({
           <div className="grid gap-4">
             {groupByDay(transactions).map(([day, dayTransactions]) => (
               <section key={day} className="min-w-0">
-                <h3 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
+                <h2 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
                   {formatDayHeading(day)}
-                </h3>
+                </h2>
                 <ul className="divide-y divide-border/50">
                   {dayTransactions.map((transaction) => {
               const account = accounts.find((a) => a.id === transaction.accountId);
@@ -121,8 +127,7 @@ export function TransactionList({
               const presentation = presentationByType[transaction.type];
               const Icon = presentation.icon;
               const title =
-                transaction.payee ??
-                transaction.rawPayee ??
+                partyNameFor(transaction, partyById, partyByGroup) ??
                 category?.name ??
                 transactionTypeLabels[transaction.type];
 

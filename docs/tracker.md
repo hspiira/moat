@@ -26,7 +26,7 @@ A consolidation pass reconciled the docs with the code and closed several review
 - **Goal progress is now derived**: goal progress = manual starting amount + savings contributions on the linked account (`deriveGoalCurrentAmount`), resolving the contradiction between the pilot checklist and the old stored-only `currentAmount`. `MonthSummary.net` now means inflow − outflow − allocated savings (previously a duplicate of `savings`).
 - **Service worker fixed**: precache now covers the icons the manifest actually uses, installs resiliently, and caches visited pages so previously opened routes work offline.
 - **Transactions workspace refactored**: balance reconciliation moved off the read path (loads no longer write to storage; only changed balances persist after mutations). Transaction construction and the month-close CSV are pure, tested modules; budgets and rules/obligations live in their own hooks.
-- **Sync server runs on Postgres**: `server/` is a standalone Node service with keyset-paged pull, transactional pushes under row locks, and row-level tenancy. Authentication is still one shared bearer token, so per-user auth remains a prerequisite before hosted sync is offered to anyone.
+- **Sync server runs on Postgres**: `server/` is a standalone Node service with keyset-paged pull, transactional pushes under row locks, and row-level tenancy. Tokens are per user per device, hashed in `sync_credentials`, and the token decides who the request is for. Payloads are sealed with AES-GCM before they leave the device. What is left before hosting this for anyone is sign-in, rate limiting, and a threat-model review.
 
 ---
 
@@ -61,11 +61,11 @@ A consolidation pass reconciled the docs with the code and closed several review
 
 ### What is not yet built
 
-- Per-user authentication for hosted sync (the server still trusts `userId` from the request body behind one shared token)
-- End-to-end encryption of sync payloads (they are currently plaintext on the wire)
+- Sign-in, so a user gets an account without a token minted by hand ([plans/hosted-sync-identity.md](plans/hosted-sync-identity.md))
+- Rate limiting on push and pull
 - Client-side `baseVersionToken` persistence, without which editing an already-synced record is reported as a conflict
 
-Hosted sync stays behind `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until all four sync items above are done. Opening it earlier means records owned by nobody and plaintext already on the server, both of which cost a migration to undo. Sequencing is in [plans/hosted-sync.md](plans/hosted-sync.md).
+Hosted sync stays behind `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until the items above are done. Tenancy and payload privacy are closed, so the remaining risk is access rather than data: there is no way in but a hand-minted token, and nothing limits how often a caller can try. Sequencing is in [plans/hosted-sync.md](plans/hosted-sync.md).
 - PDF statement parsing (MTN, Stanbic, DFCU)
 - Android notification listener rollout — service code exists but there is no permission-grant UX and it is not device-verified
 - Correction logging and parser refinement workflow

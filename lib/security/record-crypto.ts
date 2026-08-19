@@ -48,6 +48,32 @@ function monthOf(occurredOn: unknown): string {
   return String(occurredOn).slice(0, 7);
 }
 
+export async function deriveRecordSubkey(
+  info: string,
+  derivedKeyType: AesKeyGenParams | HmacKeyGenParams,
+  usages: KeyUsage[],
+): Promise<CryptoKey> {
+  if (!activeRecordKey) {
+    throw new Error("Moat is locked. Unlock with your PIN first.");
+  }
+
+  const rawDek = await crypto.subtle.exportKey("raw", activeRecordKey);
+  const hkdfBase = await crypto.subtle.importKey("raw", rawDek, "HKDF", false, ["deriveKey"]);
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: new TextEncoder().encode(info),
+    },
+    hkdfBase,
+    derivedKeyType,
+    false,
+    usages,
+  );
+}
+
 async function ensureBlindIndexKey(): Promise<CryptoKey> {
   if (activeBlindKey && blindKeySourceDek === activeRecordKey) {
     return activeBlindKey;

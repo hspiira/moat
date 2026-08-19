@@ -76,25 +76,36 @@ export function validateSyncPushRequest(input: unknown): SyncPushRequest {
   };
 }
 
-export function validateSyncBearerToken(headerValue: string | null) {
-  const expectedToken = process.env.MOAT_SYNC_BEARER_TOKEN?.trim();
-  if (!expectedToken) {
-    return;
+const COMPARISON_FLOOR = 64;
+
+export function constantTimeEquals(left: string, right: string): boolean {
+  const encoder = new TextEncoder();
+  const a = encoder.encode(left);
+  const b = encoder.encode(right);
+  const width = Math.max(a.length, b.length, COMPARISON_FLOOR);
+
+  let difference = a.length ^ b.length;
+  for (let index = 0; index < width; index += 1) {
+    difference |= (a[index] ?? 0) ^ (b[index] ?? 0);
   }
 
+  return difference === 0;
+}
+
+export function bearerTokenFrom(headerValue: string | null): string {
   const value = headerValue?.trim();
   if (!value?.startsWith("Bearer ")) {
     throw new Error("Hosted sync requires a bearer token.");
   }
-
-  const token = value.slice("Bearer ".length).trim();
-  if (token !== expectedToken) {
-    throw new Error("Hosted sync bearer token is invalid.");
-  }
+  return value.slice("Bearer ".length).trim();
 }
 
-export function isHostedBackendUsable(): boolean {
-  return Boolean(process.env.MOAT_SYNC_BEARER_TOKEN?.trim());
+export type SyncPrincipal = { userId: string };
+
+export function assertPrincipalOwns(principal: SyncPrincipal, claimedUserId: string) {
+  if (!constantTimeEquals(principal.userId, claimedUserId)) {
+    throw new Error("This token cannot read or write another user's records.");
+  }
 }
 
 export function createSyncStubResponse(request: SyncPushRequest): SyncPushResponse {

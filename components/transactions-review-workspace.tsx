@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { MonthClosePanel } from "./transactions/month-close-panel";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
+import { partyByTransferGroup } from "@/lib/domain/party-name";
 import { TransactionDetailSheet } from "./transactions/transaction-detail-sheet";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
@@ -44,6 +45,8 @@ export function TransactionsReviewWorkspace() {
           transactions={workspace.transactions}
           accounts={workspace.accounts}
           categories={workspace.categories}
+          counterparties={workspace.counterparties}
+          partyByGroup={partyByTransferGroup(workspace.transactions)}
           lineItems={workspace.lineItems}
           isSubmitting={workspace.isSubmitting}
           onOpenChange={(open) => (open ? undefined : setDetailTransactionId(null))}

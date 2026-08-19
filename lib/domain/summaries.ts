@@ -1,4 +1,5 @@
 import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
+import { sumSavingsAllocated } from "@/lib/domain/savings";
 import { excludeTransfers, isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type { Account, Category, MonthSummary, Transaction } from "@/lib/types";
 
@@ -17,9 +18,7 @@ function buildSummary(
     .filter(isSpendingTransaction)
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
 
-  const allocatedSavings = spendingTransactions
-    .filter((transaction) => transaction.type === "savings_contribution")
-    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
+  const allocatedSavings = sumSavingsAllocated(transactions, categories);
 
   const transfers = transactions
     .filter(isTransferTransaction)

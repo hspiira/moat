@@ -100,6 +100,36 @@ const transactions: Transaction[] = [
 ];
 
 describe("getMonthSummary", () => {
+  it("counts a savings transfer pair once and keeps it out of spending", () => {
+    const pair = [
+      buildTransaction({
+        id: "tx:save-out",
+        accountId: "account:bank",
+        type: "transfer",
+        amount: -250_000,
+        occurredOn: "2026-04-06",
+        categoryId: "category:savings",
+        transferGroupId: "transfer:save",
+      }),
+      buildTransaction({
+        id: "tx:save-in",
+        accountId: "account:sacco",
+        type: "transfer",
+        amount: 250_000,
+        occurredOn: "2026-04-06",
+        categoryId: "category:savings",
+        transferGroupId: "transfer:save",
+      }),
+    ];
+
+    const before = getMonthSummary(transactions, categories, "2026-04");
+    const after = getMonthSummary([...transactions, ...pair], categories, "2026-04");
+
+    expect(after.allocatedSavings).toBe(before.allocatedSavings + 250_000);
+    expect(after.outflow).toBe(before.outflow);
+    expect(after.movement).toBe(before.movement);
+  });
+
   it("separates inflow, outflow, saved surplus, allocated savings, and ignores transfers in cash-flow totals", () => {
     const summary = getMonthSummary(transactions, categories, "2026-04");
 

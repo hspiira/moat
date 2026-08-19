@@ -6,6 +6,8 @@ import { seedIndexedDb } from "./seed-indexeddb";
 export type LedgerRow = {
   id: string;
   amount: number;
+  type?: string;
+  categoryId?: string;
   transferGroupId?: string;
   feeParentId?: string;
   accountId: string;

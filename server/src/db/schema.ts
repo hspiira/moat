@@ -4,6 +4,17 @@ create table if not exists sync_users (
   created_at  text not null
 );
 
+create table if not exists sync_credentials (
+  token_sha256 text primary key,
+  user_id      text not null,
+  label        text,
+  created_at   text not null,
+  last_used_at text
+);
+
+create index if not exists sync_credentials_user_idx
+  on sync_credentials (user_id);
+
 create table if not exists sync_records (
   user_id              text not null references sync_users(user_id) on delete cascade,
   entity_type          text not null,

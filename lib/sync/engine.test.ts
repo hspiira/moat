@@ -1,12 +1,21 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+
+import { generateDek } from "@/lib/security/key-hierarchy";
+import { setActiveRecordCryptoKey } from "@/lib/security/record-crypto";
+import { sealSyncPayload } from "@/lib/sync/payload-crypto";
 
 import type { RepositoryBundle } from "@/lib/repositories/types";
 import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
 
 import { runHostedSync } from "@/lib/sync/engine";
 
+beforeEach(async () => {
+  setActiveRecordCryptoKey(await generateDek());
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  setActiveRecordCryptoKey(null);
 });
 
 function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): RepositoryBundle {
@@ -245,7 +254,7 @@ describe("runHostedSync", () => {
                   serverRecord: {
                     entityType: "transactions",
                     entityId: "t1",
-                    payload: "{\"id\":\"t1\",\"amount\":100}",
+                    payload: await sealSyncPayload("{\"id\":\"t1\",\"amount\":100}"),
                     deleted: false,
                     updatedAt: "2026-04-06T12:00:00.000Z",
                     serverVersionToken: "sv:1",
@@ -264,7 +273,7 @@ describe("runHostedSync", () => {
                 {
                   entityType: "transactions",
                   entityId: "t1",
-                  payload: "{\"id\":\"t1\",\"amount\":100}",
+                  payload: await sealSyncPayload("{\"id\":\"t1\",\"amount\":100}"),
                   deleted: false,
                   updatedAt: "2026-04-06T12:00:00.000Z",
                   serverVersionToken: "sv:1",
@@ -322,17 +331,19 @@ function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), { status: 200 });
 }
 
-function pullPage(params: { ids: string[]; nextSince?: string; hasMore: boolean }) {
+async function pullPage(params: { ids: string[]; nextSince?: string; hasMore: boolean }) {
   return jsonResponse({
     syncedAt: "2026-04-06T12:00:00.000Z",
-    records: params.ids.map((id, index) => ({
-      entityType: "categories",
-      entityId: id,
-      payload: JSON.stringify({ id }),
-      deleted: false,
-      updatedAt: `2026-04-06T12:00:0${index}.000Z`,
-      serverVersionToken: `sv:${id}`,
-    })),
+    records: await Promise.all(
+      params.ids.map(async (id, index) => ({
+        entityType: "categories",
+        entityId: id,
+        payload: await sealSyncPayload(JSON.stringify({ id })),
+        deleted: false,
+        updatedAt: `2026-04-06T12:00:0${index}.000Z`,
+        serverVersionToken: `sv:${id}`,
+      })),
+    ),
     nextSince: params.nextSince,
     hasMore: params.hasMore,
   });
@@ -348,7 +359,7 @@ describe("runHostedSync pull paging", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(pullPage({ ids: ["category:remote"], hasMore: false }));
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:remote"], hasMore: false }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await runHostedSync({
@@ -367,9 +378,9 @@ describe("runHostedSync pull paging", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
-      .mockResolvedValueOnce(pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: true }))
-      .mockResolvedValueOnce(pullPage({ ids: ["category:3"], nextSince: "c3", hasMore: false }));
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: true }))
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:3"], nextSince: "c3", hasMore: false }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await runHostedSync({
@@ -388,8 +399,8 @@ describe("runHostedSync pull paging", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
-      .mockResolvedValueOnce(pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: false }));
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: true }))
+      .mockResolvedValueOnce(await pullPage({ ids: ["category:2"], nextSince: "c2", hasMore: false }));
     vi.stubGlobal("fetch", fetchMock);
 
     await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
@@ -403,7 +414,7 @@ describe("runHostedSync pull paging", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce(pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: false })),
+      vi.fn().mockResolvedValueOnce(await pullPage({ ids: ["category:1"], nextSince: "c1", hasMore: false })),
     );
 
     await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
@@ -417,7 +428,7 @@ describe("runHostedSync pull paging", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(pullPage({ ids: [], nextSince: undefined, hasMore: true }));
+      .mockResolvedValue(await pullPage({ ids: [], nextSince: undefined, hasMore: true }));
     vi.stubGlobal("fetch", fetchMock);
 
     await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
@@ -433,7 +444,7 @@ describe("runHostedSync push batching", () => {
 
     const fetchMock = vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
       if (String(url).endsWith("/v1/sync/pull")) {
-        return pullPage({ ids: [], hasMore: false });
+        return await pullPage({ ids: [], hasMore: false });
       }
       const body = JSON.parse(String(init.body)) as { items: { outboxId: string }[] };
       return jsonResponse({

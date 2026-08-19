@@ -3,7 +3,15 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { IdMigrationError, migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
+import {
+  IdMigrationError,
+  MIGRATION_LOCK_MS,
+  migrateIdsToCuid2,
+} from "@/lib/app-state/id-migration";
+import {
+  createMemoryJournalStore,
+  type IdMigrationJournalStore,
+} from "@/lib/app-state/id-migration-journal";
 import { idReferences } from "@/lib/app-state/id-references";
 import { isValidId, deriveSeededId } from "@/lib/ids";
 import { SEEDED_SLUGS, categorySlug } from "@/lib/domain/seeded-ids";
@@ -13,13 +21,28 @@ type Store = Record<string, unknown> & { id: string };
 
 type Seed = Partial<Record<string, Store[]>>;
 
-function createRepositories(seed: Seed, options: { syncProfile?: Record<string, unknown> } = {}) {
+function createRepositories(
+  seed: Seed,
+  options: {
+    syncProfile?: Record<string, unknown>;
+    failAfter?: { store: string; calls: number };
+    failRemoveAfter?: { store: string; calls: number };
+  } = {},
+) {
   const data = new Map<string, Store[]>(Object.entries(seed).map(([k, v]) => [k, [...(v ?? [])]]));
   let syncProfile = options.syncProfile ?? null;
+  const writes = new Map<string, number>();
+  const removals = new Map<string, number>();
 
   const repositoryFor = (store: string) => ({
-    listByUser: async () => [...(data.get(store) ?? [])],
+    listByUser: async (userId: string) =>
+      (data.get(store) ?? []).filter((row) => row.userId === undefined || row.userId === userId),
     upsert: async (record: Store) => {
+      const seen = (writes.get(store) ?? 0) + 1;
+      writes.set(store, seen);
+      if (options.failAfter && options.failAfter.store === store && seen > options.failAfter.calls) {
+        throw new Error(`Storage died writing ${store}.`);
+      }
       const rows = data.get(store) ?? [];
       const index = rows.findIndex((row) => row.id === record.id);
       if (index >= 0) rows[index] = record;
@@ -28,6 +51,12 @@ function createRepositories(seed: Seed, options: { syncProfile?: Record<string, 
       return record;
     },
     remove: async (id: string) => {
+      const seen = (removals.get(store) ?? 0) + 1;
+      removals.set(store, seen);
+      const limit = options.failRemoveAfter;
+      if (limit && limit.store === store && seen > limit.calls) {
+        throw new Error(`Storage died clearing ${store}.`);
+      }
       data.set(store, (data.get(store) ?? []).filter((row) => row.id !== id));
     },
     getById: async (id: string) => (data.get(store) ?? []).find((row) => row.id === id) ?? null,
@@ -88,11 +117,107 @@ const baseSeed = (): Seed => ({
   ],
 });
 
+const BACKED_UP_AT = "2026-08-19T00:00:00.000Z";
+
+function migrate(
+  bundle: RepositoryBundle,
+  overrides: {
+    userId?: string;
+    backupTakenAt?: string | null;
+    journalStore?: IdMigrationJournalStore;
+    dryRun?: boolean;
+    now?: Date;
+  } = {},
+) {
+  return migrateIdsToCuid2({
+    repositories: bundle,
+    userId: "user:default",
+    backupTakenAt: BACKED_UP_AT,
+    journalStore: createMemoryJournalStore(),
+    ...overrides,
+  });
+}
+
+
+const resumeSeed = (): Seed => ({
+  userProfiles: [{ id: "user:default", name: "Ada" }],
+  accounts: [
+    { id: "account:money-lent-out", userId: "user:default", name: "Money lent out" },
+    { id: "account:abc", userId: "user:default", name: "MTN MoMo" },
+    { id: "account:bank", userId: "user:default", name: "Town Bank" },
+  ],
+  categories: [
+    { id: "category:food", userId: "user:default", name: "Food", isDefault: true },
+    { id: "category:mine", userId: "user:default", name: "Chai", isDefault: false },
+  ],
+  transactions: [
+    {
+      id: "transaction:1",
+      userId: "user:default",
+      name: "Market",
+      accountId: "account:abc",
+      categoryId: "category:food",
+      amount: -2000,
+    },
+    {
+      id: "transaction:2",
+      userId: "user:default",
+      name: "Move out",
+      accountId: "account:bank",
+      categoryId: "category:mine",
+      amount: -150000,
+      transferGroupId: "transfer:9",
+    },
+    {
+      id: "transaction:3",
+      userId: "user:default",
+      name: "Move in",
+      accountId: "account:abc",
+      categoryId: "category:mine",
+      amount: 150000,
+      transferGroupId: "transfer:9",
+    },
+  ],
+});
+
+function canonicalLedger(data: Map<string, Store[]>): string {
+  const label = new Map<string, string>();
+  for (const [store, rows] of data) {
+    for (const row of rows) label.set(row.id, `${store}:${String(row.name)}`);
+  }
+
+  const groups = new Map<string, string>();
+  const lines: string[] = [];
+
+  for (const store of [...data.keys()].sort()) {
+    const rows = [...(data.get(store) ?? [])].sort((a, b) =>
+      String(a.name).localeCompare(String(b.name)),
+    );
+
+    for (const row of rows) {
+      const fields = Object.entries(row)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => {
+          if (typeof value !== "string") return `${key}=${JSON.stringify(value)}`;
+          if (key === "transferGroupId") {
+            if (!groups.has(value)) groups.set(value, `group#${groups.size}`);
+            return `${key}=${groups.get(value)}`;
+          }
+          if (label.has(value)) return `${key}=${label.get(value)}`;
+          return `${key}=${isValidId(value) ? "<cuid2>" : value}`;
+        });
+      lines.push(`${store}|${fields.join(",")}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 describe("migrateIdsToCuid2", () => {
   it("gives every record a cuid2 id", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    const summary = await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    const summary = await migrate(bundle);
 
     expect(summary.migrated).toBe(true);
     for (const rows of data.values()) {
@@ -105,7 +230,7 @@ describe("migrateIdsToCuid2", () => {
   it("repoints references at the new ids", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const account = data.get("accounts")!.find((row) => row.name === "MTN MoMo")!;
     const category = data.get("categories")!.find((row) => row.name === "Food")!;
@@ -118,7 +243,7 @@ describe("migrateIdsToCuid2", () => {
   it("gives seeded records their derived id so two devices converge", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const newUserId = data.get("userProfiles")![0].id;
     const pool = data.get("accounts")!.find((row) => row.name === "Money lent out")!;
@@ -138,7 +263,7 @@ describe("migrateIdsToCuid2", () => {
     });
     const { bundle, data } = createRepositories(seed);
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const newUserId = data.get("userProfiles")![0].id;
     const derived = deriveSeededId(newUserId, categorySlug("Food"));
@@ -151,7 +276,7 @@ describe("migrateIdsToCuid2", () => {
   it("repoints userId onto the new profile id", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const newUserId = data.get("userProfiles")![0].id;
     expect(isValidId(newUserId)).toBe(true);
@@ -177,7 +302,7 @@ describe("migrateIdsToCuid2", () => {
     ];
     const { bundle, data } = createRepositories(seed);
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const account = data.get("accounts")!.find((row) => row.name === "MTN MoMo")!;
     const review = data.get("captureReviewItems")![0];
@@ -195,7 +320,7 @@ describe("migrateIdsToCuid2", () => {
     ];
     const { bundle, data } = createRepositories(seed);
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     const [first, second] = data.get("transactions")!;
     expect(first.transferGroupId).toBe(second.transferGroupId);
@@ -210,7 +335,7 @@ describe("migrateIdsToCuid2", () => {
     const { bundle, data } = createRepositories(seed);
 
     await expect(
-      migrateIdsToCuid2({ repositories: bundle, userId: "user:default" }),
+      migrate(bundle),
     ).rejects.toBeInstanceOf(IdMigrationError);
 
     expect(data.get("userProfiles")![0].id).toBe("user:default");
@@ -222,7 +347,7 @@ describe("migrateIdsToCuid2", () => {
     seed.goals = [{ id: "goal:1", userId: "user:default", name: "Rent" }];
     const { bundle, data } = createRepositories(seed);
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     expect(data.get("goals")![0].linkedAccountId).toBeUndefined();
   });
@@ -232,7 +357,7 @@ describe("migrateIdsToCuid2", () => {
       syncProfile: { id: "sync:1", userId: "user:default", lastSyncedAt: "2026-04-06T00:00:00.000Z" },
     });
 
-    const summary = await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    const summary = await migrate(bundle);
 
     expect(summary.migrated).toBe(false);
     expect(summary.reason).toContain("already synced");
@@ -244,7 +369,7 @@ describe("migrateIdsToCuid2", () => {
     seed.syncOutbox = [{ id: "sync-outbox:1", userId: "user:default" }];
     const { bundle } = createRepositories(seed);
 
-    const summary = await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    const summary = await migrate(bundle);
 
     expect(summary.migrated).toBe(false);
     expect(summary.reason).toContain("already synced");
@@ -253,11 +378,10 @@ describe("migrateIdsToCuid2", () => {
   it("is a no-op the second time", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
     const afterFirst = data.get("transactions")![0].id;
 
-    const second = await migrateIdsToCuid2({
-      repositories: bundle,
+    const second = await migrate(bundle, {
       userId: data.get("userProfiles")![0].id as string,
     });
 
@@ -265,10 +389,152 @@ describe("migrateIdsToCuid2", () => {
     expect(data.get("transactions")![0].id).toBe(afterFirst);
   });
 
+
+  it("finishes the same ledger after being killed partway and re-run", async () => {
+    const startedAt = new Date("2026-08-19T09:00:00.000Z");
+    const laterOn = new Date(startedAt.getTime() + MIGRATION_LOCK_MS + 1_000);
+
+    const clean = createRepositories(resumeSeed());
+    await migrate(clean.bundle, { now: startedAt });
+    const expected = canonicalLedger(clean.data);
+
+    const failure = { store: "transactions", calls: 2 };
+    const interrupted = createRepositories(resumeSeed(), { failAfter: failure });
+    const journalStore = createMemoryJournalStore();
+
+    await expect(
+      migrate(interrupted.bundle, { journalStore, now: startedAt }),
+    ).rejects.toThrow(/Storage died/);
+    expect(journalStore.read(), "an interrupted run left no journal").not.toBeNull();
+
+    failure.calls = Number.POSITIVE_INFINITY;
+    const second = await migrate(interrupted.bundle, { journalStore, now: laterOn });
+
+    expect(second.migrated).toBe(true);
+    expect(second.resumed).toBe(true);
+    expect(canonicalLedger(interrupted.data)).toBe(expected);
+    expect(journalStore.read(), "a finished run left its journal behind").toBeNull();
+  });
+
+  it("keeps both legs of a transfer together when the cleanup is interrupted", async () => {
+    const startedAt = new Date("2026-08-19T09:00:00.000Z");
+    const failure = { store: "transactions", calls: 1 };
+    const { bundle, data } = createRepositories(resumeSeed(), { failRemoveAfter: failure });
+    const journalStore = createMemoryJournalStore();
+
+    await expect(
+      migrate(bundle, { journalStore, now: startedAt }),
+    ).rejects.toThrow(/Storage died clearing/);
+
+    failure.calls = Number.POSITIVE_INFINITY;
+    await migrate(bundle, {
+      journalStore,
+      now: new Date(startedAt.getTime() + MIGRATION_LOCK_MS + 1_000),
+    });
+
+    const legs = data.get("transactions")!.filter((row) => row.transferGroupId);
+    expect(legs).toHaveLength(2);
+    expect(legs[0].transferGroupId).toBe(legs[1].transferGroupId);
+    expect(legs[0].transferGroupId).not.toBe("transfer:9");
+  });
+
+  it("leaves no duplicate behind after an interruption", async () => {
+    const startedAt = new Date("2026-08-19T09:00:00.000Z");
+    const failure = { store: "transactions", calls: 2 };
+    const { bundle, data } = createRepositories(resumeSeed(), { failAfter: failure });
+    const journalStore = createMemoryJournalStore();
+
+    await expect(
+      migrate(bundle, { journalStore, now: startedAt }),
+    ).rejects.toThrow(/Storage died/);
+
+    failure.calls = Number.POSITIVE_INFINITY;
+    await migrate(bundle, {
+      journalStore,
+      now: new Date(startedAt.getTime() + MIGRATION_LOCK_MS + 1_000),
+    });
+
+    for (const [store, rows] of data) {
+      const ids = rows.map((row) => row.id);
+      expect(new Set(ids).size, `${store} holds a duplicate id`).toBe(ids.length);
+      for (const row of rows) {
+        expect(isValidId(row.id), `${store} still holds an old id`).toBe(true);
+      }
+    }
+    expect(data.get("transactions")).toHaveLength(3);
+  });
+
+  it("refuses to start without a backup", async () => {
+    const { bundle, data } = createRepositories(baseSeed());
+
+    const summary = await migrate(bundle, { backupTakenAt: null });
+
+    expect(summary.migrated).toBe(false);
+    expect(summary.reason).toContain("Take an encrypted backup");
+    expect(data.get("transactions")![0].id).toBe("transaction:1");
+  });
+
+  it("refuses when the backup is older than the newest change", async () => {
+    const seed = baseSeed();
+    seed.transactions![0].updatedAt = "2026-08-20T00:00:00.000Z";
+    const { bundle, data } = createRepositories(seed);
+
+    const summary = await migrate(bundle, { backupTakenAt: "2026-08-19T00:00:00.000Z" });
+
+    expect(summary.migrated).toBe(false);
+    expect(summary.reason).toContain("older than your most recent change");
+    expect(data.get("transactions")![0].id).toBe("transaction:1");
+  });
+
+  it("runs when the backup is newer than the newest change", async () => {
+    const seed = baseSeed();
+    seed.transactions![0].updatedAt = "2026-08-18T00:00:00.000Z";
+    const { bundle } = createRepositories(seed);
+
+    const summary = await migrate(bundle, { backupTakenAt: "2026-08-19T00:00:00.000Z" });
+
+    expect(summary.migrated).toBe(true);
+  });
+
+  it("reports what a dry run would change without writing any of it", async () => {
+    const { bundle, data } = createRepositories(baseSeed());
+
+    const summary = await migrate(bundle, { dryRun: true, backupTakenAt: null });
+
+    expect(summary.migrated).toBe(false);
+    expect(summary.dryRun).toBe(true);
+    expect(summary.recordsRewritten).toBe(6);
+    expect(summary.referencesRewritten).toBeGreaterThan(0);
+    expect(data.get("userProfiles")![0].id).toBe("user:default");
+    expect(data.get("transactions")![0].id).toBe("transaction:1");
+  });
+
+  it("refuses while another run holds the journal", async () => {
+    const startedAt = new Date("2026-08-19T09:00:00.000Z");
+    const { bundle, data } = createRepositories(baseSeed());
+    const journalStore = createMemoryJournalStore({
+      userId: "user:default",
+      newUserId: "kx9wq3m2p1v7t8h4n6c0dzab",
+      startedAt: startedAt.toISOString(),
+      idMap: {},
+      groupIdMap: {},
+      storesWritten: [],
+    });
+
+    const summary = await migrate(bundle, {
+      journalStore,
+      now: new Date(startedAt.getTime() + 1_000),
+    });
+
+    expect(summary.migrated).toBe(false);
+    expect(summary.reason).toContain("Another migration is already running");
+    expect(data.get("transactions")![0].id).toBe("transaction:1");
+  });
+
   it("drops the old rows rather than leaving duplicates", async () => {
     const { bundle, data } = createRepositories(baseSeed());
 
-    await migrateIdsToCuid2({ repositories: bundle, userId: "user:default" });
+    await migrate(bundle);
 
     expect(data.get("accounts")).toHaveLength(2);
     expect(data.get("categories")).toHaveLength(2);

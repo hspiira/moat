@@ -8,20 +8,19 @@ export type CategoryLike = {
 export const allowedCategoryKinds: Record<TransactionType, CategoryKind[]> = {
   income: ["income"],
   expense: ["expense"],
-  transfer: ["transfer", "lending"],
-  savings_contribution: ["savings"],
+  transfer: ["transfer", "lending", "savings"],
+  savings_contribution: [],
   debt_payment: ["debt_repayment"],
 };
 
-const typeByCategoryKind = Object.entries(allowedCategoryKinds).reduce(
-  (map, [type, kinds]) => {
-    for (const kind of kinds) {
-      map[kind] = type as TransactionType;
-    }
-    return map;
-  },
-  {} as Record<CategoryKind, TransactionType>,
-);
+const typeByCategoryKind: Record<CategoryKind, TransactionType> = {
+  income: "income",
+  expense: "expense",
+  transfer: "transfer",
+  lending: "transfer",
+  savings: "transfer",
+  debt_repayment: "debt_payment",
+};
 
 export function transactionTypeForCategory(category: CategoryLike): TransactionType {
   return typeByCategoryKind[category.kind];

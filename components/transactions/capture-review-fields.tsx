@@ -15,14 +15,12 @@ import { pendingReviewGap } from "@/lib/domain/balance-gap";
 const typeOptions = [
   { value: "income", label: "Income" },
   { value: "expense", label: "Expense" },
-  { value: "savings_contribution", label: "Savings" },
   { value: "debt_payment", label: "Debt payment" },
 ];
 
 const feeBearingTypes = new Set<CaptureReviewItem["type"]>([
   "expense",
   "debt_payment",
-  "savings_contribution",
 ]);
 
 export function CaptureReviewFields({
