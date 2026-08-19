@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { loadKeyVaultFromDrive, publishKeyVaultToDrive } from "@/lib/integrations/drive-key-vault";
+import {
+  keepNewestVaultOnly,
+  loadKeyVaultFromDrive,
+  publishKeyVaultToDrive,
+  removeVaultFromDrive,
+  updateVaultPasskey,
+} from "@/lib/integrations/drive-key-vault";
 import {
   createPasskeyKeyMaterial,
   generateDek,
@@ -26,6 +32,22 @@ function createFakeDrive() {
       return { fileId: "vault-1" };
     }),
     loadKeyVault: vi.fn(async () => stored),
+  };
+}
+
+function createFakeVaultFolder(fileIds: string[]) {
+  const remaining = [...fileIds];
+  return {
+    listKeyVaults: vi.fn(async () =>
+      remaining.map((fileId, index) => ({
+        fileId,
+        name: "moat-key-vault.json",
+        modifiedTime: `2026-08-${19 - index}T09:00:00.000Z`,
+      })),
+    ),
+    deleteFile: vi.fn(async (fileId: string) => {
+      remaining.splice(remaining.indexOf(fileId), 1);
+    }),
   };
 }
 
@@ -87,5 +109,80 @@ describe("key vault over drive", () => {
     ).rejects.toBeInstanceOf(KeyVaultError);
 
     expect(drive.saveKeyVault).not.toHaveBeenCalled();
+  });
+});
+
+describe("keeping the vault level with the device", () => {
+  it("adds a passkey enrolled after the vault was written", async () => {
+    const drive = createFakeDrive();
+    const dek = await generateDek();
+    const prfSalt = randomBytes(32);
+    const prfOutput = randomBytes(32);
+
+    await publishKeyVaultToDrive({
+      client: drive,
+      dek,
+      userId: "user:ada",
+      passphrase: PASSPHRASE,
+    });
+
+    const passkey = await createPasskeyKeyMaterial(dek, "credential-1", prfSalt, prfOutput);
+    await updateVaultPasskey({ client: drive, passkey });
+
+    const fetched = await loadKeyVaultFromDrive(drive);
+    expect(await exportKey(await openWithPasskey(fetched!, prfOutput))).toBe(await exportKey(dek));
+  });
+
+  it("takes the passkey back out, and leaves the passphrase working", async () => {
+    const drive = createFakeDrive();
+    const dek = await generateDek();
+    const prfOutput = randomBytes(32);
+    const passkey = await createPasskeyKeyMaterial(dek, "credential-1", randomBytes(32), prfOutput);
+
+    await publishKeyVaultToDrive({
+      client: drive,
+      dek,
+      userId: "user:ada",
+      passphrase: PASSPHRASE,
+      passkey,
+    });
+
+    await updateVaultPasskey({ client: drive, passkey: null });
+
+    const fetched = await loadKeyVaultFromDrive(drive);
+    expect(fetched?.passkey).toBeUndefined();
+    await expect(openWithPasskey(fetched!, prfOutput)).rejects.toBeInstanceOf(KeyVaultError);
+    expect(await exportKey(await openWithRecoveryPassphrase(fetched!, PASSPHRASE))).toBe(
+      await exportKey(dek),
+    );
+  });
+
+  it("does nothing when there is no vault to update", async () => {
+    const drive = createFakeDrive();
+    await expect(updateVaultPasskey({ client: drive, passkey: null })).resolves.toBeNull();
+    expect(drive.saveKeyVault).not.toHaveBeenCalled();
+  });
+});
+
+describe("tidying the drive app folder", () => {
+  it("removes every vault when the device key is discarded", async () => {
+    const folder = createFakeVaultFolder(["vault-1", "vault-2"]);
+
+    await expect(removeVaultFromDrive(folder)).resolves.toBe(2);
+    expect(folder.deleteFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps only the newest when two devices each wrote one", async () => {
+    const folder = createFakeVaultFolder(["vault-newest", "vault-older"]);
+
+    await expect(keepNewestVaultOnly(folder)).resolves.toBe(1);
+    expect(folder.deleteFile).toHaveBeenCalledExactlyOnceWith("vault-older");
+  });
+
+  it("leaves a single vault alone", async () => {
+    const folder = createFakeVaultFolder(["vault-1"]);
+
+    await expect(keepNewestVaultOnly(folder)).resolves.toBe(0);
+    expect(folder.deleteFile).not.toHaveBeenCalled();
   });
 });

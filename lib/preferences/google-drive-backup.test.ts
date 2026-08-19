@@ -20,6 +20,7 @@ describe("google drive backup preferences", () => {
     expect(readGoogleDriveBackupPreferences()).toEqual({
       provider: "google_drive",
       wasConnected: false,
+      autoBackupEnabled: false,
     });
   });
 
@@ -42,6 +43,7 @@ describe("google drive backup preferences", () => {
     saveGoogleDriveBackupPreferences({
       provider: "google_drive",
       wasConnected: true,
+      autoBackupEnabled: true,
       lastBackupAt: "2026-04-07T10:00:00.000Z",
       lastBackupName: "moat-backup.enc",
     });
@@ -49,8 +51,10 @@ describe("google drive backup preferences", () => {
     expect(readGoogleDriveBackupPreferences()).toEqual({
       provider: "google_drive",
       wasConnected: true,
+      autoBackupEnabled: true,
       lastBackupAt: "2026-04-07T10:00:00.000Z",
       lastBackupName: "moat-backup.enc",
+      lastAutoBackupAt: undefined,
       lastRestoredAt: undefined,
       lastRestoredName: undefined,
     });

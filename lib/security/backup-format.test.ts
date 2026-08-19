@@ -54,3 +54,26 @@ describe("detectBackupFormat", () => {
     expect(result.kind).toBe("unrecognised");
   });
 });
+
+describe("a sealed backup", () => {
+  it("is recognised by its own marker, not by looking like an encrypted one", () => {
+    const format = detectBackupFormat(
+      JSON.stringify({
+        format: "moat-sealed-backup",
+        version: 1,
+        iv: "aXY=",
+        ciphertext: "Y3Q=",
+      }),
+    );
+
+    expect(format.kind).toBe("sealed");
+  });
+
+  it("is still told apart from a PIN-encrypted backup", () => {
+    const format = detectBackupFormat(
+      JSON.stringify({ salt: "c2E=", iv: "aXY=", ciphertext: "Y3Q=" }),
+    );
+
+    expect(format.kind).toBe("encrypted");
+  });
+});

@@ -1,4 +1,5 @@
 import { isBackupFilename } from "@/lib/security/encrypted-backup";
+import { isSealedBackupFilename } from "@/lib/security/sealed-backup";
 import { KEY_VAULT_FILENAME } from "@/lib/security/key-vault";
 
 const GOOGLE_GIS_SCRIPT_ID = "moat-google-gis-script";
@@ -22,6 +23,8 @@ export interface GoogleDriveBackupClient {
   downloadBackup(fileId: string): Promise<string>;
   saveKeyVault(vaultText: string): Promise<{ fileId: string }>;
   loadKeyVault(): Promise<string | null>;
+  listKeyVaults(): Promise<GoogleDriveBackupFile[]>;
+  deleteFile(fileId: string): Promise<void>;
 }
 
 type ScriptLoader = () => Promise<void>;
@@ -184,15 +187,32 @@ export function createGoogleDriveBackupClient(params?: {
     return accessToken;
   }
 
-  async function authorizedFetch(input: string, init?: RequestInit) {
-    const token = await ensureAccessToken();
-    const response = await fetchImpl(input, {
+  function fetchWithToken(input: string, init: RequestInit | undefined, token: string) {
+    return fetchImpl(input, {
       ...init,
       headers: {
         ...(init?.headers ?? {}),
         Authorization: `Bearer ${token}`,
       },
     });
+  }
+
+  async function authorizedFetch(input: string, init?: RequestInit) {
+    const response = await fetchWithToken(input, init, await ensureAccessToken());
+
+    // An access token lasts about an hour, so any tab left open will meet this.
+    // Asking for a fresh one silently beats reporting a failure that reads like
+    // the backup itself went wrong.
+    if (response.status === 401) {
+      accessToken = null;
+      const retried = await fetchWithToken(input, init, await ensureAccessToken());
+
+      if (!retried.ok) {
+        throw new Error(await parseDriveError(retried));
+      }
+
+      return retried;
+    }
 
     if (!response.ok) {
       throw new Error(await parseDriveError(response));
@@ -201,7 +221,7 @@ export function createGoogleDriveBackupClient(params?: {
     return response;
   }
 
-  async function findAppDataFile(name: string): Promise<GoogleDriveBackupFile | null> {
+  async function listAppDataFilesNamed(name: string): Promise<GoogleDriveBackupFile[]> {
     const query = encodeURIComponent(`name = '${name}' and trashed = false`);
     const response = await authorizedFetch(
       `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime,size)&orderBy=modifiedTime desc`,
@@ -210,15 +230,19 @@ export function createGoogleDriveBackupClient(params?: {
       files?: Array<{ id: string; name: string; modifiedTime: string; size?: string }>;
     };
 
-    const found = payload.files?.[0];
-    return found
-      ? {
-          fileId: found.id,
-          name: found.name,
-          modifiedTime: found.modifiedTime,
-          size: found.size,
-        }
-      : null;
+    return (payload.files ?? [])
+      .sort((left, right) => right.modifiedTime.localeCompare(left.modifiedTime))
+      .map((file) => ({
+        fileId: file.id,
+        name: file.name,
+        modifiedTime: file.modifiedTime,
+        size: file.size,
+      }));
+  }
+
+  async function findAppDataFile(name: string): Promise<GoogleDriveBackupFile | null> {
+    const [newest] = await listAppDataFilesNamed(name);
+    return newest ?? null;
   }
 
   async function createAppDataFile(params: {
@@ -291,7 +315,7 @@ export function createGoogleDriveBackupClient(params?: {
       };
 
       return (payload.files ?? [])
-        .filter((file) => isBackupFilename(file.name))
+        .filter((file) => isBackupFilename(file.name) || isSealedBackupFilename(file.name))
         .sort((left, right) => right.modifiedTime.localeCompare(left.modifiedTime))
         .map((file) => ({
           fileId: file.id,
@@ -328,6 +352,17 @@ export function createGoogleDriveBackupClient(params?: {
     async loadKeyVault() {
       const existing = await findAppDataFile(KEY_VAULT_FILENAME);
       return existing ? downloadAppDataFile(existing.fileId) : null;
+    },
+    // The app data folder is hidden from the Drive UI, so a second copy is
+    // something only the app can see, report, and clear up.
+    async listKeyVaults() {
+      return listAppDataFilesNamed(KEY_VAULT_FILENAME);
+    },
+    async deleteFile(fileId) {
+      await authorizedFetch(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
+        { method: "DELETE" },
+      );
     },
   };
 }

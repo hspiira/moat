@@ -11,6 +11,21 @@ function localMidnightMs(date: Date): number {
   return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+// "Daily" means once per calendar day of use, not every 24 hours: a backup at
+// 23:00 should not stop the next morning's from running.
+export function isDailyBackupDue(lastBackupAt: string | undefined, now: Date = new Date()): boolean {
+  if (!lastBackupAt) {
+    return true;
+  }
+
+  const backedUpAt = new Date(lastBackupAt);
+  if (Number.isNaN(backedUpAt.getTime())) {
+    return true;
+  }
+
+  return localMidnightMs(now) > localMidnightMs(backedUpAt);
+}
+
 export function readBackupStaleness(
   lastBackupAt: string | undefined,
   now: Date = new Date(),

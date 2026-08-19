@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateDek, randomBytes } from "@/lib/security/key-hierarchy";
 import {
   KEY_VAULT_VERSION,
+  VAULT_ARGON2_PARAMS,
   KeyVaultError,
   createKeyVault,
   isValidRecoveryPassphrase,
@@ -165,5 +166,38 @@ describe("key vault on disk", () => {
     const future = JSON.stringify({ ...vault, version: KEY_VAULT_VERSION + 1 });
 
     expect(() => parseKeyVault(future)).toThrow(/cannot read/);
+  });
+});
+
+describe("a passphrase typed on another device", () => {
+  it("survives the trailing space a phone keyboard adds", async () => {
+    const { dek, vault } = await buildVault();
+    const opened = await openWithRecoveryPassphrase(vault, `${PASSPHRASE} `);
+
+    expect(await exportKey(opened)).toBe(await exportKey(dek));
+  });
+
+  it("survives a keyboard that composes accents differently", async () => {
+    const dek = await generateDek();
+    const composed = "café brûlée sur la table".normalize("NFC");
+    const decomposed = composed.normalize("NFD");
+
+    expect(decomposed).not.toBe(composed);
+
+    const vault = await createKeyVault({ dek, userId: "user:ada", passphrase: composed });
+    const opened = await openWithRecoveryPassphrase(vault, decomposed);
+
+    expect(await exportKey(opened)).toBe(await exportKey(dek));
+  });
+
+  it("is not made valid by padding a PIN with spaces", () => {
+    expect(isValidRecoveryPassphrase("      123456      ")).toBe(false);
+  });
+
+  it("is stretched harder than the PIN, because nothing rate-limits it", async () => {
+    const { vault } = await buildVault();
+
+    expect(vault.passphrase.params).toEqual(VAULT_ARGON2_PARAMS);
+    expect(vault.passphrase.params.memoryCostKib).toBeGreaterThan(47_104);
   });
 });

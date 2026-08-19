@@ -3,6 +3,7 @@ import {
   createPinKeyMaterial,
   unwrapDekWithPin,
   unwrapDekWithPrf,
+  type Argon2Params,
   type PasskeyKeyMaterial,
   type PinKeyMaterial,
 } from "@/lib/security/key-hierarchy";
@@ -11,9 +12,27 @@ export const KEY_VAULT_VERSION = 1;
 export const KEY_VAULT_FILENAME = "moat-key-vault.json";
 export const MIN_RECOVERY_PASSPHRASE_LENGTH = 12;
 
+// The PIN's parameters are sized for a secret that is protected by a local
+// lockout counter. This one is protected by nothing: anyone holding the Drive
+// file can attack it offline, for as long as they like.
+export const VAULT_ARGON2_PARAMS: Argon2Params = {
+  algorithm: "argon2id",
+  timeCost: 4,
+  memoryCostKib: 65_536, // 64 MiB
+  parallelism: 1,
+  hashLengthBytes: 32,
+};
+
 export const RECOVERY_PASSPHRASE_REQUIREMENT =
   `Use at least ${MIN_RECOVERY_PASSPHRASE_LENGTH} characters, and not only digits. ` +
   "This is not your unlock PIN.";
+
+// A passphrase typed on one device has to match one typed on another, where the
+// keyboard may compose accents differently or add a trailing space. Both ends
+// normalize, so what is compared is what the user meant to type.
+export function normalizeRecoveryPassphrase(passphrase: string): string {
+  return passphrase.normalize("NFKC").trim();
+}
 
 export type KeyVault = {
   version: number;
@@ -26,7 +45,8 @@ export type KeyVault = {
 export class KeyVaultError extends Error {}
 
 export function isValidRecoveryPassphrase(value: string): boolean {
-  return value.length >= MIN_RECOVERY_PASSPHRASE_LENGTH && !/^\d+$/.test(value);
+  const normalized = normalizeRecoveryPassphrase(value);
+  return normalized.length >= MIN_RECOVERY_PASSPHRASE_LENGTH && !/^\d+$/.test(normalized);
 }
 
 function assertUsablePassphrase(passphrase: string) {
@@ -47,7 +67,11 @@ export async function createKeyVault(params: {
     version: KEY_VAULT_VERSION,
     userId: params.userId,
     updatedAt: (params.now ?? new Date()).toISOString(),
-    passphrase: await createPinKeyMaterial(params.passphrase, params.dek),
+    passphrase: await createPinKeyMaterial(
+      normalizeRecoveryPassphrase(params.passphrase),
+      params.dek,
+      VAULT_ARGON2_PARAMS,
+    ),
   };
 }
 
@@ -99,7 +123,7 @@ export async function openWithRecoveryPassphrase(
   passphrase: string,
 ): Promise<CryptoKey> {
   try {
-    return await unwrapDekWithPin(passphrase, vault.passphrase);
+    return await unwrapDekWithPin(normalizeRecoveryPassphrase(passphrase), vault.passphrase);
   } catch {
     throw new KeyVaultError("That recovery passphrase does not open this vault.");
   }

@@ -248,3 +248,71 @@ describe("key vault in the drive app folder", () => {
     await expect(client.loadKeyVault()).resolves.toBeNull();
   });
 });
+
+describe("an expired access token", () => {
+  it("is replaced silently and the request is retried once", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+
+    let issued = 0;
+    vi.stubGlobal("window", {
+      google: {
+        accounts: {
+          oauth2: {
+            initTokenClient: ({ callback }: { callback: (response: { access_token?: string }) => void }) => {
+              const tokenClient = {
+                callback,
+                requestAccessToken: () => {
+                  issued += 1;
+                  tokenClient.callback({ access_token: `token-${issued}` });
+                },
+              };
+              return tokenClient;
+            },
+            revoke: vi.fn(),
+          },
+        },
+      },
+    });
+    vi.stubGlobal("document", {});
+
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("no", { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ files: [] }), { status: 200 }));
+
+    const { createGoogleDriveBackupClient } = await import("@/lib/integrations/google-drive-backup");
+    const client = createGoogleDriveBackupClient({
+      scriptLoader: async () => undefined,
+      fetchImpl,
+    });
+
+    await expect(client.loadKeyVault()).resolves.toBeNull();
+
+    const [, firstInit] = fetchImpl.mock.calls[0] as [string, RequestInit];
+    const [, retryInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+    expect(firstInit.headers).toMatchObject({ Authorization: "Bearer token-1" });
+    expect(retryInit.headers).toMatchObject({ Authorization: "Bearer token-2" });
+  });
+
+  it("reports the failure when a fresh token does not help either", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID = "client-id";
+    stubGoogleIdentity();
+
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: { message: "Insufficient permissions" } }), {
+          status: 401,
+        }),
+      );
+
+    const { createGoogleDriveBackupClient } = await import("@/lib/integrations/google-drive-backup");
+    const client = createGoogleDriveBackupClient({
+      scriptLoader: async () => undefined,
+      fetchImpl,
+    });
+
+    await expect(client.loadKeyVault()).rejects.toThrow("Insufficient permissions");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});

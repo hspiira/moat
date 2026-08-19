@@ -2,10 +2,10 @@
 
 | Field | Value |
 | --- | --- |
-| Document Version | 1.3 |
-| Status | Plan — key vault in Drive landed 2026-08-19, sign-in not started |
+| Document Version | 1.4 |
+| Status | Plan — second device works via Drive; provider sign-in not started |
 | Owner | Piira |
-| Last Updated | 2026-08-19 |
+| Last Updated | 2026-08-20 |
 | Scope | How a user gets a sync account without being handed a token by hand |
 
 Today the only way onto hosted sync is a token minted on the server and pasted
@@ -143,6 +143,12 @@ records arrive sealed. What opens them is the key vault: the passkey if the
 platform carries one, the recovery passphrase otherwise. A full backup restore
 is no longer the only way through, but something the user holds still is.
 
+Adopting a vault re-seals whatever is already on the device under the ledger's
+key, so records entered before adopting are kept rather than dropped. It is
+refused when the local ledger has records and a different user id — case C,
+which the plan does not merge. An empty ledger is allowed through, because the
+restore that follows replaces the profile anyway.
+
 ## Match on subject, never on email
 
 `(iss, sub)` is the identity. Email changes, gets reassigned inside a company,
@@ -220,9 +226,11 @@ Sign-out on a device should revoke that device's token, not every token.
 
 1. ~~Key vault: both wraps, the passphrase policy, and the file format.~~ Done.
 2. ~~Store and fetch the vault from Drive `appdata`, and ask for a recovery
-   passphrase at backup time.~~ Done. What is not built yet: opening a vault on
-   a second device, which is step 6's screen, and exporting the vault to a file
-   for someone who loses their Google account.
+   passphrase at backup time.~~ Done.
+2b. ~~The reading half: adopting a vault's key on a second device, keeping the
+   vault level with local key material, sealed backups, and the daily upload.~~
+   Done 2026-08-20, and covered end to end by `e2e/drive-recovery.spec.ts`,
+   which drives two browser contexts against one stubbed Drive.
 3. `sync_identities` table, the `(iss, sub)` mapping, and the unclaimed check
    that cases A, B and C turn on.
 4. ID token verification against a JWKS, with cached keys.
@@ -233,6 +241,26 @@ Sign-out on a device should revoke that device's token, not every token.
 7. Rate limiting on the callback and on push and pull.
 8. Microsoft.
 9. Apple, only if wanted, budgeting for the key rotation.
+
+## What the daily Drive path looks like
+
+For someone who refuses hosted sync, Drive alone has to be enough. What that
+needs, beyond the vault:
+
+- **Sealed backups.** Encrypted to `HKDF(DEK, "moat/backup/v1")` instead of to a
+  PIN, so an upload needs nobody at the keyboard and a restore needs nothing
+  remembered beyond the recovery passphrase. Backups made with a PIN still work
+  and are still offered; they are simply not the automatic path.
+- **Once per calendar day, while unlocked.** A PWA cannot promise background
+  work: Periodic Background Sync is Chromium-only and absent on iOS. So the
+  upload runs when the app is open and unlocked and a day has turned over. This
+  is disclosed as what it is, rather than described as a daily guarantee.
+- **The vault first.** A sealed backup is worth nothing once the device is gone
+  unless the key that opens it is already in Drive, so the automatic upload does
+  nothing until a vault exists.
+- **Pruning.** Daily uploads accumulate against the user's own Drive quota, so
+  the 14 most recent automatic backups are kept and older ones removed. Files
+  the user made by hand with a PIN are never touched.
 
 ## What is not decided
 

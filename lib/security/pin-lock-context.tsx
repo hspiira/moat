@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { markKeyVaultDrift } from "@/lib/preferences/key-vault-state";
 import { base64ToBytes } from "@/lib/security/codec";
 import {
   createPasskeyKeyMaterial,
@@ -91,6 +92,11 @@ type PinLockContextValue = {
   completeUnlock: () => void;
   lock: () => void;
   removePin: (currentPin: string) => Promise<boolean>;
+  adoptDeviceKey: (params: {
+    dek: CryptoKey;
+    pin: string;
+    passkey?: PasskeyKeyMaterial | null;
+  }) => Promise<{ ok: boolean; error?: string }>;
   hasPinLock: boolean;
   hasPasskey: boolean;
   enablePasskey: () => Promise<{ ok: boolean; error?: string }>;
@@ -413,8 +419,65 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
     setHasPasskey(false);
     setLockState({ status: "no_pin" });
+    markKeyVaultDrift("key-discarded");
     return true;
   }, []);
+
+  // Joining a ledger that already exists: the records here are sealed under this
+  // device's own key, so they are brought back to plaintext and re-sealed under
+  // the adopted one. Both halves roll back on their own, so a failure leaves
+  // readable records rather than a half-converted store.
+  const adoptDeviceKey = useCallback(
+    async (params: {
+      dek: CryptoKey;
+      pin: string;
+      passkey?: PasskeyKeyMaterial | null;
+    }): Promise<{ ok: boolean; error?: string }> => {
+      if (!isValidPin(params.pin)) {
+        return { ok: false, error: "Choose a PIN for this device first." };
+      }
+
+      const material = readKeyMaterial();
+      const legacy = material ? null : readLegacyRecord();
+
+      if (material || legacy) {
+        if (!getActiveRecordCryptoKey()) {
+          return {
+            ok: false,
+            error: "Unlock Moat with this device's PIN first, then adopt the recovery key.",
+          };
+        }
+
+        try {
+          await decryptAllRecords();
+        } catch {
+          return { ok: false, error: "This device's records could not be re-keyed." };
+        }
+      }
+
+      try {
+        await encryptAllRecordsWithDek(params.dek); // activates the adopted key on success
+      } catch {
+        return { ok: false, error: "This device's records could not be re-keyed." };
+      }
+
+      writeStoredMaterial({
+        version: 2,
+        pin: await createPinKeyMaterial(params.pin, params.dek),
+        passkey: params.passkey ?? undefined,
+        pinLength: params.pin.length,
+      });
+      localStorage.removeItem(LEGACY_PIN_HASH_KEY);
+      localStorage.setItem(BLIND_INDEX_VERSION_KEY, BLIND_INDEX_VERSION);
+      writeAttemptState(localStorage, INITIAL_ATTEMPT_STATE);
+      setHasPasskey(Boolean(params.passkey));
+      setLockState({ status: "unlocked" });
+      resetInactivityTimer();
+
+      return { ok: true };
+    },
+    [resetInactivityTimer],
+  );
 
   const enablePasskey = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     const material = readKeyMaterial();
@@ -432,6 +495,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       );
       writeStoredMaterial({ ...material, passkey });
       setHasPasskey(true);
+      markKeyVaultDrift("passkey-added");
       return { ok: true };
     } catch (error) {
       return {
@@ -471,6 +535,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     if (!material) return;
     writeStoredMaterial({ version: material.version, pin: material.pin, pinLength: material.pinLength });
     setHasPasskey(false);
+    markKeyVaultDrift("passkey-removed");
   }, []);
 
   const hasPinLock =
@@ -491,6 +556,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
         completeUnlock,
         lock,
         removePin,
+        adoptDeviceKey,
         hasPinLock,
         hasPasskey,
         enablePasskey,
