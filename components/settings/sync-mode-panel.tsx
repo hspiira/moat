@@ -8,6 +8,7 @@ import type { SyncMode, SyncProfile, SyncOutboxItem, UserProfile } from "@/lib/t
 import { runHostedSync } from "@/lib/sync/engine";
 import { backfillSyncOutbox, hasBackfilled } from "@/lib/sync/backfill";
 import { migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
+import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import { isHostedSyncEnabled } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -103,6 +104,7 @@ export function SyncModePanel() {
     setIsSaving(true);
     setError(null);
     setSuccess(null);
+    const previous = syncProfile;
 
     try {
       await repositories.syncProfiles.save(next);
@@ -110,8 +112,36 @@ export function SyncModePanel() {
       setSuccess("Sync preference saved locally.");
 
       if (next.hostedSyncEnabled && next.mode === "hosted_opt_in" && !hasBackfilled(next)) {
-        setBackfillStatus("Preparing your records...");
-        await migrateIdsToCuid2({ repositories, userId: next.userId });
+        const backupTakenAt = readGoogleDriveBackupPreferences().lastBackupAt ?? null;
+
+        const rehearsal = await migrateIdsToCuid2({
+          repositories,
+          userId: next.userId,
+          backupTakenAt,
+          dryRun: true,
+        });
+        setBackfillStatus(
+          rehearsal.recordsRewritten > 0
+            ? `Preparing your records... ${rehearsal.recordsRewritten} to renumber.`
+            : "Preparing your records...",
+        );
+
+        const migration = await migrateIdsToCuid2({
+          repositories,
+          userId: next.userId,
+          backupTakenAt,
+        });
+
+        if (migration.blocked) {
+          if (previous) {
+            await repositories.syncProfiles.save(previous);
+            setSyncProfile(previous);
+          }
+          setBackfillStatus(null);
+          setSuccess(null);
+          setError(migration.reason ?? "Sync could not be switched on.");
+          return;
+        }
 
         const migratedUser = await repositories.userProfile.get();
         const activeProfile = migratedUser
