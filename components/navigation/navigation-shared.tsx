@@ -12,13 +12,13 @@ import {
   IconFileImport,
   IconInbox,
   IconHome2,
-  IconLock,
   IconMenu2,
   IconMessage2,
   IconMoon,
   IconPlus,
   IconSchool,
   IconCreditCard,
+  IconFolders,
   IconRepeat,
   IconSettings,
   IconShoppingCart,
@@ -49,11 +49,11 @@ export const navIcons: Record<string, Icon> = {
   "/shopping": IconShoppingCart,
   "/debt": IconCreditCard,
   "/recurring": IconRepeat,
+  "/projects": IconFolders,
   "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
   "/report": IconChartHistogram,
   "/settings": IconSettings,
-  "/privacy": IconLock,
   "/inbox": IconInbox,
   "/month": IconCalendarCheck,
   "/import": IconFileImport,
@@ -62,99 +62,48 @@ export const navIcons: Record<string, Icon> = {
 };
 
 export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
-export const mobileSecondaryNav = [
-  "/report",
-  "/goals",
-  "/budgets",
-  "/shopping",
-  "/debt",
-  "/recurring",
-  "/investment-compass",
-  "/learn",
+
+// One vocabulary for everything outside the primary slots: when a thing needs
+// you, not which feature it belongs to. Both platforms render these same
+// groups, so a destination cannot be reachable on one and missing on the other.
+export const navGroups = [
+  { title: "As things arrive", hrefs: ["/inbox"] },
+  { title: "Every month", hrefs: ["/month", "/budgets", "/recurring", "/import"] },
+  { title: "Look back", hrefs: ["/report"] },
+  { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt", "/investment-compass"] },
+  { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories", "/settings"] },
+  { title: "Reference", hrefs: ["/learn"] },
 ] as const;
-const mobileContextNav = [
-  {
-    href: "/report",
-    label: "Report",
-    description: "How your money has moved over time.",
-  },
-  {
-    href: "/goals",
-    label: "Goals",
-    description: "Emergency fund and savings goal tracking.",
-  },
-  {
-    href: "/budgets",
-    label: "Budgets",
-    description: "Monthly spending limits per category.",
-  },
-  {
-    href: "/shopping",
-    label: "Shopping",
-    description: "Plan what to buy and remember what it cost last time.",
-  },
-  {
-    href: "/debt",
-    label: "Money owed",
-    description: "What you owe, what you are owed, and when each clears.",
-  },
-  {
-    href: "/recurring",
-    label: "Recurring bills",
-    description: "Rent, school fees, and other repeating obligations.",
-  },
-  {
-    href: "/investment-compass",
-    label: "Compass",
-    description: "Rule-based guidance for Uganda investing decisions.",
-  },
-  {
-    href: "/learn",
-    label: "Learn",
-    description: "Official Uganda finance sources and explainers.",
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    description: "PIN lock, backup, data export, privacy.",
-  },
-  {
-    href: "/privacy",
-    label: "Privacy",
-    description: "How Moat stores and protects your financial records.",
-  },
-  {
-    href: "/inbox",
+
+// Destinations that are not modules in their own right, so they are not in
+// navItems. Everything else takes its label from there rather than repeating it.
+const cadenceEntries: Record<string, { label: string; description: string }> = {
+  "/inbox": {
     label: "Capture review",
     description: "Transactions read from messages, waiting on your decision.",
   },
-  {
-    href: "/month",
+  "/month": {
     label: "Month check",
     description: "One pass over the month before you put it to bed.",
   },
-  {
-    href: "/import",
+  "/import": {
     label: "CSV import",
     description: "Bring in statement rows from CSV.",
   },
-  {
-    href: "/settings/rules",
+  "/settings/rules": {
     label: "Rules & corrections",
     description: "Rules that fill in details for you, and the corrections you have made.",
   },
-  {
-    href: "/settings/categories",
+  "/settings/categories": {
     label: "Categories",
     description: "What each category has cost you, and where duplicates crept in.",
   },
-] as const;
+  "/settings": {
+    label: "Settings",
+    description: "PIN lock, backup, data export, privacy.",
+  },
+};
 
-export const mobileCadenceNav = [
-  { title: "As things arrive", hrefs: ["/inbox"] },
-  { title: "Every month", hrefs: ["/month", "/import"] },
-  { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories"] },
-] as const;
 export const mobileCaptureActions = [
   {
     href: "/transactions/capture?capture=expense&type=expense",
@@ -186,12 +135,41 @@ export function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function getMobileContextNavItem(pathname: string) {
-  return mobileContextNav.find((item) => isActiveRoute(pathname, item.href));
+export type NavEntry = { href: string; label: string; description: string };
+
+export function getNavEntry(href: string): NavEntry | undefined {
+  const item = navItems.find((entry) => entry.href === href);
+  if (item) {
+    return { href: item.href, label: item.label, description: item.description };
+  }
+
+  const cadence = cadenceEntries[href];
+  return cadence ? { href, ...cadence } : undefined;
 }
 
-export function getNavEntry(href: string) {
-  return mobileContextNav.find((item) => item.href === href);
+export const groupedHrefs = navGroups.flatMap((group) => [...group.hrefs]);
+
+// A destination already sitting in the bar is not repeated in the menu, so each
+// platform hides whatever it shows elsewhere.
+export function navGroupsExcluding(shown: readonly string[]) {
+  return navGroups
+    .map((group) => ({
+      title: group.title,
+      hrefs: group.hrefs.filter((href) => !shown.includes(href)),
+    }))
+    .filter((group) => group.hrefs.length > 0);
+}
+
+export function getActiveEntryIn(
+  pathname: string,
+  hrefs: readonly string[],
+): NavEntry | undefined {
+  const href = hrefs.find((candidate) => isActiveRoute(pathname, candidate));
+  return href ? getNavEntry(href) : undefined;
+}
+
+export function getActiveGroupedEntry(pathname: string): NavEntry | undefined {
+  return getActiveEntryIn(pathname, groupedHrefs);
 }
 
 export function MoatMark({ className }: { className?: string }) {
@@ -377,31 +355,13 @@ export function MobileUtilitySheet({
           </SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 gap-5 overflow-y-auto overscroll-contain px-6 pb-2">
-          <div className="grid">
-            {mobileSecondaryNav.map((href) => {
-              const item = navItems.find((entry) => entry.href === href);
-              if (!item) return null;
-              const IconComponent = navIcons[item.href];
-
-              return (
-                <DrawerNavRow
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  icon={IconComponent}
-                  active={isActiveRoute(pathname, item.href)}
-                  onNavigate={close}
-                />
-              );
-            })}
-          </div>
-
-          {mobileCadenceNav.map((group) => (
+          {navGroupsExcluding(mobilePrimaryNav).map((group) => (
             <DrawerSection key={group.title} title={group.title}>
               <div className="grid">
                 {group.hrefs.map((href) => {
                   const item = getNavEntry(href);
                   if (!item) return null;
+
                   return (
                     <DrawerNavRow
                       key={href}
@@ -417,18 +377,9 @@ export function MobileUtilitySheet({
             </DrawerSection>
           ))}
 
-          <div className="grid">
-            <DrawerNavRow
-              href="/settings"
-              label="Settings"
-              icon={IconSettings}
-              active={isActiveRoute(pathname, "/settings")}
-              onNavigate={close}
-            />
-            <div className="flex items-center justify-between gap-3 px-3 py-1.5">
-              <span className="text-sm font-medium text-foreground">Theme</span>
-              <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
-            </div>
+          <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+            <span className="text-sm font-medium text-foreground">Theme</span>
+            <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
           </div>
         </div>
       </SheetContent>
@@ -468,7 +419,7 @@ export function MobileMoreButton({
   pathname: string;
   onToggleTheme: () => void;
 }) {
-  const activeContextItem = getMobileContextNavItem(pathname);
+  const activeContextItem = getActiveGroupedEntry(pathname);
   const isActive = Boolean(activeContextItem);
   const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconMenu2;
   const label = activeContextItem?.label ?? "More";

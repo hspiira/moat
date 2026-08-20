@@ -3,18 +3,29 @@ import { describe, expect, it } from "vitest";
 import { navItems } from "@/lib/data";
 
 import {
-  getMobileContextNavItem,
+  desktopMenuHrefs,
+  desktopPrimaryNav,
+  desktopShortcutNav,
+} from "./desktop-navigation";
+import {
+  getActiveGroupedEntry,
   getNavEntry,
-  mobileCadenceNav,
+  groupedHrefs,
   mobileCaptureActions,
   mobilePrimaryNav,
-  mobileSecondaryNav,
+  navGroups,
+  navGroupsExcluding,
   navIcons,
 } from "./navigation-shared";
 
-describe("navigation reachability", () => {
-  const mobileReachable = new Set<string>([...mobilePrimaryNav, ...mobileSecondaryNav]);
+const mobileReachable = new Set<string>([...mobilePrimaryNav, ...groupedHrefs]);
+const desktopReachable = new Set<string>([
+  ...desktopPrimaryNav,
+  ...desktopShortcutNav,
+  ...desktopMenuHrefs,
+]);
 
+describe("navigation reachability", () => {
   it("gives every destination an icon", () => {
     expect(navItems.length).toBeGreaterThan(5);
 
@@ -27,47 +38,72 @@ describe("navigation reachability", () => {
     for (const item of navItems) {
       expect(
         mobileReachable.has(item.href),
-        `${item.href} is in navItems but in neither mobilePrimaryNav nor mobileSecondaryNav`,
+        `${item.href} is in navItems but in neither mobilePrimaryNav nor navGroups`,
       ).toBe(true);
     }
   });
 
-  const cadenceHrefs = mobileCadenceNav.flatMap((group) => [...group.hrefs]);
-
-  it("lets the More pill name every route it opens", () => {
-    for (const href of [...mobileSecondaryNav, ...cadenceHrefs]) {
-      expect(getMobileContextNavItem(href), `${href} is missing from mobileContextNav`).toBeDefined();
+  // Rules & corrections was reachable on a phone and nowhere on a laptop, which
+  // the old mobile-only assertion could not see.
+  it("reaches every destination from the desktop navigation", () => {
+    for (const item of navItems) {
+      expect(
+        desktopReachable.has(item.href),
+        `${item.href} is in navItems but unreachable from the desktop bar or menu`,
+      ).toBe(true);
     }
   });
 
-  it("gives each cadence row its own entry, not a parent's", () => {
-    for (const href of cadenceHrefs) {
+  it("puts the same destinations on both platforms", () => {
+    expect([...desktopReachable].sort()).toEqual([...mobileReachable].sort());
+  });
+});
+
+describe("the grouped menu", () => {
+  it("names and illustrates every row it renders", () => {
+    for (const href of groupedHrefs) {
       expect(getNavEntry(href)?.href, `${href} has no entry of its own`).toBe(href);
-    }
-  });
-
-  it("gives every cadence destination an icon", () => {
-    for (const href of cadenceHrefs) {
       expect(navIcons[href], `${href} has no icon in navIcons`).toBeDefined();
     }
   });
 
-  it("files each cadence destination under exactly one heading", () => {
-    expect(new Set(cadenceHrefs).size).toBe(cadenceHrefs.length);
+  it("files each destination under exactly one heading", () => {
+    expect(new Set(groupedHrefs).size).toBe(groupedHrefs.length);
   });
 
-  it("keeps the capture actions off the cadence sections", () => {
-    const capturePaths = mobileCaptureActions.map((action) => action.href.split("?")[0]);
-    for (const href of cadenceHrefs) {
-      expect(capturePaths, `${href} is already a capture action`).not.toContain(href);
+  it("never repeats a destination the bar already shows", () => {
+    for (const href of mobilePrimaryNav) {
+      expect(groupedHrefs, `${href} would render twice on a phone`).not.toContain(href);
+    }
+
+    for (const href of [...desktopPrimaryNav, ...desktopShortcutNav]) {
+      expect(desktopMenuHrefs, `${href} would render twice on a laptop`).not.toContain(href);
     }
   });
 
-  it("keeps the mobile lists pointing at real destinations", () => {
-    const known = new Set(navItems.map((item) => item.href));
+  it("drops a heading rather than rendering it empty", () => {
+    const onlyGroup = navGroups[0];
+    const groups = navGroupsExcluding(onlyGroup.hrefs);
 
-    for (const href of mobileReachable) {
-      expect(known.has(href), `${href} is in the mobile navigation but not in navItems`).toBe(true);
+    expect(groups.map((group) => group.title)).not.toContain(onlyGroup.title);
+    for (const group of groups) {
+      expect(group.hrefs.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("labels the More pill with wherever the reader actually is", () => {
+    for (const href of groupedHrefs) {
+      expect(getActiveGroupedEntry(href)?.href, `${href} does not label the pill`).toBe(href);
+    }
+
+    expect(getActiveGroupedEntry("/")).toBeUndefined();
+  });
+
+  it("keeps the capture actions out of the menu", () => {
+    const capturePaths = mobileCaptureActions.map((action) => action.href.split("?")[0]);
+
+    for (const path of capturePaths) {
+      expect(groupedHrefs).not.toContain(path);
     }
   });
 });

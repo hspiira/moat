@@ -7,9 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { navItems } from "@/lib/data";
 
-import { AppBrand, isActiveRoute, navIcons, ThemeToggle } from "./navigation-shared";
+import {
+  AppBrand,
+  getActiveEntryIn,
+  getNavEntry,
+  isActiveRoute,
+  navGroupsExcluding,
+  navIcons,
+  ThemeToggle,
+} from "./navigation-shared";
 
-const primaryNav = ["/", "/transactions", "/accounts", "/report"] as const;
+export const desktopPrimaryNav = ["/", "/transactions", "/accounts", "/report"] as const;
+// Settings has its own gear in the same bar, so the menu does not repeat it.
+export const desktopShortcutNav = ["/settings"] as const;
+
+const desktopMenuGroups = navGroupsExcluding([...desktopPrimaryNav, ...desktopShortcutNav]);
+export const desktopMenuHrefs = desktopMenuGroups.flatMap((group) => group.hrefs);
 
 export function DesktopNavigation({
   pathname,
@@ -18,10 +31,7 @@ export function DesktopNavigation({
   pathname: string;
   onToggleTheme: () => void;
 }) {
-  const overflowItems = navItems.filter(
-    (item) => !primaryNav.includes(item.href as (typeof primaryNav)[number]),
-  );
-  const activeOverflowItem = overflowItems.find((item) => isActiveRoute(pathname, item.href));
+  const activeMenuItem = getActiveEntryIn(pathname, desktopMenuHrefs);
 
   return (
     <div className="sticky top-0 z-40 hidden bg-background/92 pt-3 backdrop-blur supports-backdrop-filter:bg-background/84 lg:block">
@@ -31,7 +41,7 @@ export function DesktopNavigation({
         </div>
 
         <nav aria-label="Primary" className="flex min-w-0 flex-1 items-center gap-1">
-          {primaryNav.map((href) => {
+          {desktopPrimaryNav.map((href) => {
             const item = navItems.find((entry) => entry.href === href);
             if (!item) return null;
 
@@ -64,41 +74,51 @@ export function DesktopNavigation({
                 variant="ghost"
                 className={[
                   "h-10 rounded-full px-4 text-sm shadow-none",
-                  activeOverflowItem
+                  activeMenuItem
                     ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 ].join(" ")}
               >
                 <span className="font-medium tracking-tight">
-                  {activeOverflowItem?.label ?? "More"}
+                  {activeMenuItem?.label ?? "More"}
                 </span>
                 <IconChevronDown className="size-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-60 p-1.5">
-              <div className="grid">
-                {overflowItems.map((item) => {
-                  const IconComponent = navIcons[item.href];
-                  const isActive = isActiveRoute(pathname, item.href);
+            <PopoverContent align="start" className="w-72 p-1.5">
+              <div className="grid gap-3">
+                {desktopMenuGroups.map((group) => (
+                  <section key={group.title} className="grid gap-0.5">
+                    <div className="px-3 pt-1 text-[11px] font-medium text-muted-foreground">
+                      {group.title}
+                    </div>
+                    {group.hrefs.map((href) => {
+                      const item = getNavEntry(href);
+                      if (!item) return null;
 
-                  return (
-                    <PopoverClose key={item.href} asChild>
-                      <Link
-                        href={item.href}
-                        aria-current={isActive ? "page" : undefined}
-                        className={[
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                          isActive
-                            ? "bg-muted font-medium text-foreground"
-                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        {IconComponent ? <IconComponent className="size-4 shrink-0" /> : null}
-                        {item.label}
-                      </Link>
-                    </PopoverClose>
-                  );
-                })}
+                      const IconComponent = navIcons[href];
+                      const isActive = isActiveRoute(pathname, href);
+
+                      return (
+                        <PopoverClose key={href} asChild>
+                          <Link
+                            href={href}
+                            aria-current={isActive ? "page" : undefined}
+                            className={[
+                              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                              isActive
+                                ? "bg-muted font-medium text-foreground"
+                                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                            ].join(" ")}
+                          >
+                            {IconComponent ? <IconComponent className="size-4 shrink-0" /> : null}
+                            {item.label}
+                          </Link>
+                        </PopoverClose>
+                      );
+                    })}
+                  </section>
+                ))}
               </div>
             </PopoverContent>
           </Popover>

@@ -53,8 +53,8 @@ export const navItems: NavItem[] = [
   },
   {
     href: "/learn",
-    label: "Learn",
-    description: "Official Uganda finance sources and references.",
+    label: "Official sources",
+    description: "Regulator and research links behind this app's Uganda assumptions.",
   },
 ];
 
@@ -85,8 +85,8 @@ export const modulePreviews: ModulePreview[] = [
   },
   {
     href: "/learn",
-    title: "Learn Uganda",
-    summary: "Official sources for regulated investing and institution verification.",
+    title: "Official sources",
+    summary: "Regulator links for verifying an institution before you commit money.",
     stage: "Active",
   },
 ];
