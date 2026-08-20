@@ -5,7 +5,7 @@ import { openSeededApp } from "./harness";
 // 16px gutter. This fails if new content lands outside a card without it.
 const ROUTES = [
   "/", "/transactions", "/transactions/capture", "/accounts", "/budgets", "/debt",
-  "/goals", "/import", "/inbox", "/investment-compass", "/learn", "/month",
+  "/goals", "/import", "/inbox", "/learn", "/month",
   "/privacy", "/recurring", "/report", "/settings", "/settings/categories",
   "/settings/rules", "/settings/sync-conflicts", "/shopping",
 ];

@@ -7,7 +7,6 @@ import {
   IconBuildingBank,
   IconBusinessplan,
   IconCalendarCheck,
-  IconChalkboard,
   IconChartHistogram,
   IconFileImport,
   IconInbox,
@@ -50,7 +49,6 @@ export const navIcons: Record<string, Icon> = {
   "/debt": IconCreditCard,
   "/recurring": IconRepeat,
   "/projects": IconFolders,
-  "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
   "/report": IconChartHistogram,
   "/settings": IconSettings,
@@ -69,8 +67,8 @@ export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 export const navGroups = [
   { title: "As things arrive", hrefs: ["/inbox"] },
   { title: "Every month", hrefs: ["/month", "/budgets", "/recurring", "/import"] },
-  { title: "Look back", hrefs: ["/report"] },
-  { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt", "/investment-compass"] },
+  { title: "Look back", hrefs: ["/report", "/projects"] },
+  { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt"] },
   { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories", "/settings"] },
   { title: "Reference", hrefs: ["/learn"] },
 ] as const;

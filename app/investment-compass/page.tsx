@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/app-shell";
-import { InvestmentCompassWorkspace } from "@/components/investment-compass-workspace";
+import { redirect } from "next/navigation";
 
-export default function InvestmentCompassPage() {
-  return (
-    <AppShell>
-      <InvestmentCompassWorkspace />
-    </AppShell>
-  );
+export default function InvestmentCompassRedirect() {
+  redirect("/goals");
 }

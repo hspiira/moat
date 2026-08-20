@@ -24,6 +24,7 @@ const MOVED = [
   { from: "/transactions/review/month-close", to: "/month" },
   { from: "/transactions/import", to: "/import" },
   { from: "/transactions/tools", to: "/settings/rules" },
+  { from: "/investment-compass", to: "/goals" },
 ];
 
 for (const { from, to } of MOVED) {
