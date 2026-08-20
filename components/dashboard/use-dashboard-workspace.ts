@@ -104,8 +104,16 @@ export function useDashboardWorkspace(profile: UserProfile) {
   );
   const savingsRate = useMemo(() => getSavingsRate(summary), [summary]);
   const insights = useMemo(
-    () => getMonthlyInsights(summary, currentTransactions, accounts, period),
-    [accounts, currentTransactions, period, summary],
+    () =>
+      getMonthlyInsights({
+        summary,
+        transactions: currentTransactions,
+        previousTransactions,
+        categories,
+        accounts,
+        periodLabel: period,
+      }),
+    [accounts, categories, currentTransactions, period, previousTransactions, summary],
   );
   const chartLabel = getPeriodChartLabel(period);
   const chartSeries = useMemo(
