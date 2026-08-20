@@ -52,6 +52,7 @@ function fillForm(row: Transaction, transactions: Transaction[]): TransactionFor
     feeAmount: fee ? String(fee.originalAmount) : "",
     occurredOn: row.occurredOn,
     expectedRepaymentDate: "",
+    projectId: row.projectId ?? "",
     note: row.note ?? "",
   };
 }

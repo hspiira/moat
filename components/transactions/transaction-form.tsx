@@ -8,6 +8,7 @@ import type {
   Category,
   CategoryKind,
   Counterparty,
+  Project,
   SupportedCurrency,
   Transaction,
   TransactionType,
@@ -17,6 +18,7 @@ import {
   describeTransferCounterparty,
   type TransferDirection,
 } from "@/lib/domain/transfer-counterparty";
+import { activeProjects } from "@/lib/domain/projects";
 import { getBorrowingPortfolio } from "@/lib/domain/borrowing";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { previewLoanRepayment, previewPartyRepayment } from "@/lib/domain/repayment";
@@ -56,8 +58,13 @@ export type TransactionFormState = {
   feeAmount: string;
   occurredOn: string;
   expectedRepaymentDate: string;
+  projectId: string;
   note: string;
 };
+
+// Radix Select refuses an empty string as an item value, so "no project" needs
+// a sentinel rather than "".
+const NO_PROJECT = "none";
 
 const sectionTitles: Record<TransferDirection, string> = {
   lend: "Lending",
@@ -116,12 +123,14 @@ const defaultTransactionFormShape: TransactionFormState = {
   feeAmount: "",
   occurredOn: "",
   expectedRepaymentDate: "",
+  projectId: "",
   note: "",
 };
 
 type Props = {
   accounts: Account[];
   categories: Category[];
+  projects?: Project[];
   categoryUsage?: Map<string, number>;
   onCreateCategory?: (name: string, kind: CategoryKind) => void;
   counterparties: Counterparty[];
@@ -145,6 +154,7 @@ export function TransactionForm({
   categoryUsage,
   onCreateCategory,
   counterparties,
+  projects,
   transactions,
   form,
   editingId,
@@ -203,6 +213,7 @@ export function TransactionForm({
         })
       : null;
 
+  const openProjects = useMemo(() => activeProjects(projects ?? []), [projects]);
   const canFillAmount = form.currency === "UGX";
   const fillAmount = (value: number) =>
     onFormChange((current) => ({ ...current, amount: String(Math.round(value)) }));
@@ -428,6 +439,30 @@ export function TransactionForm({
                   }
                 />
               </div>
+
+              {openProjects.length > 0 ? (
+                <div className="grid gap-2">
+                  <SelectField
+                    id="tx-project"
+                    label="Project (optional)"
+                    value={form.projectId || NO_PROJECT}
+                    placeholder="Not part of a project"
+                    options={[
+                      { value: NO_PROJECT, label: "Not part of a project" },
+                      ...openProjects.map((project) => ({
+                        value: project.id,
+                        label: project.name,
+                      })),
+                    ]}
+                    onValueChange={(value) =>
+                      onFormChange((current) => ({
+                        ...current,
+                        projectId: value === NO_PROJECT ? "" : value,
+                      }))
+                    }
+                  />
+                </div>
+              ) : null}
 
               {supportsFee ? (
                 <InputField

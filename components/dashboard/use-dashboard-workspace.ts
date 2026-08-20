@@ -20,7 +20,15 @@ import { evaluateRecurringObligations } from "@/lib/domain/recurring";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 import { repositories } from "@/lib/repositories/instance";
-import type { Account, BudgetTarget, Category, RecurringObligation, Transaction, UserProfile } from "@/lib/types";
+import type {
+  Account,
+  BudgetTarget,
+  Category,
+  Project,
+  RecurringObligation,
+  Transaction,
+  UserProfile,
+} from "@/lib/types";
 import { currentMonthIso } from "@/lib/today";
 
 const TARGET_COVER_MONTHS = 3;
@@ -31,6 +39,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [obligations, setObligations] = useState<RecurringObligation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = usePersistedSelection<PeriodFilter>(
     "moat.dashboard-period",
@@ -54,6 +63,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedBudgets,
         storedReviewItems,
         storedObligations,
+        storedProjects,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
@@ -61,6 +71,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         repositories.budgets.listByMonth(profile.id, currentMonth),
         repositories.captureReviewItems.listByUser(profile.id),
         repositories.recurringObligations.listByUser(profile.id),
+        repositories.projects.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
@@ -68,6 +79,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setTransactions(storedTransactions);
       setBudgets(storedBudgets);
       setObligations(storedObligations);
+      setProjects(storedProjects);
       setReviewCount(
         storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
       );
@@ -111,9 +123,10 @@ export function useDashboardWorkspace(profile: UserProfile) {
         previousTransactions,
         categories,
         accounts,
+        projects,
         periodLabel: period,
       }),
-    [accounts, categories, currentTransactions, period, previousTransactions, summary],
+    [accounts, categories, currentTransactions, period, previousTransactions, projects, summary],
   );
   const chartLabel = getPeriodChartLabel(period);
   const chartSeries = useMemo(

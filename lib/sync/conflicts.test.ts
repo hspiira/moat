@@ -65,6 +65,7 @@ function createRepositories(items: SyncOutboxItem[]): RepositoryBundle {
     items: {} as RepositoryBundle["items"],
     plannedPurchases: {} as RepositoryBundle["plannedPurchases"],
     transactionLineItems: {} as RepositoryBundle["transactionLineItems"],
+    projects: {} as RepositoryBundle["projects"],
   };
 }
 

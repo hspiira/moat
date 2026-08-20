@@ -53,6 +53,7 @@ function context(overrides: Partial<InsightContext> = {}): InsightContext {
     previousTransactions: [],
     categories,
     accounts: [account("Momo", 100_000)],
+    projects: [],
     periodLabel: "month",
     summary: getSummaryForTransactions(transactions, categories),
     ...overrides,
@@ -219,5 +220,60 @@ describe("movement insight", () => {
         }),
       ).find((entry) => entry.id === "insight:movement"),
     ).toBeUndefined();
+  });
+});
+
+describe("a project explains a spike", () => {
+  const relocation = {
+    id: "project:relocation",
+    userId: USER,
+    name: "Relocation",
+    startedOn: "2026-06-01",
+    isArchived: false,
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+
+  const spike = {
+    transactions: [
+      transaction({ id: "rent", amount: 3_000_000, categoryId: "cat:rent", projectId: relocation.id }),
+    ],
+    previousTransactions: [transaction({ id: "p", amount: 1_000_000, categoryId: "cat:rent" })],
+  };
+
+  it("names the project behind the rise", () => {
+    const insight = getMonthlyInsights(
+      context({ ...spike, projects: [relocation] }),
+    ).find((entry) => entry.id === "insight:movement");
+
+    expect(insight?.title).toContain("up 200%");
+    expect(insight?.body).toContain("tagged Relocation");
+    expect(insight?.href).toBe("/projects");
+  });
+
+  it("treats an explained rise as less urgent than an unexplained one", () => {
+    const explained = getMonthlyInsights(
+      context({ ...spike, projects: [relocation] }),
+    ).find((entry) => entry.id === "insight:movement");
+    const bare = getMonthlyInsights(
+      context({
+        transactions: [transaction({ id: "rent", amount: 3_000_000, categoryId: "cat:rent" })],
+        previousTransactions: spike.previousTransactions,
+      }),
+    ).find((entry) => entry.id === "insight:movement");
+
+    expect(explained?.priority).toBeGreaterThan(bare!.priority);
+  });
+
+  it("says nothing about a project when the spending carries none", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [transaction({ id: "rent", amount: 3_000_000, categoryId: "cat:rent" })],
+        previousTransactions: spike.previousTransactions,
+        projects: [relocation],
+      }),
+    ).find((entry) => entry.id === "insight:movement");
+
+    expect(insight?.body).not.toContain("tagged");
   });
 });

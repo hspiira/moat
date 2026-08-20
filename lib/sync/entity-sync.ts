@@ -10,6 +10,7 @@ import type {
   Item,
   MonthClose,
   PlannedPurchase,
+  Project,
   RecurringObligation,
   Transaction,
   TransactionLineItem,
@@ -31,6 +32,7 @@ export type SyncableEntityType =
   | "investmentProfiles"
   | "items"
   | "plannedPurchases"
+  | "projects"
   | "transactionLineItems";
 
 type ConflictStrategy = "client_wins" | "server_wins" | "manual_review";
@@ -132,6 +134,12 @@ const entityDefinitions: Record<SyncableEntityType, EntityDefinition> = {
     upsert: (repositories, payload) => repositories.items.upsert(payload as Item),
     remove: (repositories, entityId) => repositories.items.remove(entityId),
     list: (repositories, userId) => repositories.items.listByUser(userId),
+  },
+  projects: {
+    strategy: "client_wins",
+    upsert: (repositories, payload) => repositories.projects.upsert(payload as Project),
+    remove: (repositories, entityId) => repositories.projects.remove(entityId),
+    list: (repositories, userId) => repositories.projects.listByUser(userId),
   },
   plannedPurchases: {
     strategy: "manual_review",

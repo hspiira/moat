@@ -21,6 +21,7 @@ export const storeNames = {
   items: "items",
   plannedPurchases: "plannedPurchases",
   transactionLineItems: "transactionLineItems",
+  projects: "projects",
 } as const;
 
 export type StoreName = (typeof storeNames)[keyof typeof storeNames];

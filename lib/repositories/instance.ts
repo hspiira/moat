@@ -97,6 +97,7 @@ function createBundleProxy(): RepositoryBundle {
     syncOutbox: lazyRepository("syncOutbox", ["listPendingByUser"]),
     items: lazyRepository("items", ["findByNormalizedName"]),
     plannedPurchases: lazyRepository("plannedPurchases", ["listByStatus"]),
+    projects: lazyRepository("projects"),
     transactionLineItems: lazyRepository("transactionLineItems", ["listByTransactionId"]),
   };
 }

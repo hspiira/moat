@@ -1,7 +1,8 @@
 import { formatMoney } from "@/lib/currency";
 import { getFeeLoad } from "@/lib/domain/fees";
+import { projectSpendForCategory } from "@/lib/domain/projects";
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
-import type { Account, Category, MonthSummary, Transaction } from "@/lib/types";
+import type { Account, Category, MonthSummary, Project, Transaction } from "@/lib/types";
 
 const MAX_INSIGHTS = 4;
 const MIN_REPEATS_FOR_UNIT_COST = 5;
@@ -24,6 +25,7 @@ export type InsightContext = {
   previousTransactions: Transaction[];
   categories: Category[];
   accounts: Account[];
+  projects: Project[];
   periodLabel: string;
 };
 
@@ -136,12 +138,15 @@ const movementRule: InsightRule = ({
   transactions,
   previousTransactions,
   categories,
+  projects,
   periodLabel,
 }) => {
   const current = totalsByCategory(transactions, categories);
   const before = totalsByCategory(previousTransactions, categories);
 
-  let biggest: { name: string; now: number; then: number; change: number } | null = null;
+  let biggest:
+    | { categoryId: string; name: string; now: number; then: number; change: number }
+    | null = null;
 
   for (const [categoryId, total] of current) {
     const then = before.get(categoryId)?.amount ?? 0;
@@ -150,20 +155,25 @@ const movementRule: InsightRule = ({
     const change = (total.amount - then) / then;
     if (Math.abs(change) < MOVEMENT_FLOOR) continue;
     if (!biggest || Math.abs(change) > Math.abs(biggest.change)) {
-      biggest = { name: total.name, now: total.amount, then, change };
+      biggest = { categoryId, name: total.name, now: total.amount, then, change };
     }
   }
 
   if (!biggest) return null;
 
   const direction = biggest.change > 0 ? "up" : "down";
+  // A spike with a project behind it is a plan, not a problem. Say which.
+  const tagged = projectSpendForCategory(transactions, biggest.categoryId, projects);
+  const explanation = tagged
+    ? ` ${formatMoney(tagged.amount)} of it is tagged ${tagged.project.name}.`
+    : "";
 
   return {
     id: "insight:movement",
     title: `${biggest.name} is ${direction} ${percent(Math.abs(biggest.change))}`,
-    body: `${formatMoney(biggest.now)} ${periodPhrase(periodLabel)} against ${formatMoney(biggest.then)} ${previousPhrase(periodLabel)}.`,
-    href: "/report",
-    priority: biggest.change > 0 ? 1 : 3,
+    body: `${formatMoney(biggest.now)} ${periodPhrase(periodLabel)} against ${formatMoney(biggest.then)} ${previousPhrase(periodLabel)}.${explanation}`,
+    href: tagged ? "/projects" : "/report",
+    priority: tagged ? 3 : biggest.change > 0 ? 1 : 3,
   };
 };
 

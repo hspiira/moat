@@ -119,6 +119,7 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
     items: {} as RepositoryBundle["items"],
     plannedPurchases: {} as RepositoryBundle["plannedPurchases"],
     transactionLineItems: {} as RepositoryBundle["transactionLineItems"],
+    projects: {} as RepositoryBundle["projects"],
   };
 }
 

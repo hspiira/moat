@@ -19,6 +19,7 @@ import type {
   Transaction,
   TransactionLineItem,
   TransactionRule,
+  Project,
 } from "@/lib/types";
 
 export type WorkspaceSnapshot = {
@@ -26,6 +27,7 @@ export type WorkspaceSnapshot = {
   categories: Category[];
   transactions: Transaction[];
   lineItems: TransactionLineItem[];
+  projects: Project[];
   budgets: BudgetTarget[];
   captureReviewItems: CaptureReviewItem[];
   transactionRules: TransactionRule[];
@@ -66,12 +68,14 @@ export async function loadWorkspaceSnapshot(
 
   await repairMoneyDrift(userId, timestamp);
 
-  const [storedAccounts, storedCategories, storedTransactions, lineItems] = await Promise.all([
-    repositories.accounts.listByUser(userId),
-    repositories.categories.listByUser(userId),
-    repositories.transactions.listByUser(userId),
-    repositories.transactionLineItems.listByUser(userId),
-  ]);
+  const [storedAccounts, storedCategories, storedTransactions, lineItems, projects] =
+    await Promise.all([
+      repositories.accounts.listByUser(userId),
+      repositories.categories.listByUser(userId),
+      repositories.transactions.listByUser(userId),
+      repositories.transactionLineItems.listByUser(userId),
+      repositories.projects.listByUser(userId),
+    ]);
   const [
     captureReviewItems,
     transactionRules,
@@ -109,6 +113,7 @@ export async function loadWorkspaceSnapshot(
     categories,
     transactions,
     lineItems: refiledLineItems,
+    projects,
     budgets,
     captureReviewItems,
     transactionRules,
