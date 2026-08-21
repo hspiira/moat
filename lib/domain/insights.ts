@@ -3,7 +3,9 @@ import { getFeeLoad } from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
+import { getIncomeStability } from "@/lib/domain/income-stability";
 import { findPriceRises } from "@/lib/domain/price-observations";
+import { getRunway } from "@/lib/domain/runway";
 import { detectRecurringCandidates } from "@/lib/domain/recurring-detection";
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type {
@@ -25,6 +27,9 @@ const MATERIAL_AMOUNT = 20_000;
 const MIN_FEE_TOTAL = 1_000;
 const MIN_BALANCE_GAP = 1_000;
 const MIN_PRICE_RISE = 500;
+const RUNWAY_HORIZON_DAYS = 45;
+const URGENT_RUNWAY_DAYS = 14;
+const INCOME_SWING_FLOOR = 0.4;
 
 export type Insight = {
   id: string;
@@ -337,9 +342,45 @@ const priceRiseRule: InsightRule = ({ items, lineItems, allTransactions, today }
   };
 };
 
+const runwayRule: InsightRule = ({ allTransactions, accounts, now }) => {
+  const runway = getRunway({ accounts, transactions: allTransactions, now });
+  if (runway.daysCovered === null || runway.daysCovered > RUNWAY_HORIZON_DAYS) return null;
+
+  const days = runway.daysCovered;
+  const when =
+    days === 0
+      ? "There is nothing spendable left"
+      : days === 1
+        ? "That is one more day"
+        : `That is about ${days} more days`;
+
+  return {
+    id: "insight:runway",
+    title: `${formatMoney(runway.liquid)} spendable, going out at ${formatMoney(runway.dailyBurn)} a day`,
+    body: `${when}, on the last ${runway.daysMeasured} days of spending. At this rate it is gone by ${runway.runsOutOn}, before counting anything still to come in.`,
+    href: "/report",
+    priority: days <= URGENT_RUNWAY_DAYS ? 1 : 2,
+  };
+};
+
+const incomeSwingRule: InsightRule = ({ allTransactions, now }) => {
+  const stability = getIncomeStability({ transactions: allTransactions, now });
+  if (!stability || stability.swing < INCOME_SWING_FLOOR) return null;
+
+  return {
+    id: "insight:income-swing",
+    title: `Income ranged ${formatMoney(stability.lowest.total)} to ${formatMoney(stability.highest.total)}`,
+    body: `Across ${stability.months.length} months, with a middle month of ${formatMoney(stability.median)}. A plan built on ${formatMoney(stability.lowest.total)} holds in a month like ${stability.lowest.month}; one built on the average does not.`,
+    href: "/budgets",
+    priority: 2,
+  };
+};
+
 const INSIGHT_RULES: InsightRule[] = [
+  runwayRule,
   balanceGapRule,
   feeLoadRule,
+  incomeSwingRule,
   untrackedBillRule,
   priceRiseRule,
   idleLendingRule,

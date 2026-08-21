@@ -84,6 +84,29 @@ Adding a store touches the IndexedDB schema version, `data-export.ts`,
 that fails if an id-shaped field in `lib/types.ts` is not registered, which will
 catch `projectId` if it is missed.
 
+## Where this stands, 2026-08-21
+
+All eight rules above are built, and so are two of the five gaps below.
+
+- **Near-term runway.** Done. `lib/domain/runway.ts`. Spendable balance means
+  cash, mobile money and bank; a SACCO share or an investment holding is savings
+  you would have to liquidate and a receivable is somebody else's promise, so
+  none of them answer "am I about to run out". The daily rate divides by the
+  history that exists rather than the window asked for, because five days of
+  entries over a thirty day window is a five day average. Quiet past 45 days of
+  room, urgent at a fortnight.
+- **Income stability.** Done. `lib/domain/income-stability.ts`. Reports the
+  worst month, the best and the middle, and says to plan on the worst. The month
+  in progress is excluded, since counting a half-finished month would drag the
+  low end down every time and make every month look bad.
+- **Net worth over time.** Already covered, and not rebuilt: the report's "What
+  you are worth" chart is `buildPositionSeries` over a 7, 30 or 90 day window.
+- **Sinking funds.** Not started. Needs a store of its own — accruing monthly
+  toward a known irregular cost is not a goal with a target date, and not a
+  budget envelope either.
+- **Seasonality.** Not started, and not worth starting yet: school terms and the
+  festive season only show up with more than a year of history to compare.
+
 ## Other personal finance ground already covered
 
 Worth stating so it is not rebuilt: envelope budgets, goals with contribution

@@ -535,3 +535,108 @@ describe("an item that costs more than it has", () => {
     expect(insight).toBeUndefined();
   });
 });
+
+describe("how long the money lasts", () => {
+  const cash = { ...account("Cash", 200_000), type: "cash" as const };
+  const burn = Array.from({ length: 20 }, (_, index) =>
+    transaction({
+      id: `burn:${index}`,
+      amount: 10_000,
+      occurredOn: `2026-08-${String(index + 1).padStart(2, "0")}`,
+    }),
+  );
+
+  it("says what is spendable, the daily rate, and when it runs out", () => {
+    const insight = getMonthlyInsights(
+      context({ transactions: [], allTransactions: burn, accounts: [cash] }),
+    ).find((entry) => entry.id === "insight:runway");
+
+    expect(insight?.title).toContain("200,000 spendable");
+    expect(insight?.title).toContain("10,000 a day");
+    expect(insight?.body).toContain("20 more days");
+    expect(insight?.body).toMatch(/2026-09-\d\d/);
+  });
+
+  it("treats a fortnight or less as urgent", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: burn,
+        accounts: [{ ...cash, balance: 90_000 }],
+      }),
+    ).find((entry) => entry.id === "insight:runway");
+
+    expect(insight?.priority).toBe(1);
+  });
+
+  it("stays quiet when there is more than a month and a half of room", () => {
+    expect(
+      getMonthlyInsights(
+        context({
+          transactions: [],
+          allTransactions: burn,
+          accounts: [{ ...cash, balance: 5_000_000 }],
+        }),
+      ).find((entry) => entry.id === "insight:runway"),
+    ).toBeUndefined();
+  });
+
+  it("does not count savings as spendable", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: burn,
+        accounts: [cash, { ...account("SACCO", 4_000_000), type: "sacco" as const }],
+      }),
+    ).find((entry) => entry.id === "insight:runway");
+
+    expect(insight?.title).toContain("200,000 spendable");
+  });
+});
+
+describe("income that swings", () => {
+  const swinging = [
+    ["2026-03-31", 400_000],
+    ["2026-04-30", 1_200_000],
+    ["2026-05-31", 600_000],
+    ["2026-06-30", 800_000],
+    ["2026-07-31", 700_000],
+  ].map(([occurredOn, amount], index) =>
+    transaction({
+      id: `pay:${index}`,
+      type: "income",
+      categoryId: "cat:salary",
+      occurredOn: occurredOn as string,
+      amount: amount as number,
+    }),
+  );
+
+  it("names the worst and best months and what to plan on", () => {
+    const insight = getMonthlyInsights(
+      context({ transactions: [], allTransactions: swinging }),
+    ).find((entry) => entry.id === "insight:income-swing");
+
+    expect(insight?.title).toContain("400,000");
+    expect(insight?.title).toContain("1,200,000");
+    expect(insight?.body).toContain("2026-03");
+    expect(insight?.href).toBe("/budgets");
+  });
+
+  it("stays quiet when income barely moves", () => {
+    const steady = ["2026-05-31", "2026-06-30", "2026-07-31"].map((occurredOn, index) =>
+      transaction({
+        id: `flat:${index}`,
+        type: "income",
+        categoryId: "cat:salary",
+        occurredOn,
+        amount: 700_000,
+      }),
+    );
+
+    expect(
+      getMonthlyInsights(context({ transactions: [], allTransactions: steady })).find(
+        (entry) => entry.id === "insight:income-swing",
+      ),
+    ).toBeUndefined();
+  });
+});
