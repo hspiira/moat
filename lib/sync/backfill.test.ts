@@ -48,6 +48,7 @@ function createRepositories(seed: Seed) {
     items: emptyList,
     plannedPurchases: emptyList,
     transactionLineItems: emptyList,
+    projects: emptyList,
     syncOutbox: {
       listByUser: async () => outbox,
       upsert: async (item: SyncOutboxItem) => {

@@ -13,8 +13,8 @@ import {
 
 describe("indexeddb schema metadata", () => {
   it("includes additive migrations for older installations", () => {
-    expect(getIndexedDbMigrationVersions(1)).toEqual([4, 5, 6, 7, 8, 9, 10]);
-    expect(getIndexedDbMigrationVersions(7)).toEqual([8, 9, 10]);
+    expect(getIndexedDbMigrationVersions(1)).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(getIndexedDbMigrationVersions(7)).toEqual([8, 9, 10, 11]);
   });
 
   it("declares the indexes used by repository query helpers", () => {

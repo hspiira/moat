@@ -30,6 +30,7 @@ export const idReferences: Partial<Record<StoreName, IdReference[]>> = {
     { path: "feeParentId", target: "transactions" },
     { path: "counterpartyId", target: "counterparties" },
     { path: "importBatchId", target: "imports" },
+    { path: "projectId", target: "projects" },
   ],
 
   items: [{ path: "defaultCategoryId", target: "categories" }],

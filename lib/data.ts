@@ -47,14 +47,14 @@ export const navItems: NavItem[] = [
     description: "Rent, school fees, and other repeating obligations.",
   },
   {
-    href: "/investment-compass",
-    label: "Compass",
-    description: "Rule-based guidance for Uganda investments.",
+    href: "/projects",
+    label: "Projects",
+    description: "What a relocation or a wedding really cost, across categories.",
   },
   {
     href: "/learn",
-    label: "Learn",
-    description: "Official Uganda finance sources and references.",
+    label: "Official sources",
+    description: "Regulator and research links behind this app's Uganda assumptions.",
   },
 ];
 
@@ -73,20 +73,14 @@ export const modulePreviews: ModulePreview[] = [
   },
   {
     href: "/goals",
-    title: "Goals",
-    summary: "Set savings targets and track emergency fund progress.",
-    stage: "Active",
-  },
-  {
-    href: "/investment-compass",
-    title: "Investment Compass",
-    summary: "Rule-based guidance matched to your time horizon and liquidity needs.",
+    title: "Goals and guidance",
+    summary: "Set savings targets, and see which product classes suit their horizon.",
     stage: "Active",
   },
   {
     href: "/learn",
-    title: "Learn Uganda",
-    summary: "Official sources for regulated investing and institution verification.",
+    title: "Official sources",
+    summary: "Regulator links for verifying an institution before you commit money.",
     stage: "Active",
   },
 ];

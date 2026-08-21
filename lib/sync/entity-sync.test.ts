@@ -11,6 +11,7 @@ import type { SyncPullRecord } from "@/lib/sync/types";
 function makeRepositories(): RepositoryBundle {
   return {
     userProfile: {} as RepositoryBundle["userProfile"],
+    projects: {} as RepositoryBundle["projects"],
     accounts: {} as RepositoryBundle["accounts"],
     transactions: {} as RepositoryBundle["transactions"],
     captureEnvelopes: {} as RepositoryBundle["captureEnvelopes"],
@@ -43,6 +44,7 @@ function makeRepositories(): RepositoryBundle {
       remove: vi.fn(),
     } as unknown as RepositoryBundle["plannedPurchases"],
     transactionLineItems: {
+    projects: {} as RepositoryBundle["projects"],
       getById: vi.fn(),
       listByUser: vi.fn(),
       listByTransactionId: vi.fn(),

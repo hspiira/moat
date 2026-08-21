@@ -116,22 +116,14 @@ export function DashboardWorkspace({ profile }: DashboardWorkspaceProps) {
             <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </Link>
 
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1 rounded-lg px-1 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Opening to closing, step by step
-              <IconChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" />
-            </summary>
-            <div className="pt-2">
-              <DashboardBalanceBridge
-                openingBalance={summary.openingBalance}
-                inflow={summary.inflow}
-                outflow={summary.outflow}
-                allocatedSavings={summary.allocatedSavings}
-                movement={summary.movement}
-                closingBalance={summary.closingBalance}
-              />
-            </div>
-          </details>
+          <DashboardBalanceBridge
+            openingBalance={summary.openingBalance}
+            inflow={summary.inflow}
+            outflow={summary.outflow}
+            allocatedSavings={summary.allocatedSavings}
+            movement={summary.movement}
+            closingBalance={summary.closingBalance}
+          />
 
           <DashboardTopSpendingCategories
             categories={summary.topCategories}

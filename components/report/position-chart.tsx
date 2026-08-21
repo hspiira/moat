@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { smoothAreaPath, smoothLinePath } from "@/lib/chart-path";
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
 import type { PositionPoint } from "@/lib/domain/report";
@@ -25,8 +26,8 @@ export function PositionChart({ points }: { points: PositionPoint[] }) {
     }));
 
     return {
-      line: coords.map((c) => `${c.x.toFixed(3)},${c.y.toFixed(2)}`).join(" "),
-      area: `0,${HEIGHT} ${coords.map((c) => `${c.x.toFixed(3)},${c.y.toFixed(2)}`).join(" ")} 100,${HEIGHT}`,
+      line: smoothLinePath(coords),
+      area: smoothAreaPath(coords, HEIGHT),
       last: coords[coords.length - 1],
     };
   }, [points]);
@@ -57,9 +58,9 @@ export function PositionChart({ points }: { points: PositionPoint[] }) {
             <stop offset="100%" stopColor="var(--moat-ring-fill)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <polygon points={geometry.area} fill="url(#position-fill)" />
-        <polyline
-          points={geometry.line}
+        <path d={geometry.area} fill="url(#position-fill)" />
+        <path
+          d={geometry.line}
           fill="none"
           stroke="var(--moat-ring-fill)"
           strokeWidth="2"

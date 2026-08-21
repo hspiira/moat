@@ -14,7 +14,6 @@ const ROUTES = [
   "/goals",
   "/import",
   "/inbox",
-  "/investment-compass",
   "/learn",
   "/month",
   "/privacy",

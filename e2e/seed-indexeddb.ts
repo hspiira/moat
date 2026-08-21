@@ -19,6 +19,7 @@ const BUNDLE_STORES: Record<string, string> = {
   monthCloses: storeNames.monthCloses,
   items: storeNames.items,
   plannedPurchases: storeNames.plannedPurchases,
+  projects: storeNames.projects,
   transactionLineItems: storeNames.transactionLineItems,
   captureEnvelopes: storeNames.captureEnvelopes,
   captureReviewItems: storeNames.captureReviewItems,

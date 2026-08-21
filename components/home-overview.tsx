@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   IconBuildingBank,
   IconBusinessplan,
-  IconChalkboard,
   IconChevronRight,
   IconSchool,
   IconTransfer,
@@ -21,7 +20,6 @@ const moduleIcons: Record<string, Icon> = {
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
   "/goals": IconBusinessplan,
-  "/investment-compass": IconChalkboard,
   "/learn": IconSchool,
 };
 

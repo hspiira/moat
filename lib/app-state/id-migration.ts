@@ -46,6 +46,7 @@ const migratedStores: StoreName[] = [
   storeNames.investmentProfiles,
   storeNames.captureReviewItems,
   storeNames.correctionLogs,
+  storeNames.projects,
 ];
 
 function getPath(record: AnyRecord, path: string): unknown {

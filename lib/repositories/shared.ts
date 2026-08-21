@@ -35,6 +35,7 @@ import type {
   Item,
   MonthClose,
   PlannedPurchase,
+  Project,
   RecurringObligation,
   ResourceLink,
   SyncOutboxItem,
@@ -401,6 +402,7 @@ export function createRepositoryBundle(adapter: StorageAdapter): RepositoryBundl
     syncOutbox: createSyncOutboxRepository(adapter),
     items: createItemRepository(adapter),
     plannedPurchases: createPlannedPurchaseRepository(adapter),
+    projects: createUserScopedRepository<Project>(adapter, "projects"),
     transactionLineItems: createTransactionLineItemRepository(adapter),
   };
 }

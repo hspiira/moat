@@ -11,10 +11,10 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen overflow-x-clip bg-background">
-      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+    <div className="min-h-dvh overflow-x-clip bg-background">
+      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-4 px-4 pt-2 pb-4 sm:px-6 lg:gap-5 lg:px-8 lg:pt-3 lg:pb-6">
         <AppNavigation />
-        <aside aria-label="App and storage status">
+        <aside aria-label="App and storage status" className="empty:hidden">
           <PwaStatus />
         </aside>
         <NativeCaptureIntake />

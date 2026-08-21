@@ -155,6 +155,7 @@ export type Transaction = {
   reviewedAt?: string;
   transferGroupId?: string;
   feeParentId?: string;
+  projectId?: string;
   statedBalance?: number;
   counterpartyId?: string;
   expectedRepaymentDate?: string;
@@ -295,6 +296,19 @@ export type ResourceLink = {
   url: string;
   topic: string;
   isOfficial: boolean;
+};
+
+export type Project = {
+  id: string;
+  userId: string;
+  name: string;
+  startedOn: string;
+  endedOn?: string;
+  budgetAmount?: number;
+  note?: string;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type MonthlyInsight = {

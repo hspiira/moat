@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { GoalForm } from "@/components/goals/goal-form";
 import { GoalList } from "@/components/goals/goal-list";
+import { InvestmentGuidanceSection } from "@/components/goals/investment-guidance-section";
 import { useGoalsWorkspace } from "@/components/goals/use-goals-workspace";
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
@@ -129,6 +130,8 @@ export function GoalsWorkspace() {
             onDelete={(goalId) => void handleDeleteGoal(goalId)}
             onAdd={openNewGoal}
           />
+
+          <InvestmentGuidanceSection />
 
           <Sheet open={formSheet.isOpen} onOpenChange={formSheet.onOpenChange}>
             <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">

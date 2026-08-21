@@ -86,7 +86,7 @@ export function LearnWorkspace() {
   return (
     <div className="grid gap-5">
       <PageHeader
-        title="Learn Uganda"
+        title="Official sources"
         srOnlyTitle
         description="Official and research-grade sources behind this app&apos;s Uganda-first assumptions."
         aside={

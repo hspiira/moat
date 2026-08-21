@@ -96,6 +96,25 @@ export function buildDailyNetCalendar(transactions: Transaction[], month: string
   });
 }
 
+// Everything recorded on that day, in the order it was entered. The calendar
+// cell sums the balance delta of every row, transfer legs and charges included,
+// so the drill-down has to list all of them or the figures will not agree.
+export function transactionsOnDay(transactions: Transaction[], date: string): Transaction[] {
+  return transactions
+    .filter((transaction) => transaction.occurredOn === date)
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+}
+
+// Today when the month on screen contains it, otherwise the most recent day
+// that had any activity, so opening an older month lands on something.
+export function defaultCalendarDay(cells: CalendarCell[], today: string): string | null {
+  const withinMonth = cells.find((cell) => cell.date === today);
+  if (withinMonth) return withinMonth.date;
+
+  const active = cells.filter((cell) => cell.hasActivity);
+  return active.length > 0 ? active[active.length - 1].date : null;
+}
+
 export function getFlowBreakdown(transactions: Transaction[]): FlowBreakdown {
   let inflow = 0;
   let inflowCount = 0;

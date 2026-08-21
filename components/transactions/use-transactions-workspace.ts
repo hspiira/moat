@@ -14,6 +14,7 @@ import type {
   CaptureReviewItem,
   Category,
   CategoryKind,
+  Project,
   Transaction,
   TransactionLineItem,
   UserProfile,
@@ -109,6 +110,7 @@ export function useTransactionsWorkspace() {
   const { counterparties, setCounterparties, loadAndBackfill, resolveSelection } =
     useCounterparties();
   const [captureReviewItems, setCaptureReviewItems] = useState<CaptureReviewItem[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [transactionForm, setTransactionForm] =
     useState<TransactionFormState>(createDefaultTransactionForm);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -235,6 +237,7 @@ export function useTransactionsWorkspace() {
       setLineItems(snapshot.lineItems);
       setBudgets(snapshot.budgets);
       setCaptureReviewItems(snapshot.captureReviewItems);
+      setProjects(snapshot.projects);
       setTransactionRules(snapshot.transactionRules);
       setRecurringObligations(snapshot.recurringObligations);
       setMonthClose(snapshot.monthClose);
@@ -524,6 +527,7 @@ export function useTransactionsWorkspace() {
     accounts,
     categories,
     counterparties,
+    projects,
     transactions,
     lineItems,
     pendingSyncTransactionIds,

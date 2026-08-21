@@ -20,8 +20,20 @@ import { evaluateRecurringObligations } from "@/lib/domain/recurring";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 import { repositories } from "@/lib/repositories/instance";
-import type { Account, BudgetTarget, Category, RecurringObligation, Transaction, UserProfile } from "@/lib/types";
-import { currentMonthIso } from "@/lib/today";
+import type {
+  Account,
+  BudgetTarget,
+  Category,
+  Counterparty,
+  Goal,
+  Item,
+  Project,
+  RecurringObligation,
+  Transaction,
+  TransactionLineItem,
+  UserProfile,
+} from "@/lib/types";
+import { currentMonthIso, todayIso } from "@/lib/today";
 
 const TARGET_COVER_MONTHS = 3;
 
@@ -31,6 +43,11 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [obligations, setObligations] = useState<RecurringObligation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = usePersistedSelection<PeriodFilter>(
     "moat.dashboard-period",
@@ -54,6 +71,11 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedBudgets,
         storedReviewItems,
         storedObligations,
+        storedProjects,
+        storedCounterparties,
+        storedItems,
+        storedLineItems,
+        storedGoals,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
@@ -61,6 +83,11 @@ export function useDashboardWorkspace(profile: UserProfile) {
         repositories.budgets.listByMonth(profile.id, currentMonth),
         repositories.captureReviewItems.listByUser(profile.id),
         repositories.recurringObligations.listByUser(profile.id),
+        repositories.projects.listByUser(profile.id),
+        repositories.counterparties.listByUser(profile.id),
+        repositories.items.listByUser(profile.id),
+        repositories.transactionLineItems.listByUser(profile.id),
+        repositories.goals.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
@@ -68,6 +95,11 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setTransactions(storedTransactions);
       setBudgets(storedBudgets);
       setObligations(storedObligations);
+      setProjects(storedProjects);
+      setCounterparties(storedCounterparties);
+      setGoals(storedGoals);
+      setItems(storedItems);
+      setLineItems(storedLineItems);
       setReviewCount(
         storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
       );
@@ -104,8 +136,41 @@ export function useDashboardWorkspace(profile: UserProfile) {
   );
   const savingsRate = useMemo(() => getSavingsRate(summary), [summary]);
   const insights = useMemo(
-    () => getMonthlyInsights(summary, currentTransactions, accounts, period),
-    [accounts, currentTransactions, period, summary],
+    () =>
+      getMonthlyInsights({
+        summary,
+        transactions: currentTransactions,
+        previousTransactions,
+        categories,
+        accounts,
+        projects,
+        counterparties,
+        goals,
+        trackedPayees: obligations.flatMap((obligation) =>
+          [obligation.payee, obligation.name].filter((value): value is string => Boolean(value)),
+        ),
+        allTransactions: transactions,
+        items,
+        lineItems,
+        today: todayIso(),
+        now: new Date(),
+        periodLabel: period,
+      }),
+    [
+      accounts,
+      categories,
+      counterparties,
+      currentTransactions,
+      goals,
+      items,
+      lineItems,
+      obligations,
+      period,
+      previousTransactions,
+      projects,
+      summary,
+      transactions,
+    ],
   );
   const chartLabel = getPeriodChartLabel(period);
   const chartSeries = useMemo(

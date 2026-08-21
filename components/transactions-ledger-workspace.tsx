@@ -207,7 +207,8 @@ export function TransactionsLedgerWorkspace() {
                 categoryUsage={workspace.categoryUsage}
                 onCreateCategory={(name, kind) => void workspace.createCategory(name, kind)}
                 counterparties={workspace.counterparties}
-            transactions={workspace.transactions}
+                projects={workspace.projects}
+                transactions={workspace.transactions}
                 form={workspace.transactionForm}
                 editingId={workspace.editingTransactionId}
                 isSubmitting={workspace.isSubmitting}
