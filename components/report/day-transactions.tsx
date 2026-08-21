@@ -22,7 +22,7 @@ export function DayTransactions({
   const partyById = counterpartiesById(counterparties);
 
   return (
-    <div className="grid gap-1.5 border-t border-border/50 pt-3">
+    <div className="grid min-w-0 gap-1.5 border-t border-border/50 pt-3">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-medium text-foreground">{formatDayHeading(date)}</h2>
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -33,7 +33,7 @@ export function DayTransactions({
       {transactions.length === 0 ? (
         <EmptyState>Nothing recorded on this day.</EmptyState>
       ) : (
-        <ul>
+        <ul className="min-w-0">
           {transactions.map((transaction) => {
             const delta = getTransactionBalanceDelta(transaction);
             const category = categories.find((entry) => entry.id === transaction.categoryId);
@@ -47,7 +47,16 @@ export function DayTransactions({
                 key={transaction.id}
                 className="flex items-baseline justify-between gap-3 py-1"
               >
-                <span className="min-w-0 truncate text-sm text-foreground">{title}</span>
+                {/* One text flow, so the ellipsis falls wherever it runs out
+                    and the row stays a single line. */}
+                <span className="min-w-0 truncate text-sm text-foreground">
+                  {title}
+                  {category ? (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      {category.name}
+                    </span>
+                  ) : null}
+                </span>
                 {/* The signed effect on the balance, not the stored amount:
                     an expense is stored positive and would read as money in. */}
                 <Money
