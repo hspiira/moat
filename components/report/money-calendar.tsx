@@ -61,9 +61,12 @@ export function MoneyCalendar({
                 "grid min-h-12 content-center justify-items-center gap-0.5 rounded-md px-0.5 py-1.5",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 onSelectDate && "hover:bg-muted/40",
-                positive && "bg-pos/12",
-                negative && "bg-neg/12",
-                isSelected && "ring-2 ring-foreground/60",
+                // Selection is a neutral surface rather than a ring. Deepening
+                // the day's own tint was tried first and dropped the 11px
+                // coloured amount below 4.5:1 against it.
+                !isSelected && positive && "bg-pos/12",
+                !isSelected && negative && "bg-neg/12",
+                isSelected && "bg-muted",
               )}
             >
               <span
