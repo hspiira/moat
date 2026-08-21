@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { getMonthlyInsights, insightRuleCount, type InsightContext } from "@/lib/domain/insights";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
-import { feesCategoryId } from "@/lib/domain/seeded-ids";
+import { SEEDED_SLUGS, feesCategoryId } from "@/lib/domain/seeded-ids";
+import { deriveSeededId } from "@/lib/ids";
 import type { Account, Category, Transaction } from "@/lib/types";
 
 const USER = "user:ada";
@@ -54,6 +55,9 @@ function context(overrides: Partial<InsightContext> = {}): InsightContext {
     categories,
     accounts: [account("Momo", 100_000)],
     projects: [],
+    counterparties: [],
+    allTransactions: transactions,
+    now: new Date("2026-08-20T00:00:00.000Z"),
     periodLabel: "month",
     summary: getSummaryForTransactions(transactions, categories),
     ...overrides,
@@ -275,5 +279,141 @@ describe("a project explains a spike", () => {
     ).find((entry) => entry.id === "insight:movement");
 
     expect(insight?.body).not.toContain("tagged");
+  });
+});
+
+describe("money owed to you that has gone quiet", () => {
+  const lendingPool = {
+    id: deriveSeededId(USER, SEEDED_SLUGS.lendingPool),
+    userId: USER,
+    name: "Money lent out",
+    type: "receivable" as const,
+    openingBalance: 0,
+    balance: 250_000,
+    isArchived: false,
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+
+  const grace = {
+    id: "counterparty:grace",
+    userId: USER,
+    name: "Auntie Grace",
+    kind: "borrower" as const,
+    isArchived: false,
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+
+  const lent = transaction({
+    id: "lent",
+    accountId: lendingPool.id,
+    type: "transfer",
+    amount: 250_000,
+    categoryId: "cat:lending",
+    counterpartyId: grace.id,
+    occurredOn: "2026-05-20",
+    transferGroupId: "g:lend",
+  });
+
+  it("names who owes what, and how long it has been quiet", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: [lent],
+        accounts: [lendingPool],
+        counterparties: [grace],
+      }),
+    ).find((entry) => entry.id === "insight:idle-lending");
+
+    expect(insight?.title).toContain("Auntie Grace still owes you");
+    expect(insight?.title).toContain("250,000");
+    expect(insight?.body).toMatch(/\d+ days/);
+    expect(insight?.href).toBe("/debt");
+  });
+
+  it("treats an overdue loan as more urgent than a quiet one", () => {
+    const overdue = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: [{ ...lent, expectedRepaymentDate: "2026-06-30" }],
+        accounts: [lendingPool],
+        counterparties: [grace],
+      }),
+    ).find((entry) => entry.id === "insight:idle-lending");
+
+    expect(overdue?.priority).toBe(1);
+    expect(overdue?.body).toContain("2026-06-30");
+  });
+
+  it("says nothing when nothing is outstanding", () => {
+    expect(
+      getMonthlyInsights(context({ transactions: [], allTransactions: [] })).find(
+        (entry) => entry.id === "insight:idle-lending",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("reads all history, not just the period, since a loan outlives a month", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: [lent],
+        accounts: [lendingPool],
+        counterparties: [grace],
+      }),
+    ).find((entry) => entry.id === "insight:idle-lending");
+
+    expect(insight, "an older loan disappeared because only the period was read").toBeDefined();
+  });
+});
+
+describe("records against the balance a message stated", () => {
+  const stated = (id: string, day: string, amount: number, statedBalance?: number) =>
+    transaction({ id, amount, occurredOn: day, statedBalance, accountId: "acc:Momo" });
+
+  it("reports the account that does not add up, and both figures", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: [
+          stated("a", "2026-08-01", 1_000, 50_000),
+          stated("b", "2026-08-02", 1_000, 40_000),
+        ],
+      }),
+    ).find((entry) => entry.id === "insight:balance-gap");
+
+    expect(insight?.title).toContain("Momo is");
+    expect(insight?.title).toContain("9,000");
+    expect(insight?.body).toContain("40,000");
+    expect(insight?.body).toContain("49,000");
+  });
+
+  it("ignores a gap too small to chase", () => {
+    expect(
+      getMonthlyInsights(
+        context({
+          transactions: [],
+          allTransactions: [
+            stated("a", "2026-08-01", 1_000, 50_000),
+            stated("b", "2026-08-02", 1_000, 48_900),
+          ],
+        }),
+      ).find((entry) => entry.id === "insight:balance-gap"),
+    ).toBeUndefined();
+  });
+
+  it("stays quiet when the records agree with the messages", () => {
+    expect(
+      getMonthlyInsights(
+        context({
+          transactions: [],
+          allTransactions: [
+            stated("a", "2026-08-01", 1_000, 50_000),
+            stated("b", "2026-08-02", 1_000, 49_000),
+          ],
+        }),
+      ).find((entry) => entry.id === "insight:balance-gap"),
+    ).toBeUndefined();
   });
 });

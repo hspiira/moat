@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CaptureReviewItem, Transaction } from "@/lib/types";
 
-import { detectBalanceGaps, pendingReviewGap } from "./balance-gap";
+import { detectBalanceGaps, detectBalanceGapsByAccount, pendingReviewGap } from "./balance-gap";
 
 function tx(values: Partial<Transaction> & Pick<Transaction, "id" | "type" | "amount" | "occurredOn">): Transaction {
   return {
@@ -60,5 +60,53 @@ describe("pendingReviewGap", () => {
 
   it("returns null when the item has no stated balance", () => {
     expect(pendingReviewGap({ ...item, statedBalance: undefined }, [])).toBeNull();
+  });
+});
+
+describe("detectBalanceGapsByAccount", () => {
+  const row = (
+    id: string,
+    accountId: string,
+    amount: number,
+    statedBalance?: number,
+  ): Transaction => ({
+    id,
+    userId: "u1",
+    accountId,
+    type: "expense",
+    amount,
+    currency: "UGX",
+    originalAmount: amount,
+    occurredOn: `2026-08-${id.padStart(2, "0")}`,
+    categoryId: "cat:food",
+    reconciliationState: "posted",
+    source: "sms",
+    statedBalance,
+    createdAt: `2026-08-${id.padStart(2, "0")}T00:00:00.000Z`,
+    updatedAt: `2026-08-${id.padStart(2, "0")}T00:00:00.000Z`,
+  });
+
+  it("measures each account against its own statements", () => {
+    const gaps = detectBalanceGapsByAccount([
+      row("01", "acc:momo", 1_000, 50_000),
+      row("02", "acc:bank", 5_000, 900_000),
+      row("03", "acc:momo", 1_000, 44_000),
+    ]);
+
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]).toMatchObject({ accountId: "acc:momo", gap: -5_000 });
+  });
+
+  it("does not charge one account's spending against another's statement", () => {
+    // Momo is internally consistent: 50,000 less 1,000 spent is 49,000. The
+    // bank row between them must not be charged against Momo's statement.
+    const mixed = [
+      row("01", "acc:momo", 1_000, 50_000),
+      row("02", "acc:bank", 40_000),
+      row("03", "acc:momo", 1_000, 49_000),
+    ];
+
+    expect(detectBalanceGapsByAccount(mixed)).toEqual([]);
+    expect(detectBalanceGaps(mixed).length).toBeGreaterThan(0);
   });
 });

@@ -1,8 +1,17 @@
 import { formatMoney } from "@/lib/currency";
 import { getFeeLoad } from "@/lib/domain/fees";
+import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
+import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
-import type { Account, Category, MonthSummary, Project, Transaction } from "@/lib/types";
+import type {
+  Account,
+  Category,
+  Counterparty,
+  MonthSummary,
+  Project,
+  Transaction,
+} from "@/lib/types";
 
 const MAX_INSIGHTS = 4;
 const MIN_REPEATS_FOR_UNIT_COST = 5;
@@ -10,6 +19,7 @@ const CONCENTRATION_FLOOR = 0.4;
 const MOVEMENT_FLOOR = 0.25;
 const MATERIAL_AMOUNT = 20_000;
 const MIN_FEE_TOTAL = 1_000;
+const MIN_BALANCE_GAP = 1_000;
 
 export type Insight = {
   id: string;
@@ -23,9 +33,14 @@ export type InsightContext = {
   summary: MonthSummary;
   transactions: Transaction[];
   previousTransactions: Transaction[];
+  // Everything ever recorded. Outstanding lending and a running balance are
+  // cumulative, so a rule about either cannot read only the period.
+  allTransactions: Transaction[];
   categories: Category[];
   accounts: Account[];
   projects: Project[];
+  counterparties: Counterparty[];
+  now: Date;
   periodLabel: string;
 };
 
@@ -220,8 +235,65 @@ const untaggedSurplusRule: InsightRule = ({ summary, periodLabel }) => {
   };
 };
 
+const idleLendingRule: InsightRule = ({
+  allTransactions,
+  accounts,
+  counterparties,
+  now,
+}) => {
+  const portfolio = getLendingPortfolio(accounts, allTransactions, now, counterparties);
+  const waiting = portfolio.parties.filter(
+    (party) => party.status === "outstanding" && party.outstanding >= MATERIAL_AMOUNT,
+  );
+  if (waiting.length === 0) return null;
+
+  // Overdue first, then whoever has been quiet longest.
+  const worst = [...waiting].sort((left, right) => {
+    if (left.isOverdue !== right.isOverdue) return left.isOverdue ? -1 : 1;
+    return right.daysSinceLastActivity - left.daysSinceLastActivity;
+  })[0];
+
+  const quiet =
+    worst.daysSinceLastActivity > 0
+      ? `Nothing has moved on it in ${worst.daysSinceLastActivity} days.`
+      : "It moved today.";
+  const due = worst.isOverdue
+    ? ` It was due on ${worst.expectedRepaymentDate}.`
+    : "";
+
+  return {
+    id: "insight:idle-lending",
+    title: `${worst.partyName} still owes you ${formatMoney(worst.outstanding)}`,
+    body: `${quiet}${due}`,
+    href: "/debt",
+    priority: worst.isOverdue ? 1 : 2,
+  };
+};
+
+const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
+  const gaps = detectBalanceGapsByAccount(allTransactions).filter(
+    (gap) => Math.abs(gap.gap) >= MIN_BALANCE_GAP,
+  );
+  if (gaps.length === 0) return null;
+
+  const worst = gaps.reduce((held, gap) =>
+    Math.abs(gap.gap) > Math.abs(held.gap) ? gap : held,
+  );
+  const account = accounts.find((entry) => entry.id === worst.accountId);
+
+  return {
+    id: "insight:balance-gap",
+    title: `${account?.name ?? "An account"} is ${formatMoney(Math.abs(worst.gap))} out of step`,
+    body: `The last message on it stated ${formatMoney(worst.statedBalance)}, but the entries add up to ${formatMoney(worst.expectedBalance)}. Something is missing or counted twice.`,
+    href: "/accounts",
+    priority: 1,
+  };
+};
+
 const INSIGHT_RULES: InsightRule[] = [
+  balanceGapRule,
   feeLoadRule,
+  idleLendingRule,
   deficitRule,
   negativeBalanceRule,
   movementRule,

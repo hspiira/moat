@@ -24,6 +24,7 @@ import type {
   Account,
   BudgetTarget,
   Category,
+  Counterparty,
   Project,
   RecurringObligation,
   Transaction,
@@ -40,6 +41,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [obligations, setObligations] = useState<RecurringObligation[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = usePersistedSelection<PeriodFilter>(
     "moat.dashboard-period",
@@ -64,6 +66,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedReviewItems,
         storedObligations,
         storedProjects,
+        storedCounterparties,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
@@ -72,6 +75,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         repositories.captureReviewItems.listByUser(profile.id),
         repositories.recurringObligations.listByUser(profile.id),
         repositories.projects.listByUser(profile.id),
+        repositories.counterparties.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
@@ -80,6 +84,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setBudgets(storedBudgets);
       setObligations(storedObligations);
       setProjects(storedProjects);
+      setCounterparties(storedCounterparties);
       setReviewCount(
         storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
       );
@@ -124,9 +129,22 @@ export function useDashboardWorkspace(profile: UserProfile) {
         categories,
         accounts,
         projects,
+        counterparties,
+        allTransactions: transactions,
+        now: new Date(),
         periodLabel: period,
       }),
-    [accounts, categories, currentTransactions, period, previousTransactions, projects, summary],
+    [
+      accounts,
+      categories,
+      counterparties,
+      currentTransactions,
+      period,
+      previousTransactions,
+      projects,
+      summary,
+      transactions,
+    ],
   );
   const chartLabel = getPeriodChartLabel(period);
   const chartSeries = useMemo(

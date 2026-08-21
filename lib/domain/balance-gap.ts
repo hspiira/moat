@@ -45,6 +45,26 @@ export function detectBalanceGaps(transactions: Transaction[]): BalanceGap[] {
   return gaps;
 }
 
+export type AccountBalanceGap = BalanceGap & { accountId: string };
+
+// detectBalanceGaps walks one running balance, so it is only correct for a
+// single account's rows. Anything holding a mixed ledger must come through
+// here, or one account's spending is measured against another's statement.
+export function detectBalanceGapsByAccount(transactions: Transaction[]): AccountBalanceGap[] {
+  const byAccount = new Map<string, Transaction[]>();
+
+  for (const transaction of transactions) {
+    byAccount.set(transaction.accountId, [
+      ...(byAccount.get(transaction.accountId) ?? []),
+      transaction,
+    ]);
+  }
+
+  return [...byAccount.entries()].flatMap(([accountId, rows]) =>
+    detectBalanceGaps(rows).map((gap) => ({ ...gap, accountId })),
+  );
+}
+
 export type BalanceGapSubject = Pick<
   CaptureReviewItem,
   | "id"
