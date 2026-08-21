@@ -130,6 +130,9 @@ export function useDashboardWorkspace(profile: UserProfile) {
         accounts,
         projects,
         counterparties,
+        trackedPayees: obligations.flatMap((obligation) =>
+          [obligation.payee, obligation.name].filter((value): value is string => Boolean(value)),
+        ),
         allTransactions: transactions,
         now: new Date(),
         periodLabel: period,
@@ -139,6 +142,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       categories,
       counterparties,
       currentTransactions,
+      obligations,
       period,
       previousTransactions,
       projects,

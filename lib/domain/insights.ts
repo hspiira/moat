@@ -3,6 +3,7 @@ import { getFeeLoad } from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
+import { detectRecurringCandidates } from "@/lib/domain/recurring-detection";
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type {
   Account,
@@ -40,6 +41,7 @@ export type InsightContext = {
   accounts: Account[];
   projects: Project[];
   counterparties: Counterparty[];
+  trackedPayees: string[];
   now: Date;
   periodLabel: string;
 };
@@ -57,6 +59,14 @@ function previousPhrase(periodLabel: string): string {
   if (periodLabel === "week") return "last week";
   if (periodLabel === "year") return "last year";
   return "last month";
+}
+
+function ordinal(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) return "th";
+  if (day % 10 === 1) return "st";
+  if (day % 10 === 2) return "nd";
+  if (day % 10 === 3) return "rd";
+  return "th";
 }
 
 function percent(value: number): string {
@@ -290,9 +300,27 @@ const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
   };
 };
 
+const untrackedBillRule: InsightRule = ({ allTransactions, trackedPayees, now }) => {
+  const [candidate] = detectRecurringCandidates({
+    transactions: allTransactions,
+    trackedPayees,
+    now,
+  });
+  if (!candidate) return null;
+
+  return {
+    id: "insight:untracked-bill",
+    title: `${candidate.name} looks monthly at ${formatMoney(candidate.typicalAmount)}`,
+    body: `Seen in ${candidate.monthsSeen} months, usually around the ${candidate.typicalDay}${ordinal(candidate.typicalDay)}, and not tracked as a bill. Tracking it means it can be counted before it lands rather than after.`,
+    href: "/recurring",
+    priority: 2,
+  };
+};
+
 const INSIGHT_RULES: InsightRule[] = [
   balanceGapRule,
   feeLoadRule,
+  untrackedBillRule,
   idleLendingRule,
   deficitRule,
   negativeBalanceRule,

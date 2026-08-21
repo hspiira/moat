@@ -56,6 +56,7 @@ function context(overrides: Partial<InsightContext> = {}): InsightContext {
     accounts: [account("Momo", 100_000)],
     projects: [],
     counterparties: [],
+    trackedPayees: [],
     allTransactions: transactions,
     now: new Date("2026-08-20T00:00:00.000Z"),
     periodLabel: "month",
@@ -414,6 +415,38 @@ describe("records against the balance a message stated", () => {
           ],
         }),
       ).find((entry) => entry.id === "insight:balance-gap"),
+    ).toBeUndefined();
+  });
+});
+
+describe("a bill that repeats but is not tracked", () => {
+  const rent = ["2026-06-01", "2026-07-01", "2026-08-01"].map((occurredOn, index) =>
+    transaction({
+      id: `rent:${index}`,
+      occurredOn,
+      amount: 1_500_000,
+      categoryId: "cat:rent",
+      payee: "Landlord",
+    }),
+  );
+
+  it("names it, its usual amount and the day it lands", () => {
+    const insight = getMonthlyInsights(
+      context({ transactions: [], allTransactions: rent }),
+    ).find((entry) => entry.id === "insight:untracked-bill");
+
+    expect(insight?.title).toContain("Landlord looks monthly at");
+    expect(insight?.title).toContain("1,500,000");
+    expect(insight?.body).toContain("3 months");
+    expect(insight?.body).toContain("1st");
+    expect(insight?.href).toBe("/recurring");
+  });
+
+  it("goes quiet once the bill is tracked", () => {
+    expect(
+      getMonthlyInsights(
+        context({ transactions: [], allTransactions: rent, trackedPayees: ["Landlord"] }),
+      ).find((entry) => entry.id === "insight:untracked-bill"),
     ).toBeUndefined();
   });
 });
