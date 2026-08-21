@@ -227,8 +227,8 @@ function DrawerSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-3">
-      <div className="text-[11px] font-medium text-muted-foreground">
+    <section className="grid gap-1.5">
+      <div className="px-1 text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
       {children}
@@ -260,12 +260,12 @@ function DrawerNavRow({
       <Link
         href={href}
         onClick={onNavigate}
-        className="grid w-full gap-1 rounded-lg px-3 py-2.5 text-left"
+        className="grid w-full gap-1 rounded-lg px-2.5 py-2 text-left"
       >
-        <span className="flex items-center gap-3">
+        <span className="flex min-w-0 items-center gap-2.5">
           <IconComponent className="h-4 w-4 shrink-0" />
-          <span className="text-left">
-            <span className="block text-sm font-medium text-foreground">{label}</span>
+          <span className="min-w-0 text-left">
+            <span className="block text-sm leading-tight font-medium text-foreground">{label}</span>
             {description ? (
               <span className="block text-xs text-muted-foreground">{description}</span>
             ) : null}
@@ -346,16 +346,16 @@ export function MobileUtilitySheet({
         side="bottom"
         className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
       >
-        <SheetHeader className="px-6 pb-2">
-          <SheetTitle>More</SheetTitle>
+        <SheetHeader className="px-5 pb-1">
+          <SheetTitle className="text-base">More</SheetTitle>
           <SheetDescription className="sr-only">
             The rest of Moat, grouped by how often you need it.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid flex-1 gap-5 overflow-y-auto overscroll-contain px-6 pb-2">
+        <div className="grid flex-1 gap-3 overflow-y-auto overscroll-contain px-5 pb-2">
           {navGroupsExcluding(mobilePrimaryNav).map((group) => (
             <DrawerSection key={group.title} title={group.title}>
-              <div className="grid">
+              <div className="grid grid-cols-2 gap-x-1">
                 {group.hrefs.map((href) => {
                   const item = getNavEntry(href);
                   if (!item) return null;
@@ -375,7 +375,7 @@ export function MobileUtilitySheet({
             </DrawerSection>
           ))}
 
-          <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+          <div className="flex items-center justify-between gap-3 px-2.5 py-1">
             <span className="text-sm font-medium text-foreground">Theme</span>
             <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
           </div>

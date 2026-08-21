@@ -10,7 +10,7 @@ export function PinLockGate({ children }: { children: React.ReactNode }) {
   const status = lockState.status;
 
   if (status === "initializing") {
-    return <div className="min-h-screen bg-background" aria-hidden />;
+    return <div className="min-h-dvh bg-background" aria-hidden />;
   }
 
   const showApp = status === "no_pin" || status === "unlocked" || status === "unlocking";

@@ -106,7 +106,9 @@ export function AccountList({
           <div className="mt-2 grid gap-1">
             {archived.map((account) => (
               <div key={account.id} className="flex items-center justify-between gap-3 py-1">
-                <span className="truncate text-sm text-muted-foreground">{account.name}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                  {account.name}
+                </span>
                 <div className="flex shrink-0 items-center gap-1">
                   {onArchive ? (
                     <Button

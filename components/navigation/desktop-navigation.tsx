@@ -86,10 +86,10 @@ export function DesktopNavigation({
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-72 p-1.5">
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {desktopMenuGroups.map((group) => (
-                  <section key={group.title} className="grid gap-0.5">
-                    <div className="px-3 pt-1 text-[11px] font-medium text-muted-foreground">
+                  <section key={group.title} className="grid">
+                    <div className="px-3 pb-0.5 text-[11px] font-medium text-muted-foreground">
                       {group.title}
                     </div>
                     {group.hrefs.map((href) => {
@@ -105,7 +105,7 @@ export function DesktopNavigation({
                             href={href}
                             aria-current={isActive ? "page" : undefined}
                             className={[
-                              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                              "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors",
                               isActive
                                 ? "bg-muted font-medium text-foreground"
                                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
