@@ -25,6 +25,7 @@ import type {
   BudgetTarget,
   Category,
   Counterparty,
+  Goal,
   Item,
   Project,
   RecurringObligation,
@@ -44,6 +45,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [obligations, setObligations] = useState<RecurringObligation[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
@@ -73,6 +75,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedCounterparties,
         storedItems,
         storedLineItems,
+        storedGoals,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
@@ -84,6 +87,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         repositories.counterparties.listByUser(profile.id),
         repositories.items.listByUser(profile.id),
         repositories.transactionLineItems.listByUser(profile.id),
+        repositories.goals.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
@@ -93,6 +97,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setObligations(storedObligations);
       setProjects(storedProjects);
       setCounterparties(storedCounterparties);
+      setGoals(storedGoals);
       setItems(storedItems);
       setLineItems(storedLineItems);
       setReviewCount(
@@ -140,6 +145,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
         accounts,
         projects,
         counterparties,
+        goals,
         trackedPayees: obligations.flatMap((obligation) =>
           [obligation.payee, obligation.name].filter((value): value is string => Boolean(value)),
         ),
@@ -155,6 +161,7 @@ export function useDashboardWorkspace(profile: UserProfile) {
       categories,
       counterparties,
       currentTransactions,
+      goals,
       items,
       lineItems,
       obligations,

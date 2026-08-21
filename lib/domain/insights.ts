@@ -3,6 +3,7 @@ import { getFeeLoad } from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
+import { getGoalPace } from "@/lib/domain/goal-pace";
 import { getIncomeStability } from "@/lib/domain/income-stability";
 import { findPriceRises } from "@/lib/domain/price-observations";
 import { getRunway } from "@/lib/domain/runway";
@@ -12,6 +13,7 @@ import type {
   Account,
   Category,
   Counterparty,
+  Goal,
   Item,
   TransactionLineItem,
   MonthSummary,
@@ -51,6 +53,7 @@ export type InsightContext = {
   projects: Project[];
   counterparties: Counterparty[];
   trackedPayees: string[];
+  goals: Goal[];
   items: Item[];
   lineItems: TransactionLineItem[];
   today: string;
@@ -376,11 +379,30 @@ const incomeSwingRule: InsightRule = ({ allTransactions, now }) => {
   };
 };
 
+const goalPaceRule: InsightRule = ({ goals, allTransactions, categories, now }) => {
+  const [behind] = getGoalPace({ goals, transactions: allTransactions, categories, now })
+    .filter((pace) => pace.shortfall > 0);
+  if (!behind) return null;
+
+  const nothingYet = behind.contributedThisMonth === 0;
+
+  return {
+    id: "insight:goal-pace",
+    title: `${behind.goal.name} needs ${formatMoney(behind.requiredMonthly)} a month`,
+    body: nothingYet
+      ? `Nothing has gone in this month, with ${behind.monthsRemaining} ${behind.monthsRemaining === 1 ? "month" : "months"} left to reach ${formatMoney(behind.goal.targetAmount)}. A month skipped raises every month after it.`
+      : `${formatMoney(behind.contributedThisMonth)} has gone in, leaving ${formatMoney(behind.shortfall)} to keep pace this month.`,
+    href: "/goals",
+    priority: nothingYet ? 2 : 3,
+  };
+};
+
 const INSIGHT_RULES: InsightRule[] = [
   runwayRule,
   balanceGapRule,
   feeLoadRule,
   incomeSwingRule,
+  goalPaceRule,
   untrackedBillRule,
   priceRiseRule,
   idleLendingRule,

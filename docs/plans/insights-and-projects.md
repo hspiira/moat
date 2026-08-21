@@ -101,9 +101,15 @@ All eight rules above are built, and so are two of the five gaps below.
   low end down every time and make every month look bad.
 - **Net worth over time.** Already covered, and not rebuilt: the report's "What
   you are worth" chart is `buildPositionSeries` over a 7, 30 or 90 day window.
-- **Sinking funds.** Not started. Needs a store of its own — accruing monthly
-  toward a known irregular cost is not a goal with a target date, and not a
-  budget envelope either.
+- **Sinking funds.** Covered by Goals, and deliberately not given a store of
+  its own. A Goal already carries a target amount and a target date, and
+  getGoalContributionPlan already divides the remainder by the months left,
+  which is the monthly accrual. `school_fees` is one of the goal types. A
+  separate store would have duplicated all of it. What was actually missing was
+  whether this month kept up, so `lib/domain/goal-pace.ts` compares what
+  arrived in the linked account against what the pace needs. The one thing
+  Goals still cannot express is recurrence: a fund that resets each term or year
+  rather than completing once. That is a field on Goal, not a new store.
 - **Seasonality.** Not started, and not worth starting yet: school terms and the
   festive season only show up with more than a year of history to compare.
 

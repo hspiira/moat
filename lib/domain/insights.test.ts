@@ -13,6 +13,7 @@ const categories: Category[] = [
   { id: "cat:rent", userId: USER, name: "Rent", kind: "expense", isDefault: true, createdAt: STAMP },
   { id: "cat:boda", userId: USER, name: "Transport / boda", kind: "expense", isDefault: true, createdAt: STAMP },
   { id: "cat:food", userId: USER, name: "Food", kind: "expense", isDefault: true, createdAt: STAMP },
+  { id: "cat:savings", userId: USER, name: "Savings", kind: "savings", isDefault: true, createdAt: STAMP },
   { id: "cat:salary", userId: USER, name: "Salary", kind: "income", isDefault: true, createdAt: STAMP },
   { id: feesCategoryId(USER), userId: USER, name: "Fees & charges", kind: "expense", isDefault: true, createdAt: STAMP },
 ];
@@ -57,6 +58,7 @@ function context(overrides: Partial<InsightContext> = {}): InsightContext {
     projects: [],
     counterparties: [],
     trackedPayees: [],
+    goals: [],
     items: [],
     lineItems: [],
     today: "2026-08-20",
@@ -637,6 +639,67 @@ describe("income that swings", () => {
       getMonthlyInsights(context({ transactions: [], allTransactions: steady })).find(
         (entry) => entry.id === "insight:income-swing",
       ),
+    ).toBeUndefined();
+  });
+});
+
+describe("a goal that is falling behind", () => {
+  const fees = {
+    id: "goal:fees",
+    userId: USER,
+    name: "School fees",
+    goalType: "school_fees" as const,
+    targetAmount: 1_200_000,
+    currentAmount: 0,
+    targetDate: "2027-02-01",
+    priority: 1,
+    linkedAccountId: "acc:Sacco",
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+
+  it("says what it needs a month when nothing has gone in", () => {
+    const insight = getMonthlyInsights(
+      context({ transactions: [], allTransactions: [], goals: [fees] }),
+    ).find((entry) => entry.id === "insight:goal-pace");
+
+    expect(insight?.title).toContain("School fees needs");
+    expect(insight?.body).toContain("Nothing has gone in this month");
+    expect(insight?.href).toBe("/goals");
+  });
+
+  it("says what is left to keep pace once something has gone in", () => {
+    const deposit = transaction({
+      id: "dep",
+      accountId: "acc:Sacco",
+      type: "transfer",
+      amount: 50_000,
+      categoryId: "cat:savings",
+      transferGroupId: "g",
+    });
+
+    const insight = getMonthlyInsights(
+      context({ transactions: [], allTransactions: [deposit], goals: [fees] }),
+    ).find((entry) => entry.id === "insight:goal-pace");
+
+    expect(insight?.body).toContain("50,000 has gone in");
+    expect(insight?.priority).toBe(3);
+  });
+
+  it("goes quiet once the month is covered", () => {
+    const deposit = transaction({
+      id: "dep",
+      accountId: "acc:Sacco",
+      type: "transfer",
+      amount: 500_000,
+      categoryId: "cat:savings",
+      transferGroupId: "g",
+    });
+
+    expect(
+      getMonthlyInsights(
+        context({ transactions: [], allTransactions: [deposit], goals: [fees] }),
+      ).find((entry) => entry.id === "insight:goal-pace"),
     ).toBeUndefined();
   });
 });
