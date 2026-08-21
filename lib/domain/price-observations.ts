@@ -1,4 +1,5 @@
 import type {
+  Item,
   ItemPriceSummary,
   PriceObservation,
   Transaction,
@@ -65,4 +66,53 @@ export function summarizeItemPrices(
     summaries.set(observation.itemId, summary);
   }
   return summaries;
+}
+
+export type PriceRise = {
+  itemId: string;
+  name: string;
+  paidNow: number;
+  paidBefore: number;
+  rise: number;
+  before: PriceObservation;
+  now: PriceObservation;
+};
+
+// What an item costs now against the cheapest it has recently been. Comparing
+// against the cheapest rather than the previous purchase is deliberate: a price
+// that crept up over three shops never shows a jump between any two of them.
+export function findPriceRises(params: {
+  items: Item[];
+  lineItems: TransactionLineItem[];
+  transactions: Transaction[];
+  today: string;
+}): PriceRise[] {
+  const names = new Map(params.items.map((item) => [item.id, item.name]));
+  const summaries = summarizeItemPrices(
+    derivePriceObservations(params.lineItems, params.transactions),
+    params.today,
+  );
+
+  const rises: PriceRise[] = [];
+
+  for (const summary of summaries.values()) {
+    const { lastPaid, bestRecent } = summary;
+    if (!lastPaid || !bestRecent || lastPaid.lineItemId === bestRecent.lineItemId) continue;
+
+    const paidNow = pricePoint(lastPaid);
+    const paidBefore = pricePoint(bestRecent);
+    if (paidNow == null || paidBefore == null || paidNow <= paidBefore) continue;
+
+    rises.push({
+      itemId: summary.itemId,
+      name: names.get(summary.itemId) ?? "An item",
+      paidNow,
+      paidBefore,
+      rise: paidNow - paidBefore,
+      before: bestRecent,
+      now: lastPaid,
+    });
+  }
+
+  return rises.sort((left, right) => right.rise - left.rise);
 }

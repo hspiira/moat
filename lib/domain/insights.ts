@@ -3,12 +3,15 @@ import { getFeeLoad } from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
+import { findPriceRises } from "@/lib/domain/price-observations";
 import { detectRecurringCandidates } from "@/lib/domain/recurring-detection";
 import { isSpendingTransaction, isTransferTransaction } from "@/lib/domain/transfers";
 import type {
   Account,
   Category,
   Counterparty,
+  Item,
+  TransactionLineItem,
   MonthSummary,
   Project,
   Transaction,
@@ -21,6 +24,7 @@ const MOVEMENT_FLOOR = 0.25;
 const MATERIAL_AMOUNT = 20_000;
 const MIN_FEE_TOTAL = 1_000;
 const MIN_BALANCE_GAP = 1_000;
+const MIN_PRICE_RISE = 500;
 
 export type Insight = {
   id: string;
@@ -42,6 +46,9 @@ export type InsightContext = {
   projects: Project[];
   counterparties: Counterparty[];
   trackedPayees: string[];
+  items: Item[];
+  lineItems: TransactionLineItem[];
+  today: string;
   now: Date;
   periodLabel: string;
 };
@@ -317,10 +324,24 @@ const untrackedBillRule: InsightRule = ({ allTransactions, trackedPayees, now })
   };
 };
 
+const priceRiseRule: InsightRule = ({ items, lineItems, allTransactions, today }) => {
+  const [rise] = findPriceRises({ items, lineItems, transactions: allTransactions, today });
+  if (!rise || rise.rise < MIN_PRICE_RISE) return null;
+
+  return {
+    id: "insight:price-rise",
+    title: `${rise.name} costs ${formatMoney(rise.rise)} more than it has`,
+    body: `${formatMoney(rise.paidNow)} at ${rise.now.merchant} on ${rise.now.occurredOn}, against ${formatMoney(rise.paidBefore)} at ${rise.before.merchant} on ${rise.before.occurredOn}.`,
+    href: "/shopping",
+    priority: 3,
+  };
+};
+
 const INSIGHT_RULES: InsightRule[] = [
   balanceGapRule,
   feeLoadRule,
   untrackedBillRule,
+  priceRiseRule,
   idleLendingRule,
   deficitRule,
   negativeBalanceRule,

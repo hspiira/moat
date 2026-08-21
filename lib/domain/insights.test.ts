@@ -57,6 +57,9 @@ function context(overrides: Partial<InsightContext> = {}): InsightContext {
     projects: [],
     counterparties: [],
     trackedPayees: [],
+    items: [],
+    lineItems: [],
+    today: "2026-08-20",
     allTransactions: transactions,
     now: new Date("2026-08-20T00:00:00.000Z"),
     periodLabel: "month",
@@ -448,5 +451,87 @@ describe("a bill that repeats but is not tracked", () => {
         context({ transactions: [], allTransactions: rent, trackedPayees: ["Landlord"] }),
       ).find((entry) => entry.id === "insight:untracked-bill"),
     ).toBeUndefined();
+  });
+});
+
+describe("an item that costs more than it has", () => {
+  const sugar = {
+    id: "item:sugar",
+    userId: USER,
+    name: "Sugar",
+    normalizedName: "sugar",
+    isArchived: false,
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+
+  const shops = [
+    transaction({ id: "shop:1", occurredOn: "2026-06-10", payee: "Market", amount: 20_000 }),
+    transaction({ id: "shop:2", occurredOn: "2026-08-10", payee: "Kiosk", amount: 20_000 }),
+  ];
+
+  const lineItems = [
+    {
+      id: "line:1",
+      userId: USER,
+      transactionId: "shop:1",
+      itemId: sugar.id,
+      label: "Sugar",
+      quantity: 1,
+      unitPrice: 5_500,
+      amount: 5_500,
+      createdAt: STAMP,
+      updatedAt: STAMP,
+    },
+    {
+      id: "line:2",
+      userId: USER,
+      transactionId: "shop:2",
+      itemId: sugar.id,
+      label: "Sugar",
+      quantity: 1,
+      unitPrice: 6_200,
+      amount: 6_200,
+      createdAt: STAMP,
+      updatedAt: STAMP,
+    },
+  ];
+
+  it("names the item, both prices and where each was paid", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: shops,
+        items: [sugar],
+        lineItems,
+      }),
+    ).find((entry) => entry.id === "insight:price-rise");
+
+    expect(insight?.title).toContain("Sugar costs");
+    expect(insight?.title).toContain("700");
+    expect(insight?.body).toContain("Kiosk");
+    expect(insight?.body).toContain("Market");
+    expect(insight?.href).toBe("/shopping");
+  });
+
+  it("stays quiet when nothing has been itemised", () => {
+    expect(
+      getMonthlyInsights(context({ transactions: [], allTransactions: shops })).find(
+        (entry) => entry.id === "insight:price-rise",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("ignores a rise too small to notice", () => {
+    const insight = getMonthlyInsights(
+      context({
+        transactions: [],
+        allTransactions: shops,
+        items: [sugar],
+        lineItems: [lineItems[0], { ...lineItems[1], unitPrice: 5_600, amount: 5_600 }],
+      }),
+    ).find((entry) => entry.id === "insight:price-rise");
+
+    expect(insight).toBeUndefined();
   });
 });

@@ -25,12 +25,14 @@ import type {
   BudgetTarget,
   Category,
   Counterparty,
+  Item,
   Project,
   RecurringObligation,
   Transaction,
+  TransactionLineItem,
   UserProfile,
 } from "@/lib/types";
-import { currentMonthIso } from "@/lib/today";
+import { currentMonthIso, todayIso } from "@/lib/today";
 
 const TARGET_COVER_MONTHS = 3;
 
@@ -42,6 +44,8 @@ export function useDashboardWorkspace(profile: UserProfile) {
   const [obligations, setObligations] = useState<RecurringObligation[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [lineItems, setLineItems] = useState<TransactionLineItem[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
   const [period, setPeriod] = usePersistedSelection<PeriodFilter>(
     "moat.dashboard-period",
@@ -67,6 +71,8 @@ export function useDashboardWorkspace(profile: UserProfile) {
         storedObligations,
         storedProjects,
         storedCounterparties,
+        storedItems,
+        storedLineItems,
       ] = await Promise.all([
         repositories.accounts.listByUser(profile.id),
         repositories.categories.listByUser(profile.id),
@@ -76,6 +82,8 @@ export function useDashboardWorkspace(profile: UserProfile) {
         repositories.recurringObligations.listByUser(profile.id),
         repositories.projects.listByUser(profile.id),
         repositories.counterparties.listByUser(profile.id),
+        repositories.items.listByUser(profile.id),
+        repositories.transactionLineItems.listByUser(profile.id),
       ]);
 
       setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
@@ -85,6 +93,8 @@ export function useDashboardWorkspace(profile: UserProfile) {
       setObligations(storedObligations);
       setProjects(storedProjects);
       setCounterparties(storedCounterparties);
+      setItems(storedItems);
+      setLineItems(storedLineItems);
       setReviewCount(
         storedReviewItems.filter((item) => getSectionOf(item) === "to_review").length,
       );
@@ -134,6 +144,9 @@ export function useDashboardWorkspace(profile: UserProfile) {
           [obligation.payee, obligation.name].filter((value): value is string => Boolean(value)),
         ),
         allTransactions: transactions,
+        items,
+        lineItems,
+        today: todayIso(),
         now: new Date(),
         periodLabel: period,
       }),
@@ -142,6 +155,8 @@ export function useDashboardWorkspace(profile: UserProfile) {
       categories,
       counterparties,
       currentTransactions,
+      items,
+      lineItems,
       obligations,
       period,
       previousTransactions,
