@@ -6,7 +6,17 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: string }) {
+export function MoneyCalendar({
+  cells,
+  month,
+  selectedDate,
+  onSelectDate,
+}: {
+  cells: CalendarCell[];
+  month: string;
+  selectedDate?: string | null;
+  onSelectDate?: (date: string) => void;
+}) {
   const [year, monthIndex] = month.split("-").map(Number);
   const leadingBlanks = new Date(year, monthIndex - 1, 1).getDay();
 
@@ -33,18 +43,27 @@ export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: 
           const positive = cell.net > 0;
           const negative = cell.net < 0;
 
+          const isSelected = selectedDate === cell.date;
+
           return (
-            <div
+            <button
               key={cell.date}
-              title={
+              type="button"
+              disabled={!onSelectDate}
+              aria-pressed={isSelected}
+              aria-label={`${cell.date}${
                 cell.hasActivity
-                  ? `${cell.date}: ${positive ? "+" : negative ? "−" : ""}${formatMoney(Math.abs(cell.net))}`
-                  : undefined
-              }
+                  ? `, ${positive ? "up " : negative ? "down " : ""}${formatMoney(Math.abs(cell.net))}`
+                  : ", nothing recorded"
+              }`}
+              onClick={() => onSelectDate?.(cell.date)}
               className={cn(
                 "grid min-h-12 content-center justify-items-center gap-0.5 rounded-md px-0.5 py-1.5",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                onSelectDate && "hover:bg-muted/40",
                 positive && "bg-pos/12",
                 negative && "bg-neg/12",
+                isSelected && "ring-2 ring-foreground/60",
               )}
             >
               <span
@@ -66,7 +85,7 @@ export function MoneyCalendar({ cells, month }: { cells: CalendarCell[]; month: 
                   {formatCompactAmount(cell.net)}
                 </span>
               ) : null}
-            </div>
+            </button>
           );
         })}
       </div>

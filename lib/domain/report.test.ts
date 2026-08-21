@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildDailyNetCalendar,
   buildPositionSeries,
+  defaultCalendarDay,
   formatCompactAmount,
   getAllocation,
   getFlowBreakdown,
+  transactionsOnDay,
 } from "@/lib/domain/report";
+import { getTransactionBalanceDelta } from "@/lib/domain/accounts";
 import type { Account, Transaction } from "@/lib/types";
 
 function account(overrides: Partial<Account> = {}): Account {
@@ -175,5 +178,60 @@ describe("getAllocation", () => {
 
   it("returns nothing when there is nothing held", () => {
     expect(getAllocation([])).toEqual([]);
+  });
+});
+
+describe("calendar drill-down", () => {
+  const day = (id: string, occurredOn: string, values: Partial<Transaction> = {}) =>
+    transaction({ id, occurredOn, ...values });
+
+  it("lists every row recorded on the day, in the order they were entered", () => {
+    const rows = transactionsOnDay(
+      [
+        day("b", "2026-08-10", { createdAt: "2026-08-10T10:00:00.000Z" }),
+        day("a", "2026-08-10", { createdAt: "2026-08-10T08:00:00.000Z" }),
+        day("other", "2026-08-11"),
+      ],
+      "2026-08-10",
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["a", "b"]);
+  });
+
+  it("lists rows whose deltas add up to the figure on the cell", () => {
+    const rows = [
+      day("out", "2026-08-10", { type: "transfer", amount: -50_000, transferGroupId: "g" }),
+      day("in", "2026-08-10", { type: "transfer", amount: 50_000, transferGroupId: "g" }),
+      day("fee", "2026-08-10", { amount: 1_725, feeParentId: "out" }),
+      day("food", "2026-08-10", { amount: 20_000 }),
+    ];
+
+    const [cell] = buildDailyNetCalendar(rows, "2026-08").filter((entry) => entry.day === 10);
+    const listed = transactionsOnDay(rows, "2026-08-10").reduce(
+      (sum, row) => sum + getTransactionBalanceDelta(row),
+      0,
+    );
+
+    expect(listed, "the drill-down does not add up to the cell").toBe(cell.net);
+    expect(listed).toBe(-21_725);
+  });
+
+  it("selects today when the month on screen contains it", () => {
+    const cells = buildDailyNetCalendar([day("a", "2026-08-10")], "2026-08");
+
+    expect(defaultCalendarDay(cells, "2026-08-20")).toBe("2026-08-20");
+  });
+
+  it("falls back to the last day with activity in an older month", () => {
+    const cells = buildDailyNetCalendar(
+      [day("a", "2026-06-03"), day("b", "2026-06-17")],
+      "2026-06",
+    );
+
+    expect(defaultCalendarDay(cells, "2026-08-20")).toBe("2026-06-17");
+  });
+
+  it("selects nothing in a month with no activity at all", () => {
+    expect(defaultCalendarDay(buildDailyNetCalendar([], "2026-06"), "2026-08-20")).toBeNull();
   });
 });

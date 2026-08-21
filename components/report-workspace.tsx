@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 
+import { DayTransactions } from "@/components/report/day-transactions";
 import { MoneyCalendar } from "@/components/report/money-calendar";
 import { PositionChart } from "@/components/report/position-chart";
 import {
@@ -20,11 +21,14 @@ import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import {
   buildDailyNetCalendar,
   buildPositionSeries,
+  defaultCalendarDay,
   getAllocation,
   getFlowBreakdown,
+  transactionsOnDay,
 } from "@/lib/domain/report";
 import { repositories } from "@/lib/repositories/instance";
-import type { Account, Transaction, UserProfile } from "@/lib/types";
+import { todayIso } from "@/lib/today";
+import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 
 const WINDOWS = [
   { days: 7, label: "7 days" },
@@ -55,6 +59,8 @@ function monthLabel(month: string) {
 export function ReportWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,12 +81,14 @@ export function ReportWorkspace() {
           setProfile(nextProfile);
           if (!nextProfile) return;
 
-          const [storedAccounts, storedTransactions] = await Promise.all([
+          const [storedAccounts, storedTransactions, storedCategories] = await Promise.all([
             repositories.accounts.listByUser(nextProfile.id),
             repositories.transactions.listByUser(nextProfile.id),
+            repositories.categories.listByUser(nextProfile.id),
           ]);
           setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
           setTransactions(storedTransactions);
+          setCategories(storedCategories);
         } catch (loadError) {
           setError(
             loadError instanceof Error ? loadError.message : "Couldn't load your report.",
@@ -113,6 +121,18 @@ export function ReportWorkspace() {
     [transactions, month],
   );
   const monthNet = calendar.reduce((sum, cell) => sum + cell.net, 0);
+
+  const calendarSelection = useMemo(
+    () => defaultCalendarDay(calendar, todayIso()),
+    [calendar],
+  );
+  const activeDate =
+    selectedDate && selectedDate.startsWith(month) ? selectedDate : calendarSelection;
+  const dayTransactions = useMemo(
+    () => (activeDate ? transactionsOnDay(transactions, activeDate) : []),
+    [activeDate, transactions],
+  );
+
 
   const windowLabel = WINDOWS.find((option) => option.days === days)?.label ?? `${days} days`;
 
@@ -268,7 +288,20 @@ export function ReportWorkspace() {
                 </Button>
               </div>
 
-              <MoneyCalendar cells={calendar} month={month} />
+              <MoneyCalendar
+                cells={calendar}
+                month={month}
+                selectedDate={activeDate}
+                onSelectDate={setSelectedDate}
+              />
+
+              {activeDate ? (
+                <DayTransactions
+                  date={activeDate}
+                  transactions={dayTransactions}
+                  categories={categories}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </>
