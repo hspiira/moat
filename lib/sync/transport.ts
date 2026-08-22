@@ -17,6 +17,9 @@ export async function createSyncPushRequest(params: {
   items: SyncOutboxItem[];
   platform?: "web" | "android" | "ios";
   deviceId?: string;
+  // The token last seen for each record, so the server can tell an edit made
+  // against its current version from one made against a stale one.
+  baseVersionTokens?: Map<string, string>;
 }): Promise<SyncPushRequest> {
   const items = await Promise.all(
     params.items.map(async (item) => ({
@@ -26,6 +29,7 @@ export async function createSyncPushRequest(params: {
       operation: item.operation,
       payload: await sealSyncPayload(item.payload),
       queuedAt: item.queuedAt,
+      baseVersionToken: params.baseVersionTokens?.get(`${item.entityType}:${item.entityId}`),
     })),
   );
 

@@ -17,6 +17,8 @@ describe("sync completeness", () => {
     [storeNames.captureReviewItems]: "staging; the approved transaction is what syncs",
     [storeNames.imports]: "staging; the transactions an import produced are what sync",
     [storeNames.correctionLogs]: "parser feedback, kept locally and in the export",
+    [storeNames.syncVersions]:
+      "what version this device last saw; another device's answer is not its own",
   };
 
   it("registers every store that is not deliberately excluded", () => {

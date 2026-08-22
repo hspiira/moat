@@ -35,6 +35,7 @@ const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>
   categories: (entity) => ({ userId: String(entity.userId), isDefault: String(entity.isDefault) }),
   counterparties: (entity) => ({ userId: String(entity.userId) }),
   projects: (entity) => ({ userId: String(entity.userId) }),
+  syncVersions: (entity) => ({ userId: String(entity.userId) }),
   goals: (entity) => ({ userId: String(entity.userId) }),
   budgets: (entity) => ({ userId: String(entity.userId), month: String(entity.month) }),
   investmentProfiles: (entity) => ({ userId: String(entity.userId) }),

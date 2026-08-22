@@ -5,7 +5,7 @@ import { setActiveRecordCryptoKey } from "@/lib/security/record-crypto";
 import { sealSyncPayload } from "@/lib/sync/payload-crypto";
 
 import type { RepositoryBundle } from "@/lib/repositories/types";
-import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
+import type { SyncOutboxItem, SyncProfile, SyncVersion } from "@/lib/types";
 
 import { runHostedSync } from "@/lib/sync/engine";
 
@@ -36,6 +36,8 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
     }),
     remove: vi.fn(),
   };
+
+  const versions: SyncVersion[] = [];
 
   const syncProfiles = {
     getByUser: vi.fn(async () => currentProfile),
@@ -120,6 +122,17 @@ function createRepositories(items: SyncOutboxItem[], profile: SyncProfile): Repo
     plannedPurchases: {} as RepositoryBundle["plannedPurchases"],
     transactionLineItems: {} as RepositoryBundle["transactionLineItems"],
     projects: {} as RepositoryBundle["projects"],
+    syncVersions: {
+      listByUser: vi.fn(async () => versions),
+      upsert: vi.fn(async (version: SyncVersion) => {
+        const index = versions.findIndex((entry) => entry.id === version.id);
+        if (index >= 0) versions[index] = version;
+        else versions.push(version);
+        return version;
+      }),
+      get: vi.fn(),
+      remove: vi.fn(),
+    } as unknown as RepositoryBundle["syncVersions"],
   };
 }
 
@@ -548,5 +561,150 @@ describe("runHostedSync push batching", () => {
     expect(pushUrls).toHaveLength(2);
     expect(result.attempted).toBe(250);
     expect(result.synced).toBe(250);
+  });
+});
+
+describe("version tokens", () => {
+  /* Without the token the server compares payloads, and a real edit is by
+     definition a different payload, so every edit came back a conflict. */
+  it("sends back the token the server last gave for that record", async () => {
+    const repositories = createRepositories([pendingItem(0)], hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            syncedAt: "2026-04-06T12:00:00.000Z",
+            results: [
+              { outboxId: "sync-outbox:0", status: "synced", serverVersionToken: "sv:first" },
+            ],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ syncedAt: "2026-04-06T12:00:01.000Z", records: [] }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const firstPush = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+    expect(firstPush.items[0].baseVersionToken).toBeUndefined();
+
+    // The same record, edited again after the server has a copy of it.
+    const again = createRepositories([pendingItem(0)], hostedProfile());
+    again.syncVersions = repositories.syncVersions;
+
+    const secondFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            syncedAt: "2026-04-06T13:00:00.000Z",
+            results: [
+              { outboxId: "sync-outbox:0", status: "synced", serverVersionToken: "sv:second" },
+            ],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ syncedAt: "2026-04-06T13:00:01.000Z", records: [] }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", secondFetch);
+
+    const result = await runHostedSync({ repositories: again, profile: hostedProfile(), isOnline: true });
+
+    const secondPush = JSON.parse(String(secondFetch.mock.calls[0][1].body));
+    expect(secondPush.items[0].baseVersionToken).toBe("sv:first");
+    expect(result).toMatchObject({ synced: 1, conflicts: 0 });
+  });
+
+  it("takes the server's own token from a conflict, so a retry is not refused again", async () => {
+    const repositories = createRepositories([pendingItem(0)], hostedProfile());
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              syncedAt: "2026-04-06T12:00:00.000Z",
+              results: [
+                {
+                  outboxId: "sync-outbox:0",
+                  status: "conflict",
+                  strategy: "manual_review",
+                  serverRecord: {
+                    entityType: "categories",
+                    entityId: "category:0",
+                    payload: null,
+                    deleted: false,
+                    updatedAt: "2026-04-06T11:00:00.000Z",
+                    serverVersionToken: "sv:theirs",
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ syncedAt: "2026-04-06T12:00:01.000Z", records: [] }),
+            { status: 200 },
+          ),
+        ),
+    );
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const stored = await repositories.syncVersions.listByUser("u1");
+    expect(stored.map((entry) => entry.serverVersionToken)).toEqual(["sv:theirs"]);
+  });
+
+  it("remembers the token that came with a pulled record", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            syncedAt: "2026-04-06T12:00:00.000Z",
+            records: [
+              {
+                entityType: "categories",
+                entityId: "category:9",
+                payload: await sealSyncPayload(
+                  JSON.stringify({ id: "category:9", userId: "u1", name: "Food" }),
+                ),
+                deleted: false,
+                updatedAt: "2026-04-06T11:00:00.000Z",
+                serverVersionToken: "sv:pulled",
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const stored = await repositories.syncVersions.listByUser("u1");
+    expect(stored[0]).toMatchObject({
+      entityId: "category:9",
+      serverVersionToken: "sv:pulled",
+    });
   });
 });

@@ -15,6 +15,7 @@ import type {
   MonthClose,
   PlannedPurchase,
   Project,
+  SyncVersion,
   RecurringObligation,
   SyncOutboxItem,
   SyncProfile,
@@ -46,6 +47,7 @@ export type FullExport = {
   items?: Item[];
   plannedPurchases?: PlannedPurchase[];
   projects?: Project[];
+  syncVersions?: SyncVersion[];
   transactionLineItems?: TransactionLineItem[];
   captureEnvelopes?: CaptureEnvelope[];
   captureReviewItems?: CaptureReviewItem[];
@@ -73,6 +75,7 @@ export async function collectFullExport(): Promise<FullExport> {
     items,
     plannedPurchases,
     projects,
+    syncVersions,
     transactionLineItems,
     captureEnvelopes,
     captureReviewItems,
@@ -92,6 +95,7 @@ export async function collectFullExport(): Promise<FullExport> {
     forUser((id) => repositories.items.listByUser(id)),
     forUser((id) => repositories.plannedPurchases.listByUser(id)),
     forUser((id) => repositories.projects.listByUser(id)),
+    forUser((id) => repositories.syncVersions.listByUser(id)),
     forUser((id) => repositories.transactionLineItems.listByUser(id)),
     forUser((id) => repositories.captureEnvelopes.listByUser(id)),
     forUser((id) => repositories.captureReviewItems.listByUser(id)),
@@ -123,6 +127,7 @@ export async function collectFullExport(): Promise<FullExport> {
     items,
     plannedPurchases,
     projects,
+    syncVersions,
     transactionLineItems,
     captureEnvelopes,
     captureReviewItems,
@@ -153,6 +158,7 @@ export async function restoreFullExport(data: FullExport): Promise<void> {
     ...(data.items ?? []).map((r) => repositories.items.upsert(r)),
     ...(data.plannedPurchases ?? []).map((r) => repositories.plannedPurchases.upsert(r)),
     ...(data.projects ?? []).map((r) => repositories.projects.upsert(r)),
+    ...(data.syncVersions ?? []).map((r) => repositories.syncVersions.upsert(r)),
     ...(data.transactionLineItems ?? []).map((r) =>
       repositories.transactionLineItems.upsert(r),
     ),

@@ -4,7 +4,7 @@ export { storeNames };
 export type { StoreName };
 
 const DATABASE_NAME = "moat-db";
-const DATABASE_VERSION = 11;
+const DATABASE_VERSION = 12;
 
 const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 
@@ -63,6 +63,7 @@ const storeIndexes: Partial<Record<StoreName, StoreIndexDefinition[]>> = {
   plannedPurchases: [{ name: USER_ID_INDEX, keyPath: "userId" }],
   transactionLineItems: [{ name: USER_ID_INDEX, keyPath: "userId" }],
   projects: [{ name: USER_ID_INDEX, keyPath: "userId" }],
+  syncVersions: [{ name: USER_ID_INDEX, keyPath: "userId" }],
 };
 
 function ensureStore(database: IDBDatabase, storeName: StoreName) {
@@ -133,6 +134,9 @@ const migrationSteps: Partial<Record<number, (database: IDBDatabase) => void>> =
   },
   11: (database) => {
     ensureStore(database, "projects");
+  },
+  12: (database) => {
+    ensureStore(database, "syncVersions");
   },
 };
 

@@ -554,3 +554,12 @@ export type InvestmentGuidance = {
   shouldPrioritizeEmergencyFund: boolean;
   shouldPrioritizeDebtRepayment: boolean;
 };
+
+export type SyncVersion = {
+  id: string;
+  userId: string;
+  entityType: string;
+  entityId: string;
+  serverVersionToken: string;
+  updatedAt: string;
+};
