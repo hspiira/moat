@@ -6,7 +6,7 @@ export type { StoreName };
 const DATABASE_NAME = "moat-db";
 const DATABASE_VERSION = 12;
 
-const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9, 10, 11] as const;
+const MIGRATION_VERSIONS = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 type MetaRecord = {
   id: "schema";
@@ -169,7 +169,45 @@ function persistSchemaMeta(database: IDBDatabase) {
   store.put(record);
 }
 
+// One connection for the tab, not one per read. Every operation used to open
+// its own and never close it, so a page load leaked a handful of handles, and
+// each one held the schema version open against the next upgrade.
+let connection: Promise<IDBDatabase> | null = null;
+
+// A connection someone else closed still looks like a connection. onclose only
+// fires for an abnormal close, so the handle has to be tried before it is handed
+// out or a caller gets an InvalidStateError on a database that looks fine.
+function isStillOpen(database: IDBDatabase): boolean {
+  const anyStore = database.objectStoreNames[0];
+  if (!anyStore) return false;
+  try {
+    database.transaction(anyStore, "readonly").abort();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function openFinanceDatabase(): Promise<IDBDatabase> {
+  const held = connection;
+  if (held) {
+    return held.then((database) =>
+      isStillOpen(database) ? database : (connection = null, openFinanceDatabase()),
+    );
+  }
+
+  connection = connectToFinanceDatabase().catch((error) => {
+    connection = null;
+    throw error;
+  });
+  return connection;
+}
+
+export function forgetFinanceDatabaseConnection() {
+  connection = null;
+}
+
+function connectToFinanceDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === "undefined") {
       reject(new Error("IndexedDB is not available in this environment."));
@@ -194,6 +232,18 @@ export function openFinanceDatabase(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       const database = request.result;
+
+      // Another tab cannot upgrade while this one holds the old version open,
+      // and a connection the browser closes under us must not be handed out
+      // again.
+      database.onversionchange = () => {
+        database.close();
+        connection = null;
+      };
+      database.onclose = () => {
+        connection = null;
+      };
+
       persistSchemaMeta(database);
       resolve(database);
     };
@@ -222,6 +272,10 @@ export function getIndexedDbIndexName(storeName: StoreName, keyPath: string[]): 
   }
 
   return match.name;
+}
+
+export function getIndexedDbMigrationStepVersions(): number[] {
+  return Object.keys(migrationSteps).map(Number).sort((left, right) => left - right);
 }
 
 export function getIndexedDbMigrationVersions(oldVersion: number): number[] {
