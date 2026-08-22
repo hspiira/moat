@@ -27,6 +27,7 @@ import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useIncrementalList } from "@/components/hooks/use-incremental-list";
 import { useRecordTransaction } from "@/components/transactions/record-transaction-sheet";
+import { ReconcileBand } from "@/components/accounts/reconcile-band";
 
 import { AccountBalanceBreakdown } from "./account-balance-breakdown";
 import { DebtSummary } from "./debt-summary";
@@ -183,6 +184,12 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
           </div>
 
           <AccountBalanceBreakdown account={account} transactions={transactions} />
+
+          <ReconcileBand
+            account={account}
+            transactions={transactions}
+            onRecord={() => record.open({ accountId: account.id })}
+          />
 
           {account.type === "debt" ? (
             <DebtSummary account={account} transactions={transactions} />

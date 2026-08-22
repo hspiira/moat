@@ -1,3 +1,4 @@
+import { FEES_CATEGORY_NAME } from "@/lib/app-state/defaults";
 import { formatMoney } from "@/lib/currency";
 import { getFeeLoad } from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
@@ -121,7 +122,7 @@ const feeLoadRule: InsightRule = ({ transactions, periodLabel }) => {
     id: "insight:fees",
     title: `Charges cost you ${formatMoney(load.fees)} ${periodPhrase(periodLabel)}`,
     body: `${load.count} ${load.count === 1 ? "charge" : "charges"}${share}. Fewer, larger transfers cost less than many small ones.`,
-    href: "/report",
+    href: `/transactions?q=${encodeURIComponent(FEES_CATEGORY_NAME)}`,
     priority: 1,
   };
 };
@@ -243,7 +244,7 @@ const negativeBalanceRule: InsightRule = ({ accounts }) => {
     id: "insight:negative-balance",
     title: `${worst.name} is ${formatMoney(Math.abs(worst.balance))} below zero`,
     body: `${worst.name}${others} shows a negative balance after reconciliation. Either an entry is missing or this is borrowing that should be recorded as debt.`,
-    href: "/accounts",
+    href: `/accounts/detail?id=${encodeURIComponent(worst.id)}`,
     priority: 1,
   };
 };
@@ -310,7 +311,7 @@ const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
     id: "insight:balance-gap",
     title: `${account?.name ?? "An account"} is ${formatMoney(Math.abs(worst.gap))} out of step`,
     body: `The last message on it stated ${formatMoney(worst.statedBalance)}, but the entries add up to ${formatMoney(worst.expectedBalance)}. Something is missing or counted twice.`,
-    href: "/accounts",
+    href: account ? `/accounts/detail?id=${encodeURIComponent(account.id)}` : "/accounts",
     priority: 1,
   };
 };

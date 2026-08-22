@@ -13,6 +13,8 @@ import {
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
 import { AmountIndicator } from "@/components/amount-indicator";
+import { DashboardTopSpendingCategories } from "@/components/dashboard/dashboard-sections";
+import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
@@ -115,6 +117,10 @@ export function ReportWorkspace() {
   }, [series.points, transactions]);
 
   const flow = useMemo(() => getFlowBreakdown(windowTransactions), [windowTransactions]);
+  const windowSpending = useMemo(
+    () => getSummaryForTransactions(windowTransactions, categories),
+    [categories, windowTransactions],
+  );
   const allocation = useMemo(() => getAllocation(accounts), [accounts]);
   const calendar = useMemo(
     () => buildDailyNetCalendar(transactions, month),
@@ -217,6 +223,11 @@ export function ReportWorkspace() {
               />
             </CardContent>
           </Card>
+
+          <DashboardTopSpendingCategories
+            categories={windowSpending.topCategories}
+            totalOutflow={windowSpending.outflow}
+          />
 
           {allocation.length > 0 ? (
             <Card>

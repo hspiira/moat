@@ -320,32 +320,51 @@ export function DashboardTopSpendingCategories({
               ))}
             </div>
 
-            <ul className="grid gap-2 pt-1">
-              {segments.map((segment, index) => (
-                <li key={segment.key} className="flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="size-2.5 shrink-0 rounded-[3px] bg-neg"
-                      style={{ opacity: segmentOpacity(index, segment.isRemainder) }}
-                    />
-                    <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                      {segment.label}
-                      {segment.count === null ? null : (
-                        <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
-                          {segment.count}×
-                        </span>
-                      )}
+            <ul className="grid pt-1">
+              {segments.map((segment, index) => {
+                const row = (
+                  <>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        aria-hidden
+                        className="size-2.5 shrink-0 rounded-[3px] bg-neg"
+                        style={{ opacity: segmentOpacity(index, segment.isRemainder) }}
+                      />
+                      <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                        {segment.label}
+                        {segment.count === null ? null : (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
+                            {segment.count}×
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <AmountIndicator
-                    tone="negative"
-                    sign="negative"
-                    value={formatMoney(segment.amount)}
-                    className="shrink-0 text-sm font-semibold tabular-nums"
-                  />
-                </li>
-              ))}
+                    <AmountIndicator
+                      tone="negative"
+                      sign="negative"
+                      value={formatMoney(segment.amount)}
+                      className="shrink-0 text-sm font-semibold tabular-nums"
+                    />
+                  </>
+                );
+
+                // The remainder is several categories at once, so there is no one
+                // list of transactions it stands for.
+                return (
+                  <li key={segment.key} className="min-w-0">
+                    {segment.isRemainder ? (
+                      <span className="flex items-center justify-between gap-3 py-2">{row}</span>
+                    ) : (
+                      <Link
+                        href={`/transactions?q=${encodeURIComponent(segment.label)}`}
+                        className="flex items-center justify-between gap-3 py-2 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        {row}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}

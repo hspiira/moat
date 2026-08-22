@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { IconSearch, IconX } from "@tabler/icons-react";
 
 import { partyByTransferGroup } from "@/lib/domain/party-name";
@@ -28,7 +29,9 @@ const LEDGER_PAGE_SIZE = 25;
 
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
-  const [query, setQuery] = useState("");
+  // Insights link here with the thing they are about already typed in, so the
+  // list you land on is the list the insight was talking about.
+  const [query, setQuery] = useState(useSearchParams().get("q") ?? "");
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
   const visibleTransactions = useMemo(
