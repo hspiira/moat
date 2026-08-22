@@ -50,3 +50,26 @@ describe("formatMoneyShort", () => {
     expect(formatMoneyShort(20, "USD")).toBe(formatMoney(20, "USD"));
   });
 });
+
+describe("converting a foreign amount for storage", () => {
+  /* Written out by hand in the capture approval path three times over, and
+     each copy skipped the rounding, so an approved foreign capture stored a
+     fraction of a shilling in a currency that has none. */
+  it("gives a whole shilling, never a fraction of one", () => {
+    const stored = normalizeAmountToUgx(10.33, "USD", 3771.5);
+
+    expect(Number.isInteger(stored)).toBe(true);
+    expect(stored).toBe(38_960);
+    expect(10.33 * 3771.5).not.toBe(stored);
+  });
+
+  it("refuses to guess when the rate is missing, rather than calling it nothing", () => {
+    expect(normalizeAmountToUgx(10, "USD", undefined)).toBeNaN();
+    expect(normalizeAmountToUgx(10, "USD", 0)).toBeNaN();
+  });
+
+  it("keeps a magnitude, so a sign cannot flip the stored amount", () => {
+    expect(normalizeAmountToUgx(-10, "USD", 4_000)).toBe(40_000);
+    expect(normalizeAmountToUgx(-5_000, "UGX")).toBe(5_000);
+  });
+});

@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
+import { normalizeAmountToUgx } from "@/lib/currency";
 import { announceLocalSave } from "@/lib/local-save";
 import { repositories } from "@/lib/repositories/instance";
 import { buildFeeTransaction } from "@/components/transactions/transaction-builder";
@@ -134,7 +135,11 @@ export function useCaptureReviewWorkspace() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const normalizedAmount = item.currency === "UGX" ? item.originalAmount : item.originalAmount * (item.fxRateToUgx ?? 0);
+      const normalizedAmount = normalizeAmountToUgx(
+        item.originalAmount,
+        item.currency,
+        item.fxRateToUgx,
+      );
       const issues = validateCaptureReviewItem({
         originalAmount: item.originalAmount,
         currency: item.currency,
@@ -189,8 +194,11 @@ export function useCaptureReviewWorkspace() {
       const baseTransaction = buildTransactionFromCaptureReviewItem({
         item: {
           ...item,
-          normalizedAmount:
-            item.currency === "UGX" ? item.originalAmount : item.originalAmount * (item.fxRateToUgx ?? 0),
+          normalizedAmount: normalizeAmountToUgx(
+            item.originalAmount,
+            item.currency,
+            item.fxRateToUgx,
+          ),
         },
         userId: profile.id,
         createdAt: timestamp,
@@ -204,8 +212,11 @@ export function useCaptureReviewWorkspace() {
         currency: item.currency,
         fxRateToUgx: item.fxRateToUgx,
         feeAmount: item.feeAmount,
-        normalizedAmount:
-          item.currency === "UGX" ? item.originalAmount : item.originalAmount * (item.fxRateToUgx ?? 0),
+        normalizedAmount: normalizeAmountToUgx(
+          item.originalAmount,
+          item.currency,
+          item.fxRateToUgx,
+        ),
         type: item.type,
         categoryId: item.categoryId,
         payee: item.payee,
