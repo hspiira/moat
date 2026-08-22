@@ -8,6 +8,9 @@ import { buildFeeTransaction } from "@/components/transactions/transaction-build
 import { feesCategoryId, ensureFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
+import { getCorrectionsToPrune } from "@/lib/domain/correction-log-pruning";
+import { buildRuleFromCorrection, type RuleDraft } from "@/lib/domain/rule-from-correction";
+import { createId } from "@/lib/ids";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import { canApproveCaptureItem, isCaptureItemEditable } from "@/lib/domain/capture-review";
 import { detectCaptureDuplicate } from "@/lib/capture/deduplication";
@@ -50,6 +53,7 @@ export function useCaptureReviewWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ruleOffer, setRuleOffer] = useState<RuleDraft | null>(null);
   const currentPeriod = currentMonthIso();
 
   const openCaptureReviewItems = useMemo(
@@ -217,14 +221,19 @@ export function useCaptureReviewWorkspace() {
           await repositories.transactions.upsert(fee);
         }
       }
-      await repositories.correctionLogs.upsert(
-        createCorrectionLog({
-          userId: profile.id,
-          item,
-          approvedSnapshot,
-          createdAt: timestamp,
-        }),
-      );
+      const correction = createCorrectionLog({
+        userId: profile.id,
+        item,
+        approvedSnapshot,
+        createdAt: timestamp,
+      });
+      await repositories.correctionLogs.upsert(correction);
+      setRuleOffer(buildRuleFromCorrection(correction));
+
+      const kept = await repositories.correctionLogs.listByUser(profile.id);
+      for (const stale of getCorrectionsToPrune(kept)) {
+        await repositories.correctionLogs.remove(stale.id);
+      }
       await repositories.captureReviewItems.upsert({
         ...item,
         approvedTransactionId: proposed.id,
@@ -344,6 +353,28 @@ export function useCaptureReviewWorkspace() {
     }
   }, [loadWorkspace]);
 
+  const acceptRuleOffer = useCallback(async () => {
+    if (!profile || !ruleOffer) return;
+    setIsSubmitting(true);
+    try {
+      const timestamp = new Date().toISOString();
+      await repositories.transactionRules.upsert({
+        id: createId(),
+        userId: profile.id,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        ...ruleOffer,
+      });
+      setRuleOffer(null);
+    } catch (ruleError) {
+      setError(ruleError instanceof Error ? ruleError.message : "Unable to save the rule.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [profile, ruleOffer]);
+
+  const dismissRuleOffer = useCallback(() => setRuleOffer(null), []);
+
   return {
     profile,
     accounts,
@@ -361,5 +392,8 @@ export function useCaptureReviewWorkspace() {
     rejectItem,
     markDuplicate,
     clearDuplicate,
+    ruleOffer,
+    acceptRuleOffer,
+    dismissRuleOffer,
   };
 }

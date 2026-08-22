@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { newestFirst } from "@/lib/domain/correction-log-pruning";
 import { buildRuleFromCorrection, type RuleDraft } from "@/lib/domain/rule-from-correction";
 import { repositories } from "@/lib/repositories/instance";
 import type { Category, CorrectionLog, UserProfile } from "@/lib/types";
@@ -62,7 +63,7 @@ export function CorrectionLogPanel({
       }
 
       const stored = await repositories.correctionLogs.listByUser(profile.id);
-      setLogs(stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8));
+      setLogs(newestFirst(stored).slice(0, 8));
     }
 
     void loadLogs();
