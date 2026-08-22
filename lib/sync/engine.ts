@@ -95,13 +95,12 @@ async function pullAllPages(params: {
       request: { userId: profile.userId, since, limit: DEFAULT_PULL_PAGE_SIZE },
     });
 
-    await applyPulledRecords({
+    pulled += await applyPulledRecords({
       repositories: params.repositories,
       records: await Promise.all(response.records.map(openPulledRecord)),
       conflictedEntityKeys: params.conflictedEntityKeys,
     });
 
-    pulled += response.records.length;
     syncedAt = response.syncedAt;
 
     const nextSince = response.nextSince ?? lastCursorOf(response.records) ?? since;
@@ -128,7 +127,9 @@ async function applyPulledRecords(params: {
   repositories: RepositoryBundle;
   records: SyncPullRecord[];
   conflictedEntityKeys: Set<string>;
-}) {
+}): Promise<number> {
+  let applied = 0;
+
   for (const record of params.records) {
     const entityKey = `${record.entityType}:${record.entityId}`;
     if (
@@ -138,10 +139,19 @@ async function applyPulledRecords(params: {
       continue;
     }
 
-    await runWithSyncMutationSuppressed(async () => {
-      await applyPulledRecord(params.repositories, record);
-    });
+    // One record this app cannot use is not a reason to stop syncing the
+    // account. Reported, and the rest of the page still applies.
+    try {
+      await runWithSyncMutationSuppressed(async () => {
+        await applyPulledRecord(params.repositories, record);
+      });
+      applied += 1;
+    } catch (error) {
+      console.error(`[sync] could not apply ${entityKey}`, error);
+    }
   }
+
+  return applied;
 }
 
 export async function runHostedSync(params: {
@@ -184,6 +194,10 @@ export async function runHostedSync(params: {
     ),
   );
 
+  /* Items the server has already answered for. A later failure must not rewrite
+     them: their status is settled and their attempt counts are read by callers. */
+  const settled = new Map<string, SyncOutboxItem>();
+
   try {
     let syncedCount = 0;
     let failedCount = 0;
@@ -215,6 +229,7 @@ export async function runHostedSync(params: {
       );
 
       await Promise.all(nextItems.map((item) => params.repositories.syncOutbox.upsert(item)));
+      for (const item of nextItems) settled.set(item.id, item);
 
       syncedCount += nextItems.filter((item) => item.status === "synced").length;
       failedCount += nextItems.filter((item) => item.status === "failed").length;
@@ -252,8 +267,10 @@ export async function runHostedSync(params: {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed.";
+    const unanswered = pendingItems.filter((item) => !settled.has(item.id));
+
     await Promise.all(
-      pendingItems.map((item) =>
+      unanswered.map((item) =>
         params.repositories.syncOutbox.upsert(
           withOutboxUpdate(item, {
             status: "failed",
@@ -263,11 +280,13 @@ export async function runHostedSync(params: {
       ),
     );
 
+    const answered = [...settled.values()];
+
     return {
       attempted: pendingItems.length,
-      synced: 0,
-      failed: pendingItems.length,
-      conflicts: 0,
+      synced: answered.filter((item) => item.status === "synced").length,
+      failed: unanswered.length + answered.filter((item) => item.status === "failed").length,
+      conflicts: answered.filter((item) => item.status === "conflict").length,
       error: message,
     };
   }
