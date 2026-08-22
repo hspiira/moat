@@ -374,9 +374,15 @@ function urlsFrom(fetchMock: ReturnType<typeof vi.fn>): string[] {
 }
 
 describe("runHostedSync robustness", () => {
-  /* One record the server should not have sent must not stop the account
-     syncing. The rest of the page is still good. */
-  it("applies the rest of a page when one record is unusable", async () => {
+  let consoleError: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  /* A record of a type this build does not know means the server is ahead of
+     this app. It is skipped without noise, and the rest of the page applies. */
+  it("applies the rest of a page when one record is of an unknown type", async () => {
     const repositories = createRepositories([], hostedProfile());
 
     const fetchMock = vi.fn().mockResolvedValueOnce(
@@ -403,6 +409,7 @@ describe("runHostedSync robustness", () => {
 
     expect(repositories.categories.upsert).toHaveBeenCalledTimes(2);
     expect(result.error).toBeUndefined();
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
   /* A failure part way through the push must not rewrite items the server

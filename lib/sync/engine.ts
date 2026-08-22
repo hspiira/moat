@@ -8,7 +8,11 @@ import {
   serializeCursor,
   toEntityKey,
 } from "@/lib/sync/cursor";
-import { applyPulledRecord, getConflictStrategy } from "@/lib/sync/entity-sync";
+import {
+  applyPulledRecord,
+  getConflictStrategy,
+  isSyncableEntityType,
+} from "@/lib/sync/entity-sync";
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 import { canSealSyncPayloads, openSyncPayload } from "@/lib/sync/payload-crypto";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
@@ -82,11 +86,12 @@ async function pullAllPages(params: {
   repositories: RepositoryBundle;
   profile: SyncProfile;
   conflictedEntityKeys: Set<string>;
-}): Promise<{ profile: SyncProfile; syncedAt?: string; pulled: number }> {
+}): Promise<{ profile: SyncProfile; syncedAt?: string; pulled: number; skippedAhead: number }> {
   let profile = params.profile;
   let since = profile.lastPulledAt ?? profile.lastSyncedAt;
   let syncedAt: string | undefined;
   let pulled = 0;
+  let skippedAhead = 0;
 
   for (let page = 0; page < MAX_PULL_PAGES; page += 1) {
     const response = await pullSyncBatch({
@@ -95,11 +100,13 @@ async function pullAllPages(params: {
       request: { userId: profile.userId, since, limit: DEFAULT_PULL_PAGE_SIZE },
     });
 
-    pulled += await applyPulledRecords({
+    const page_ = await applyPulledRecords({
       repositories: params.repositories,
       records: await Promise.all(response.records.map(openPulledRecord)),
       conflictedEntityKeys: params.conflictedEntityKeys,
     });
+    pulled += page_.applied;
+    skippedAhead += page_.skipped;
 
     syncedAt = response.syncedAt;
 
@@ -120,15 +127,16 @@ async function pullAllPages(params: {
     }
   }
 
-  return { profile, syncedAt, pulled };
+  return { profile, syncedAt, pulled, skippedAhead };
 }
 
 async function applyPulledRecords(params: {
   repositories: RepositoryBundle;
   records: SyncPullRecord[];
   conflictedEntityKeys: Set<string>;
-}): Promise<number> {
+}): Promise<{ applied: number; skipped: number }> {
   let applied = 0;
+  let skipped = 0;
 
   for (const record of params.records) {
     const entityKey = `${record.entityType}:${record.entityId}`;
@@ -139,8 +147,16 @@ async function applyPulledRecords(params: {
       continue;
     }
 
-    // One record this app cannot use is not a reason to stop syncing the
-    // account. Reported, and the rest of the page still applies.
+    // A type this build does not know means the server is ahead of this app,
+    // which happens during a rollout. Skipped, not reported, because there is
+    // nothing wrong and nothing the owner can do about it.
+    if (!isSyncableEntityType(record.entityType)) {
+      skipped += 1;
+      continue;
+    }
+
+    // A record that should have worked and did not is worth seeing. The rest
+    // of the page still applies either way.
     try {
       await runWithSyncMutationSuppressed(async () => {
         await applyPulledRecord(params.repositories, record);
@@ -151,7 +167,7 @@ async function applyPulledRecords(params: {
     }
   }
 
-  return applied;
+  return { applied, skipped };
 }
 
 export async function runHostedSync(params: {
