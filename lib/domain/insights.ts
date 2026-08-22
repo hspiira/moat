@@ -121,7 +121,7 @@ const feeLoadRule: InsightRule = ({ transactions, periodLabel }) => {
   const load = getFeeLoad(transactions);
   if (load.fees < MIN_FEE_TOTAL) return null;
 
-  const share = load.share > 0 ? ` — ${percent(load.share)} of the ${formatMoney(load.movedOut)} you moved` : "";
+  const share = load.share > 0 ? ` — ${percent(load.share)} of the ${formatMoney(load.moved)} you moved` : "";
 
   return {
     id: "insight:fees",
@@ -347,7 +347,7 @@ const dearAccountRule: InsightRule = ({ transactions, accounts, periodLabel }) =
     .filter(
       (load) =>
         load.accountId !== dearest.accountId &&
-        load.movedOut >= MIN_MOVED_FOR_RATE &&
+        load.moved >= MIN_MOVED_FOR_RATE &&
         load.costPerThousandMoved < dearest.costPerThousandMoved,
     )
     .sort((left, right) => left.costPerThousandMoved - right.costPerThousandMoved)[0];
@@ -362,7 +362,7 @@ const dearAccountRule: InsightRule = ({ transactions, accounts, periodLabel }) =
   return {
     id: "insight:dear-account",
     title: `${account?.name ?? "An account"} costs ${formatMoney(Math.round(dearest.costPerThousandMoved))} per Sh 1,000 you move`,
-    body: `${formatMoney(dearest.fees)} in charges ${periodPhrase(periodLabel)} on ${formatMoney(dearest.movedOut)} moved.${comparison}`,
+    body: `${formatMoney(dearest.fees)} in charges ${periodPhrase(periodLabel)} on ${formatMoney(dearest.moved)} moved.${comparison}`,
     href: "/report",
     priority: 2,
   };

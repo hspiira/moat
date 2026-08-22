@@ -57,7 +57,7 @@ export function CostOfMoving({
                       href={`/transactions?q=${encodeURIComponent(account?.name ?? "")}`}
                       className="grid gap-0.5 border-b border-border py-2.5 transition-colors last:border-b-0 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
-                      <span className="flex items-baseline justify-between gap-3">
+                      <span className="flex min-w-0 items-baseline justify-between gap-3">
                         <span className="min-w-0 truncate text-sm font-medium text-foreground">
                           {account?.name ?? "Closed account"}
                         </span>
@@ -71,7 +71,7 @@ export function CostOfMoving({
                       <span className="text-xs text-muted-foreground">
                         {formatMoneyShort(Math.round(load.costPerThousandMoved))} per Sh 1,000
                         moved · {load.count} {load.count === 1 ? "charge" : "charges"} on{" "}
-                        {formatMoneyShort(load.movedOut)}
+                        {formatMoneyShort(load.moved)}
                       </span>
                     </Link>
                   </li>

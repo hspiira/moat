@@ -5,7 +5,7 @@ import type { Transaction } from "@/lib/types";
 export type FeeLoad = {
   fees: number;
   count: number;
-  movedOut: number;
+  moved: number;
   share: number;
 };
 
@@ -16,13 +16,13 @@ export function isFeeTransaction(transaction: Transaction): boolean {
   );
 }
 
-// What it costs to move money, and against what. movedOut counts every
-// non-fee row that reduces an account, so an expense, a debt payment and the
-// leaving leg of a transfer all count, which is where charges are incurred.
+// What it costs to move money, and against what. Money coming in is charged
+// too, so income counts. A transfer counts its leaving leg only, or the one
+// movement would be counted twice, once on each account.
 export function getFeeLoad(transactions: Transaction[]): FeeLoad {
   let fees = 0;
   let count = 0;
-  let movedOut = 0;
+  let moved = 0;
 
   for (const transaction of transactions) {
     if (isFeeTransaction(transaction)) {
@@ -32,16 +32,16 @@ export function getFeeLoad(transactions: Transaction[]): FeeLoad {
     }
 
     const delta = getTransactionBalanceDelta(transaction);
-    if (delta < 0) {
-      movedOut += Math.abs(delta);
+    if (delta < 0 || transaction.type === "income") {
+      moved += Math.abs(delta);
     }
   }
 
   return {
     fees,
     count,
-    movedOut,
-    share: movedOut > 0 ? fees / movedOut : 0,
+    moved,
+    share: moved > 0 ? fees / moved : 0,
   };
 }
 
@@ -69,7 +69,7 @@ export function getFeeLoadByAccount(transactions: Transaction[]): AccountFeeLoad
       return {
         ...load,
         accountId,
-        costPerThousandMoved: load.movedOut > 0 ? (load.fees / load.movedOut) * 1_000 : 0,
+        costPerThousandMoved: load.moved > 0 ? (load.fees / load.moved) * 1_000 : 0,
       };
     })
     .filter((load) => load.fees > 0)
@@ -83,7 +83,7 @@ export function dearestAccountToMoveFrom(
   minimumMoved: number,
 ): AccountFeeLoad | null {
   const usable = getFeeLoadByAccount(transactions).filter(
-    (load) => load.movedOut >= minimumMoved,
+    (load) => load.moved >= minimumMoved,
   );
   if (usable.length === 0) return null;
 

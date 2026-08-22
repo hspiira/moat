@@ -57,7 +57,7 @@ describe("getFeeLoad", () => {
 
     expect(load.fees).toBe(2_225);
     expect(load.count).toBe(2);
-    expect(load.movedOut).toBe(250_000);
+    expect(load.moved).toBe(250_000);
     expect(load.share).toBeCloseTo(2_225 / 250_000);
   });
 
@@ -68,22 +68,31 @@ describe("getFeeLoad", () => {
       transaction({ id: "fee", amount: 1_725, feeParentId: "out" }),
     ]);
 
-    expect(load.movedOut).toBe(200_000);
+    expect(load.moved).toBe(200_000);
     expect(load.fees).toBe(1_725);
   });
 
-  it("does not count income as money moved out", () => {
+  it("counts income, because receiving money is charged too", () => {
     const load = getFeeLoad([
       transaction({ id: "pay", type: "income", amount: 900_000 }),
       transaction({ id: "fee", amount: 500, feeParentId: "pay" }),
     ]);
 
-    expect(load.movedOut).toBe(0);
-    expect(load.share).toBe(0);
+    expect(load.moved).toBe(900_000);
+    expect(load.fees).toBe(500);
+  });
+
+  it("counts one transfer once, not once on each account", () => {
+    const load = getFeeLoad([
+      transaction({ id: "out", type: "transfer", amount: -200_000 }),
+      transaction({ id: "in", type: "transfer", amount: 200_000, accountId: "acc:bank" }),
+    ]);
+
+    expect(load.moved).toBe(200_000);
   });
 
   it("never divides by zero when nothing moved", () => {
-    expect(getFeeLoad([])).toEqual({ fees: 0, count: 0, movedOut: 0, share: 0 });
+    expect(getFeeLoad([])).toEqual({ fees: 0, count: 0, moved: 0, share: 0 });
   });
 
   it("keeps a fee out of the money-moved figure it is measured against", () => {
@@ -92,7 +101,7 @@ describe("getFeeLoad", () => {
       transaction({ id: "t1:fee", amount: 1_000, feeParentId: "t1" }),
     ]);
 
-    expect(load.movedOut).toBe(100_000);
+    expect(load.moved).toBe(100_000);
   });
 });
 
