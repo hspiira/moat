@@ -71,9 +71,9 @@ test("a spending row on the report leads to its transactions", async ({ page }) 
   await page.goto("/report");
   await page.waitForTimeout(1500);
 
-  await expect(page.getByText("Where it went")).toBeVisible();
-  const row = page.getByRole("link", { name: /Transport/ }).first();
-  await row.click();
+  const breakdown = page.locator("[data-slot='card']").filter({ hasText: "Where it went" });
+  await expect(breakdown).toBeVisible();
+  await breakdown.getByRole("link", { name: /Transport/ }).first().click();
   await page.waitForTimeout(1500);
 
   await expect(page.getByRole("searchbox")).toHaveValue(/Transport/);

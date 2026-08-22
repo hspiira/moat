@@ -10,6 +10,7 @@ import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
 import { getGoalPace } from "@/lib/domain/goal-pace";
 import { getIncomeStability } from "@/lib/domain/income-stability";
+import { findPartyPriceRises, findSmallButAddsUp } from "@/lib/domain/party-totals";
 import { findPriceRises } from "@/lib/domain/price-observations";
 import { getRunway } from "@/lib/domain/runway";
 import { detectRecurringCandidates } from "@/lib/domain/recurring-detection";
@@ -304,6 +305,39 @@ const idleLendingRule: InsightRule = ({
 // reflect one unlucky charge.
 const MIN_MOVED_FOR_RATE = 100_000;
 
+const partyPriceRiseRule: InsightRule = ({
+  transactions,
+  previousTransactions,
+  counterparties,
+  periodLabel,
+}) => {
+  const [rise] = findPartyPriceRises(transactions, previousTransactions, counterparties);
+  if (!rise) return null;
+
+  return {
+    id: "insight:party-price-rise",
+    title: `${rise.party.name} now costs ${formatMoney(rise.nowPerTime)} each time, was ${formatMoney(rise.wasPerTime)}`,
+    body: `${rise.party.count} ${rise.party.count === 1 ? "payment" : "payments"} ${periodPhrase(periodLabel)}, ${formatMoney(rise.party.amount)} in all. Same party, dearer each time.`,
+    href: `/transactions?q=${encodeURIComponent(rise.party.name)}`,
+    priority: 2,
+  };
+};
+
+const smallSumsRule: InsightRule = ({ transactions, counterparties, periodLabel }) => {
+  const found = findSmallButAddsUp(transactions, counterparties);
+  if (found.length === 0) return null;
+
+  const worst = found.reduce((held, party) => (party.amount > held.amount ? party : held));
+
+  return {
+    id: "insight:small-sums",
+    title: `${worst.name} took ${formatMoney(worst.amount)} in ${worst.count} small payments`,
+    body: `${formatMoney(worst.perTime)} at a time ${periodPhrase(periodLabel)}. No one payment looks worth noticing, which is why the total goes unnoticed.`,
+    href: `/transactions?q=${encodeURIComponent(worst.name)}`,
+    priority: 2,
+  };
+};
+
 const dearAccountRule: InsightRule = ({ transactions, accounts, periodLabel }) => {
   const dearest = dearestAccountToMoveFrom(transactions, MIN_MOVED_FOR_RATE);
   if (!dearest || dearest.costPerThousandMoved < 1) return null;
@@ -441,6 +475,8 @@ const INSIGHT_RULES: InsightRule[] = [
   balanceGapRule,
   feeLoadRule,
   dearAccountRule,
+  partyPriceRiseRule,
+  smallSumsRule,
   incomeSwingRule,
   goalPaceRule,
   untrackedBillRule,

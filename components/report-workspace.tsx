@@ -5,6 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 
 import { CostOfMoving } from "@/components/report/cost-of-moving";
+import { WhoMovedIt } from "@/components/report/who-moved-it";
 import { DayTransactions } from "@/components/report/day-transactions";
 import { MoneyCalendar } from "@/components/report/money-calendar";
 import { PositionChart } from "@/components/report/position-chart";
@@ -32,7 +33,13 @@ import {
 } from "@/lib/domain/report";
 import { repositories } from "@/lib/repositories/instance";
 import { todayIso } from "@/lib/today";
-import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+import type {
+  Account,
+  Category,
+  Counterparty,
+  Transaction,
+  UserProfile,
+} from "@/lib/types";
 
 const WINDOWS = [
   { days: 7, label: "7 days" },
@@ -64,6 +71,7 @@ export function ReportWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,14 +93,17 @@ export function ReportWorkspace() {
           setProfile(nextProfile);
           if (!nextProfile) return;
 
-          const [storedAccounts, storedTransactions, storedCategories] = await Promise.all([
-            repositories.accounts.listByUser(nextProfile.id),
-            repositories.transactions.listByUser(nextProfile.id),
-            repositories.categories.listByUser(nextProfile.id),
-          ]);
+          const [storedAccounts, storedTransactions, storedCategories, storedCounterparties] =
+            await Promise.all([
+              repositories.accounts.listByUser(nextProfile.id),
+              repositories.transactions.listByUser(nextProfile.id),
+              repositories.categories.listByUser(nextProfile.id),
+              repositories.counterparties.listByUser(nextProfile.id),
+            ]);
           setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
           setTransactions(storedTransactions);
           setCategories(storedCategories);
+          setCounterparties(storedCounterparties);
         } catch (loadError) {
           setError(
             loadError instanceof Error ? loadError.message : "Couldn't load your report.",
@@ -218,6 +229,12 @@ export function ReportWorkspace() {
               />
             </CardContent>
           </Card>
+
+          <WhoMovedIt
+            transactions={windowTransactions}
+            categories={categories}
+            counterparties={counterparties}
+          />
 
           <CostOfMoving accounts={accounts} transactions={windowTransactions} />
 
