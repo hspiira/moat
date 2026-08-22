@@ -168,13 +168,20 @@ export type Transaction = {
   updatedAt: string;
 };
 
-export type CounterpartyKind = "borrower" | "lender" | "both";
+// Whether money is owed, and in which direction. "none" is a party you simply
+// pay or are paid by, such as a shop.
+export type CounterpartyKind = "borrower" | "lender" | "both" | "none";
+
+// What the party is, kept apart from whether they owe you. Overloading one
+// field would let a shop that once appeared in a loan become a borrower.
+export type CounterpartyNature = "person" | "business";
 
 export type Counterparty = {
   id: string;
   userId: string;
   name: string;
   kind: CounterpartyKind;
+  nature?: CounterpartyNature;
   openingBalance?: number;
   phone?: string;
   notes?: string;
@@ -464,6 +471,8 @@ export type TransactionRule = {
   effectAccountId?: string;
   effectTransactionType?: TransactionType;
   autoMarkReviewed: boolean;
+  timesAccepted?: number;
+  timesOverridden?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -546,4 +555,13 @@ export type InvestmentGuidance = {
   removals: string[];
   shouldPrioritizeEmergencyFund: boolean;
   shouldPrioritizeDebtRepayment: boolean;
+};
+
+export type SyncVersion = {
+  id: string;
+  userId: string;
+  entityType: string;
+  entityId: string;
+  serverVersionToken: string;
+  updatedAt: string;
 };

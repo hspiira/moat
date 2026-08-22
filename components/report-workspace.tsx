@@ -4,6 +4,9 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 
+import { CostOfMoving } from "@/components/report/cost-of-moving";
+import { NamePartySheet } from "@/components/report/name-party-sheet";
+import { WhoMovedIt } from "@/components/report/who-moved-it";
 import { DayTransactions } from "@/components/report/day-transactions";
 import { MoneyCalendar } from "@/components/report/money-calendar";
 import { PositionChart } from "@/components/report/position-chart";
@@ -13,7 +16,12 @@ import {
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
 import { AmountIndicator } from "@/components/amount-indicator";
+import { DashboardTopSpendingCategories } from "@/components/dashboard/dashboard-sections";
+import { getSummaryForTransactions } from "@/lib/domain/summaries";
+import { planNamedParty, suggestedPartyName } from "@/lib/domain/name-party";
+import { createId } from "@/lib/ids";
 import { Button } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/filter-chips";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
@@ -28,7 +36,14 @@ import {
 } from "@/lib/domain/report";
 import { repositories } from "@/lib/repositories/instance";
 import { todayIso } from "@/lib/today";
-import type { Account, Category, Transaction, UserProfile } from "@/lib/types";
+import type {
+  Account,
+  Category,
+  Counterparty,
+  CounterpartyNature,
+  Transaction,
+  UserProfile,
+} from "@/lib/types";
 
 const WINDOWS = [
   { days: 7, label: "7 days" },
@@ -60,6 +75,9 @@ export function ReportWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [namingPartyKey, setNamingPartyKey] = useState<string | null>(null);
+  const [isNaming, setIsNaming] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,14 +99,17 @@ export function ReportWorkspace() {
           setProfile(nextProfile);
           if (!nextProfile) return;
 
-          const [storedAccounts, storedTransactions, storedCategories] = await Promise.all([
-            repositories.accounts.listByUser(nextProfile.id),
-            repositories.transactions.listByUser(nextProfile.id),
-            repositories.categories.listByUser(nextProfile.id),
-          ]);
+          const [storedAccounts, storedTransactions, storedCategories, storedCounterparties] =
+            await Promise.all([
+              repositories.accounts.listByUser(nextProfile.id),
+              repositories.transactions.listByUser(nextProfile.id),
+              repositories.categories.listByUser(nextProfile.id),
+              repositories.counterparties.listByUser(nextProfile.id),
+            ]);
           setAccounts(reconcileAccountBalances(storedAccounts, storedTransactions));
           setTransactions(storedTransactions);
           setCategories(storedCategories);
+          setCounterparties(storedCounterparties);
         } catch (loadError) {
           setError(
             loadError instanceof Error ? loadError.message : "Couldn't load your report.",
@@ -115,6 +136,10 @@ export function ReportWorkspace() {
   }, [series.points, transactions]);
 
   const flow = useMemo(() => getFlowBreakdown(windowTransactions), [windowTransactions]);
+  const windowSpending = useMemo(
+    () => getSummaryForTransactions(windowTransactions, categories),
+    [categories, windowTransactions],
+  );
   const allocation = useMemo(() => getAllocation(accounts), [accounts]);
   const calendar = useMemo(
     () => buildDailyNetCalendar(transactions, month),
@@ -136,23 +161,52 @@ export function ReportWorkspace() {
 
   const windowLabel = WINDOWS.find((option) => option.days === days)?.label ?? `${days} days`;
 
+  async function saveName(name: string, nature: CounterpartyNature) {
+    if (!profile || !namingPartyKey) return;
+    setIsNaming(true);
+    try {
+      const plan = planNamedParty({
+        partyKey: namingPartyKey,
+        name,
+        nature,
+        transactions,
+        existing: counterparties,
+        userId: profile.id,
+        timestamp: new Date().toISOString(),
+        id: createId(),
+      });
+
+      if (plan) {
+        await repositories.counterparties.upsert(plan.counterparty);
+        for (const transaction of plan.transactions) {
+          await repositories.transactions.upsert(transaction);
+        }
+        setCounterparties((current) => [
+          ...current.filter((entry) => entry.id !== plan.counterparty.id),
+          plan.counterparty,
+        ]);
+        const stamped = new Map(plan.transactions.map((entry) => [entry.id, entry]));
+        setTransactions((current) => current.map((entry) => stamped.get(entry.id) ?? entry));
+      }
+
+      setNamingPartyKey(null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Couldn't save the name.");
+    } finally {
+      setIsNaming(false);
+    }
+  }
+
   return (
     <div className="grid gap-5">
       <h1 className="sr-only">Report</h1>
 
-      <div className="flex items-center gap-1">
-        {WINDOWS.map((option) => (
-          <Button
-            key={option.days}
-            type="button"
-            size="sm"
-            variant={days === option.days ? "secondary" : "ghost"}
-            onClick={() => setDays(option.days)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+      <FilterChips
+        label="Period"
+        options={WINDOWS.map((option) => ({ value: option.days, label: option.label }))}
+        value={days}
+        onChange={setDays}
+      />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading your report..." /> : null}
@@ -217,6 +271,20 @@ export function ReportWorkspace() {
               />
             </CardContent>
           </Card>
+
+          <WhoMovedIt
+            transactions={windowTransactions}
+            categories={categories}
+            counterparties={counterparties}
+            onName={setNamingPartyKey}
+          />
+
+          <CostOfMoving accounts={accounts} transactions={windowTransactions} />
+
+          <DashboardTopSpendingCategories
+            categories={windowSpending.topCategories}
+            totalOutflow={windowSpending.outflow}
+          />
 
           {allocation.length > 0 ? (
             <Card>
@@ -306,6 +374,15 @@ export function ReportWorkspace() {
           </Card>
         </>
       ) : null}
+
+      <NamePartySheet
+        key={namingPartyKey ?? "none"}
+        isOpen={namingPartyKey !== null}
+        isSubmitting={isNaming}
+        suggestion={namingPartyKey ? suggestedPartyName(namingPartyKey, transactions) : ""}
+        onOpenChange={(open) => (open ? undefined : setNamingPartyKey(null))}
+        onSave={(name, nature) => void saveName(name, nature)}
+      />
     </div>
   );
 }

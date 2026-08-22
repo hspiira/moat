@@ -43,8 +43,17 @@ export function findCounterpartyByName(
   return counterparties.find((entry) => counterpartyMatchKey(entry.name) === key);
 }
 
+// A party with no debt relationship takes on whichever side first appears.
+// Only two real and opposite sides make them both.
 export function widenKind(current: CounterpartyKind, next: CounterpartyKind): CounterpartyKind {
-  return current === next ? current : "both";
+  if (current === next) return current;
+  if (current === "none") return next;
+  if (next === "none") return current;
+  return "both";
+}
+
+export function owesOrIsOwed(kind: CounterpartyKind): boolean {
+  return kind !== "none";
 }
 
 export type ResolvedCounterparty = {

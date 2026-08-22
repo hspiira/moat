@@ -1,5 +1,5 @@
 import type { RepositoryBundle } from "@/lib/repositories/types";
-import type { SyncOutboxItem, SyncProfile } from "@/lib/types";
+import type { SyncOutboxItem, SyncProfile, SyncVersion } from "@/lib/types";
 import type { SyncPullRecord, SyncPushResult, SyncRunSummary } from "@/lib/sync/types";
 
 import {
@@ -16,6 +16,11 @@ import {
 import { runWithSyncMutationSuppressed } from "@/lib/sync/mutation-scope";
 import { canSealSyncPayloads, openSyncPayload } from "@/lib/sync/payload-crypto";
 import { createSyncPushRequest, pullSyncBatch, pushSyncBatch } from "@/lib/sync/transport";
+import {
+  tokenLookup,
+  versionRecordsFromPull,
+  versionRecordsFromPush,
+} from "@/lib/sync/version-tokens";
 
 const MAX_PULL_PAGES = 1000;
 const PUSH_BATCH_SIZE = 200;
@@ -100,11 +105,22 @@ async function pullAllPages(params: {
       request: { userId: profile.userId, since, limit: DEFAULT_PULL_PAGE_SIZE },
     });
 
+    const opened = await Promise.all(response.records.map(openPulledRecord));
+
     const page_ = await applyPulledRecords({
       repositories: params.repositories,
-      records: await Promise.all(response.records.map(openPulledRecord)),
+      records: opened,
       conflictedEntityKeys: params.conflictedEntityKeys,
     });
+
+    await rememberVersions(
+      params.repositories,
+      versionRecordsFromPull({
+        userId: profile.userId,
+        records: opened,
+        timestamp: response.syncedAt,
+      }),
+    );
     pulled += page_.applied;
     skippedAhead += page_.skipped;
 
@@ -128,6 +144,15 @@ async function pullAllPages(params: {
   }
 
   return { profile, syncedAt, pulled, skippedAhead };
+}
+
+async function rememberVersions(
+  repositories: RepositoryBundle,
+  versions: SyncVersion[],
+): Promise<void> {
+  for (const version of versions) {
+    await repositories.syncVersions.upsert(version);
+  }
 }
 
 async function applyPulledRecords(params: {
@@ -221,6 +246,10 @@ export async function runHostedSync(params: {
     let pushedAt: string | undefined;
     const conflictedEntityKeys = new Set<string>();
 
+    const baseVersionTokens = tokenLookup(
+      await params.repositories.syncVersions.listByUser(params.profile.userId),
+    );
+
     for (let start = 0; start < pendingItems.length; start += PUSH_BATCH_SIZE) {
       const batch = pendingItems.slice(start, start + PUSH_BATCH_SIZE);
 
@@ -231,9 +260,24 @@ export async function runHostedSync(params: {
           items: batch,
           platform: params.platform,
           deviceId: params.profile.deviceId,
+          baseVersionTokens,
         }),
         authToken: params.profile.syncAuthToken,
       });
+
+      await rememberVersions(
+        params.repositories,
+        versionRecordsFromPush({
+          userId: params.profile.userId,
+          results: response.results,
+          pushed: batch.map((item) => ({
+            outboxId: item.id,
+            entityType: item.entityType,
+            entityId: item.entityId,
+          })),
+          timestamp: response.syncedAt,
+        }),
+      );
 
       const nextItems = await Promise.all(
         batch.map((item) =>

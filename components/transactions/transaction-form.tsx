@@ -221,7 +221,10 @@ export function TransactionForm({
   const hasDetails = Boolean(
     form.payee || form.note || form.currency !== "UGX" || form.feeAmount,
   );
-  const supportsFee = form.type === "expense" || form.type === "transfer";
+  // Receiving money is charged too: a withdrawal or a deposit fee comes off the
+  // same account the money landed in.
+  const supportsFee =
+    form.type === "expense" || form.type === "transfer" || form.type === "income";
   const [detailsOpen, setDetailsOpen] = useState(hasDetails);
   const [seenHasDetails, setSeenHasDetails] = useState(hasDetails);
   if (hasDetails !== seenHasDetails) {

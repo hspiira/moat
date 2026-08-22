@@ -98,6 +98,7 @@ function createBundleProxy(): RepositoryBundle {
     items: lazyRepository("items", ["findByNormalizedName"]),
     plannedPurchases: lazyRepository("plannedPurchases", ["listByStatus"]),
     projects: lazyRepository("projects"),
+    syncVersions: lazyRepository("syncVersions"),
     transactionLineItems: lazyRepository("transactionLineItems", ["listByTransactionId"]),
   };
 }

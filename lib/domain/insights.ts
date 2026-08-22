@@ -1,10 +1,16 @@
+import { FEES_CATEGORY_NAME } from "@/lib/app-state/defaults";
 import { formatMoney } from "@/lib/currency";
-import { getFeeLoad } from "@/lib/domain/fees";
+import {
+  dearestAccountToMoveFrom,
+  getFeeLoad,
+  getFeeLoadByAccount,
+} from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
 import { getGoalPace } from "@/lib/domain/goal-pace";
 import { getIncomeStability } from "@/lib/domain/income-stability";
+import { findPartyPriceRises, findSmallButAddsUp } from "@/lib/domain/party-totals";
 import { findPriceRises } from "@/lib/domain/price-observations";
 import { getRunway } from "@/lib/domain/runway";
 import { detectRecurringCandidates } from "@/lib/domain/recurring-detection";
@@ -115,13 +121,13 @@ const feeLoadRule: InsightRule = ({ transactions, periodLabel }) => {
   const load = getFeeLoad(transactions);
   if (load.fees < MIN_FEE_TOTAL) return null;
 
-  const share = load.share > 0 ? ` — ${percent(load.share)} of the ${formatMoney(load.movedOut)} you moved` : "";
+  const share = load.share > 0 ? ` — ${percent(load.share)} of the ${formatMoney(load.moved)} you moved` : "";
 
   return {
     id: "insight:fees",
     title: `Charges cost you ${formatMoney(load.fees)} ${periodPhrase(periodLabel)}`,
     body: `${load.count} ${load.count === 1 ? "charge" : "charges"}${share}. Fewer, larger transfers cost less than many small ones.`,
-    href: "/report",
+    href: `/transactions?q=${encodeURIComponent(FEES_CATEGORY_NAME)}`,
     priority: 1,
   };
 };
@@ -243,7 +249,7 @@ const negativeBalanceRule: InsightRule = ({ accounts }) => {
     id: "insight:negative-balance",
     title: `${worst.name} is ${formatMoney(Math.abs(worst.balance))} below zero`,
     body: `${worst.name}${others} shows a negative balance after reconciliation. Either an entry is missing or this is borrowing that should be recorded as debt.`,
-    href: "/accounts",
+    href: `/accounts/detail?id=${encodeURIComponent(worst.id)}`,
     priority: 1,
   };
 };
@@ -295,6 +301,73 @@ const idleLendingRule: InsightRule = ({
   };
 };
 
+// Enough moved through an account for its rate to mean something rather than
+// reflect one unlucky charge.
+const MIN_MOVED_FOR_RATE = 100_000;
+
+const partyPriceRiseRule: InsightRule = ({
+  transactions,
+  previousTransactions,
+  counterparties,
+  periodLabel,
+}) => {
+  const [rise] = findPartyPriceRises(transactions, previousTransactions, counterparties);
+  if (!rise) return null;
+
+  return {
+    id: "insight:party-price-rise",
+    title: `${rise.party.name} now costs ${formatMoney(rise.nowPerTime)} each time, was ${formatMoney(rise.wasPerTime)}`,
+    body: `${rise.party.count} ${rise.party.count === 1 ? "payment" : "payments"} ${periodPhrase(periodLabel)}, ${formatMoney(rise.party.amount)} in all. Same party, dearer each time.`,
+    href: `/transactions?q=${encodeURIComponent(rise.party.name)}`,
+    priority: 2,
+  };
+};
+
+const smallSumsRule: InsightRule = ({ transactions, counterparties, periodLabel }) => {
+  const found = findSmallButAddsUp(transactions, counterparties);
+  if (found.length === 0) return null;
+
+  const worst = found.reduce((held, party) => (party.amount > held.amount ? party : held));
+
+  return {
+    id: "insight:small-sums",
+    title: `${worst.name} took ${formatMoney(worst.amount)} in ${worst.count} small payments`,
+    body: `${formatMoney(worst.perTime)} at a time ${periodPhrase(periodLabel)}. No one payment looks worth noticing, which is why the total goes unnoticed.`,
+    href: `/transactions?q=${encodeURIComponent(worst.name)}`,
+    priority: 2,
+  };
+};
+
+const dearAccountRule: InsightRule = ({ transactions, accounts, periodLabel }) => {
+  const dearest = dearestAccountToMoveFrom(transactions, MIN_MOVED_FOR_RATE);
+  if (!dearest || dearest.costPerThousandMoved < 1) return null;
+
+  const account = accounts.find((entry) => entry.id === dearest.accountId);
+  const cheaper = getFeeLoadByAccount(transactions)
+    .filter(
+      (load) =>
+        load.accountId !== dearest.accountId &&
+        load.moved >= MIN_MOVED_FOR_RATE &&
+        load.costPerThousandMoved < dearest.costPerThousandMoved,
+    )
+    .sort((left, right) => left.costPerThousandMoved - right.costPerThousandMoved)[0];
+  const cheaperAccount = cheaper
+    ? accounts.find((entry) => entry.id === cheaper.accountId)
+    : undefined;
+
+  const comparison = cheaperAccount
+    ? ` ${cheaperAccount.name} costs ${formatMoney(Math.round(cheaper!.costPerThousandMoved))} for the same Sh 1,000.`
+    : "";
+
+  return {
+    id: "insight:dear-account",
+    title: `${account?.name ?? "An account"} costs ${formatMoney(Math.round(dearest.costPerThousandMoved))} per Sh 1,000 you move`,
+    body: `${formatMoney(dearest.fees)} in charges ${periodPhrase(periodLabel)} on ${formatMoney(dearest.moved)} moved.${comparison}`,
+    href: "/report",
+    priority: 2,
+  };
+};
+
 const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
   const gaps = detectBalanceGapsByAccount(allTransactions).filter(
     (gap) => Math.abs(gap.gap) >= MIN_BALANCE_GAP,
@@ -310,7 +383,7 @@ const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
     id: "insight:balance-gap",
     title: `${account?.name ?? "An account"} is ${formatMoney(Math.abs(worst.gap))} out of step`,
     body: `The last message on it stated ${formatMoney(worst.statedBalance)}, but the entries add up to ${formatMoney(worst.expectedBalance)}. Something is missing or counted twice.`,
-    href: "/accounts",
+    href: account ? `/accounts/detail?id=${encodeURIComponent(account.id)}` : "/accounts",
     priority: 1,
   };
 };
@@ -361,7 +434,7 @@ const runwayRule: InsightRule = ({ allTransactions, accounts, now }) => {
     id: "insight:runway",
     title: `${formatMoney(runway.liquid)} spendable, going out at ${formatMoney(runway.dailyBurn)} a day`,
     body: `${when}, on the last ${runway.daysMeasured} days of spending. At this rate it is gone by ${runway.runsOutOn}, before counting anything still to come in.`,
-    href: "/report",
+    href: "/transactions?days=30&sort=largest",
     priority: days <= URGENT_RUNWAY_DAYS ? 1 : 2,
   };
 };
@@ -401,6 +474,9 @@ const INSIGHT_RULES: InsightRule[] = [
   runwayRule,
   balanceGapRule,
   feeLoadRule,
+  dearAccountRule,
+  partyPriceRiseRule,
+  smallSumsRule,
   incomeSwingRule,
   goalPaceRule,
   untrackedBillRule,

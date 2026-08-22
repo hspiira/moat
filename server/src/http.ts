@@ -6,6 +6,7 @@ export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly headers: Record<string, string> = {},
   ) {
     super(message);
   }
@@ -34,12 +35,18 @@ export async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   }
 }
 
-export function sendJson(response: ServerResponse, status: number, body: unknown) {
+export function sendJson(
+  response: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   const payload = JSON.stringify(body);
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(payload),
     "cache-control": "no-store",
+    ...headers,
   });
   response.end(payload);
 }

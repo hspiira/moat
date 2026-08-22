@@ -7,7 +7,6 @@ import { useFormSheet } from "@/components/hooks/use-form-sheet";
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { AppSectionHeading } from "@/components/app-page";
 import { GoalForm } from "@/components/goals/goal-form";
 import { GoalList } from "@/components/goals/goal-list";
 import { InvestmentGuidanceSection } from "@/components/goals/investment-guidance-section";
@@ -81,55 +81,94 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <Card>
-            <CardContent className="grid gap-6 px-5 py-6 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-8 sm:px-7">
-              <MoatRing
-                value={emergencyProgress}
-                tone={emergencyProgress >= 1 ? "positive" : "moat"}
-                ariaLabel={
-                  emergencyFundGoal && emergencyFundSuggestion > 0
-                    ? `Emergency fund: ${emergencyPercent}% of the suggested moat`
-                    : "Emergency fund: no goal yet"
-                }
-                label={emergencyFundGoal && emergencyFundSuggestion > 0 ? `${emergencyPercent}%` : "0%"}
-                sublabel={emergencyFundGoal && emergencyFundSuggestion > 0 ? "of moat" : "no goal yet"}
-                size={124}
-                thickness={10}
-                className="justify-self-center sm:justify-self-start"
-              />
-              <div className="min-w-0 space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Suggested emergency fund
-                </p>
-                <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
-                  <Money amount={emergencyFundSuggestion} tone="neutral" className="font-display" />
-                </div>
-                <p className="max-w-lg text-sm leading-6 text-muted-foreground">
-                  Roughly three months of your current spending — a good starting target.
-                </p>
-              </div>
-              <div className="space-y-0.5 sm:text-right">
-                <p className="text-xs text-muted-foreground">Active goals</p>
-                <p className="text-3xl font-semibold tabular-nums">{goals.length}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <section className="grid gap-4">
+            <AppSectionHeading
+              title="Your goals"
+              description="What you are saving towards, and how each one is tracking."
+            />
 
-          <div className="flex gap-2">
-            <Button onClick={openNewGoal} className="flex-1 sm:flex-none sm:px-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm text-muted-foreground">Active goals</p>
+              <p className="font-display text-3xl font-semibold tabular-nums">{goals.length}</p>
+            </div>
+
+            <Button onClick={openNewGoal} className="justify-self-start sm:px-6">
               <IconPlus />
               New goal
             </Button>
-          </div>
 
-          <GoalList
-            accounts={accounts}
-            goals={goals}
-            isSubmitting={isSubmitting}
-            onEdit={openEditGoal}
-            onDelete={(goalId) => void handleDeleteGoal(goalId)}
-            onAdd={openNewGoal}
-          />
+            <GoalList
+              accounts={accounts}
+              goals={goals}
+              isSubmitting={isSubmitting}
+              onEdit={openEditGoal}
+              onDelete={(goalId) => void handleDeleteGoal(goalId)}
+            />
+          </section>
+
+          <section className="grid gap-4">
+            <AppSectionHeading
+              title="Your emergency fund"
+              description="The one goal worth having before any other."
+            />
+
+            {emergencyFundGoal && emergencyFundSuggestion > 0 ? (
+              <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8">
+                <MoatRing
+                  value={emergencyProgress}
+                  tone={emergencyProgress >= 1 ? "positive" : "moat"}
+                  ariaLabel={`Emergency fund: ${emergencyPercent}% of the suggested moat`}
+                  label={`${emergencyPercent}%`}
+                  sublabel="of moat"
+                  size={124}
+                  thickness={10}
+                  className="justify-self-center sm:justify-self-start"
+                />
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Suggested emergency fund
+                  </p>
+                  <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
+                    <Money
+                      amount={emergencyFundSuggestion}
+                      tone="neutral"
+                      className="font-display"
+                    />
+                  </div>
+                  <p className="max-w-lg text-sm leading-6 text-muted-foreground">
+                    Roughly three months of your current spending.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // A ring at nought says nothing you did not already know. What is
+              // useful when there is no fund yet is the figure and a way to start.
+              <div className="grid gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Aim for about
+                  </p>
+                  <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
+                    <Money
+                      amount={emergencyFundSuggestion}
+                      tone="neutral"
+                      className="font-display"
+                    />
+                  </div>
+                  <p className="max-w-lg text-sm leading-6 text-muted-foreground">
+                    Roughly three months of your current spending. Nothing set aside for it yet.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={openNewGoal}
+                  className="justify-self-start"
+                >
+                  Start an emergency fund
+                </Button>
+              </div>
+            )}
+          </section>
 
           <InvestmentGuidanceSection />
 

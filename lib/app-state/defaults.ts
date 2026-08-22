@@ -60,11 +60,13 @@ export {
   debtRepaymentCategoryId,
 } from "@/lib/domain/seeded-ids";
 
+export const FEES_CATEGORY_NAME = "Fees & charges";
+
 export function buildFeesCategory(userId: string): Category {
   return {
     id: feesCategoryId(userId),
     userId,
-    name: "Fees & charges",
+    name: FEES_CATEGORY_NAME,
     kind: "expense",
     isDefault: true,
     createdAt: DEFAULT_DATE,

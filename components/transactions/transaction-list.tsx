@@ -32,6 +32,9 @@ type Props = {
   transactions: Transaction[];
   pendingSyncIds?: Set<string>;
   onOpenDetail: (transaction: Transaction) => void;
+  caption?: string;
+  // Day headings would fight an order that is not by day.
+  grouped?: boolean;
 };
 
 type RowPresentation = {
@@ -77,13 +80,15 @@ export function TransactionList({
   transactions,
   pendingSyncIds,
   onOpenDetail,
+  caption = "Newest first. Transfers show as a matched pair.",
+  grouped = true,
 }: Props) {
   const partyById = counterpartiesById(counterparties);
   return (
     <Card>
       <CardHeader>
         <CardTitle>Ledger</CardTitle>
-        <CardDescription>Newest first. Transfers show as a matched pair.</CardDescription>
+        <CardDescription>{caption}</CardDescription>
       </CardHeader>
       <CardContent className="px-0">
         {transactions.length === 0 ? (
@@ -92,11 +97,16 @@ export function TransactionList({
           </div>
         ) : (
           <div className="grid gap-4">
-            {groupByDay(transactions).map(([day, dayTransactions]) => (
+            {(grouped
+              ? groupByDay(transactions)
+              : ([["all", transactions]] as Array<[string, Transaction[]]>)
+            ).map(([day, dayTransactions]) => (
               <section key={day} className="min-w-0">
-                <h2 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
-                  {formatDayHeading(day)}
-                </h2>
+                {grouped ? (
+                  <h2 className="px-4 pb-1 text-xs font-medium text-muted-foreground">
+                    {formatDayHeading(day)}
+                  </h2>
+                ) : null}
                 <ul className="divide-y divide-border/50">
                   {dayTransactions.map((transaction) => {
               const account = accounts.find((a) => a.id === transaction.accountId);

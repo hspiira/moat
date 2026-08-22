@@ -53,6 +53,7 @@ export function Money({
 
   return (
     <span
+      data-slot="money"
       className={cn(
         "tabular-nums tracking-tight wrap-anywhere",
         toneClass,

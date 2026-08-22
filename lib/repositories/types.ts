@@ -13,6 +13,7 @@ import type {
   MonthClose,
   PlannedPurchase,
   Project,
+  SyncVersion,
   PlannedPurchaseStatus,
   RecurringObligation,
   ResourceLink,
@@ -118,5 +119,6 @@ export interface RepositoryBundle {
   items: ItemRepository;
   plannedPurchases: PlannedPurchaseRepository;
   projects: Repository<Project>;
+  syncVersions: Repository<SyncVersion>;
   transactionLineItems: TransactionLineItemRepository;
 }

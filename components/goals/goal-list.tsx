@@ -6,13 +6,7 @@ import { getGoalContributionPlan } from "@/lib/domain/goals";
 import { formatDate } from "@/lib/format-date";
 import type { Account, Goal } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirmDelete } from "@/components/hooks/use-confirm-delete";
@@ -28,26 +22,19 @@ type Props = {
   isSubmitting: boolean;
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
-  onAdd?: () => void;
 };
 
-export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete, onAdd }: Props) {
+export function GoalList({ accounts, goals, isSubmitting, onEdit, onDelete }: Props) {
   const del = useConfirmDelete<Goal>((goal) => onDelete(goal.id));
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your goals</CardTitle>
-        <CardDescription>Your savings goals and how each is tracking.</CardDescription>
-      </CardHeader>
-      <CardContent className="px-0">
+      <CardContent className="px-0 pt-0">
         {goals.length === 0 ? (
           <EmptyState className="mx-4">
-            <p>No goals yet. Create your first goal to start building.</p>
-            {onAdd ? (
-              <Button size="sm" className="mt-3" onClick={onAdd}>
-                New goal
-              </Button>
-            ) : null}
+            <p>
+              No goals yet. Name what you are saving towards and this tracks whether you are
+              keeping pace with it.
+            </p>
           </EmptyState>
         ) : (
           <div className="divide-y divide-border/60">

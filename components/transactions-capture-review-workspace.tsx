@@ -3,6 +3,7 @@
 import { CaptureReviewQueue } from "./transactions/capture-review-queue";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
 import { RuleOfferBanner } from "./transactions/rule-offer-banner";
+import { TrustOfferBanner } from "./transactions/trust-offer-banner";
 import { useCaptureReviewWorkspace } from "./transactions/use-capture-review-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -20,6 +21,12 @@ export function TransactionsCaptureReviewWorkspace() {
     >
       <>
         <CaptureReviewSectionLinks current="capture" />
+        <TrustOfferBanner
+          rule={workspace.trustOffer}
+          isSubmitting={workspace.isSubmitting}
+          onAccept={() => void workspace.acceptTrustOffer()}
+          onDismiss={workspace.dismissTrustOffer}
+        />
         <RuleOfferBanner
           offer={workspace.ruleOffer}
           categoryName={

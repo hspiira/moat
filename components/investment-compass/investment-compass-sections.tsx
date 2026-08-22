@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { MoatRing } from "@/components/moat/moat-ring";
 import { Money } from "@/components/ui/money";
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
@@ -61,7 +60,7 @@ export function InvestmentEmptyState() {
   );
 }
 
-export function InvestmentMetricCards({
+export function InvestmentBasis({
   monthlyOutflow,
   emergencyFundMonthsCovered,
 }: {
@@ -73,38 +72,18 @@ export function InvestmentMetricCards({
   }
 
   return (
-    <Card>
-      <CardContent className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr_1fr] sm:items-center sm:gap-8">
-        <MoatRing
-          value={emergencyFundMonthsCovered / 3}
-          tone={emergencyFundMonthsCovered >= 3 ? "positive" : "moat"}
-          ariaLabel={`Emergency fund goal: ${emergencyFundMonthsCovered.toFixed(1)} of 3 target months`}
-          label={emergencyFundMonthsCovered.toFixed(1)}
-          sublabel="months"
-          size={104}
-          thickness={9}
-          className="justify-self-center sm:justify-self-start"
-        />
-        <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Emergency fund goal</p>
-          {emergencyFundMonthsCovered > 0 ? (
-            <p className="text-xl font-semibold">
-              {emergencyFundMonthsCovered.toFixed(1)} month
-              {emergencyFundMonthsCovered !== 1 ? "s" : ""}
-              <span className="text-sm font-normal text-muted-foreground"> of 3 target</span>
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Not started. This tracks a savings goal, not the balances on your home screen.
-            </p>
-          )}
-        </div>
-        <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Monthly outflow baseline</p>
-          <Money amount={monthlyOutflow} tone="negative" className="text-xl font-semibold" />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+      <div className="flex items-baseline justify-between gap-3 border-b border-border py-2">
+        <span className="text-xs text-muted-foreground">Emergency cover</span>
+        <span className="text-sm text-foreground">
+          {emergencyFundMonthsCovered.toFixed(1)} of 3 months
+        </span>
+      </div>
+      <div className="flex items-baseline justify-between gap-3 border-b border-border py-2">
+        <span className="text-xs text-muted-foreground">Going out each month</span>
+        <Money amount={monthlyOutflow} tone="negative" symbol="short" className="text-sm" />
+      </div>
+    </div>
   );
 }
 
