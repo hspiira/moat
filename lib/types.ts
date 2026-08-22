@@ -153,6 +153,7 @@ export type Transaction = {
   isRecurringCandidate?: boolean;
   matchedRuleId?: string;
   reviewedAt?: string;
+  duplicateClearedAt?: string;
   transferGroupId?: string;
   feeParentId?: string;
   projectId?: string;
@@ -486,6 +487,8 @@ export type RecurringObligation = {
   dueDatePattern?: string;
   linkedAccountId?: string;
   payee?: string;
+  startsOn?: string;
+  endsOn?: string;
   status: "active" | "paused";
   createdAt: string;
   updatedAt: string;

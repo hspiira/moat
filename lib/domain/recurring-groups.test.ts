@@ -150,3 +150,31 @@ describe("getRecurringSections", () => {
     expect(sections.outstandingTotal).toBe(110_000);
   });
 });
+
+describe("a bill outside its window", () => {
+  it("is still listed, so it can be found again", () => {
+    const ended: RecurringObligation = {
+      id: "obligation:school",
+      userId: "user:default",
+      name: "School fees",
+      categoryId: "category:school",
+      expectedAmount: 500_000,
+      cadence: "monthly",
+      dueDay: 10,
+      type: "school_fees",
+      status: "active",
+      endsOn: "2026-03",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    const sections = getRecurringSections({
+      evaluations: [],
+      obligations: [ended],
+      today: "2026-04-08",
+    });
+
+    expect(sections.offSchedule.map((entry) => entry.id)).toEqual(["obligation:school"]);
+    expect(sections.paused).toEqual([]);
+  });
+});

@@ -152,3 +152,52 @@ describe("recurring obligations", () => {
     expect(suggestions.some((obligation) => obligation.type === "sacco_contribution")).toBe(true);
   });
 });
+
+describe("a bill with a start and end month", () => {
+  const rentTransaction = buildTransaction({
+    id: "transaction:rent",
+    accountId: "account:bank",
+    type: "expense",
+    amount: 800_000,
+    occurredOn: "2026-04-05",
+    categoryId: "category:rent",
+    payee: "landlord",
+  });
+
+  it("is not expected before its first month", () => {
+    const evaluations = evaluateRecurringObligations(
+      [{ ...obligation, startsOn: "2026-05" }],
+      [rentTransaction],
+      "2026-04",
+    );
+
+    expect(evaluations).toEqual([]);
+  });
+
+  it("is not expected after its last month", () => {
+    const evaluations = evaluateRecurringObligations(
+      [{ ...obligation, endsOn: "2026-03" }],
+      [rentTransaction],
+      "2026-04",
+    );
+
+    expect(evaluations).toEqual([]);
+  });
+
+  it("is expected inside its window", () => {
+    const evaluations = evaluateRecurringObligations(
+      [{ ...obligation, startsOn: "2026-01", endsOn: "2026-12" }],
+      [rentTransaction],
+      "2026-04",
+    );
+
+    expect(evaluations).toHaveLength(1);
+    expect(evaluations[0].state).toBe("paid");
+  });
+
+  it("is expected in its first and last month, not only between them", () => {
+    const window = { ...obligation, startsOn: "2026-04", endsOn: "2026-04" };
+
+    expect(evaluateRecurringObligations([window], [rentTransaction], "2026-04")).toHaveLength(1);
+  });
+});
