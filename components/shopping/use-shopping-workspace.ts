@@ -97,7 +97,6 @@ export function useShoppingWorkspace() {
 
   const today = todayIso();
   const groups = useMemo(() => groupPlannerRows(purchases, today), [purchases, today]);
-  const estimate = useMemo(() => estimatePlannedTotal(purchases), [purchases]);
   const observations = useMemo(
     () => derivePriceObservations(lineItems, transactions),
     [lineItems, transactions],
@@ -105,6 +104,18 @@ export function useShoppingWorkspace() {
   const priceSummaries: Map<string, ItemPriceSummary> = useMemo(
     () => summarizeItemPrices(observations, today),
     [observations, today],
+  );
+  const lastPaidFor = useCallback(
+    (itemId: string) => {
+      const paid = priceSummaries.get(itemId)?.lastPaid;
+      if (!paid) return undefined;
+      return paid.unitPrice ?? (paid.amount != null ? paid.amount / (paid.quantity ?? 1) : undefined);
+    },
+    [priceSummaries],
+  );
+  const estimate = useMemo(
+    () => estimatePlannedTotal(purchases, lastPaidFor),
+    [lastPaidFor, purchases],
   );
   const recentExpenses = useMemo(
     () =>
@@ -318,6 +329,7 @@ export function useShoppingWorkspace() {
     estimate,
     observations,
     priceSummaries,
+    lastPaidFor,
     recentExpenses,
     transactions,
     accounts,

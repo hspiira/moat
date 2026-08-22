@@ -5,7 +5,18 @@ import { useMemo, useState } from "react";
 import type { PlannedPurchase } from "@/lib/types";
 
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { IconPlus } from "@tabler/icons-react";
+
 import { Button } from "@/components/ui/button";
+import { FormCardShell } from "@/components/forms/form-card-shell";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { estimateBasis } from "@/components/shopping/estimate-basis";
 import { Money } from "@/components/ui/money";
 
 import { CheckOffSheet } from "./shopping/check-off-sheet";
@@ -56,51 +67,37 @@ export function ShoppingWorkspace() {
       setupMessage="Complete onboarding before planning purchases."
     >
       <div className="grid gap-6">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Estimated total <Money amount={workspace.estimate.total} tone="neutral" />
-            {workspace.estimate.unestimatedCount > 0
-              ? ` · ${workspace.estimate.unestimatedCount} unestimated`
-              : ""}
-          </p>
-          <Button
-            size="sm"
-            disabled={selectedPurchases.length === 0 || workspace.isSubmitting}
-            onClick={() => setIsCheckOffOpen(true)}
-          >
-            Bought {selectedPurchases.length > 0 ? `(${selectedPurchases.length})` : ""}
-          </Button>
-        </div>
-
-        {isAddOpen ? (
-          <div className="grid gap-2 rounded-lg border border-border/40 p-3">
-            <PlannerAddForm
-              items={workspace.items}
-              isSubmitting={workspace.isSubmitting}
-              onAdd={(input) => {
-                void workspace.addPurchase(input);
-                setIsAddOpen(false);
-              }}
+        {/* A headline of nought is not a headline. The empty state carries the
+            page until there is something to add up. */}
+        {workspace.estimate.total > 0 || workspace.estimate.unknownCount > 0 ? (
+        <div className="grid gap-1">
+          <p className="text-sm text-muted-foreground">This trip will cost about</p>
+          <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
+            <Money
+              amount={workspace.estimate.total}
+              tone="neutral"
+              className="font-display"
             />
-            <Button
-              size="sm"
-              variant="ghost"
-              className="justify-self-start"
-              onClick={() => setIsAddOpen(false)}
-            >
-              Cancel
-            </Button>
           </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="justify-self-start"
-            onClick={() => setIsAddOpen(true)}
-          >
-            Add an item
+          <p className="text-sm text-muted-foreground">{estimateBasis(workspace.estimate)}</p>
+        </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
+            <IconPlus className="size-4" /> Add an item
           </Button>
-        )}
+          {selectedPurchases.length > 0 ? (
+            <Button
+              variant="outline"
+              disabled={workspace.isSubmitting}
+              className="flex-1 sm:flex-none sm:px-6"
+              onClick={() => setIsCheckOffOpen(true)}
+            >
+              Bought {selectedPurchases.length}
+            </Button>
+          ) : null}
+        </div>
 
         <PlannerList
           groups={workspace.groups}
@@ -116,6 +113,30 @@ export function ShoppingWorkspace() {
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
       </div>
+      <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Add an item</SheetTitle>
+            <SheetDescription>Name what you mean to buy.</SheetDescription>
+          </SheetHeader>
+          <FormCardShell
+            embedded
+            title="Add an item"
+            description="Name it and it remembers what you last paid. Leave the price out and it uses that."
+          >
+            <PlannerAddForm
+              items={workspace.items}
+              lastPaidFor={workspace.lastPaidFor}
+              isSubmitting={workspace.isSubmitting}
+              onAdd={(input) => {
+                void workspace.addPurchase(input);
+                setIsAddOpen(false);
+              }}
+            />
+          </FormCardShell>
+        </SheetContent>
+      </Sheet>
+
       <PlannerEditSheet
         purchase={editingPurchase}
         item={editingPurchase ? workspace.items.find((i) => i.id === editingPurchase.itemId) : undefined}

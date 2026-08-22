@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatMoneyShort } from "@/lib/currency";
+import { normalizeItemName } from "@/lib/domain/item-normalization";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Item } from "@/lib/types";
 
@@ -13,10 +15,12 @@ const emptyDraft = { name: "", quantity: "", estimatedUnitPrice: "", neededBy: "
 
 export function PlannerAddForm({
   items,
+  lastPaidFor,
   isSubmitting,
   onAdd,
 }: {
   items: Item[];
+  lastPaidFor?: (itemId: string) => number | undefined;
   isSubmitting: boolean;
   onAdd: (input: {
     name: string;
@@ -27,6 +31,13 @@ export function PlannerAddForm({
   }) => void;
 }) {
   const [draft, setDraft] = useState(emptyDraft);
+
+  const matchedItem = items.find(
+    (item) =>
+      !item.isArchived &&
+      normalizeItemName(item.name) === normalizeItemName(draft.name),
+  );
+  const remembered = matchedItem ? lastPaidFor?.(matchedItem.id) : undefined;
 
   const submit = () => {
     if (!draft.name.trim()) return;
@@ -75,8 +86,14 @@ export function PlannerAddForm({
           id="planner-estimate"
           inputMode="numeric"
           value={draft.estimatedUnitPrice}
+          placeholder={remembered != null ? String(remembered) : undefined}
           onChange={(event) => setDraft({ ...draft, estimatedUnitPrice: event.target.value })}
         />
+        {remembered != null && !draft.estimatedUnitPrice ? (
+          <p className="text-xs text-muted-foreground">
+            You last paid {formatMoneyShort(remembered)}. Leave this blank to use that.
+          </p>
+        ) : null}
       </div>
       <div className="grid gap-1">
         <Label htmlFor="planner-needed-by">Needed by</Label>
