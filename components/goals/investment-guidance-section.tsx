@@ -3,7 +3,7 @@
 import { AppSectionHeading } from "@/components/app-page";
 import {
   InvestmentGuidancePanels,
-  InvestmentMetricCards,
+  InvestmentBasis,
   InvestmentProfileCard,
 } from "@/components/investment-compass/investment-compass-sections";
 import { useInvestmentCompassWorkspace } from "@/components/investment-compass/use-investment-compass-workspace";
@@ -35,11 +35,11 @@ export function InvestmentGuidanceSection() {
   return (
     <section className="grid gap-4">
       <AppSectionHeading
-        title="Where to put money you are not spending"
-        description="Rule-based guidance for Uganda. No stock picks, no guaranteed returns."
+        title="Money you are not spending"
+        description="What to do with a surplus. No stock picks, no guaranteed returns."
       />
 
-      <InvestmentMetricCards
+      <InvestmentBasis
         monthlyOutflow={monthlyOutflow}
         emergencyFundMonthsCovered={emergencyFundMonthsCovered}
       />
