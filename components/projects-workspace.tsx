@@ -7,6 +7,14 @@ import { EmptyStateCard } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
+import { FormCardShell } from "@/components/forms/form-card-shell";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Money } from "@/components/ui/money";
 import { useToast } from "@/components/ui/toast";
 import { getProjectSummary, type ProjectSummary } from "@/lib/domain/projects";
@@ -28,6 +36,7 @@ export function ProjectsWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   async function load() {
     setIsLoading(true);
@@ -101,6 +110,7 @@ export function ProjectsWorkspace() {
       });
       setName("");
       setBudget("");
+      setIsFormOpen(false);
       show("Project added.", "success");
       await load();
     } catch (submitError) {
@@ -136,41 +146,69 @@ export function ProjectsWorkspace() {
       error={error}
       setupMessage="Set up your profile before tracking a project."
     >
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base">Start a project</CardTitle>
-          <CardDescription>
-            Tag transactions to it from the transaction form, including ones already recorded.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end" onSubmit={(event) => void handleCreate(event)}>
-            <InputField
-              id="project-name"
-              label="Name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Relocation"
-            />
-            <InputField
-              id="project-budget"
-              label="Budget (optional)"
-              inputMode="numeric"
-              value={budget}
-              onChange={(event) => setBudget(event.target.value)}
-              placeholder="4000000"
-            />
-            <Button type="submit" disabled={isSubmitting}>
-              Add
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <Button
+        type="button"
+        className="justify-self-start"
+        onClick={() => {
+          setError(null);
+          setIsFormOpen(true);
+        }}
+      >
+        Start a project
+      </Button>
+
+      <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Start a project</SheetTitle>
+            <SheetDescription>Name a one-off and give it a budget.</SheetDescription>
+          </SheetHeader>
+          <FormCardShell
+            embedded
+            title="Start a project"
+            description="Once it exists you can tag spending to it from the transaction form, including money you have already recorded."
+            footer={
+              <Button
+                type="submit"
+                size="lg"
+                form="project-form"
+                disabled={isSubmitting || !name.trim()}
+                className="w-full"
+              >
+                {isSubmitting ? "Saving..." : "Start project"}
+              </Button>
+            }
+          >
+            <form
+              id="project-form"
+              className="grid gap-4"
+              onSubmit={(event) => void handleCreate(event)}
+            >
+              <InputField
+                id="project-name"
+                label="Name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Relocation"
+              />
+              <InputField
+                id="project-budget"
+                label="Budget (optional)"
+                inputMode="numeric"
+                value={budget}
+                onChange={(event) => setBudget(event.target.value)}
+                placeholder="4000000"
+                hint="What you expect the whole thing to cost."
+              />
+            </form>
+          </FormCardShell>
+        </SheetContent>
+      </Sheet>
 
       {summaries.length === 0 ? (
         <EmptyStateCard
           title="No projects yet"
-          message="Start one above, then tag the spending that belongs to it."
+          message="Start one, then tag the spending that belongs to it."
         />
       ) : (
         summaries.map((summary) => (

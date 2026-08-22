@@ -30,8 +30,9 @@ test("a project survives a reload once records are encrypted", async ({ page }) 
   await page.goto("/projects");
   await page.waitForTimeout(1500);
   await unlock(page);
+  await page.getByRole("button", { name: "Start a project" }).click();
   await page.locator("#project-name").fill("Relocation");
-  await page.getByRole("button", { name: /^Add$/ }).click();
+  await page.getByRole("button", { name: "Start project" }).click();
   await page.waitForTimeout(1500);
   // Scoped to a card title on purpose: the page description contains the word
   // "relocation", and getByText matches substrings case-insensitively, so a

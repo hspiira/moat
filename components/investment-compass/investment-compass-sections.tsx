@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { AccentCardHeader } from "@/components/accent-card-header";
 import { MoatRing } from "@/components/moat/moat-ring";
 import { Money } from "@/components/ui/money";
 import { InputField } from "@/components/forms/input-field";
