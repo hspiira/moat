@@ -5,6 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 
 import { CostOfMoving } from "@/components/report/cost-of-moving";
+import { NamePartySheet } from "@/components/report/name-party-sheet";
 import { WhoMovedIt } from "@/components/report/who-moved-it";
 import { DayTransactions } from "@/components/report/day-transactions";
 import { MoneyCalendar } from "@/components/report/money-calendar";
@@ -17,6 +18,8 @@ import {
 import { AmountIndicator } from "@/components/amount-indicator";
 import { DashboardTopSpendingCategories } from "@/components/dashboard/dashboard-sections";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
+import { planNamedParty, suggestedPartyName } from "@/lib/domain/name-party";
+import { createId } from "@/lib/ids";
 import { Button } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +40,7 @@ import type {
   Account,
   Category,
   Counterparty,
+  CounterpartyNature,
   Transaction,
   UserProfile,
 } from "@/lib/types";
@@ -72,6 +76,8 @@ export function ReportWorkspace() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [namingPartyKey, setNamingPartyKey] = useState<string | null>(null);
+  const [isNaming, setIsNaming] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,6 +161,42 @@ export function ReportWorkspace() {
 
   const windowLabel = WINDOWS.find((option) => option.days === days)?.label ?? `${days} days`;
 
+  async function saveName(name: string, nature: CounterpartyNature) {
+    if (!profile || !namingPartyKey) return;
+    setIsNaming(true);
+    try {
+      const plan = planNamedParty({
+        partyKey: namingPartyKey,
+        name,
+        nature,
+        transactions,
+        existing: counterparties,
+        userId: profile.id,
+        timestamp: new Date().toISOString(),
+        id: createId(),
+      });
+
+      if (plan) {
+        await repositories.counterparties.upsert(plan.counterparty);
+        for (const transaction of plan.transactions) {
+          await repositories.transactions.upsert(transaction);
+        }
+        setCounterparties((current) => [
+          ...current.filter((entry) => entry.id !== plan.counterparty.id),
+          plan.counterparty,
+        ]);
+        const stamped = new Map(plan.transactions.map((entry) => [entry.id, entry]));
+        setTransactions((current) => current.map((entry) => stamped.get(entry.id) ?? entry));
+      }
+
+      setNamingPartyKey(null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Couldn't save the name.");
+    } finally {
+      setIsNaming(false);
+    }
+  }
+
   return (
     <div className="grid gap-5">
       <h1 className="sr-only">Report</h1>
@@ -234,6 +276,7 @@ export function ReportWorkspace() {
             transactions={windowTransactions}
             categories={categories}
             counterparties={counterparties}
+            onName={setNamingPartyKey}
           />
 
           <CostOfMoving accounts={accounts} transactions={windowTransactions} />
@@ -331,6 +374,15 @@ export function ReportWorkspace() {
           </Card>
         </>
       ) : null}
+
+      <NamePartySheet
+        key={namingPartyKey ?? "none"}
+        isOpen={namingPartyKey !== null}
+        isSubmitting={isNaming}
+        suggestion={namingPartyKey ? suggestedPartyName(namingPartyKey, transactions) : ""}
+        onOpenChange={(open) => (open ? undefined : setNamingPartyKey(null))}
+        onSave={(name, nature) => void saveName(name, nature)}
+      />
     </div>
   );
 }

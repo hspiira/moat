@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import { formatMoneyShort } from "@/lib/currency";
 import { getPartyMovement, type PartyTotal } from "@/lib/domain/party-totals";
+import { isNamedPartyKey } from "@/lib/domain/name-party";
+import { Button } from "@/components/ui/button";
 import type { Category, Counterparty, Transaction } from "@/lib/types";
 import { Money } from "@/components/ui/money";
 import {
@@ -21,10 +23,12 @@ function PartyRows({
   parties,
   categories,
   tone,
+  onName,
 }: {
   parties: PartyTotal[];
   categories: Category[];
   tone: "negative" | "positive";
+  onName: (partyKey: string) => void;
 }) {
   return (
     <ul className="grid">
@@ -61,6 +65,17 @@ function PartyRows({
                 {party.fees > 0 ? ` · ${formatMoneyShort(party.fees)} in charges` : ""}
               </span>
             </Link>
+            {isNamedPartyKey(party.key) ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-mt-1 -ml-2 h-6 text-xs text-muted-foreground"
+                onClick={() => onName(party.key)}
+              >
+                Name this party
+              </Button>
+            )}
           </li>
         );
       })}
@@ -72,10 +87,12 @@ export function WhoMovedIt({
   transactions,
   categories,
   counterparties,
+  onName,
 }: {
   transactions: Transaction[];
   categories: Category[];
   counterparties: Counterparty[];
+  onName: (partyKey: string) => void;
 }) {
   const movement = getPartyMovement(transactions, counterparties);
 
@@ -93,7 +110,12 @@ export function WhoMovedIt({
           {movement.out.length === 0 ? (
             <EmptyState>Nobody was paid in this period.</EmptyState>
           ) : (
-            <PartyRows parties={movement.out} categories={categories} tone="negative" />
+            <PartyRows
+              parties={movement.out}
+              categories={categories}
+              tone="negative"
+              onName={onName}
+            />
           )}
         </section>
 
@@ -102,7 +124,12 @@ export function WhoMovedIt({
           {movement.in.length === 0 ? (
             <EmptyState>Nothing came in during this period.</EmptyState>
           ) : (
-            <PartyRows parties={movement.in} categories={categories} tone="positive" />
+            <PartyRows
+              parties={movement.in}
+              categories={categories}
+              tone="positive"
+              onName={onName}
+            />
           )}
         </section>
       </CardContent>
