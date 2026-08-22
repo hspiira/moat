@@ -128,8 +128,8 @@ export function TransactionRulesPanel({
   return (
     <Card className="gap-0 pt-0 shadow-none">
       <AccentCardHeader
-        title="Transaction rules"
-        description="Tidy up payees and fill in details automatically. A rule never records anything on its own."
+        title="Rules"
+        description="A rule watches for something in an incoming message and fills in the rest for you. It never records a transaction on its own."
       />
       <CardContent className="grid gap-4 p-5">
         <div>
@@ -297,7 +297,19 @@ export function TransactionRulesPanel({
 
         <div className="grid gap-2">
           {rules.length === 0 ? (
-            <EmptyState className="py-6">No rules yet.</EmptyState>
+            <EmptyState className="py-6">
+              <span className="grid gap-2 text-left">
+                <span>
+                  No rules yet. A rule saves you the same edit twice. For example: when a
+                  message says <span className="text-foreground">MTNMOBILEMONEY</span>, call it{" "}
+                  <span className="text-foreground">MTN airtime</span> and file it under Airtime.
+                </span>
+                <span>
+                  The quickest way to make one is to correct a transaction once, then use
+                  &ldquo;Do this for me next time&rdquo; beside it.
+                </span>
+              </span>
+            </EmptyState>
           ) : (
             [...rules]
               .sort((left, right) => left.priority - right.priority)

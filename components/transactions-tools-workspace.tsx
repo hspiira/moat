@@ -12,7 +12,7 @@ export function TransactionsToolsWorkspace() {
     <TransactionsWorkspaceFrame
       title="Rules & corrections"
       srOnlyTitle
-      description="Rules that fill in details for you, and a record of the corrections you have made."
+      description="Teach the app to make the same fix for you next time."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
@@ -27,7 +27,12 @@ export function TransactionsToolsWorkspace() {
           onToggleRule={(rule) => void workspace.toggleRule(rule)}
         />
 
-        <CorrectionLogPanel profile={workspace.profile} />
+        <CorrectionLogPanel
+          profile={workspace.profile}
+          categories={workspace.categories}
+          isSubmitting={workspace.isSubmitting}
+          onSaveRule={(rule) => void workspace.saveRule(rule)}
+        />
       </div>
     </TransactionsWorkspaceFrame>
   );
