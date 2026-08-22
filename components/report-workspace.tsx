@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
 
+import { CostOfMoving } from "@/components/report/cost-of-moving";
 import { DayTransactions } from "@/components/report/day-transactions";
 import { MoneyCalendar } from "@/components/report/money-calendar";
 import { PositionChart } from "@/components/report/position-chart";
@@ -16,6 +17,7 @@ import { AmountIndicator } from "@/components/amount-indicator";
 import { DashboardTopSpendingCategories } from "@/components/dashboard/dashboard-sections";
 import { getSummaryForTransactions } from "@/lib/domain/summaries";
 import { Button } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/filter-chips";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
@@ -146,19 +148,12 @@ export function ReportWorkspace() {
     <div className="grid gap-5">
       <h1 className="sr-only">Report</h1>
 
-      <div className="flex items-center gap-1">
-        {WINDOWS.map((option) => (
-          <Button
-            key={option.days}
-            type="button"
-            size="sm"
-            variant={days === option.days ? "secondary" : "ghost"}
-            onClick={() => setDays(option.days)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+      <FilterChips
+        label="Period"
+        options={WINDOWS.map((option) => ({ value: option.days, label: option.label }))}
+        value={days}
+        onChange={setDays}
+      />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading your report..." /> : null}
@@ -223,6 +218,8 @@ export function ReportWorkspace() {
               />
             </CardContent>
           </Card>
+
+          <CostOfMoving accounts={accounts} transactions={windowTransactions} />
 
           <DashboardTopSpendingCategories
             categories={windowSpending.topCategories}

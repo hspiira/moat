@@ -7,8 +7,19 @@ import { IconSearch, IconX } from "@tabler/icons-react";
 
 import { partyByTransferGroup } from "@/lib/domain/party-name";
 import { searchTransactions } from "@/lib/domain/transaction-search";
+import {
+  filterByWindow,
+  LEDGER_WINDOWS,
+  parseLedgerSort,
+  parseLedgerWindow,
+  sortForLedger,
+  type LedgerSort,
+  type LedgerWindow,
+} from "@/lib/domain/ledger-view";
+import { todayIso } from "@/lib/today";
 
 import { Button } from "@/components/ui/button";
+import { FilterChips } from "@/components/ui/filter-chips";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
@@ -27,17 +38,42 @@ import { useIncrementalList } from "@/components/hooks/use-incremental-list";
 
 const LEDGER_PAGE_SIZE = 25;
 
+const WINDOW_OPTIONS = [
+  ...LEDGER_WINDOWS.map((days) => ({ value: days as LedgerWindow, label: `${days} days` })),
+  { value: null as LedgerWindow, label: "All time" },
+];
+
+const SORT_OPTIONS: ReadonlyArray<{ value: LedgerSort; label: string }> = [
+  { value: "recent", label: "Newest" },
+  { value: "largest", label: "Biggest out" },
+];
+
 export function TransactionsLedgerWorkspace() {
   const workspace = useTransactionsWorkspace();
   // Insights link here with the thing they are about already typed in, so the
   // list you land on is the list the insight was talking about.
-  const [query, setQuery] = useState(useSearchParams().get("q") ?? "");
+  const params = useSearchParams();
+  const [query, setQuery] = useState(params.get("q") ?? "");
+  const [window_, setWindow] = useState<LedgerWindow>(parseLedgerWindow(params.get("days")));
+  const [sort, setSort] = useState<LedgerSort>(parseLedgerSort(params.get("sort")));
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
 
   const visibleTransactions = useMemo(
     () =>
-      searchTransactions(workspace.transactions, query, workspace.accounts, workspace.categories),
-    [workspace.transactions, query, workspace.accounts, workspace.categories],
+      sortForLedger(
+        filterByWindow(
+          searchTransactions(
+            workspace.transactions,
+            query,
+            workspace.accounts,
+            workspace.categories,
+          ),
+          window_,
+          todayIso(),
+        ),
+        sort,
+      ),
+    [workspace.transactions, query, workspace.accounts, workspace.categories, window_, sort],
   );
 
   const {
@@ -47,7 +83,10 @@ export function TransactionsLedgerWorkspace() {
     totalCount,
     sentinelRef,
     showMore,
-  } = useIncrementalList(visibleTransactions, { pageSize: LEDGER_PAGE_SIZE, resetKey: query });
+  } = useIncrementalList(visibleTransactions, {
+    pageSize: LEDGER_PAGE_SIZE,
+    resetKey: `${query}|${window_}|${sort}`,
+  });
   const partyByGroup = useMemo(
     () => partyByTransferGroup(workspace.transactions),
     [workspace.transactions],
@@ -137,9 +176,21 @@ export function TransactionsLedgerWorkspace() {
           ) : null}
         </div>
 
-        {query && visibleTransactions.length === 0 ? (
+        <div className="grid gap-1.5">
+          <FilterChips
+            label="Period"
+            options={WINDOW_OPTIONS}
+            value={window_}
+            onChange={setWindow}
+          />
+          <FilterChips label="Order" options={SORT_OPTIONS} value={sort} onChange={setSort} />
+        </div>
+
+        {visibleTransactions.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            No transactions match &ldquo;{query.trim()}&rdquo;.
+            {query
+              ? `No transactions match "${query.trim()}"${window_ ? ` in the last ${window_} days` : ""}.`
+              : `Nothing recorded in the last ${window_} days.`}
           </p>
         ) : null}
         {query && visibleTransactions.length > 0 ? (
@@ -150,6 +201,12 @@ export function TransactionsLedgerWorkspace() {
         ) : null}
 
         <TransactionList
+          grouped={sort === "recent"}
+          caption={
+            sort === "largest"
+              ? "Biggest money out first. Transfers show as a matched pair."
+              : "Newest first. Transfers show as a matched pair."
+          }
           accounts={workspace.accounts}
           categories={workspace.categories}
           counterparties={workspace.counterparties}

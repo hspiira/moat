@@ -1,6 +1,10 @@
 import { FEES_CATEGORY_NAME } from "@/lib/app-state/defaults";
 import { formatMoney } from "@/lib/currency";
-import { getFeeLoad } from "@/lib/domain/fees";
+import {
+  dearestAccountToMoveFrom,
+  getFeeLoad,
+  getFeeLoadByAccount,
+} from "@/lib/domain/fees";
 import { detectBalanceGapsByAccount } from "@/lib/domain/balance-gap";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { projectSpendForCategory } from "@/lib/domain/projects";
@@ -296,6 +300,40 @@ const idleLendingRule: InsightRule = ({
   };
 };
 
+// Enough moved through an account for its rate to mean something rather than
+// reflect one unlucky charge.
+const MIN_MOVED_FOR_RATE = 100_000;
+
+const dearAccountRule: InsightRule = ({ transactions, accounts, periodLabel }) => {
+  const dearest = dearestAccountToMoveFrom(transactions, MIN_MOVED_FOR_RATE);
+  if (!dearest || dearest.costPerThousandMoved < 1) return null;
+
+  const account = accounts.find((entry) => entry.id === dearest.accountId);
+  const cheaper = getFeeLoadByAccount(transactions)
+    .filter(
+      (load) =>
+        load.accountId !== dearest.accountId &&
+        load.movedOut >= MIN_MOVED_FOR_RATE &&
+        load.costPerThousandMoved < dearest.costPerThousandMoved,
+    )
+    .sort((left, right) => left.costPerThousandMoved - right.costPerThousandMoved)[0];
+  const cheaperAccount = cheaper
+    ? accounts.find((entry) => entry.id === cheaper.accountId)
+    : undefined;
+
+  const comparison = cheaperAccount
+    ? ` ${cheaperAccount.name} costs ${formatMoney(Math.round(cheaper!.costPerThousandMoved))} for the same Sh 1,000.`
+    : "";
+
+  return {
+    id: "insight:dear-account",
+    title: `${account?.name ?? "An account"} costs ${formatMoney(Math.round(dearest.costPerThousandMoved))} per Sh 1,000 you move`,
+    body: `${formatMoney(dearest.fees)} in charges ${periodPhrase(periodLabel)} on ${formatMoney(dearest.movedOut)} moved.${comparison}`,
+    href: "/report",
+    priority: 2,
+  };
+};
+
 const balanceGapRule: InsightRule = ({ allTransactions, accounts }) => {
   const gaps = detectBalanceGapsByAccount(allTransactions).filter(
     (gap) => Math.abs(gap.gap) >= MIN_BALANCE_GAP,
@@ -362,7 +400,7 @@ const runwayRule: InsightRule = ({ allTransactions, accounts, now }) => {
     id: "insight:runway",
     title: `${formatMoney(runway.liquid)} spendable, going out at ${formatMoney(runway.dailyBurn)} a day`,
     body: `${when}, on the last ${runway.daysMeasured} days of spending. At this rate it is gone by ${runway.runsOutOn}, before counting anything still to come in.`,
-    href: "/report",
+    href: "/transactions?days=30&sort=largest",
     priority: days <= URGENT_RUNWAY_DAYS ? 1 : 2,
   };
 };
@@ -402,6 +440,7 @@ const INSIGHT_RULES: InsightRule[] = [
   runwayRule,
   balanceGapRule,
   feeLoadRule,
+  dearAccountRule,
   incomeSwingRule,
   goalPaceRule,
   untrackedBillRule,
