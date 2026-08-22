@@ -2,6 +2,7 @@
 
 import { CaptureReviewQueue } from "./transactions/capture-review-queue";
 import { CaptureReviewSectionLinks } from "./transactions/capture-review-section-links";
+import { RuleOfferBanner } from "./transactions/rule-offer-banner";
 import { useCaptureReviewWorkspace } from "./transactions/use-capture-review-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -12,13 +13,24 @@ export function TransactionsCaptureReviewWorkspace() {
     <TransactionsWorkspaceFrame
       title="Capture review"
       srOnlyTitle
-      description="Resolve captured items before they reach the ledger."
+      description="Check what was read from a message before it counts towards your money."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
       <>
         <CaptureReviewSectionLinks current="capture" />
+        <RuleOfferBanner
+          offer={workspace.ruleOffer}
+          categoryName={
+            workspace.categories.find(
+              (category) => category.id === workspace.ruleOffer?.effectCategoryId,
+            )?.name ?? null
+          }
+          isSubmitting={workspace.isSubmitting}
+          onAccept={() => void workspace.acceptRuleOffer()}
+          onDismiss={workspace.dismissRuleOffer}
+        />
         <CaptureReviewQueue
           accounts={workspace.accounts}
           categories={workspace.categories}

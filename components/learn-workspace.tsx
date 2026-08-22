@@ -9,6 +9,7 @@ import {
   LoadingStateCard,
   SetupRequiredCard,
 } from "@/components/page-shell/page-state";
+import { defaultResourceLinks } from "@/lib/app-state/defaults";
 import { repositories } from "@/lib/repositories/instance";
 import type { ResourceLink, UserProfile } from "@/lib/types";
 import {
@@ -58,7 +59,9 @@ export function LearnWorkspace() {
       ]);
 
       setProfile(nextProfile);
-      setResources(sortResources(nextResources));
+      // These links are app content, not the owner's records, so an empty store
+      // means nothing was seeded rather than that there is nothing to show.
+      setResources(sortResources(nextResources.length > 0 ? nextResources : defaultResourceLinks));
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Couldn't load learning resources. Please try again.",

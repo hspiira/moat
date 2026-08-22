@@ -101,6 +101,9 @@ export type UserProfile = {
   currency: "UGX";
   salaryCycle: SalaryCycle;
   primaryIncomeType: IncomeType;
+  // What onboarding asked once. The answers in force live on InvestmentProfile,
+  // which is the only copy the owner can change, so read these two only to seed
+  // an InvestmentProfile that does not exist yet.
   riskComfort: RiskComfort;
   investmentHorizonMonths: number;
   createdAt: string;
@@ -153,6 +156,7 @@ export type Transaction = {
   isRecurringCandidate?: boolean;
   matchedRuleId?: string;
   reviewedAt?: string;
+  duplicateClearedAt?: string;
   transferGroupId?: string;
   feeParentId?: string;
   projectId?: string;
@@ -486,6 +490,8 @@ export type RecurringObligation = {
   dueDatePattern?: string;
   linkedAccountId?: string;
   payee?: string;
+  startsOn?: string;
+  endsOn?: string;
   status: "active" | "paused";
   createdAt: string;
   updatedAt: string;
@@ -537,6 +543,7 @@ export type InvestmentGuidance = {
   recommendedProducts: string[];
   warnings: string[];
   rationale: string[];
+  removals: string[];
   shouldPrioritizeEmergencyFund: boolean;
   shouldPrioritizeDebtRepayment: boolean;
 };

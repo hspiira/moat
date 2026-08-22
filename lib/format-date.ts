@@ -32,3 +32,10 @@ export function formatDayHeading(iso: string, options?: FormatOptions): string {
     year: yearFor(date, options),
   });
 }
+
+export function formatMonthLabel(period: string): string {
+  const month = period.slice(0, 7);
+  const date = parseIso(`${month}-01`);
+  if (!date) return period;
+  return date.toLocaleDateString("en-UG", { month: "long", year: "numeric" });
+}

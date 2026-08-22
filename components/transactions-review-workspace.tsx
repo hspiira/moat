@@ -38,6 +38,7 @@ export function TransactionsReviewWorkspace() {
           onExport={workspace.exportMonthClose}
           onClose={() => void workspace.closeMonth()}
           onOpenTransaction={(transaction) => setDetailTransactionId(transaction.id)}
+          onKeepDuplicates={(group) => void workspace.keepDuplicates(group)}
         />
 
         <TransactionDetailSheet

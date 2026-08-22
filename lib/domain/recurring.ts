@@ -184,12 +184,26 @@ export function buildSuggestedRecurringObligations(
   return [...debtObligations, ...saccoObligations];
 }
 
+export function isObligationActiveInPeriod(
+  obligation: Pick<RecurringObligation, "startsOn" | "endsOn">,
+  period: string,
+): boolean {
+  const startsIn = obligation.startsOn?.slice(0, 7);
+  const endsIn = obligation.endsOn?.slice(0, 7);
+  if (startsIn && startsIn > period) return false;
+  if (endsIn && endsIn < period) return false;
+  return true;
+}
+
 export function evaluateRecurringObligations(
   obligations: MatchableObligation[],
   transactions: Transaction[],
   period: string,
 ): RecurringEvaluation[] {
-  const activeObligations = obligations.filter((obligation) => obligation.status === "active");
+  const activeObligations = obligations.filter(
+    (obligation) =>
+      obligation.status === "active" && isObligationActiveInPeriod(obligation, period),
+  );
   const periodTransactions = transactions.filter((transaction) =>
     isTransactionInPeriod(transaction, period),
   );

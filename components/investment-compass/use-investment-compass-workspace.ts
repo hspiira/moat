@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { createBootstrapState } from "@/lib/app-state/bootstrap";
+import { defaultResourceLinks } from "@/lib/app-state/defaults";
 import { deriveGoalCurrentAmount } from "@/lib/domain/goals";
 import { getInvestmentGuidance } from "@/lib/domain/guidance";
 import { announceLocalSave } from "@/lib/local-save";
@@ -93,7 +94,7 @@ export function useInvestmentCompassWorkspace() {
     try {
       const nextProfile = await repositories.userProfile.get();
       const nextResources = await repositories.resources.list();
-      setResources(nextResources);
+      setResources(nextResources.length > 0 ? nextResources : defaultResourceLinks);
       setProfile(nextProfile);
 
       if (!nextProfile) {

@@ -35,6 +35,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
+import { formatMonthLabel } from "@/lib/format-date";
 import { parseAmountInput } from "@/lib/parse-amount";
 import { validateAmount, validateInteger } from "@/lib/validation";
 
@@ -47,12 +48,23 @@ type ObligationFormState = {
   dueDay: string;
   linkedAccountId: string;
   payee: string;
+  startsOn: string;
+  endsOn: string;
 };
 
 function isPersistedObligation(
   obligation: RecurringObligation | SuggestedRecurringObligation,
 ): obligation is RecurringObligation {
   return !isSuggestedRecurringObligation(obligation.id);
+}
+
+function describeBillWindow(obligation: RecurringObligation) {
+  if (obligation.startsOn && obligation.endsOn) {
+    return `runs ${formatMonthLabel(obligation.startsOn)} to ${formatMonthLabel(obligation.endsOn)}`;
+  }
+  if (obligation.startsOn) return `starts ${formatMonthLabel(obligation.startsOn)}`;
+  if (obligation.endsOn) return `ended ${formatMonthLabel(obligation.endsOn)}`;
+  return "outside this month";
 }
 
 const defaultObligationForm: ObligationFormState = {
@@ -64,6 +76,8 @@ const defaultObligationForm: ObligationFormState = {
   dueDay: "1",
   linkedAccountId: "",
   payee: "",
+  startsOn: "",
+  endsOn: "",
 };
 
 type Props = {
@@ -90,7 +104,11 @@ export function RecurringObligationsPanel({
   onToggleObligation,
 }: Props) {
   const [form, setForm] = useState<ObligationFormState>(defaultObligationForm);
-  const [fieldErrors, setFieldErrors] = useState<{ expectedAmount?: string; dueDay?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    expectedAmount?: string;
+    dueDay?: string;
+    endsOn?: string;
+  }>({});
   const [isOpen, setIsOpen] = useState(false);
   const linkedAccountOptions = [
     { value: "__none__", label: "Any account" },
@@ -110,13 +128,16 @@ export function RecurringObligationsPanel({
 
   function handleSave() {
     if (!form.name.trim() || !form.categoryId) return;
-    const nextErrors: { expectedAmount?: string; dueDay?: string } = {};
+    const nextErrors: { expectedAmount?: string; dueDay?: string; endsOn?: string } = {};
     const amountError = validateAmount(form.expectedAmount, {
       requiredMessage: "Enter the expected amount.",
     });
     if (amountError) nextErrors.expectedAmount = amountError;
     const dueDayError = validateInteger(form.dueDay, 1, 31, "Enter a due day.");
     if (dueDayError) nextErrors.dueDay = dueDayError;
+    if (form.startsOn && form.endsOn && form.endsOn < form.startsOn) {
+      nextErrors.endsOn = "The last month cannot be before the first.";
+    }
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       return;
@@ -132,6 +153,8 @@ export function RecurringObligationsPanel({
       dueDatePattern: undefined,
       linkedAccountId: form.linkedAccountId || undefined,
       payee: form.payee.trim() || undefined,
+      startsOn: form.startsOn || undefined,
+      endsOn: form.endsOn || undefined,
       status: "active",
     });
     setForm(defaultObligationForm);
@@ -141,7 +164,8 @@ export function RecurringObligationsPanel({
   const isEmpty =
     sections.outstanding.length === 0 &&
     sections.paid.length === 0 &&
-    sections.paused.length === 0;
+    sections.paused.length === 0 &&
+    sections.offSchedule.length === 0;
 
   return (
     <div id="recurring" className="grid min-w-0 scroll-mt-20 gap-4">
@@ -197,6 +221,20 @@ export function RecurringObligationsPanel({
                   onToggle={onToggleObligation}
                   onTrackSuggestion={(seed) => openForCreate(seed)}
                 />
+              ))}
+            </BillSection>
+          ) : null}
+
+          {sections.offSchedule.length > 0 ? (
+            <BillSection title="Not due this month">
+              {sections.offSchedule.map((obligation) => (
+                <div key={obligation.id} className="min-w-0 py-3">
+                  <div className="truncate text-sm text-muted-foreground">{obligation.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {formatMoney(obligation.expectedAmount, "UGX")} ·{" "}
+                    {describeBillWindow(obligation)}
+                  </div>
+                </div>
               ))}
             </BillSection>
           ) : null}
@@ -333,6 +371,27 @@ export function RecurringObligationsPanel({
                   }
                 />
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField
+                  id="obligation-starts-on"
+                  label="First month (optional)"
+                  type="month"
+                  value={form.startsOn}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, startsOn: event.target.value }))
+                  }
+                />
+                <InputField
+                  id="obligation-ends-on"
+                  label="Last month (optional)"
+                  type="month"
+                  value={form.endsOn}
+                  error={fieldErrors.endsOn}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, endsOn: event.target.value }))
+                  }
+                />
+              </div>
               <InputField
                 id="obligation-payee"
                 label="Payee"
@@ -453,6 +512,8 @@ function BillRow({
                   categoryId: obligation.categoryId,
                   expectedAmount: String(obligation.expectedAmount),
                   dueDay: String(obligation.dueDay ?? 1),
+                  startsOn: obligation.startsOn?.slice(0, 7) ?? "",
+                  endsOn: obligation.endsOn?.slice(0, 7) ?? "",
                 })
               }
             >

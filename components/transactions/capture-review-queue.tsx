@@ -28,9 +28,10 @@ type CaptureReviewQueueProps = {
 };
 
 const emptyMessages: Record<CaptureReviewSection, string> = {
-  to_review: "Nothing waiting for review.",
-  approved: "No captures have been approved yet.",
-  rejected: "No captures have been rejected.",
+  to_review:
+    "Nothing waiting. Paste an SMS or a mobile-money notification and what it reads lands here first, so you can check it before it counts.",
+  approved: "Nothing approved yet. What you approve here becomes a transaction.",
+  rejected: "Nothing rejected yet. What you reject here is left out of your totals.",
 };
 
 export function CaptureReviewQueue({

@@ -5,9 +5,10 @@ import { expectLedgerIntact, openSeededApp } from "./harness";
 test("a project totals what it cost across categories", async ({ page }) => {
   const { errors } = await openSeededApp(page, "/projects");
 
+  await page.getByRole("button", { name: "Start a project" }).click();
   await page.locator("#project-name").fill("Relocation");
   await page.locator("#project-budget").fill("4000000");
-  await page.getByRole("button", { name: /^Add$/ }).click();
+  await page.getByRole("button", { name: "Start project" }).click();
   await page.waitForTimeout(1500);
 
   await expect(page.getByText("Relocation").first()).toBeVisible();

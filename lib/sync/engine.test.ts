@@ -350,9 +350,92 @@ async function pullPage(params: { ids: string[]; nextSince?: string; hasMore: bo
   });
 }
 
+async function pullPageWith(records: unknown[], hasMore = false) {
+  return jsonResponse({
+    syncedAt: "2026-04-06T12:00:00.000Z",
+    records,
+    hasMore,
+  });
+}
+
+async function goodRecord(id: string, index = 0) {
+  return {
+    entityType: "categories",
+    entityId: id,
+    payload: await sealSyncPayload(JSON.stringify({ id })),
+    deleted: false,
+    updatedAt: `2026-04-06T12:00:0${index}.000Z`,
+    serverVersionToken: `sv:${id}`,
+  };
+}
+
 function urlsFrom(fetchMock: ReturnType<typeof vi.fn>): string[] {
   return fetchMock.mock.calls.map((call) => String(call[0]));
 }
+
+describe("runHostedSync robustness", () => {
+  let consoleError: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  /* A record of a type this build does not know means the server is ahead of
+     this app. It is skipped without noise, and the rest of the page applies. */
+  it("applies the rest of a page when one record is of an unknown type", async () => {
+    const repositories = createRepositories([], hostedProfile());
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      await pullPageWith([
+        await goodRecord("category:1", 0),
+        {
+          entityType: "somethingThisAppDoesNotKnow",
+          entityId: "x1",
+          payload: await sealSyncPayload(JSON.stringify({ id: "x1" })),
+          deleted: false,
+          updatedAt: "2026-04-06T12:00:01.000Z",
+          serverVersionToken: "sv:x1",
+        },
+        await goodRecord("category:2", 2),
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runHostedSync({
+      repositories,
+      profile: hostedProfile(),
+      isOnline: true,
+    });
+
+    expect(repositories.categories.upsert).toHaveBeenCalledTimes(2);
+    expect(result.error).toBeUndefined();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  /* A failure part way through the push must not rewrite items the server
+     already confirmed. Their attempt counts drive stuck-row reporting. */
+  it("keeps the synced status of a batch that already went through", async () => {
+    const items = Array.from({ length: 3 }, (_, index) => pendingItem(index));
+    const repositories = createRepositories(items, hostedProfile());
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          syncedAt: "2026-04-06T12:00:00.000Z",
+          results: items.map((item) => ({ outboxId: item.id, status: "synced" })),
+        }),
+      )
+      .mockRejectedValueOnce(new Error("network died during the pull"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runHostedSync({ repositories, profile: hostedProfile(), isOnline: true });
+
+    const outbox = await repositories.syncOutbox.listByUser("u1");
+    expect(outbox.map((item) => item.status)).toEqual(["synced", "synced", "synced"]);
+    expect(outbox.every((item) => item.attempts === 1)).toBe(true);
+  });
+});
 
 describe("runHostedSync pull paging", () => {
   it("pulls even when there is nothing queued to push", async () => {

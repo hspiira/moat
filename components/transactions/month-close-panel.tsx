@@ -16,15 +16,8 @@ import type { RecurringEvaluation } from "@/lib/domain/recurring";
 import { getMonthCloseBlockers, getMonthCloseChecks } from "@/lib/domain/month-close-blockers";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
-import { formatDate } from "@/lib/format-date";
+import { formatDate, formatMonthLabel } from "@/lib/format-date";
 import type { Account } from "@/lib/types";
-
-function formatMonthLabel(period: string) {
-  const date = new Date(`${period}-01T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? period
-    : date.toLocaleDateString("en-UG", { month: "long", year: "numeric" });
-}
 
 type Props = {
   period: string;
@@ -36,6 +29,7 @@ type Props = {
   onExport: () => void;
   onClose: () => void;
   onOpenTransaction: (transaction: Transaction) => void;
+  onKeepDuplicates: (group: Transaction[]) => void;
 };
 
 const groupIcons = {
@@ -113,6 +107,7 @@ export function MonthClosePanel({
   onExport,
   onClose,
   onOpenTransaction,
+  onKeepDuplicates,
 }: Props) {
   const monthLabel = formatMonthLabel(period);
   const { groups, total } = getMonthCloseBlockers({ evaluation, recurringEvaluations });
@@ -196,29 +191,49 @@ export function MonthClosePanel({
 
                   {group.kind === "duplicate"
                     ? group.entries.map((entry) => (
-                        <BlockerRow
-                          key={entry.id}
-                          onClick={() => onOpenTransaction(entry.transactions[0])}
-                        >
-                          <div className="truncate text-sm text-foreground">
-                            {formatDate(entry.transactions[0].occurredOn)} ·{" "}
-                            {entry.transactions.length} matching records
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="truncate text-xs text-muted-foreground">
-                              {entry.transactions[0].payee ??
-                                entry.transactions[0].rawPayee ??
-                                "No payee"}
-                            </span>
-                            <Money
-                              amount={entry.transactions[0].amount}
-                              currency="UGX"
-                              tone="negative"
-                              signed
-                              className="shrink-0 text-sm font-semibold"
+                        <div key={entry.id} className="min-w-0 py-3">
+                          <button
+                            type="button"
+                            onClick={() => onOpenTransaction(entry.transactions[0])}
+                            className="flex w-full min-w-0 items-center gap-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm text-foreground">
+                                {formatDate(entry.transactions[0].occurredOn)} ·{" "}
+                                {entry.transactions.length} matching records
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {entry.transactions[0].payee ??
+                                    entry.transactions[0].rawPayee ??
+                                    "No payee"}
+                                </span>
+                                <Money
+                                  amount={entry.transactions[0].amount}
+                                  currency="UGX"
+                                  tone="negative"
+                                  signed
+                                  className="shrink-0 text-sm font-semibold"
+                                />
+                              </div>
+                            </div>
+                            <IconChevronRight
+                              aria-hidden
+                              className="size-4 shrink-0 text-muted-foreground"
                             />
-                          </div>
-                        </BlockerRow>
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isSubmitting}
+                            onClick={() => onKeepDuplicates(entry.transactions)}
+                            className="mt-1 -ml-2 h-7 text-xs text-muted-foreground"
+                          >
+                            {entry.transactions.length > 2
+                              ? "Not duplicates, keep all"
+                              : "Not a duplicate, keep both"}
+                          </Button>
+                        </div>
                       ))
                     : null}
 

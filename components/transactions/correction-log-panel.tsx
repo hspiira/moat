@@ -1,14 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { newestFirst } from "@/lib/domain/correction-log-pruning";
+import { buildRuleFromCorrection, type RuleDraft } from "@/lib/domain/rule-from-correction";
 import { repositories } from "@/lib/repositories/instance";
-import type { CorrectionLog, UserProfile } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
+import type { Category, CorrectionLog, UserProfile } from "@/lib/types";
+import { formatDate } from "@/lib/format-date";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export function CorrectionLogPanel({ profile }: { profile: UserProfile | null }) {
+function describeChange(
+  log: CorrectionLog,
+  nameOfCategory: (categoryId: string) => string,
+): string[] {
+  const changes: string[] = [];
+  const readPayee = log.originalSnapshot.payee.trim() || "no payee";
+  const fixedPayee = log.approvedSnapshot.payee.trim();
+
+  if (fixedPayee && fixedPayee !== log.originalSnapshot.payee.trim()) {
+    changes.push(`You renamed ${readPayee} to ${fixedPayee}.`);
+  }
+
+  if (log.approvedSnapshot.categoryId !== log.originalSnapshot.categoryId) {
+    changes.push(
+      `You moved it from ${nameOfCategory(log.originalSnapshot.categoryId)} to ${nameOfCategory(
+        log.approvedSnapshot.categoryId,
+      )}.`,
+    );
+  }
+
+  if (log.approvedSnapshot.type !== log.originalSnapshot.type) {
+    changes.push(`You changed it from ${log.originalSnapshot.type} to ${log.approvedSnapshot.type}.`);
+  }
+
+  return changes.length > 0 ? changes : ["You checked it and left it as read."];
+}
+
+export function CorrectionLogPanel({
+  profile,
+  categories,
+  isSubmitting,
+  onSaveRule,
+}: {
+  profile: UserProfile | null;
+  categories: Category[];
+  isSubmitting: boolean;
+  onSaveRule: (rule: RuleDraft) => void;
+}) {
   const [logs, setLogs] = useState<CorrectionLog[]>([]);
+
+  const nameOfCategory = useMemo(() => {
+    const byId = new Map(categories.map((category) => [category.id, category.name]));
+    return (categoryId: string) => byId.get(categoryId) ?? "no category";
+  }, [categories]);
 
   useEffect(() => {
     async function loadLogs() {
@@ -18,44 +63,62 @@ export function CorrectionLogPanel({ profile }: { profile: UserProfile | null })
       }
 
       const stored = await repositories.correctionLogs.listByUser(profile.id);
-      setLogs(stored.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8));
+      setLogs(newestFirst(stored).slice(0, 8));
     }
 
     void loadLogs();
   }, [profile]);
 
   return (
-    <Card className="gap-0 pt-0 shadow-none">
-      <CardContent className="grid gap-4 p-5">
-        <div className="grid gap-1">
-          <div className="text-sm text-foreground">Correction log</div>
-          <div className="text-sm text-muted-foreground">
-            A record of edits you made to captured items before saving them.
-          </div>
-        </div>
+    <div className="grid content-start gap-3">
+      <div className="grid gap-0.5">
+        <h2 className="font-display text-base font-semibold">Corrections you have made</h2>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Where a message was read wrongly and you fixed it. Turn a fix into a rule and it is
+          fixed for you next time.
+        </p>
+      </div>
 
-        {logs.length === 0 ? (
-          <EmptyState className="py-6">No capture corrections have been logged yet.</EmptyState>
-        ) : (
-          <div className="grid gap-2">
-            {logs.map((log) => (
-              <div key={log.id} className="grid gap-1 px-4 py-3">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-foreground">{log.parserLabel ?? "Captured item"}</span>
-                  <span className="text-muted-foreground">{log.createdAt.slice(0, 10)}</span>
+      {logs.length === 0 ? (
+        <EmptyState className="py-6">
+          Nothing yet. This fills up as you correct transactions read from messages.
+        </EmptyState>
+      ) : (
+        <div className="grid">
+          {logs.map((log) => {
+            const draft = buildRuleFromCorrection(log);
+            return (
+              <div key={log.id} className="grid gap-1.5 border-b border-border py-3 last:border-b-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="truncate text-sm text-foreground">
+                    {log.parserLabel ?? "Read from a message"}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatDate(log.createdAt)}
+                  </span>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {log.originalSnapshot.payee || "Unlabeled"} → {log.approvedSnapshot.payee || "Unlabeled"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {log.originalSnapshot.type} / {log.originalSnapshot.categoryId} → {log.approvedSnapshot.type} /{" "}
-                  {log.approvedSnapshot.categoryId}
-                </div>
+                {describeChange(log, nameOfCategory).map((change) => (
+                  <p key={change} className="text-xs leading-5 text-muted-foreground">
+                    {change}
+                  </p>
+                ))}
+                {draft ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSubmitting}
+                    className="-ml-2 h-7 justify-self-start text-xs"
+                    onClick={() => onSaveRule(draft)}
+                  >
+                    Do this for me next time
+                  </Button>
+                ) : null}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

@@ -482,6 +482,37 @@ export function useTransactionsWorkspace() {
     ],
   );
 
+  const keepDuplicates = useCallback(
+    async (group: Transaction[]) => {
+      if (!profile) return;
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        const timestamp = new Date().toISOString();
+        for (const transaction of group) {
+          await repositories.transactions.upsert({
+            ...transaction,
+            duplicateClearedAt: timestamp,
+            updatedAt: timestamp,
+          });
+        }
+
+        setLastSavedAt(timestamp);
+        show("Kept both. They won't be flagged again.", "success");
+        await refreshMonthCloseState(profile.id);
+        await loadWorkspace();
+      } catch (keepError) {
+        const message = errorMessage(keepError, "Couldn't clear the duplicate.");
+        setError(message);
+        show(message, "error");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [loadWorkspace, profile, refreshMonthCloseState, show],
+  );
+
   const saveCapturedTransactions = useCallback(
     async (candidates: ParsedCaptureCandidate[]) => {
       if (!profile || candidates.length === 0) return;
@@ -565,6 +596,7 @@ export function useTransactionsWorkspace() {
     beginTransactionEdit,
     handleDeleteTransaction,
     saveCapturedTransactions,
+    keepDuplicates,
     saveRule: rulesAndObligations.saveRule,
     toggleRule: rulesAndObligations.toggleRule,
     saveObligation: rulesAndObligations.saveObligation,

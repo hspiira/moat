@@ -57,6 +57,7 @@ export function InvestmentGuidanceSection() {
         <InvestmentGuidancePanels
           recommendedProducts={guidance.recommendedProducts}
           rationale={guidance.rationale}
+          removals={guidance.removals}
           warnings={guidance.warnings}
           regulatedResources={regulatedResources}
         />

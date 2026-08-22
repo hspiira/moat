@@ -5,7 +5,13 @@ import {
   encryptRecordForStorage,
   hasActiveRecordCryptoKey,
   setActiveRecordCryptoKey,
+  storesWithRecordMetadata,
 } from "@/lib/security/record-crypto";
+import {
+  USER_ID_INDEX,
+  getIndexedDbStoreIndexes,
+} from "@/lib/repositories/indexeddb/client";
+import { storeNames, type StoreName } from "@/lib/repositories/store-names";
 
 afterEach(() => {
   setActiveRecordCryptoKey(null);
@@ -64,5 +70,20 @@ describe("record encryption helpers", () => {
 
     setActiveRecordCryptoKey(null);
     await expect(decryptRecordFromStorage(stored)).rejects.toThrow("Moat is locked");
+  });
+});
+
+describe("record metadata covers every store looked up by user", () => {
+  it("leaves no store queryable by userId without a metadata entry", () => {
+    const byUserId = (Object.values(storeNames) as StoreName[]).filter((store) =>
+      getIndexedDbStoreIndexes(store).includes(USER_ID_INDEX),
+    );
+
+    const missing = byUserId.filter((store) => !storesWithRecordMetadata.includes(store));
+
+    expect(
+      missing,
+      "these stores index userId but encrypt it away, so listByUser returns nothing once a PIN is set",
+    ).toEqual([]);
   });
 });

@@ -44,6 +44,7 @@ export type RecurringSections = {
   outstanding: OutstandingBill[];
   paid: OutstandingBill[];
   paused: RecurringObligation[];
+  offSchedule: RecurringObligation[];
   outstandingTotal: number;
 };
 
@@ -64,6 +65,7 @@ export function getRecurringSections({
   });
 
   const described = evaluations.map(describe);
+  const evaluated = new Set(evaluations.map((entry) => entry.obligation.id));
 
   const outstanding = described
     .filter((entry) => entry.evaluation.state !== "paid")
@@ -77,6 +79,11 @@ export function getRecurringSections({
     outstanding,
     paid: described.filter((entry) => entry.evaluation.state === "paid"),
     paused: obligations.filter((obligation) => obligation.status !== "active"),
+    // An active bill outside its start/end months gets no evaluation, so list it
+    // here or it disappears from the page altogether.
+    offSchedule: obligations.filter(
+      (obligation) => obligation.status === "active" && !evaluated.has(obligation.id),
+    ),
     outstandingTotal: outstanding.reduce((sum, entry) => sum + entry.stillOwed, 0),
   };
 }
