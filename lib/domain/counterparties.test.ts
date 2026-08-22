@@ -7,6 +7,7 @@ import {
   findCounterpartyByName,
   normalizeCounterpartyName,
   resolveCounterparty,
+  owesOrIsOwed,
   widenKind,
 } from "@/lib/domain/counterparties";
 import { borrowingPoolAccountId } from "@/lib/domain/borrowing";
@@ -183,5 +184,26 @@ describe("backfillCounterparties", () => {
 
     expect(result.counterparties).toEqual([]);
     expect(result.transactions[0].counterpartyId).toBe("counterparty:1");
+  });
+});
+
+describe("a party you only pay", () => {
+  it("takes on a debt side the first time one appears", () => {
+    expect(widenKind("none", "borrower")).toBe("borrower");
+    expect(widenKind("lender", "none")).toBe("lender");
+  });
+
+  it("is not made both by being paid and then lent to", () => {
+    expect(widenKind("none", "none")).toBe("none");
+  });
+
+  it("still becomes both when two real and opposite sides appear", () => {
+    expect(widenKind("borrower", "lender")).toBe("both");
+  });
+
+  it("is not counted among those who owe you or are owed", () => {
+    expect(owesOrIsOwed("none")).toBe(false);
+    expect(owesOrIsOwed("borrower")).toBe(true);
+    expect(owesOrIsOwed("both")).toBe(true);
   });
 });
