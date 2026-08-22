@@ -33,6 +33,8 @@ const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>
   recurringObligations: (entity) => ({ userId: String(entity.userId) }),
   monthCloses: (entity) => ({ userId: String(entity.userId), period: String(entity.period) }),
   categories: (entity) => ({ userId: String(entity.userId), isDefault: String(entity.isDefault) }),
+  counterparties: (entity) => ({ userId: String(entity.userId) }),
+  projects: (entity) => ({ userId: String(entity.userId) }),
   goals: (entity) => ({ userId: String(entity.userId) }),
   budgets: (entity) => ({ userId: String(entity.userId), month: String(entity.month) }),
   investmentProfiles: (entity) => ({ userId: String(entity.userId) }),
@@ -43,6 +45,11 @@ const metadataFields: Partial<Record<StoreName, (entity: Record<string, unknown>
   plannedPurchases: (entity) => ({ userId: String(entity.userId) }),
   transactionLineItems: (entity) => ({ userId: String(entity.userId) }),
 };
+
+// Every store queried through its userId index has to appear above, or the
+// encrypted record carries no userId to match on and listByUser finds nothing.
+// The write still succeeds, which is why this fails silently.
+export const storesWithRecordMetadata = Object.keys(metadataFields) as StoreName[];
 
 function monthOf(occurredOn: unknown): string {
   return String(occurredOn).slice(0, 7);
