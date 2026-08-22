@@ -16,13 +16,11 @@ import type {
 import {
   NEW_COUNTERPARTY,
   describeTransferCounterparty,
-  type TransferDirection,
 } from "@/lib/domain/transfer-counterparty";
 import { activeProjects } from "@/lib/domain/projects";
 import { getBorrowingPortfolio } from "@/lib/domain/borrowing";
 import { getLendingPortfolio } from "@/lib/domain/lending";
 import { previewLoanRepayment, previewPartyRepayment } from "@/lib/domain/repayment";
-import { formatDate } from "@/lib/format-date";
 import { transactionTypeForCategory } from "@/lib/domain/transaction-classification";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { FormCardShell } from "@/components/forms/form-card-shell";
@@ -39,7 +37,6 @@ import {
   supportedCurrencyOptionLabels,
 } from "@/lib/select-options";
 import { Button } from "@/components/ui/button";
-import { todayIso } from "@/lib/today";
 import { IconChevronDown } from "@tabler/icons-react";
 
 export { transactionTypeLabels } from "@/lib/select-options";
@@ -64,68 +61,17 @@ export type TransactionFormState = {
 
 // Radix Select refuses an empty string as an item value, so "no project" needs
 // a sentinel rather than "".
-const NO_PROJECT = "none";
+import {
+  loanCaption,
+  loanOptions,
+  NO_PROJECT,
+  outstandingLabels,
+  partyCaption,
+  sectionTitles,
+  settlingDirections,
+} from "./transaction-form-model";
 
-const sectionTitles: Record<TransferDirection, string> = {
-  lend: "Lending",
-  collect: "Repayment",
-  borrow: "Borrowing",
-  repay: "Repayment",
-};
-
-const outstandingLabels: Record<TransferDirection, string> = {
-  lend: "Already owes you",
-  collect: "Owes you",
-  borrow: "You already owe",
-  repay: "You owe",
-};
-
-const settlingDirections = new Set<TransferDirection>(["collect", "repay"]);
-
-function loanOptions(accounts: Account[]) {
-  return accounts
-    .filter((account) => account.type === "debt")
-    .map((account) => {
-      const outstanding = Math.max(0, -account.balance);
-      return {
-        value: account.id,
-        label:
-          outstanding > 0
-            ? `${account.name} · ${formatMoney(outstanding, "UGX")} left`
-            : account.name,
-      };
-    });
-}
-
-function loanCaption(loan: Account | undefined): string | null {
-  return loan?.debtStartDate ? `since ${formatDate(loan.debtStartDate)}` : null;
-}
-
-function partyCaption(advancedOn: string | null): string | null {
-  return advancedOn ? `since ${formatDate(advancedOn)}` : null;
-}
-
-export function createDefaultTransactionForm(): TransactionFormState {
-  return { ...defaultTransactionFormShape, occurredOn: todayIso() };
-}
-
-const defaultTransactionFormShape: TransactionFormState = {
-  type: "expense",
-  accountId: "",
-  destinationAccountId: "",
-  categoryId: "",
-  currency: "UGX",
-  payee: "",
-  counterpartyId: "",
-  counterpartyName: "",
-  amount: "",
-  fxRateToUgx: "",
-  feeAmount: "",
-  occurredOn: "",
-  expectedRepaymentDate: "",
-  projectId: "",
-  note: "",
-};
+export { createDefaultTransactionForm } from "./transaction-form-model";
 
 type Props = {
   accounts: Account[];
@@ -542,3 +488,4 @@ export function TransactionForm({
     </FormCardShell>
   );
 }
+

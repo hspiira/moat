@@ -1,21 +1,43 @@
 import type { Item, PlannedPurchase, TransactionLineItem } from "@/lib/types";
 import { createId } from "@/lib/ids";
 
-export function estimatePlannedTotal(purchases: PlannedPurchase[]): {
+export type PlannedEstimate = {
   total: number;
-  unestimatedCount: number;
-} {
-  let total = 0;
-  let unestimatedCount = 0;
+  typed: number;
+  remembered: number;
+  unknownCount: number;
+};
+
+// A price you typed wins over one from memory, because you may know something
+// this trip that last month's receipt does not. Where you typed nothing, what
+// you last paid is a far better guess than nothing at all.
+export function estimatePlannedTotal(
+  purchases: PlannedPurchase[],
+  lastPaidFor?: (itemId: string) => number | undefined,
+): PlannedEstimate {
+  let typed = 0;
+  let remembered = 0;
+  let unknownCount = 0;
+
   for (const purchase of purchases) {
     if (purchase.status !== "planned") continue;
-    if (purchase.estimatedUnitPrice == null) {
-      unestimatedCount += 1;
+    const quantity = purchase.quantity ?? 1;
+
+    if (purchase.estimatedUnitPrice != null) {
+      typed += quantity * purchase.estimatedUnitPrice;
       continue;
     }
-    total += (purchase.quantity ?? 1) * purchase.estimatedUnitPrice;
+
+    const remembered_ = lastPaidFor?.(purchase.itemId);
+    if (remembered_ != null && remembered_ > 0) {
+      remembered += quantity * remembered_;
+      continue;
+    }
+
+    unknownCount += 1;
   }
-  return { total, unestimatedCount };
+
+  return { total: typed + remembered, typed, remembered, unknownCount };
 }
 
 export type PlannerGroups = {

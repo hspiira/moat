@@ -8,14 +8,16 @@ import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/compone
 import { navItems } from "@/lib/data";
 
 import {
-  AppBrand,
   getActiveEntryIn,
   getNavEntry,
   isActiveRoute,
   navGroupsExcluding,
   navIcons,
+} from "./navigation-model";
+import {
+  AppBrand,
   ThemeToggle,
-} from "./navigation-shared";
+} from "./navigation-brand";
 
 export const desktopPrimaryNav = ["/", "/transactions", "/accounts", "/report"] as const;
 // Settings has its own gear in the same bar, so the menu does not repeat it.

@@ -5,13 +5,14 @@ import {
   IconAlertCircle,
   IconBackspace,
   IconFingerprint,
-  IconLockFilled,
   IconLockOpen,
 } from "@tabler/icons-react";
 
 import { usePinLock } from "@/lib/security/pin-lock-context";
+import { formatLockoutMessage, vibrate } from "@/lib/security/lockout-message";
+import { LockMark } from "@/components/security/pin-lock-mark";
+import { Key } from "@/components/security/pin-keypad-key";
 import { MIN_PIN_LENGTH } from "@/lib/security/pin-policy";
-import { MoatRing } from "@/components/moat/moat-ring";
 import { cn } from "@/lib/utils";
 
 export function PinLockScreen() {
@@ -41,72 +42,8 @@ export function PinLockScreen() {
   );
 }
 
-function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    navigator.vibrate(pattern);
-  }
-}
-
-function formatLockoutMessage(lockoutMs: number): string {
-  const seconds = Math.ceil(lockoutMs / 1000);
-  if (seconds < 60) {
-    return `Too many attempts. Try again in ${seconds}s.`;
-  }
-  const minutes = Math.ceil(seconds / 60);
-  return `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
-}
 
 const MAX_PIN_LENGTH = 12;
-
-function LockMark({ spinning, open, progress = 1 }: { spinning: boolean; open: boolean; progress?: number }) {
-  return (
-    <div className="relative grid place-items-center">
-      {open ? (
-        <span
-          aria-hidden
-          className="absolute size-16 rounded-full bg-primary/30 blur-lg"
-          style={{ animation: "moat-unlock-glow 0.7s ease-out forwards" }}
-        />
-      ) : null}
-
-      <MoatRing
-        value={progress}
-        size={72}
-        thickness={5}
-        ariaLabel={open ? "Unlocked" : "Moat is locked"}
-      />
-
-      {!open ? (
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{ animation: `moat-orbit ${spinning ? "0.8s" : "9s"} linear infinite` }}
-        >
-          <span className="absolute top-[-0.5px] left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-clay" />
-        </div>
-      ) : null}
-
-      <span
-        aria-hidden
-        className={cn(
-          "absolute grid place-items-center transition-opacity duration-200",
-          open ? "opacity-0" : "opacity-100",
-        )}
-      >
-        <IconLockFilled className="size-5 text-primary" />
-      </span>
-      <span
-        aria-hidden
-        className={cn(
-          "absolute grid place-items-center transition-opacity duration-200",
-          open ? "opacity-100" : "opacity-0",
-        )}
-      >
-        <IconLockOpen className="size-5 text-primary" />
-      </span>
-    </div>
-  );
-}
 
 function LockScreen({
   unlock,
@@ -139,6 +76,7 @@ function LockScreen({
   const [pinLength] = useState(() => getPinLength());
   const [revealedDigit, setRevealedDigit] = useState<string | null>(null);
   const revealTimer = useRef<number | null>(null);
+  const shakeTimer = useRef<number | null>(null);
   const autoPromptedBiometric = useRef(false);
 
   const [markStyle, setMarkStyle] = useState<React.CSSProperties>();
@@ -207,11 +145,20 @@ function LockScreen({
         setPin("");
         setShaking(true);
         vibrate([30, 60, 30]);
-        window.setTimeout(() => setShaking(false), 420);
+        if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
+        shakeTimer.current = window.setTimeout(() => setShaking(false), 420);
       }
       setIsChecking(false);
     },
     [unlock, getUnlockLockoutMs, getAttemptsUntilLockout],
+  );
+
+  useEffect(
+    () => () => {
+      if (revealTimer.current) window.clearTimeout(revealTimer.current);
+      if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
+    },
+    [],
   );
 
   const pushDigit = useCallback(
@@ -448,69 +395,3 @@ function LockScreen({
   );
 }
 
-const LONG_PRESS_MS = 550;
-
-function Key({
-  children,
-  onPress,
-  onLongPress,
-  disabled,
-  variant = "solid",
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onPress: () => void;
-  onLongPress?: () => void;
-  disabled?: boolean;
-  variant?: "solid" | "ghost";
-  ariaLabel?: string;
-}) {
-  const longPressTimer = useRef<number | null>(null);
-  const longPressFired = useRef(false);
-
-  function startLongPress() {
-    if (!onLongPress) return;
-    longPressFired.current = false;
-    longPressTimer.current = window.setTimeout(() => {
-      longPressFired.current = true;
-      onLongPress();
-    }, LONG_PRESS_MS);
-  }
-
-  function cancelLongPress() {
-    if (longPressTimer.current) {
-      window.clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (longPressFired.current) {
-          longPressFired.current = false;
-          return;
-        }
-        onPress();
-      }}
-      onPointerDown={onLongPress ? startLongPress : undefined}
-      onPointerUp={onLongPress ? cancelLongPress : undefined}
-      onPointerLeave={onLongPress ? cancelLongPress : undefined}
-      onContextMenu={onLongPress ? (e) => e.preventDefault() : undefined}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      className={cn(
-        "grid size-16 place-items-center rounded-full font-display text-2xl font-medium tabular-nums select-none",
-        "transition-[background-color,transform] duration-100 active:scale-95",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        "disabled:pointer-events-none disabled:opacity-40",
-        variant === "solid"
-          ? "bg-muted/60 text-foreground hover:bg-muted active:bg-muted"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}

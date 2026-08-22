@@ -37,14 +37,14 @@ const sugar: Item = {
 };
 
 describe("estimatePlannedTotal", () => {
-  it("sums (quantity ?? 1) × estimatedUnitPrice and counts unestimated rows", () => {
+  it("sums (quantity ?? 1) × estimatedUnitPrice and counts what has no price", () => {
     const result = estimatePlannedTotal([
       purchase({ estimatedUnitPrice: 3500, quantity: 2 }),
       purchase({ estimatedUnitPrice: 4000 }),
       purchase({}),
       purchase({ status: "purchased", estimatedUnitPrice: 99999 }),
     ]);
-    expect(result).toEqual({ total: 11000, unestimatedCount: 1 });
+    expect(result).toEqual({ total: 11000, typed: 11000, remembered: 0, unknownCount: 1 });
   });
 });
 
@@ -158,5 +158,69 @@ describe("sumFulfillmentCost", () => {
 
   it("is zero for nothing selected", () => {
     expect(sumFulfillmentCost([])).toBe(0);
+  });
+});
+
+describe("estimatePlannedTotal with what you last paid", () => {
+  const lastPaid = (itemId: string) => (itemId === "item:rice" ? 8_000 : undefined);
+
+  it("uses what you last paid where you typed no price", () => {
+    const result = estimatePlannedTotal(
+      [purchase({ itemId: "item:rice", quantity: 2 })],
+      lastPaid,
+    );
+
+    expect(result).toMatchObject({ total: 16_000, typed: 0, remembered: 16_000, unknownCount: 0 });
+  });
+
+  it("prefers the price you typed over the one it remembers", () => {
+    const result = estimatePlannedTotal(
+      [purchase({ itemId: "item:rice", quantity: 1, estimatedUnitPrice: 9_500 })],
+      lastPaid,
+    );
+
+    expect(result).toMatchObject({ total: 9_500, typed: 9_500, remembered: 0 });
+  });
+
+  it("still counts what it cannot guess at", () => {
+    const result = estimatePlannedTotal(
+      [purchase({ itemId: "item:salt" }), purchase({ itemId: "item:rice" })],
+      lastPaid,
+    );
+
+    expect(result).toMatchObject({ total: 8_000, remembered: 8_000, unknownCount: 1 });
+  });
+
+  it("keeps the two apart, so the page can say which is a guess", () => {
+    const result = estimatePlannedTotal(
+      [
+        purchase({ itemId: "item:rice" }),
+        purchase({ itemId: "item:oil", estimatedUnitPrice: 12_000 }),
+      ],
+      lastPaid,
+    );
+
+    expect(result).toMatchObject({ total: 20_000, typed: 12_000, remembered: 8_000 });
+  });
+
+  it("does not treat a remembered price of nothing as a price", () => {
+    const result = estimatePlannedTotal([purchase({ itemId: "item:free" })], () => 0);
+
+    expect(result).toMatchObject({ total: 0, unknownCount: 1 });
+  });
+
+  it("counts nothing for what has already been bought", () => {
+    const result = estimatePlannedTotal(
+      [purchase({ itemId: "item:rice", status: "purchased" })],
+      lastPaid,
+    );
+
+    expect(result).toMatchObject({ total: 0, unknownCount: 0 });
+  });
+
+  it("works with no memory to draw on, as it did before", () => {
+    const result = estimatePlannedTotal([purchase({ itemId: "item:rice" })]);
+
+    expect(result).toMatchObject({ total: 0, unknownCount: 1 });
   });
 });

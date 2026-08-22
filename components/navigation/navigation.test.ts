@@ -16,7 +16,7 @@ import {
   navGroups,
   navGroupsExcluding,
   navIcons,
-} from "./navigation-shared";
+} from "./navigation-model";
 
 const mobileReachable = new Set<string>([...mobilePrimaryNav, ...groupedHrefs]);
 const desktopReachable = new Set<string>([

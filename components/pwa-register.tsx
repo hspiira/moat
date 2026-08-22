@@ -30,29 +30,35 @@ export function PwaRegister() {
       return;
     }
 
-    let cancelled = false;
+    const teardown = new AbortController();
 
     void navigator.serviceWorker.register("/sw.js").then((registration) => {
-      if (cancelled) return;
+      if (teardown.signal.aborted) return;
 
       function watch(worker: ServiceWorker | null) {
         if (!worker) return;
-        worker.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            setUpdateReady(true);
-          }
-        });
+        worker.addEventListener(
+          "statechange",
+          () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              setUpdateReady(true);
+            }
+          },
+          { signal: teardown.signal },
+        );
       }
 
       if (registration.waiting && navigator.serviceWorker.controller) {
         setUpdateReady(true);
       }
       watch(registration.installing);
-      registration.addEventListener("updatefound", () => watch(registration.installing));
+      registration.addEventListener("updatefound", () => watch(registration.installing), {
+        signal: teardown.signal,
+      });
     });
 
     return () => {
-      cancelled = true;
+      teardown.abort();
     };
   }, []);
 

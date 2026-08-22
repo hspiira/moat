@@ -6,7 +6,7 @@ import {
   IconSparkles,
 } from "@tabler/icons-react";
 
-import { MoatMark } from "@/components/navigation/navigation-shared";
+import { MoatMark } from "@/components/navigation/navigation-brand";
 import { OnboardingRecoveryPanel } from "@/components/onboarding-recovery-panel";
 import { AccountStep } from "@/components/onboarding/account-step";
 import { GoalStep } from "@/components/onboarding/goal-step";
