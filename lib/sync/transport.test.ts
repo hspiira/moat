@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { generateDek } from "@/lib/security/key-hierarchy";
 import { setActiveRecordCryptoKey } from "@/lib/security/record-crypto";
 import { openSyncPayload } from "@/lib/sync/payload-crypto";
-import { createSyncPushRequest } from "@/lib/sync/transport";
+import { createSyncPushRequest, pullSyncBatch } from "@/lib/sync/transport";
 import type { SyncOutboxItem } from "@/lib/types";
 
 const RECORD = JSON.stringify({
@@ -67,5 +67,32 @@ describe("createSyncPushRequest", () => {
     await expect(
       createSyncPushRequest({ userId: "user:owner", items: [item] }),
     ).rejects.toThrow(/needs a PIN/);
+  });
+});
+
+describe("being asked to slow down", () => {
+  it("says so, and when to come back, rather than showing a status code", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: "Too many requests." }), {
+            status: 429,
+            headers: { "retry-after": "37" },
+          }),
+      ),
+    );
+
+    await expect(
+      pullSyncBatch({ endpoint: "https://sync.example.com", request: { userId: "u1" } }),
+    ).rejects.toThrow("Sync is being asked for too often. Try again in 37s.");
+  });
+
+  it("still reports an ordinary failure by its status", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+
+    await expect(
+      pullSyncBatch({ endpoint: "https://sync.example.com", request: { userId: "u1" } }),
+    ).rejects.toThrow("status 500");
   });
 });

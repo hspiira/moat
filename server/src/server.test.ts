@@ -131,5 +131,26 @@ describeServer("sync server tenancy", () => {
     const response = await post(PORT, "/v1/sync/push", pushBody(OWNER), null);
     expect(response.status).toBe(401);
   });
+
+  /* Guessing tokens is held far tighter than ordinary use, so this runs last:
+     it spends the failed-authentication budget for this address. */
+  it("stops someone guessing tokens, and says when to come back", async () => {
+    let refused: Response | undefined;
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const response = await post(PORT, "/v1/sync/push", pushBody(OWNER), `guess-${attempt}`);
+      if (response.status === 429) {
+        refused = response;
+        break;
+      }
+      expect(response.status).toBe(401);
+    }
+
+    expect(refused, "token guessing was never refused").toBeDefined();
+    expect(Number(refused?.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(await refused?.json()).toEqual({
+      error: "Too many failed sign-ins. Try again shortly.",
+    });
+  });
 });
 
