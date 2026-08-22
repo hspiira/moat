@@ -76,6 +76,7 @@ function LockScreen({
   const [pinLength] = useState(() => getPinLength());
   const [revealedDigit, setRevealedDigit] = useState<string | null>(null);
   const revealTimer = useRef<number | null>(null);
+  const shakeTimer = useRef<number | null>(null);
   const autoPromptedBiometric = useRef(false);
 
   const [markStyle, setMarkStyle] = useState<React.CSSProperties>();
@@ -144,11 +145,20 @@ function LockScreen({
         setPin("");
         setShaking(true);
         vibrate([30, 60, 30]);
-        window.setTimeout(() => setShaking(false), 420);
+        if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
+        shakeTimer.current = window.setTimeout(() => setShaking(false), 420);
       }
       setIsChecking(false);
     },
     [unlock, getUnlockLockoutMs, getAttemptsUntilLockout],
+  );
+
+  useEffect(
+    () => () => {
+      if (revealTimer.current) window.clearTimeout(revealTimer.current);
+      if (shakeTimer.current) window.clearTimeout(shakeTimer.current);
+    },
+    [],
   );
 
   const pushDigit = useCallback(
