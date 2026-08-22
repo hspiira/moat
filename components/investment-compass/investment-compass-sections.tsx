@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { AccentCardHeader } from "@/components/accent-card-header";
 import { MoatRing } from "@/components/moat/moat-ring";
@@ -9,6 +10,14 @@ import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
 import { LocalSaveFeedback } from "@/components/local-save-feedback";
 import { Button } from "@/components/ui/button";
+import { FormCardShell } from "@/components/forms/form-card-shell";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Card,
   CardContent,
@@ -100,6 +109,34 @@ export function InvestmentMetricCards({
   );
 }
 
+function AnswerRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-2.5 last:border-b-0">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-right text-sm text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function answerSummary(form: InvestmentProfileFormState) {
+  const months = Number(form.timeHorizonMonths);
+  return [
+    {
+      label: "Needed in",
+      value: Number.isFinite(months) && months > 0 ? `${months} months` : "Not set",
+    },
+    { label: "How soon you may need it", value: liquidityNeedLabels[form.liquidityNeed] },
+    { label: "Comfort if the value falls", value: riskComfortLabels[form.riskComfort] },
+    {
+      label: "What it is for",
+      value:
+        goalFocusOptions.find((option) => option.value === form.goalFocus)?.label ??
+        "General wealth",
+    },
+    { label: "How much detail", value: guidanceLevelLabels[form.guidanceLevel] },
+  ];
+}
+
 export function InvestmentProfileCard({
   form,
   isSubmitting,
@@ -115,102 +152,155 @@ export function InvestmentProfileCard({
   onFormChange: (updater: (current: InvestmentProfileFormState) => InvestmentProfileFormState) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+
   return (
-    <Card className="gap-0 pt-0 shadow-none">
-      <AccentCardHeader
-        title="Your investment profile"
-        description="Your guidance updates as you change these."
-        titleClassName="text-base"
-      />
-      <CardContent className="p-5">
-        <form className="grid gap-4" onSubmit={onSubmit}>
-          <LocalSaveFeedback
-            isSubmitting={isSubmitting}
-            lastSavedAt={lastSavedAt}
-            successMessage={successMessage}
-          />
+    <div className="grid content-start gap-3">
+      <AppAnswersHeading />
 
-          <InputField
-            id="time-horizon"
-            label="Time horizon (months)"
-            inputMode="numeric"
-            min="1"
-            value={form.timeHorizonMonths}
-            onChange={(event) =>
-              onFormChange((current) => ({ ...current, timeHorizonMonths: event.target.value }))
+      <div className="grid">
+        {answerSummary(form).map((answer) => (
+          <AnswerRow key={answer.label} label={answer.label} value={answer.value} />
+        ))}
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="justify-self-start"
+        onClick={() => setIsEditing(true)}
+      >
+        Change your answers
+      </Button>
+
+      <Sheet open={isEditing} onOpenChange={setIsEditing}>
+        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Change your answers</SheetTitle>
+            <SheetDescription>These five answers decide what is suggested.</SheetDescription>
+          </SheetHeader>
+          <FormCardShell
+            embedded
+            title="Change your answers"
+            description="These five answers decide what is suggested below."
+            footer={
+              <Button
+                type="submit"
+                size="lg"
+                form="investment-profile-form"
+                disabled={isSubmitting}
+                className="w-full"
+              >
+                {isSubmitting ? "Saving..." : "Save answers"}
+              </Button>
             }
-            required
-          />
+          >
+            <form
+              id="investment-profile-form"
+              className="grid gap-4"
+              onSubmit={(event) => {
+                onSubmit(event);
+                setIsEditing(false);
+              }}
+            >
+              <LocalSaveFeedback
+                isSubmitting={isSubmitting}
+                lastSavedAt={lastSavedAt}
+                successMessage={successMessage}
+              />
 
-          <SelectField
-            id="liquidity-need"
-            label="Liquidity need"
-            value={form.liquidityNeed}
-            options={optionsFromRecord(liquidityNeedLabels)}
-            onValueChange={(value) =>
-              onFormChange((current) => ({
-                ...current,
-                liquidityNeed: value as InvestmentProfileFormState["liquidityNeed"],
-              }))
-            }
-          />
+              <InputField
+                id="time-horizon"
+                label="Needed in (months)"
+                inputMode="numeric"
+                min="1"
+                value={form.timeHorizonMonths}
+                onChange={(event) =>
+                  onFormChange((current) => ({ ...current, timeHorizonMonths: event.target.value }))
+                }
+                required
+              />
 
-          <SelectField
-            id="risk-comfort"
-            label="Risk comfort"
-            value={form.riskComfort}
-            options={optionsFromRecord(riskComfortLabels)}
-            onValueChange={(value) =>
-              onFormChange((current) => ({
-                ...current,
-                riskComfort: value as InvestmentProfileFormState["riskComfort"],
-              }))
-            }
-          />
+              <SelectField
+                id="liquidity-need"
+                label="How soon you may need it"
+                value={form.liquidityNeed}
+                options={optionsFromRecord(liquidityNeedLabels)}
+                onValueChange={(value) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    liquidityNeed: value as InvestmentProfileFormState["liquidityNeed"],
+                  }))
+                }
+              />
 
-          <SelectField
-            id="goal-focus"
-            label="Goal focus"
-            value={form.goalFocus}
-            options={goalFocusOptions}
-            onValueChange={(value) =>
-              onFormChange((current) => ({
-                ...current,
-                goalFocus: value as InvestmentProfile["goalFocus"],
-              }))
-            }
-          />
+              <SelectField
+                id="risk-comfort"
+                label="Comfort if the value falls"
+                value={form.riskComfort}
+                options={optionsFromRecord(riskComfortLabels)}
+                onValueChange={(value) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    riskComfort: value as InvestmentProfileFormState["riskComfort"],
+                  }))
+                }
+              />
 
-          <SelectField
-            id="guidance-level"
-            label="Guidance detail"
-            value={form.guidanceLevel}
-            options={optionsFromRecord(guidanceLevelLabels)}
-            onValueChange={(value) =>
-              onFormChange((current) => ({
-                ...current,
-                guidanceLevel: value as InvestmentProfileFormState["guidanceLevel"],
-              }))
-            }
-          />
+              <SelectField
+                id="goal-focus"
+                label="What it is for"
+                value={form.goalFocus}
+                options={goalFocusOptions}
+                onValueChange={(value) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    goalFocus: value as InvestmentProfile["goalFocus"],
+                  }))
+                }
+              />
 
-          <Button disabled={isSubmitting} type="submit" size="lg" className="w-full sm:w-auto">
-            {isSubmitting ? "Saving..." : "Update profile"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+              <SelectField
+                id="guidance-level"
+                label="How much detail"
+                value={form.guidanceLevel}
+                options={optionsFromRecord(guidanceLevelLabels)}
+                onValueChange={(value) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    guidanceLevel: value as InvestmentProfileFormState["guidanceLevel"],
+                  }))
+                }
+              />
+            </form>
+          </FormCardShell>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function AppAnswersHeading() {
+  return (
+    <div className="grid gap-0.5">
+      <h3 className="font-display text-base font-semibold">What this is based on</h3>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Change any answer and the suggestions below change with it.
+      </p>
+    </div>
   );
 }
 
 export function InvestmentGuidancePanels({
   recommendedProducts,
   rationale,
+  removals,
   warnings,
   regulatedResources,
 }: {
   recommendedProducts: string[];
   rationale: string[];
+  removals: string[];
   warnings: string[];
   regulatedResources: ResourceLink[];
 }) {
@@ -243,6 +333,15 @@ export function InvestmentGuidancePanels({
           {rationale.map((item) => (
             <p key={item}>{item}</p>
           ))}
+          {removals.length > 0 ? (
+            <ul className="grid gap-1 pt-1">
+              {removals.map((removal) => (
+                <li key={removal} className="text-xs">
+                  {removal}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {warnings.length > 0 ? (
             <div className="mt-1 grid gap-2 border border-amber-300/40 bg-amber-50/60 px-4 py-3 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
               {warnings.map((warning) => (

@@ -540,6 +540,7 @@ export type InvestmentGuidance = {
   recommendedProducts: string[];
   warnings: string[];
   rationale: string[];
+  removals: string[];
   shouldPrioritizeEmergencyFund: boolean;
   shouldPrioritizeDebtRepayment: boolean;
 };
