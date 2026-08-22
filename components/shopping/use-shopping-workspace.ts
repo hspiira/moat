@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getBudgetEnvelopes } from "@/lib/domain/budgets";
+import { learnItemCategory } from "@/lib/domain/item-category";
+import { comparePlannedWithBudget } from "@/lib/domain/planned-against-budget";
 import { resolveItem } from "@/lib/domain/item-normalization";
 import {
   buildFulfillmentLineItem,
@@ -15,6 +18,7 @@ import {
   summarizeItemPrices,
 } from "@/lib/domain/price-observations";
 import { repositories } from "@/lib/repositories/instance";
+import type { BudgetTarget } from "@/lib/types";
 import type {
   Account,
   Category,
@@ -47,6 +51,7 @@ export type CheckOffTarget =
 
 export function useShoppingWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [budgets, setBudgets] = useState<BudgetTarget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -70,6 +75,7 @@ export function useShoppingWorkspace() {
         loadedTransactions,
         loadedAccounts,
         loadedCategories,
+        loadedBudgets,
       ] = await Promise.all([
         repositories.items.listByUser(loadedProfile.id),
         repositories.plannedPurchases.listByUser(loadedProfile.id),
@@ -77,6 +83,7 @@ export function useShoppingWorkspace() {
         repositories.transactions.listByUser(loadedProfile.id),
         repositories.accounts.listByUser(loadedProfile.id),
         repositories.categories.listByUser(loadedProfile.id),
+        repositories.budgets.listByUser(loadedProfile.id),
       ]);
       setItems(loadedItems);
       setPurchases(loadedPurchases);
@@ -84,6 +91,7 @@ export function useShoppingWorkspace() {
       setTransactions(loadedTransactions);
       setAccounts(loadedAccounts);
       setCategories(loadedCategories);
+      setBudgets(loadedBudgets);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Couldn't load shopping.");
     } finally {
@@ -116,6 +124,16 @@ export function useShoppingWorkspace() {
   const estimate = useMemo(
     () => estimatePlannedTotal(purchases, lastPaidFor),
     [lastPaidFor, purchases],
+  );
+  const againstBudget = useMemo(
+    () =>
+      comparePlannedWithBudget({
+        purchases,
+        items,
+        envelopes: getBudgetEnvelopes(budgets, categories, transactions),
+        lastPaidFor,
+      }),
+    [budgets, categories, items, lastPaidFor, purchases, transactions],
   );
   const recentExpenses = useMemo(
     () =>
@@ -265,9 +283,14 @@ export function useShoppingWorkspace() {
       try {
         const timestamp = new Date().toISOString();
         let transactionId: string;
+        // Attaching to an existing expense means its category is the one that
+        // counts, not one the sheet asked for.
+        let filedUnder: string | undefined;
         if (target.mode === "attach") {
           transactionId = target.transactionId;
+          filedUnder = transactions.find((entry) => entry.id === transactionId)?.categoryId;
         } else {
+          filedUnder = target.categoryId;
           transactionId = createId();
           await repositories.transactions.upsert({
             id: transactionId,
@@ -303,6 +326,13 @@ export function useShoppingWorkspace() {
           await repositories.plannedPurchases.upsert(
             fulfillPurchase(purchase, lineItem, timestamp),
           );
+
+          // Where the spending was filed is the item's category. Learned here so
+          // a shopping list can be weighed against a budget without ever asking.
+          const learned = filedUnder ? learnItemCategory(item, filedUnder, timestamp) : null;
+          if (learned) {
+            await repositories.items.upsert(learned);
+          }
         }
         await refresh();
         return true;
@@ -315,7 +345,7 @@ export function useShoppingWorkspace() {
         setIsSubmitting(false);
       }
     },
-    [items, profile, refresh],
+    [items, profile, refresh, transactions],
   );
 
   return {
@@ -330,6 +360,7 @@ export function useShoppingWorkspace() {
     observations,
     priceSummaries,
     lastPaidFor,
+    againstBudget,
     recentExpenses,
     transactions,
     accounts,

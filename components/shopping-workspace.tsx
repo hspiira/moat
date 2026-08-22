@@ -16,6 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { AgainstBudgetNote } from "@/components/shopping/against-budget-note";
 import { estimateBasis } from "@/components/shopping/estimate-basis";
 import { Money } from "@/components/ui/money";
 
@@ -82,6 +83,8 @@ export function ShoppingWorkspace() {
           <p className="text-sm text-muted-foreground">{estimateBasis(workspace.estimate)}</p>
         </div>
         ) : null}
+
+        <AgainstBudgetNote rows={workspace.againstBudget} />
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
