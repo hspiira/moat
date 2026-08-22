@@ -307,9 +307,11 @@ export function InvestmentGuidancePanels({
     <div className="grid gap-4 content-start">
       <Card>
         <CardHeader>
-          <CardTitle>Suggested product classes</CardTitle>
+          <CardTitle>Where money like this usually goes</CardTitle>
           <CardDescription>
-            These are regulated or capital-preserving categories, not specific product recommendations.
+            Kinds of place, not products, and not a recommendation. Moat has no view on any
+            institution. Check whoever you are dealing with against the official sources below
+            before you hand over money.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2">
@@ -356,9 +358,9 @@ export function InvestmentGuidancePanels({
       {regulatedResources.length > 0 ? (
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle className="text-base">Regulated Uganda sources</CardTitle>
+            <CardTitle className="text-base">Check them here</CardTitle>
             <CardDescription>
-              Verify institutions through official channels before committing funds.
+              The regulators that license and supervise these institutions in Uganda.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">

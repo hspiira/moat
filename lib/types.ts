@@ -101,6 +101,9 @@ export type UserProfile = {
   currency: "UGX";
   salaryCycle: SalaryCycle;
   primaryIncomeType: IncomeType;
+  // What onboarding asked once. The answers in force live on InvestmentProfile,
+  // which is the only copy the owner can change, so read these two only to seed
+  // an InvestmentProfile that does not exist yet.
   riskComfort: RiskComfort;
   investmentHorizonMonths: number;
   createdAt: string;
