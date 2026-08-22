@@ -38,6 +38,7 @@ function getDuplicateKey(transaction: Transaction) {
     transaction.occurredOn,
     transaction.type,
     Math.abs(transaction.amount),
+    transaction.payee ?? "",
     transaction.note ?? "",
   ].join("|");
 }
@@ -54,6 +55,8 @@ export function getDuplicateGroups(transactions: Transaction[]): DuplicateGroup[
 
   return [...groups.entries()]
     .filter(([, items]) => items.length > 1)
+    // Cleared rows drop out, but a new matching row re-opens the group.
+    .filter(([, items]) => items.some((item) => !item.duplicateClearedAt))
     .map(([key, items]) => ({ key, transactions: items }));
 }
 

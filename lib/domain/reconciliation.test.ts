@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMonthCloseRecord, evaluateMonthClose } from "@/lib/domain/reconciliation";
+import {
+  buildMonthCloseRecord,
+  evaluateMonthClose,
+  getDuplicateGroups,
+} from "@/lib/domain/reconciliation";
 import type { Category, RecurringObligation, Transaction } from "@/lib/types";
 
 const categories: Category[] = [
@@ -86,5 +90,56 @@ describe("reconciliation and month close", () => {
 
     expect(record.state).toBe("ready");
     expect(record.unresolvedTransactions).toBe(0);
+  });
+});
+
+describe("getDuplicateGroups", () => {
+  const base = {
+    accountId: "account:cash",
+    type: "expense" as const,
+    amount: 3_000,
+    occurredOn: "2026-04-08",
+    categoryId: "category:transport",
+  };
+
+  it("does not pair two payments of the same size to different payees", () => {
+    const groups = getDuplicateGroups([
+      buildTransaction({ ...base, id: "transaction:boda", payee: "Boda rider" }),
+      buildTransaction({ ...base, id: "transaction:airtime", payee: "Airtime top-up" }),
+    ]);
+
+    expect(groups).toEqual([]);
+  });
+
+  it("pairs two identical payments so they can be checked", () => {
+    const groups = getDuplicateGroups([
+      buildTransaction({ ...base, id: "transaction:first", payee: "Boda rider" }),
+      buildTransaction({ ...base, id: "transaction:second", payee: "Boda rider" }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].transactions).toHaveLength(2);
+  });
+
+  it("stops flagging a pair the owner has kept on purpose", () => {
+    const cleared = { duplicateClearedAt: "2026-04-09T00:00:00.000Z" };
+    const groups = getDuplicateGroups([
+      buildTransaction({ ...base, ...cleared, id: "transaction:first", payee: "Boda rider" }),
+      buildTransaction({ ...base, ...cleared, id: "transaction:second", payee: "Boda rider" }),
+    ]);
+
+    expect(groups).toEqual([]);
+  });
+
+  it("flags the group again when a new matching record arrives", () => {
+    const cleared = { duplicateClearedAt: "2026-04-09T00:00:00.000Z" };
+    const groups = getDuplicateGroups([
+      buildTransaction({ ...base, ...cleared, id: "transaction:first", payee: "Boda rider" }),
+      buildTransaction({ ...base, ...cleared, id: "transaction:second", payee: "Boda rider" }),
+      buildTransaction({ ...base, id: "transaction:third", payee: "Boda rider" }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].transactions).toHaveLength(3);
   });
 });

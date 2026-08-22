@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  IconChevronRight,
   IconCloudLock,
   IconDatabaseExport,
   IconLockSquareRounded,
@@ -12,7 +13,6 @@ import {
 } from "@tabler/icons-react";
 
 import { useHasNativeBridge } from "@/components/hooks/use-native-bridge";
-import { Button } from "@/components/ui/button";
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
@@ -51,6 +51,29 @@ function SettingsSection({
   );
 }
 
+function SettingsNavRow({
+  href,
+  label,
+  hint,
+}: {
+  href: string;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="-mx-4 flex items-center gap-3 border-y border-border px-4 py-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-sm text-foreground">{label}</div>
+        <div className="text-xs text-muted-foreground">{hint}</div>
+      </div>
+      <IconChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
+  );
+}
+
 export function SettingsWorkspace() {
   const hasNativeBridge = useHasNativeBridge();
   return (
@@ -76,9 +99,11 @@ export function SettingsWorkspace() {
         title="Categories"
         description="What each one has cost you, and where duplicates crept in."
       >
-        <Button asChild variant="outline" className="justify-self-start">
-          <Link href="/settings/categories">Manage categories</Link>
-        </Button>
+        <SettingsNavRow
+          href="/settings/categories"
+          label="Your categories"
+          hint="Rename, merge or retire a category"
+        />
       </SettingsSection>
 
       {hasNativeBridge ? (
