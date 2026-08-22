@@ -37,3 +37,6 @@ server/dist/
 # Licensed font files, kept out of git. See app/fonts/README.md.
 /app/fonts/helvetica-now-*.woff2
 /app/fonts/NeueMachina-*.woff2
+
+# Working copies. Git history is the record.
+*.bak
