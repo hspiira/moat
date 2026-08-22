@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getFeeLoad, isFeeTransaction } from "@/lib/domain/fees";
+import {
+  dearestAccountToMoveFrom,
+  getFeeLoad,
+  getFeeLoadByAccount,
+  isFeeTransaction,
+} from "@/lib/domain/fees";
 import { feesCategoryId } from "@/lib/domain/seeded-ids";
 import type { Transaction } from "@/lib/types";
 
@@ -88,5 +93,55 @@ describe("getFeeLoad", () => {
     ]);
 
     expect(load.movedOut).toBe(100_000);
+  });
+});
+
+describe("fees per account", () => {
+  const row = (id: string, accountId: string, amount: number, isFee = false) =>
+    transaction({
+      id,
+      accountId,
+      amount,
+      ...(isFee ? { feeParentId: `${id}-parent` } : {}),
+    });
+
+  // Momo: 300,000 moved for 3,000 in charges — 10 per thousand.
+  // Bank: 1,000,000 moved for 5,000 — 5 per thousand, dearer in total, cheaper to use.
+  const rows = [
+    row("momo-out", "acc:momo", 300_000),
+    row("momo-fee", "acc:momo", 3_000, true),
+    row("bank-out", "acc:bank", 1_000_000),
+    row("bank-fee", "acc:bank", 5_000, true),
+    row("cash-out", "acc:cash", 50_000),
+  ];
+
+  it("leaves out accounts that never charged you", () => {
+    expect(getFeeLoadByAccount(rows).map((load) => load.accountId)).toEqual([
+      "acc:bank",
+      "acc:momo",
+    ]);
+  });
+
+  it("orders by what each account cost you", () => {
+    expect(getFeeLoadByAccount(rows)[0]).toMatchObject({ accountId: "acc:bank", fees: 5_000 });
+  });
+
+  it("gives a rate that does not just follow how much you moved", () => {
+    const byAccount = getFeeLoadByAccount(rows);
+
+    expect(byAccount.find((load) => load.accountId === "acc:bank")?.costPerThousandMoved).toBe(5);
+    expect(byAccount.find((load) => load.accountId === "acc:momo")?.costPerThousandMoved).toBe(10);
+  });
+
+  it("names the dearest account by rate, not by total", () => {
+    expect(dearestAccountToMoveFrom(rows, 0)?.accountId).toBe("acc:momo");
+  });
+
+  it("ignores an account you have barely used, where the rate means little", () => {
+    expect(dearestAccountToMoveFrom(rows, 500_000)?.accountId).toBe("acc:bank");
+  });
+
+  it("names nothing when no account has been used enough", () => {
+    expect(dearestAccountToMoveFrom(rows, 5_000_000)).toBeNull();
   });
 });
