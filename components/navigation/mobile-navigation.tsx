@@ -9,13 +9,17 @@ import { navItems } from "@/lib/data";
 
 import {
   isActiveRoute,
-  MobileCaptureSheet,
   mobilePrimaryNav,
+  navIcons,
+} from "./navigation-model";
+import {
+  MoatMark,
+} from "./navigation-brand";
+import {
+  MobileCaptureSheet,
   MobileMoreButton,
   MobileNavTrigger,
-  MoatMark,
-  navIcons,
-} from "./navigation-shared";
+} from "./navigation-sheets";
 
 export function MobileNavigation({
   pathname,
