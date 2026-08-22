@@ -8,6 +8,11 @@ import { buildFeeTransaction } from "@/components/transactions/transaction-build
 import { feesCategoryId, ensureFeesCategory } from "@/lib/app-state/defaults";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
 import { applyTransactionRules } from "@/lib/domain/rules";
+import {
+  hasEarnedAutoApproval,
+  judgeRuleOutcome,
+  recordRuleOutcome,
+} from "@/lib/domain/rule-trust";
 import { getCorrectionsToPrune } from "@/lib/domain/correction-log-pruning";
 import { buildRuleFromCorrection, type RuleDraft } from "@/lib/domain/rule-from-correction";
 import { createId } from "@/lib/ids";
@@ -54,6 +59,7 @@ export function useCaptureReviewWorkspace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ruleOffer, setRuleOffer] = useState<RuleDraft | null>(null);
+  const [trustOffer, setTrustOffer] = useState<TransactionRule | null>(null);
   const currentPeriod = currentMonthIso();
 
   const openCaptureReviewItems = useMemo(
@@ -189,8 +195,8 @@ export function useCaptureReviewWorkspace() {
         userId: profile.id,
         createdAt: timestamp,
       });
-      const proposed =
-        applyTransactionRules(baseTransaction, transactionRules)?.proposedTransaction ?? baseTransaction;
+      const match = applyTransactionRules(baseTransaction, transactionRules);
+      const proposed = match?.proposedTransaction ?? baseTransaction;
       const approvedSnapshot = {
         accountId: item.accountId,
         occurredOn: item.occurredOn,
@@ -234,6 +240,25 @@ export function useCaptureReviewWorkspace() {
       for (const stale of getCorrectionsToPrune(kept)) {
         await repositories.correctionLogs.remove(stale.id);
       }
+      if (match) {
+        const judged = recordRuleOutcome(
+          match.rule,
+          judgeRuleOutcome({
+            rule: match.rule,
+            parsed: item.originalSnapshot,
+            approved: {
+              payee: item.payee,
+              categoryId: item.categoryId,
+              accountId: item.accountId,
+              type: item.type,
+            },
+          }),
+          timestamp,
+        );
+        await repositories.transactionRules.upsert(judged);
+        setTrustOffer(hasEarnedAutoApproval(judged) ? judged : null);
+      }
+
       await repositories.captureReviewItems.upsert({
         ...item,
         approvedTransactionId: proposed.id,
@@ -375,6 +400,26 @@ export function useCaptureReviewWorkspace() {
 
   const dismissRuleOffer = useCallback(() => setRuleOffer(null), []);
 
+  const acceptTrustOffer = useCallback(async () => {
+    if (!trustOffer) return;
+    setIsSubmitting(true);
+    try {
+      await repositories.transactionRules.upsert({
+        ...trustOffer,
+        autoMarkReviewed: true,
+        updatedAt: new Date().toISOString(),
+      });
+      setTrustOffer(null);
+      await loadWorkspace();
+    } catch (trustError) {
+      setError(trustError instanceof Error ? trustError.message : "Unable to save the rule.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [loadWorkspace, trustOffer]);
+
+  const dismissTrustOffer = useCallback(() => setTrustOffer(null), []);
+
   return {
     profile,
     accounts,
@@ -395,5 +440,8 @@ export function useCaptureReviewWorkspace() {
     ruleOffer,
     acceptRuleOffer,
     dismissRuleOffer,
+    trustOffer,
+    acceptTrustOffer,
+    dismissTrustOffer,
   };
 }

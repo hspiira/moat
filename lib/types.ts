@@ -471,6 +471,8 @@ export type TransactionRule = {
   effectAccountId?: string;
   effectTransactionType?: TransactionType;
   autoMarkReviewed: boolean;
+  timesAccepted?: number;
+  timesOverridden?: number;
   createdAt: string;
   updatedAt: string;
 };
