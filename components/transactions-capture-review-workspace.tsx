@@ -12,7 +12,7 @@ export function TransactionsCaptureReviewWorkspace() {
     <TransactionsWorkspaceFrame
       title="Capture review"
       srOnlyTitle
-      description="Resolve captured items before they reach the ledger."
+      description="Check what was read from a message before it counts towards your money."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

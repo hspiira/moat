@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -133,6 +134,26 @@ export function PlannerList(props: {
   isSubmitting: boolean;
 }) {
   const shared = props;
+  const isEmpty =
+    props.groups.overdue.length === 0 &&
+    props.groups.upcoming.length === 0 &&
+    props.groups.someday.length === 0 &&
+    props.groups.history.length === 0;
+
+  if (isEmpty) {
+    return (
+      <EmptyState className="py-8">
+        <span className="grid gap-2 text-left">
+          <span>
+            Nothing planned yet. Add what you mean to buy and this page remembers what it cost
+            you last time, so you can tell a fair price from a bad one.
+          </span>
+          <span>Tick an item off when you buy it and it becomes an expense.</span>
+        </span>
+      </EmptyState>
+    );
+  }
+
   return (
     <div className="grid gap-5">
       <PlannerSection title="Overdue" purchases={props.groups.overdue} {...shared} />
