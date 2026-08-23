@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { InputField } from "@/components/forms/input-field";
 import { SelectField } from "@/components/forms/select-field";
@@ -18,6 +19,10 @@ const HORIZON_PRESETS = [
   { value: "3", unit: "years" as const, label: "3 years" },
   { value: "5", unit: "years" as const, label: "5 years" },
 ];
+
+function matchesAPreset(value: string | undefined, unit: string | undefined): boolean {
+  return HORIZON_PRESETS.some((preset) => preset.value === value && preset.unit === unit);
+}
 
 const incomeTypeLabels: Record<IncomeType, string> = {
   salary: "Salary only",
@@ -45,6 +50,11 @@ type Props = {
 };
 
 export function ProfileStep({ form, onFormChange, consentGiven, onConsentChange }: Props) {
+  const [wantsExactHorizon, setWantsExactHorizon] = useState(false);
+  const showExactHorizon =
+    wantsExactHorizon ||
+    !matchesAPreset(form.investmentHorizonValue, form.investmentHorizonUnit);
+
   return (
     <>
       <InputField
@@ -117,8 +127,19 @@ export function ProfileStep({ form, onFormChange, consentGiven, onConsentChange 
                 {preset.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setWantsExactHorizon(true)}
+              aria-pressed={showExactHorizon}
+              className={`rounded-full border px-3 py-1 text-sm ${
+                showExactHorizon ? "border-primary text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Something else
+            </button>
           </div>
         </div>
+        {showExactHorizon ? (
         <div className="grid items-start gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
           <InputField
             id="horizon"
@@ -163,6 +184,7 @@ export function ProfileStep({ form, onFormChange, consentGiven, onConsentChange 
             />
           </div>
         </div>
+        ) : null}
       </div>
 
       <div className="flex items-start gap-3 rounded-md bg-muted/20 px-4 py-3">

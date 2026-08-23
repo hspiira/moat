@@ -32,7 +32,8 @@ test("onboarding reaches the security step and names what turning the PIN off co
   await page.waitForTimeout(1000);
 
   await page.locator("#display-name").fill("E2E Tester");
-  await page.locator("#horizon").fill("2");
+  // The presets are how the horizon is normally answered.
+  await page.getByRole("button", { name: "2 years" }).click();
   await page.locator("#consent").check();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.waitForTimeout(800);
