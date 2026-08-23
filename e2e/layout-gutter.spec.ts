@@ -7,7 +7,7 @@ const ROUTES = [
   "/", "/transactions", "/transactions/capture", "/accounts", "/budgets", "/debt",
   "/goals", "/import", "/inbox", "/learn", "/month",
   "/privacy", "/recurring", "/report", "/settings", "/settings/categories",
-  "/settings/rules", "/settings/sync-conflicts", "/shopping",
+  "/settings/rules", "/settings/sync-conflicts", "/shopping", "/onboarding",
 ];
 
 for (const route of ROUTES) {

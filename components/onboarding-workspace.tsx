@@ -183,8 +183,11 @@ export function OnboardingWorkspace() {
 
       {error ? <ErrorNotice message={error} /> : null}
 
+      {/* This card reached the screen edge by hand before the shell did it for
+          every card. Its content still needs the page's gutter, or the fields
+          sit against the glass while the heading above them does not. */}
       <Card className="rounded-none border-0 bg-transparent py-0 shadow-none ring-0 sm:rounded-xl sm:bg-card sm:py-4">
-        <CardContent className="px-0 pt-2 sm:px-4 sm:pt-6">
+        <CardContent className="px-4 pt-2 sm:pt-6">
           <form className="grid gap-5" onSubmit={handleSubmit}>
             {step === "profile" ? (
               <ProfileStep
