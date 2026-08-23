@@ -42,6 +42,7 @@ function isStandaloneDisplay() {
   }
 
   return (
+    "Capacitor" in window ||
     window.matchMedia("(display-mode: standalone)").matches ||
     ("standalone" in window.navigator &&
       Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone))

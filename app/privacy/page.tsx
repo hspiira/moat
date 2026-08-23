@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { IconArrowLeft, IconDownload, IconLock, IconTrash } from "@tabler/icons-react";
+import { IconDownload, IconLock, IconTrash } from "@tabler/icons-react";
 
 import { AppShell } from "@/components/app-shell";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -226,12 +226,7 @@ export default function PrivacyPage() {
     <AppShell>
       <div className="grid gap-5">
         <div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/settings">
-              <IconArrowLeft className="h-4 w-4" />
-              Back to settings
-            </Link>
-          </Button>
+          <BackButton />
         </div>
 
         <div className="grid gap-2">
