@@ -16,7 +16,7 @@ import type { Item } from "@/lib/types";
 // What people buy here, so the unit is a tap rather than a guess.
 const UNIT_SUGGESTIONS = ["kg", "g", "litre", "ml", "piece", "packet", "bunch", "tray", "bar"];
 
-const emptyDraft = { name: "", quantity: "", unit: "", estimatedUnitPrice: "", neededBy: "", note: "" };
+const emptyDraft = { name: "", quantity: "", unit: "", estimatedUnitPrice: "", expectedTotal: "", neededBy: "", note: "" };
 
 export function PlannerAddForm({
   items,
@@ -32,6 +32,7 @@ export function PlannerAddForm({
     unit?: string;
     quantity?: number;
     estimatedUnitPrice?: number;
+    expectedTotal?: number;
     neededBy?: string;
     note?: string;
   }) => void;
@@ -54,6 +55,7 @@ export function PlannerAddForm({
       unit: draft.unit.trim() || undefined,
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       estimatedUnitPrice: parseAmountInput(draft.estimatedUnitPrice) ?? undefined,
+      expectedTotal: parseAmountInput(draft.expectedTotal) ?? undefined,
       neededBy: draft.neededBy || undefined,
       note: draft.note.trim() || undefined,
     });
@@ -151,6 +153,18 @@ export function PlannerAddForm({
           onChange={(value) => setDraft({ ...draft, neededBy: value })}
         />
       </div>
+      </div>
+      ) : null}
+      {showDetails ? (
+      <div className="grid gap-1">
+        <Label htmlFor="planner-expected-total">Paying in instalments? Full price</Label>
+        <Input
+          id="planner-expected-total"
+          inputMode="numeric"
+          value={draft.expectedTotal}
+          placeholder="Leave blank if paying at once"
+          onChange={(event) => setDraft({ ...draft, expectedTotal: event.target.value })}
+        />
       </div>
       ) : null}
       {showDetails ? (

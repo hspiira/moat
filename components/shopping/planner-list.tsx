@@ -18,6 +18,7 @@ import type {
 } from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
 import { buildShoppingHistory } from "@/lib/domain/shopping-history";
+import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
   if (!summary?.lastPaid) return null;
@@ -46,6 +47,7 @@ function PlannerSection({
   onDrop,
   onEdit,
   onOpenHistory,
+  lineItemsById,
 }: {
   title: string;
   purchases: PlannedPurchase[];
@@ -56,8 +58,10 @@ function PlannerSection({
   onDrop: (purchase: PlannedPurchase) => void;
   onEdit: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
+  lineItemsById: Map<string, TransactionLineItem>;
 }) {
   if (purchases.length === 0) return null;
+  const lineItems = [...lineItemsById.values()];
   return (
     <section className="grid gap-2">
       <h3 className="text-xs font-medium text-muted-foreground">
@@ -67,6 +71,9 @@ function PlannerSection({
         {purchases.map((purchase) => {
           const item = itemsById.get(purchase.itemId);
           const memory = priceMemoryLine(priceSummaries.get(purchase.itemId));
+          const plan = isInstallmentPurchase(purchase)
+            ? summariseInstallments(purchase, lineItems)
+            : undefined;
           const isSelected = selectedIds.has(purchase.id);
           return (
             <li key={purchase.id} className="flex items-start justify-between gap-3">
@@ -100,6 +107,26 @@ function PlannerSection({
                     >
                       {memory}
                     </button>
+                  ) : null}
+
+                  {plan && plan.expected > 0 ? (
+                    <span className="mt-1 block">
+                      <span className="block text-xs text-muted-foreground">
+                        {formatMoney(plan.paid)} of {formatMoney(plan.expected)} paid
+                        {plan.remaining > 0
+                          ? ` · ${formatMoney(plan.remaining)} to go`
+                          : " · settled"}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted"
+                      >
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{ width: `${plan.percentPaid}%` }}
+                        />
+                      </span>
+                    </span>
                   ) : null}
                 </span>
               </label>

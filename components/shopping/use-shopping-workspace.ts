@@ -154,6 +154,7 @@ export function useShoppingWorkspace() {
       unit?: string;
       quantity?: number;
       estimatedUnitPrice?: number;
+      expectedTotal?: number;
       neededBy?: string;
       note?: string;
     }) => {
@@ -178,6 +179,7 @@ export function useShoppingWorkspace() {
           itemId: resolved.item.id,
           quantity: input.quantity,
           estimatedUnitPrice: input.estimatedUnitPrice,
+          expectedTotal: input.expectedTotal,
           neededBy: input.neededBy,
           note: input.note,
           status: "planned",
