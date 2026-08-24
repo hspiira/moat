@@ -13,6 +13,7 @@
     "mint": "node mint-token.js"
   },
   "dependencies": {
+    "jose": "^6.2.9",
     "pg": "^8.23.0"
   },
   "devDependencies": {

@@ -39,6 +39,21 @@ create table if not exists sync_applied_outbox (
   primary key (user_id, outbox_id)
 );
 
+-- One row per provider account. The subject is what identifies a person; an
+-- email can be reassigned by the provider and must never be the key.
+create table if not exists sync_identities (
+  issuer      text not null,
+  subject     text not null,
+  user_id     text not null references sync_users(user_id) on delete cascade,
+  email       text,
+  created_at  text not null,
+  primary key (issuer, subject)
+);
+
+-- Not unique: a second provider may be linked to the same ledger later.
+create index if not exists sync_identities_user
+  on sync_identities (user_id);
+
 alter table sync_records enable row level security;
 alter table sync_records force row level security;
 alter table sync_applied_outbox enable row level security;
