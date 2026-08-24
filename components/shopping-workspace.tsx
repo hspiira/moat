@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AgainstBudgetNote } from "@/components/shopping/against-budget-note";
+import { PriceTrendsPanel } from "./shopping/price-trends-panel";
 import { estimateBasis } from "@/components/shopping/estimate-basis";
 import { Money } from "@/components/ui/money";
 
@@ -89,6 +90,11 @@ export function ShoppingWorkspace() {
         ) : null}
 
         <AgainstBudgetNote rows={workspace.againstBudget} />
+
+        <section className="grid gap-2">
+          <h2 className="text-sm font-medium text-foreground">What prices are doing</h2>
+          <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
+        </section>
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
