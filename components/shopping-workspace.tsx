@@ -91,10 +91,7 @@ export function ShoppingWorkspace() {
 
         <AgainstBudgetNote rows={workspace.againstBudget} />
 
-        <section className="grid gap-2">
-          <h2 className="text-sm font-medium text-foreground">What prices are doing</h2>
-          <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
-        </section>
+
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
@@ -126,6 +123,8 @@ export function ShoppingWorkspace() {
           onRestore={(purchase) => void workspace.restorePurchase(purchase)}
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
+
+        <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
       </div>
       <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
         <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">

@@ -6,9 +6,7 @@ const config = [
     // Playwright writes and deletes trace artifacts here mid-run, so linting
     // them fails on files that no longer exist by the time eslint opens them.
     ignores: [
-      "server/dist/**",
-      "server/server.js",
-      "server/migrate.js",
+      "server/*.js",
       "test-results/**",
       "playwright-report/**",
       // The static export copied into the native shells. Generated, not ours.

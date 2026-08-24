@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
+import { IconPencil, IconX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
@@ -64,10 +64,10 @@ function PlannerSection({
   const lineItems = [...lineItemsById.values()];
   return (
     <section className="grid gap-2">
-      <h3 className="text-xs font-medium text-muted-foreground">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {title}
       </h3>
-      <ul className="grid gap-2">
+      <ul className="grid gap-0.5">
         {purchases.map((purchase) => {
           const item = itemsById.get(purchase.itemId);
           const memory = priceMemoryLine(priceSummaries.get(purchase.itemId));
@@ -75,75 +75,90 @@ function PlannerSection({
             ? summariseInstallments(purchase, lineItems)
             : undefined;
           const isSelected = selectedIds.has(purchase.id);
-          return (
-            <li key={purchase.id} className="flex items-start justify-between gap-3">
-              <label className="flex min-w-0 items-start gap-2 text-sm">
-                <Checkbox
-                  className="mt-1"
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleSelect(purchase)}
-                  aria-label={`Mark ${item?.name ?? "item"} as bought`}
-                />
-                <span className="min-w-0">
-                  <span className="block truncate">
-                    {item?.name ?? "Unknown item"}
-                    {purchase.quantity != null ? ` × ${purchase.quantity}` : ""}
-                  </span>
-                  {purchase.neededBy ? (
-                    <span className="block text-xs text-muted-foreground">
-                      needed by {formatDate(purchase.neededBy)}
-                    </span>
-                  ) : null}
-                  {purchase.note ? (
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {purchase.note}
-                    </span>
-                  ) : null}
-                  {memory ? (
-                    <button
-                      type="button"
-                      className="block text-left text-xs text-muted-foreground underline-offset-2 hover:underline"
-                      onClick={() => onOpenHistory(purchase.itemId)}
-                    >
-                      {memory}
-                    </button>
-                  ) : null}
+          const estimate =
+            purchase.estimatedUnitPrice != null
+              ? (purchase.quantity ?? 1) * purchase.estimatedUnitPrice
+              : undefined;
+          // One line of context, not four. The rest is a tap away in history.
+          const meta = [
+            purchase.neededBy ? `needed by ${formatDate(purchase.neededBy)}` : null,
+            memory,
+            purchase.note,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
-                  {plan && plan.expected > 0 ? (
-                    <span className="mt-1 block">
-                      <span className="block text-xs text-muted-foreground">
-                        {formatMoney(plan.paid)} of {formatMoney(plan.expected)} paid
-                        {plan.remaining > 0
-                          ? ` · ${formatMoney(plan.remaining)} to go`
-                          : " · settled"}
-                      </span>
-                      <span
-                        aria-hidden
-                        className="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted"
-                      >
-                        <span
-                          className="block h-full rounded-full bg-primary"
-                          style={{ width: `${plan.percentPaid}%` }}
-                        />
-                      </span>
-                    </span>
+          return (
+            <li
+              key={purchase.id}
+              className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-2 hover:bg-muted/40"
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(purchase)}
+                aria-label={`Mark ${item?.name ?? "item"} as bought`}
+              />
+
+              <button
+                type="button"
+                onClick={() => onOpenHistory(purchase.itemId)}
+                className="block min-w-0 flex-1 overflow-hidden text-left"
+              >
+                <span className="block truncate text-sm text-foreground">
+                  {item?.name ?? "Unknown item"}
+                  {purchase.quantity != null ? (
+                    <span className="text-muted-foreground"> × {purchase.quantity}</span>
                   ) : null}
                 </span>
-              </label>
-              <span className="flex shrink-0 items-center gap-2">
-                {purchase.estimatedUnitPrice != null ? (
-                  <Money
-                    amount={(purchase.quantity ?? 1) * purchase.estimatedUnitPrice}
-                    tone="neutral"
-                  />
+                {meta ? (
+                  <span className="block truncate text-xs text-muted-foreground">{meta}</span>
+                ) : null}
+                {plan && plan.expected > 0 ? (
+                  <span className="mt-1 flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="h-1 w-16 overflow-hidden rounded-full bg-muted"
+                    >
+                      <span
+                        className="block h-full rounded-full bg-primary"
+                        style={{ width: `${plan.percentPaid}%` }}
+                      />
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {plan.remaining > 0
+                        ? `${formatMoney(plan.remaining)} to go`
+                        : "settled"}
+                    </span>
+                  </span>
+                ) : null}
+              </button>
+
+              <span className="shrink-0 whitespace-nowrap text-right text-sm tabular-nums">
+                {estimate != null ? (
+                  <Money amount={estimate} tone="neutral" />
                 ) : (
-                  <Badge variant="outline">no estimate</Badge>
+                  <span className="text-xs text-muted-foreground">no estimate</span>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => onEdit(purchase)}>
-                  Edit
+              </span>
+
+              <span className="flex shrink-0 items-center">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 text-muted-foreground hover:text-foreground"
+                  aria-label={`Edit ${item?.name ?? "item"}`}
+                  onClick={() => onEdit(purchase)}
+                >
+                  <IconPencil className="size-4" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => onDrop(purchase)}>
-                  Drop
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 text-muted-foreground hover:text-foreground"
+                  aria-label={`Drop ${item?.name ?? "item"}`}
+                  onClick={() => onDrop(purchase)}
+                >
+                  <IconX className="size-4" />
                 </Button>
               </span>
             </li>

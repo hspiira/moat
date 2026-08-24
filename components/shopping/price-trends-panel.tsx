@@ -1,11 +1,13 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney } from "@/lib/currency";
-import { formatDate } from "@/lib/format-date";
 import { buildPriceTrends, summariseBasket } from "@/lib/domain/price-trends";
 import type { Item, PriceObservation } from "@/lib/types";
 
+/**
+ * How prices have moved on things bought more than once. Reference rather than
+ * a task, so it stays folded away and says nothing at all until it can.
+ */
 export function PriceTrendsPanel({
   observations,
   items,
@@ -15,51 +17,33 @@ export function PriceTrendsPanel({
 }) {
   const basket = summariseBasket(buildPriceTrends({ observations, items }));
 
-  if (basket.trends.length === 0) {
-    return (
-      <EmptyState className="py-6">
-        <span className="grid gap-2 text-left">
-          <span>
-            Nothing to compare yet. Buy the same item twice with a quantity on it and this
-            works out whether the price moved or you simply bought more.
-          </span>
-        </span>
-      </EmptyState>
-    );
-  }
+  if (basket.trends.length === 0) return null;
 
   const average = basket.averageChangePercent ?? 0;
 
   return (
-    <div className="grid gap-3">
-      <p className="text-sm text-muted-foreground">
-        Across {basket.trends.length} item{basket.trends.length === 1 ? "" : "s"} you buy
-        repeatedly, prices are{" "}
+    <details className="group border-t border-border/60 pt-3">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground">What prices are doing</span>
         <span className={average > 0 ? "text-neg" : "text-pos"}>
-          {average > 0 ? "up" : "down"} {Math.abs(average)}%
-        </span>{" "}
-        on average. {basket.dearer} dearer, {basket.cheaper} cheaper.
-      </p>
+          {average > 0 ? "up" : "down"} {Math.abs(average)}% across {basket.trends.length}
+        </span>
+      </summary>
 
-      <ul className="grid gap-2">
+      <ul className="mt-2 grid gap-0.5">
         {basket.trends.map((trend) => (
           <li
             key={trend.itemId}
-            className="flex items-baseline justify-between gap-3 border-b border-border/60 pb-2 text-sm last:border-0"
+            className="flex items-baseline justify-between gap-3 py-1 text-sm"
           >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-foreground">{trend.itemName}</span>
-              <span className="block text-xs text-muted-foreground">
-                {formatMoney(trend.first.pricePerUnit)}
-                {trend.unit ? `/${trend.unit}` : ""} in {formatDate(trend.first.occurredOn)}
-                {" to "}
-                {formatMoney(trend.latest.pricePerUnit)}
-                {trend.unit ? `/${trend.unit}` : ""} in {formatDate(trend.latest.occurredOn)}
-              </span>
+            <span className="min-w-0 flex-1 truncate text-foreground">{trend.itemName}</span>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {formatMoney(trend.first.pricePerUnit)} to{" "}
+              {formatMoney(trend.latest.pricePerUnit)}
+              {trend.unit ? `/${trend.unit}` : ""}
             </span>
-
             <span
-              className={`shrink-0 text-sm font-medium ${
+              className={`w-12 shrink-0 text-right text-sm tabular-nums ${
                 trend.changePercent > 0 ? "text-neg" : "text-pos"
               }`}
             >
@@ -69,6 +53,6 @@ export function PriceTrendsPanel({
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }
