@@ -245,8 +245,7 @@ export function SyncModePanel() {
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Storage and sync</div>
           <div className="text-sm text-muted-foreground">
-            Moat always saves on this device first. Cloud sync is optional and only sends the
-            changes you make while offline.
+            Saved on this device first. Sync is optional.
           </div>
         </div>
 

@@ -11,17 +11,29 @@ export function configuredSyncEndpoint(
   return env.NEXT_PUBLIC_SYNC_ENDPOINT?.trim() ?? "";
 }
 
-/** The address to sync with: what the device stored, else what the build knows. */
+function currentOrigin(origin?: string): string {
+  if (origin !== undefined) return origin.trim();
+  return typeof window === "undefined" ? "" : window.location.origin;
+}
+
+/**
+ * Where to reach the sync server: what this device stored, else what the build
+ * was given, else the origin the app is served from. The deployment routes
+ * /v1/sync here on the same domain, so that last fallback is the normal case
+ * and nobody has to be asked.
+ */
 export function resolveSyncEndpoint(
   stored?: string,
   env: Record<string, string | undefined> = BUILD_ENV,
+  origin?: string,
 ): string {
-  return stored?.trim() || configuredSyncEndpoint(env);
+  return stored?.trim() || configuredSyncEndpoint(env) || currentOrigin(origin);
 }
 
-/** Whether to ask for the address, which is only when the build has no answer. */
+/** Whether to ask for the address, which is only when nothing else can answer. */
 export function needsManualSyncEndpoint(
   env: Record<string, string | undefined> = BUILD_ENV,
+  origin?: string,
 ): boolean {
-  return configuredSyncEndpoint(env) === "";
+  return configuredSyncEndpoint(env) === "" && currentOrigin(origin) === "";
 }
