@@ -65,7 +65,10 @@ export function MobileNavigation({
 
   return (
     <>
-      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-backdrop-filter:bg-background/84 lg:hidden">
+      {/* Pinned so the brand and the menu stay reachable without scrolling back
+          up. It parks below the status bar rather than at 0, which on a phone
+          would put it under the clock. */}
+      <div className="sticky top-(--safe-top) z-40 border-b border-border/60 bg-background/95 backdrop-blur-md supports-backdrop-filter:bg-background/90 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-1 py-1.5">
           <MoatMark className="h-9 w-9 shrink-0" />
 

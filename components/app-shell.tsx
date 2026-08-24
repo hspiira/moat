@@ -18,10 +18,10 @@ export function AppShell({ children }: AppShellProps) {
           profile exists, so this cannot live there. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top,0px)] bg-background"
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 h-(--safe-top) bg-background"
       />
       <div
-        className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-4 pb-4 pt-[max(0.5rem,env(safe-area-inset-top,0px))] sm:px-6 lg:gap-5 lg:px-8 lg:pb-6 lg:pt-[max(0.75rem,env(safe-area-inset-top,0px))]"
+        className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-4 pb-4 pt-[max(0.5rem,var(--safe-top))] sm:px-6 lg:gap-5 lg:px-8 lg:pb-6 lg:pt-[max(0.75rem,var(--safe-top))]"
         style={{
           paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
           paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
