@@ -13,7 +13,7 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:server && pnpm test:e2e",
     "test:e2e": "playwright test",
     "test:server": "vitest run --config vitest.server.config.ts",
-    "ios": "next build && node scripts/sync-ios-url-scheme.mjs && cap sync ios"
+    "ios": "next build && node scripts/sync-ios-url-scheme.mjs && cap sync ios && rm -rf ios/App/CapApp-SPM/.build"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
