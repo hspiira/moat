@@ -64,3 +64,34 @@ describe("resolveItem", () => {
     expect(resolved.isNew).toBe(true);
   });
 });
+
+describe("units on items", () => {
+  const base = { existing: [], userId: "u1", timestamp: "2026-08-20T00:00:00.000Z" };
+
+  it("keeps the unit given when the item is new", () => {
+    const { item } = resolveItem({ ...base, rawName: "Sugar", unit: "kg" });
+    expect(item.unit).toBe("kg");
+  });
+
+  it("leaves the unit unset rather than storing an empty one", () => {
+    expect(resolveItem({ ...base, rawName: "Sugar", unit: "  " }).item.unit).toBeUndefined();
+    expect(resolveItem({ ...base, rawName: "Sugar" }).item.unit).toBeUndefined();
+  });
+
+  it("fills in a unit an existing item never had", () => {
+    const existing = resolveItem({ ...base, rawName: "Sugar" }).item;
+    const { item, isNew } = resolveItem({ ...base, existing: [existing], rawName: "sugar", unit: "kg" });
+
+    expect(item.id).toBe(existing.id);
+    expect(item.unit).toBe("kg");
+    expect(isNew).toBe(true);
+  });
+
+  it("does not overwrite a unit already recorded", () => {
+    const existing = resolveItem({ ...base, rawName: "Sugar", unit: "kg" }).item;
+    const { item, isNew } = resolveItem({ ...base, existing: [existing], rawName: "sugar", unit: "g" });
+
+    expect(item.unit).toBe("kg");
+    expect(isNew).toBe(false);
+  });
+});

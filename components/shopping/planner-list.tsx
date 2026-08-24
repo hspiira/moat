@@ -17,7 +17,7 @@ import type {
   TransactionLineItem,
 } from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
-import { comparePlannedWithActual } from "@/lib/domain/planned-purchases";
+import { buildShoppingHistory } from "@/lib/domain/shopping-history";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
   if (!summary?.lastPaid) return null;
@@ -142,6 +142,12 @@ export function PlannerList(props: {
   isSubmitting: boolean;
 }) {
   const shared = props;
+  const history = buildShoppingHistory({
+    purchases: props.groups.history,
+    itemsById: props.itemsById,
+    transactionsById: props.transactionsById,
+    lineItemsById: props.lineItemsById,
+  });
   const isEmpty =
     props.groups.overdue.length === 0 &&
     props.groups.upcoming.length === 0 &&
@@ -167,70 +173,95 @@ export function PlannerList(props: {
       <PlannerSection title="Overdue" purchases={props.groups.overdue} {...shared} />
       <PlannerSection title="Upcoming" purchases={props.groups.upcoming} {...shared} />
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
-      {props.groups.history.length > 0 ? (
+      {history.trips.length > 0 ? (
         <details className="grid gap-2">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-            History ({props.groups.history.length})
+            Bought ({history.trips.length} trip{history.trips.length === 1 ? "" : "s"})
           </summary>
-          <ul className="mt-2 grid gap-2">
-            {props.groups.history.map((purchase) => {
-              const item = props.itemsById.get(purchase.itemId);
-              const isPurchased = purchase.status === "purchased";
-              const expense = purchase.linkedTransactionId
-                ? props.transactionsById.get(purchase.linkedTransactionId)
-                : undefined;
-              const outcome = comparePlannedWithActual(
-                purchase,
-                purchase.linkedLineItemId
-                  ? props.lineItemsById.get(purchase.linkedLineItemId)
-                  : undefined,
-              );
+          <ul className="mt-2 grid gap-4">
+            {history.trips.map((trip) => (
+              <li key={trip.transactionId} className="grid gap-1">
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  {trip.accountId ? (
+                    <Link
+                      href={`/accounts/detail?id=${encodeURIComponent(trip.accountId)}`}
+                      className="font-medium text-foreground underline underline-offset-2"
+                    >
+                      {formatDate(trip.occurredOn)}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-foreground">
+                      {formatDate(trip.occurredOn)}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">
+                    {trip.entries.length} item{trip.entries.length === 1 ? "" : "s"} ·{" "}
+                    <span className="text-foreground">{formatMoney(trip.total)}</span>
+                  </span>
+                </div>
 
-              return (
-                <li
-                  key={purchase.id}
-                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
-                >
-                  <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
+                <ul className="grid gap-1 border-l border-border pl-3">
+                  {trip.entries.map((entry) => (
+                    <li
+                      key={entry.purchase.id}
+                      className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground"
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {entry.item?.name ?? "Unknown item"}
+                        {entry.pricePerUnit != null && entry.item?.unit ? (
+                          <span className="text-xs">
+                            {" "}
+                            · {formatMoney(entry.pricePerUnit)}/{entry.item.unit}
+                          </span>
+                        ) : null}
+                      </span>
 
-                  {isPurchased && expense ? (
-                    <span className="flex shrink-0 items-baseline gap-2">
-                      {outcome.difference != null && outcome.difference !== 0 ? (
+                      {entry.outcome.difference != null && entry.outcome.difference !== 0 ? (
                         <span
                           className={
-                            outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
+                            entry.outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
                           }
                         >
-                          {outcome.difference < 0 ? "under" : "over"} by{" "}
-                          {formatMoney(Math.abs(outcome.difference))}
+                          {entry.outcome.difference < 0 ? "under" : "over"} by{" "}
+                          {formatMoney(Math.abs(entry.outcome.difference))}
                         </span>
                       ) : null}
-                      <Link
-                        href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}
-                        className="text-xs underline underline-offset-2 hover:text-foreground"
-                      >
-                        Bought {formatDate(expense.occurredOn)} ·{" "}
-                        {formatMoney(outcome.actual ?? Math.abs(expense.amount))}
-                      </Link>
-                    </span>
-                  ) : (
-                    <Badge variant="outline">{isPurchased ? "Bought" : "Dropped"}</Badge>
-                  )}
 
-                  {purchase.status === "dropped" ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="shrink-0"
-                      disabled={props.isSubmitting}
-                      onClick={() => props.onRestore(purchase)}
-                    >
-                      Put back
-                    </Button>
-                  ) : null}
-                </li>
-              );
-            })}
+                      <span className="shrink-0 text-xs">
+                        {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+
+      {history.dropped.length > 0 ? (
+        <details className="grid gap-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            Dropped ({history.dropped.length})
+          </summary>
+          <ul className="mt-2 grid gap-2">
+            {history.dropped.map(({ purchase, item }) => (
+              <li
+                key={purchase.id}
+                className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+              >
+                <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0"
+                  disabled={props.isSubmitting}
+                  onClick={() => props.onRestore(purchase)}
+                >
+                  Put back
+                </Button>
+              </li>
+            ))}
           </ul>
         </details>
       ) : null}

@@ -13,7 +13,10 @@ import { normalizeItemName } from "@/lib/domain/item-normalization";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Item } from "@/lib/types";
 
-const emptyDraft = { name: "", quantity: "", estimatedUnitPrice: "", neededBy: "", note: "" };
+// What people buy here, so the unit is a tap rather than a guess.
+const UNIT_SUGGESTIONS = ["kg", "g", "litre", "ml", "piece", "packet", "bunch", "tray", "bar"];
+
+const emptyDraft = { name: "", quantity: "", unit: "", estimatedUnitPrice: "", neededBy: "", note: "" };
 
 export function PlannerAddForm({
   items,
@@ -26,6 +29,7 @@ export function PlannerAddForm({
   isSubmitting: boolean;
   onAdd: (input: {
     name: string;
+    unit?: string;
     quantity?: number;
     estimatedUnitPrice?: number;
     neededBy?: string;
@@ -41,11 +45,13 @@ export function PlannerAddForm({
       normalizeItemName(item.name) === normalizeItemName(draft.name),
   );
   const remembered = matchedItem ? lastPaidFor?.(matchedItem.id) : undefined;
+  const rememberedUnit = matchedItem?.unit;
 
   const submit = () => {
     if (!draft.name.trim()) return;
     onAdd({
       name: draft.name,
+      unit: draft.unit.trim() || undefined,
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       estimatedUnitPrice: parseAmountInput(draft.estimatedUnitPrice) ?? undefined,
       neededBy: draft.neededBy || undefined,
@@ -102,7 +108,7 @@ export function PlannerAddForm({
       </button>
 
       {showDetails ? (
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr] sm:items-end">
+      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr] sm:items-end">
       <div className="grid gap-1">
         <Label htmlFor="planner-quantity">Qty</Label>
         <Input
@@ -111,6 +117,21 @@ export function PlannerAddForm({
           value={draft.quantity}
           onChange={(event) => setDraft({ ...draft, quantity: event.target.value })}
         />
+      </div>
+      <div className="grid gap-1">
+        <Label htmlFor="planner-unit">Unit</Label>
+        <Input
+          id="planner-unit"
+          list="planner-unit-suggestions"
+          value={draft.unit}
+          placeholder={rememberedUnit ?? "kg, litre, packet"}
+          onChange={(event) => setDraft({ ...draft, unit: event.target.value })}
+        />
+        <datalist id="planner-unit-suggestions">
+          {UNIT_SUGGESTIONS.map((unit) => (
+            <option key={unit} value={unit} />
+          ))}
+        </datalist>
       </div>
       <div className="grid gap-1">
         <Label htmlFor="planner-estimate">Est. price</Label>

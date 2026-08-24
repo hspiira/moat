@@ -151,6 +151,7 @@ export function useShoppingWorkspace() {
   const addPurchase = useCallback(
     async (input: {
       name: string;
+      unit?: string;
       quantity?: number;
       estimatedUnitPrice?: number;
       neededBy?: string;
@@ -166,6 +167,7 @@ export function useShoppingWorkspace() {
           rawName: input.name,
           userId: profile.id,
           timestamp,
+          unit: input.unit,
         });
         if (resolved.isNew) {
           await repositories.items.upsert(resolved.item);
