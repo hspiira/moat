@@ -12,6 +12,7 @@ import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive
 import { isHostedSyncEnabled } from "@/lib/features";
 import { GoogleSignInButton } from "@/components/sync/google-sign-in-button";
 import { needsManualSyncEndpoint, resolveSyncEndpoint } from "@/lib/sync/endpoint";
+import { isKnownOffline } from "@/lib/sync/connectivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -84,10 +85,10 @@ export function SyncModePanel() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setIsOnline(window.navigator.onLine);
+    setIsOnline(!isKnownOffline());
 
     const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => setIsOnline(!isKnownOffline());
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
