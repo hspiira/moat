@@ -60,6 +60,10 @@ function SheetContent({
           side === "bottom" &&
             "inset-x-0 bottom-0 rounded-t-3xl border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           className,
+          // Last, so a caller passing p-0 still clears the status bar. The
+          // inset is the device's, not the caller's to opt out of.
+          side !== "bottom" && "pt-[max(0.75rem,var(--safe-top))]",
+          side === "bottom" && "pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
         )}
         {...props}
       >
