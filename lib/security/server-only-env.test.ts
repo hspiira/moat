@@ -8,18 +8,23 @@ import { describe, expect, it } from "vitest";
    nowhere the browser runs. The client secret reaching a phone would let anyone
    holding the app impersonate the deployment to Google. */
 describe("server-only configuration", () => {
-  const tracked = execFileSync("git", ["ls-files", "app", "components", "lib", "server", "scripts"], {
-    encoding: "utf8",
-  })
+  // Tests never ship to the browser, and one naming the variable in order to
+  // check for it would otherwise report itself. That is not hypothetical: this
+  // file did exactly that once it was committed and git began listing it.
+  const shipped = execFileSync(
+    "git",
+    ["ls-files", "app", "components", "lib", "server", "scripts"],
+    { encoding: "utf8" },
+  )
     .split("\n")
-    .filter((file) => /\.(ts|tsx|mjs)$/.test(file));
+    .filter((file) => /\.(ts|tsx|mjs)$/.test(file) && !/\.test\.(ts|tsx|mjs)$/.test(file));
 
   // Only the sign-in configuration is secret. lib/sync/hosted-store.ts reads a
   // store path, imports node:path, and is imported by the server alone, so it
   // never reaches a browser bundle to begin with.
   it("reads no sign-in secret anywhere the browser runs", () => {
-    const offenders = tracked
-      .filter((file) => !file.startsWith("server/") && !file.endsWith(".test.ts"))
+    const offenders = shipped
+      .filter((file) => !file.startsWith("server/"))
       .filter((file) => /process\.env\.MOAT_OIDC/.test(readFileSync(file, "utf8")));
 
     expect(
@@ -29,7 +34,7 @@ describe("server-only configuration", () => {
   });
 
   it("gives no MOAT_ variable a NEXT_PUBLIC_ name", () => {
-    const offenders = tracked.filter((file) =>
+    const offenders = shipped.filter((file) =>
       /NEXT_PUBLIC_MOAT_OIDC/.test(readFileSync(file, "utf8")),
     );
 
