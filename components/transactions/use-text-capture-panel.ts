@@ -35,7 +35,7 @@ export function useTextCapturePanel({
 
   const accountSelectOptions = useMemo(() => accountOptions(accounts), [accounts]);
   const typeOptions = useMemo(
-    () => optionsFromRecord(transactionTypeLabels).filter((option) => option.value !== "transfer"),
+    () => optionsFromRecord(transactionTypeLabels),
     [],
   );
   const captureSourceOptions = useMemo(
@@ -43,17 +43,31 @@ export function useTextCapturePanel({
     [],
   );
 
-  function parseMessages() {
-    const parsed = parseCaptureText({
-      input,
-      source,
-      accountId: accountId || accounts[0]?.id || "",
-      categories,
-      existingTransactions,
-      fallbackFxRate: Number(fallbackFxRate || 0) || undefined,
-    });
-    setCandidates(parsed);
-  }
+
+  // Reading the text is cheap and pure, so it happens as you paste rather than
+  // behind a button you have to go and find. Settling first keeps the list from
+  // flickering while typing.
+  useEffect(() => {
+    if (!input.trim()) {
+      setCandidates([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCandidates(
+        parseCaptureText({
+          input,
+          source,
+          accountId: accountId || accounts[0]?.id || "",
+          categories,
+          existingTransactions,
+          fallbackFxRate: Number(fallbackFxRate || 0) || undefined,
+        }),
+      );
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [input, source, accountId, fallbackFxRate, accounts, categories, existingTransactions]);
 
   async function appendFiles(files: File[]) {
     setIsExtractingFiles(true);
@@ -98,7 +112,6 @@ export function useTextCapturePanel({
     accountSelectOptions,
     typeOptions,
     captureSourceOptions,
-    parseMessages,
     appendFiles,
     resetReview,
     clearAll,

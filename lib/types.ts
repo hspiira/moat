@@ -369,8 +369,9 @@ export type CaptureReviewSnapshot = {
   feeAmount?: number;
   statedBalance?: number;
   normalizedAmount: number;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   categoryId: string;
+  destinationAccountId?: string;
   payee: string;
   note: string;
   parserLabel?: string;
@@ -392,8 +393,9 @@ export type CaptureReviewItem = {
   feeAmount?: number;
   statedBalance?: number;
   normalizedAmount: number;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   categoryId: string;
+  destinationAccountId?: string;
   payee: string;
   note: string;
   messageHash: string;

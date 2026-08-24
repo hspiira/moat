@@ -41,8 +41,43 @@ describe("inferCapturePayee", () => {
 });
 
 describe("captured savings", () => {
-  it("reads as spending, because a capture cannot say where the money went", () => {
-    expect(inferCaptureType("Moved UGX 50,000 to savings")).toBe("expense");
+  it("reads moving money to your own savings as a transfer", () => {
+    // This used to read as spending because capture could not express a
+    // destination. It can now, and the destination is asked for on review.
+    expect(inferCaptureType("Moved UGX 50,000 to savings")).toBe("transfer");
+  });
+
+  it("still reads a contribution as spending, since it names no account", () => {
     expect(inferCaptureType("SACCO contribution UGX 50,000")).toBe("expense");
+  });
+});
+
+describe("transfers between your own accounts", () => {
+  it("reads the wording banks and wallets use", () => {
+    for (const text of [
+      "Transferred UGX 200,000 to your bank account on 12-08-2026",
+      "You have moved USh 50,000 to your own wallet",
+      "Bank transfer of UGX 1,000,000 completed",
+      "Withdrawal to bank of UGX 300,000",
+    ]) {
+      expect(inferCaptureType(text), text).toBe("transfer");
+    }
+  });
+
+  it("wins over income when a message says both", () => {
+    // The receiving half of a transfer says "received", which would otherwise
+    // book the same movement as new money coming in.
+    expect(
+      inferCaptureType("Received UGX 200,000 transferred from your own bank account"),
+    ).toBe("transfer");
+  });
+
+  it("leaves an ordinary payment to someone else alone", () => {
+    expect(inferCaptureType("Paid USh 45,000 to Grocery store")).toBe("expense");
+    expect(inferCaptureType("Received UGX 500,000 from Employer Ltd")).toBe("income");
+  });
+
+  it("does not call a loan repayment a transfer", () => {
+    expect(inferCaptureType("Loan repayment of UGX 80,000 received")).toBe("debt_payment");
   });
 });

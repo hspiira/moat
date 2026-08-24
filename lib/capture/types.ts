@@ -11,7 +11,7 @@ import type {
 export type CaptureProviderResult = {
   providerId: string;
   parserLabel: string;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   currency: SupportedCurrency;
   originalAmount: number;
   occurredOn?: string;
@@ -31,9 +31,11 @@ export type CapturePipelineCandidate = {
   feeAmount?: number;
   statedBalance?: number;
   normalizedAmount: number;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   categoryId: string;
   accountId: string;
+  /** Where a transfer lands. Chosen on review, since a message rarely says. */
+  destinationAccountId?: string;
   payee: string;
   note: string;
   source: TransactionSource;
