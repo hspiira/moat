@@ -13,9 +13,11 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:server && pnpm test:e2e",
     "test:e2e": "playwright test",
     "test:server": "vitest run --config vitest.server.config.ts",
-    "ios": "next build && cap sync ios"
+    "ios": "next build && node scripts/sync-ios-url-scheme.mjs && cap sync ios"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "@paralleldrive/cuid2": "^3.3.0",

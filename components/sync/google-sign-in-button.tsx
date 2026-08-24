@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { startGoogleSignIn } from "@/lib/sync/pkce";
+import { iosRedirectUri, isNativeApp } from "@/lib/sync/native-sign-in";
 import { rememberSignInAttempt } from "@/lib/sync/sign-in-handoff";
 import { Button } from "@/components/ui/button";
 
@@ -20,11 +21,20 @@ export function GoogleSignInButton({
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID?.trim();
+  const native = isNativeApp();
+  // The app is a public client with its own id. The web client id would be
+  // refused for a native redirect, and it holds a secret the app cannot use.
+  const clientId = native
+    ? process.env.NEXT_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim()
+    : process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID?.trim();
 
   async function start() {
     if (!clientId) {
-      setError("No Google client id is configured for this deployment.");
+      setError(
+        native
+          ? "This app build has no Google client id for signing in."
+          : "No Google client id is configured for this deployment.",
+      );
       return;
     }
     if (!endpoint.trim()) {
@@ -35,7 +45,9 @@ export function GoogleSignInButton({
     setIsStarting(true);
     setError(null);
 
-    const redirectUri = `${window.location.origin}/auth/callback`;
+    const redirectUri = native
+      ? iosRedirectUri(clientId)
+      : `${window.location.origin}/auth/callback`;
     const attempt = await startGoogleSignIn({ clientId, redirectUri });
 
     // The ledger already on this device is offered, and the token it already
@@ -48,7 +60,16 @@ export function GoogleSignInButton({
       endpoint: endpoint.trim(),
       proposedUserId: userId,
       existingAuthToken: existingAuthToken?.trim() || undefined,
+      client: native ? "ios" : "web",
     });
+
+    if (native) {
+      // Google will not show its sign-in inside an embedded web view, so this
+      // has to leave the app for the system browser.
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: attempt.authorizeUrl });
+      return;
+    }
 
     window.location.assign(attempt.authorizeUrl);
   }

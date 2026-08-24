@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
+import { readGoogleClient, type GoogleClientKind } from "./google-clients.js";
 import { readIdTokenClaims, type VerifiedIdentity } from "./id-token-claims.js";
 
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
@@ -10,35 +11,32 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 // rather than per request.
 const googleKeys = createRemoteJWKSet(GOOGLE_JWKS_URL);
 
-export function googleClientId(): string {
-  const value = process.env.MOAT_OIDC_GOOGLE_CLIENT_ID?.trim();
-  if (!value) throw new Error("MOAT_OIDC_GOOGLE_CLIENT_ID is not set.");
-  return value;
-}
-
-function googleClientSecret(): string {
-  const value = process.env.MOAT_OIDC_GOOGLE_CLIENT_SECRET?.trim();
-  if (!value) throw new Error("MOAT_OIDC_GOOGLE_CLIENT_SECRET is not set.");
-  return value;
-}
-
 export async function exchangeGoogleCode(params: {
   code: string;
   codeVerifier: string;
   redirectUri: string;
   nonce: string;
+  client: GoogleClientKind;
 }): Promise<VerifiedIdentity> {
+  const client = readGoogleClient(params.client);
+
+  const form = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: params.code,
+    code_verifier: params.codeVerifier,
+    redirect_uri: params.redirectUri,
+    client_id: client.clientId,
+  });
+  // Sent only for the web client. Google rejects a secret against a native
+  // client, and there is none to send in any case.
+  if (client.clientSecret) {
+    form.set("client_secret", client.clientSecret);
+  }
+
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code: params.code,
-      code_verifier: params.codeVerifier,
-      redirect_uri: params.redirectUri,
-      client_id: googleClientId(),
-      client_secret: googleClientSecret(),
-    }),
+    body: form,
   });
 
   if (!response.ok) {
@@ -54,7 +52,7 @@ export async function exchangeGoogleCode(params: {
 
   const { payload } = await jwtVerify(body.id_token, googleKeys, {
     issuer: GOOGLE_ISSUERS,
-    audience: googleClientId(),
+    audience: client.clientId,
   });
 
   // jose has checked the signature, issuer and audience. The claims are read
@@ -63,7 +61,7 @@ export async function exchangeGoogleCode(params: {
   return readIdTokenClaims({
     claims: payload,
     expectedIssuers: GOOGLE_ISSUERS,
-    expectedAudience: googleClientId(),
+    expectedAudience: client.clientId,
     expectedNonce: params.nonce,
     now: Date.now(),
   });

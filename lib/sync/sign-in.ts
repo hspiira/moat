@@ -37,6 +37,7 @@ export async function completeGoogleSignIn(params: {
   nonce: string;
   proposedUserId?: string;
   existingAuthToken?: string;
+  client?: "web" | "ios";
 }): Promise<SignInResult> {
   const response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/auth/callback`, {
     method: "POST",
@@ -50,6 +51,7 @@ export async function completeGoogleSignIn(params: {
     },
     body: JSON.stringify({
       provider: "google",
+      client: params.client ?? "web",
       code: params.code,
       codeVerifier: params.codeVerifier,
       redirectUri: params.redirectUri,

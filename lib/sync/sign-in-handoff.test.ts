@@ -25,6 +25,7 @@ const attempt: SignInAttempt = {
   endpoint: "https://sync.example.com",
   proposedUserId: "user:mine",
   existingAuthToken: "old-token",
+  client: "web",
 };
 
 describe("the sign-in handoff", () => {
@@ -37,6 +38,25 @@ describe("the sign-in handoff", () => {
 
   /* A verifier left behind is a code someone else could spend, so reading it
      consumes it. */
+  /* Which client asked decides which Google application the code is exchanged
+     against, so losing it across the redirect would send the app's code to the
+     web client and be refused. */
+  it("remembers that the app was the one asking", () => {
+    const store = fakeStore();
+    rememberSignInAttempt({ ...attempt, client: "ios" }, store);
+
+    expect(takeSignInAttempt(store)?.client).toBe("ios");
+  });
+
+  it("treats an attempt stored before this existed as the web one", () => {
+    const store = fakeStore();
+    const older: Record<string, unknown> = { ...attempt };
+    delete older.client;
+    store.setItem("moat.sign-in-attempt", JSON.stringify(older));
+
+    expect(takeSignInAttempt(store)?.client).toBe("web");
+  });
+
   it("can only be read once", () => {
     const store = fakeStore();
     rememberSignInAttempt(attempt, store);

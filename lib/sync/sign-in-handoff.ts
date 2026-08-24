@@ -8,6 +8,7 @@ export type SignInAttempt = {
   endpoint: string;
   proposedUserId?: string;
   existingAuthToken?: string;
+  client?: "web" | "ios";
 };
 
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -59,6 +60,7 @@ export function takeSignInAttempt(store: Store | null = sessionStore()): SignInA
         typeof parsed.proposedUserId === "string" ? parsed.proposedUserId : undefined,
       existingAuthToken:
         typeof parsed.existingAuthToken === "string" ? parsed.existingAuthToken : undefined,
+      client: parsed.client === "ios" ? "ios" : "web",
     };
   } catch {
     return null;

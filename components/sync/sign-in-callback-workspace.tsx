@@ -4,10 +4,35 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { repositories } from "@/lib/repositories/instance";
+import { isNativeApp, readNativeCallbackUrl } from "@/lib/sync/native-sign-in";
 import { readSignInRedirect } from "@/lib/sync/pkce";
 import { completeGoogleSignIn } from "@/lib/sync/sign-in";
 import { matchesAttempt, takeSignInAttempt } from "@/lib/sync/sign-in-handoff";
 import { Button } from "@/components/ui/button";
+
+// The deep link is delivered before this screen exists, so the shell parks the
+// query and this reads it once.
+const NATIVE_QUERY_KEY = "moat.sign-in-native-query";
+
+export function stashNativeSignInQuery(url: string) {
+  try {
+    window.sessionStorage.setItem(NATIVE_QUERY_KEY, readNativeCallbackUrl(url));
+  } catch {
+    // A browser refusing storage simply loses this sign-in, which the screen
+    // reports rather than hiding.
+  }
+}
+
+function readStashedNativeQuery(): string {
+  if (!isNativeApp()) return "";
+  try {
+    const value = window.sessionStorage.getItem(NATIVE_QUERY_KEY) ?? "";
+    window.sessionStorage.removeItem(NATIVE_QUERY_KEY);
+    return value;
+  } catch {
+    return "";
+  }
+}
 
 type Outcome =
   | { state: "working" }
@@ -26,7 +51,10 @@ export function SignInCallbackWorkspace() {
 
     void (async () => {
       const attempt = takeSignInAttempt();
-      const redirect = readSignInRedirect(window.location.search);
+      // On the phone the code arrives on a custom scheme through a deep link,
+      // which the shell hands over as a query rather than a page load.
+      const search = window.location.search || readStashedNativeQuery();
+      const redirect = readSignInRedirect(search);
 
       if ("error" in redirect) {
         setOutcome({ state: "refused", message: redirect.error });
@@ -49,6 +77,7 @@ export function SignInCallbackWorkspace() {
         nonce: attempt!.nonce,
         proposedUserId: attempt!.proposedUserId,
         existingAuthToken: attempt!.existingAuthToken,
+        client: attempt!.client,
       });
 
       if (result.status === "refused") {

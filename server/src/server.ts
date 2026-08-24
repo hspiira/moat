@@ -120,7 +120,13 @@ const server = createServer(async (request, response) => {
       limit(perSignIn, address, Date.now(), "Too many sign-in attempts. Try again shortly.");
 
       const body = await readJsonBody(request);
-      const signIn = validate(() => validateAuthCallbackRequest(body, allowedRedirectUris()));
+      const signIn = validate(() =>
+        validateAuthCallbackRequest(
+          body,
+          allowedRedirectUris(),
+          process.env.MOAT_OIDC_GOOGLE_IOS_CLIENT_ID?.trim(),
+        ),
+      );
 
       let identity;
       try {
@@ -129,6 +135,7 @@ const server = createServer(async (request, response) => {
           codeVerifier: signIn.codeVerifier,
           redirectUri: signIn.redirectUri,
           nonce: signIn.nonce,
+          client: signIn.client,
         });
       } catch (error) {
         throw new HttpError(401, error instanceof Error ? error.message : "Sign-in failed.");

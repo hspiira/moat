@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AppNavigation } from "@/components/app-navigation";
 import { NativeCaptureIntake } from "@/components/native-capture-intake";
+import { NativeSignInListener } from "@/components/sync/native-sign-in-listener";
 import { NavBottomSpacer } from "@/components/navigation/nav-bottom-spacer";
 import { PwaStatus } from "@/components/pwa-status";
 
@@ -31,6 +32,7 @@ export function AppShell({ children }: AppShellProps) {
           <PwaStatus />
         </aside>
         <NativeCaptureIntake />
+        <NativeSignInListener />
         <main className="min-w-0 overflow-x-clip">{children}</main>
         <NavBottomSpacer />
       </div>
