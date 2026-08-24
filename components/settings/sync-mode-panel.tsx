@@ -11,6 +11,7 @@ import { migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import { isHostedSyncEnabled } from "@/lib/features";
 import { GoogleSignInButton } from "@/components/sync/google-sign-in-button";
+import { needsManualSyncEndpoint, resolveSyncEndpoint } from "@/lib/sync/endpoint";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -264,7 +265,9 @@ export function SyncModePanel() {
                     mode: option.value,
                     hostedSyncEnabled: option.value === "hosted_opt_in",
                     postgresSyncUrl:
-                      option.value === "hosted_opt_in" ? postgresSyncUrl.trim() || undefined : undefined,
+                      option.value === "hosted_opt_in"
+                        ? resolveSyncEndpoint(postgresSyncUrl) || undefined
+                        : undefined,
                     syncAuthToken:
                       option.value === "hosted_opt_in" ? syncAuthToken.trim() || undefined : undefined,
                     updatedAt: timestamp,
@@ -283,17 +286,19 @@ export function SyncModePanel() {
 
         {syncProfile.mode === "hosted_opt_in" ? (
           <div className="grid gap-3">
-            <InputField
-              id="postgres-sync-url"
-              label="Sync endpoint"
-              value={postgresSyncUrl}
-              onChange={(event) => setPostgresSyncUrl(event.target.value)}
-              placeholder="https://sync.example.com"
-              autoComplete="off"
-              hint="Optional today. Local writes continue even if this is unreachable."
-            />
+            {needsManualSyncEndpoint() ? (
+              <InputField
+                id="postgres-sync-url"
+                label="Sync endpoint"
+                value={postgresSyncUrl}
+                onChange={(event) => setPostgresSyncUrl(event.target.value)}
+                placeholder="https://sync.example.com"
+                autoComplete="off"
+                hint="This build was not given a sync server, so it needs one here."
+              />
+            ) : null}
             <GoogleSignInButton
-              endpoint={postgresSyncUrl}
+              endpoint={resolveSyncEndpoint(postgresSyncUrl)}
               userId={profile.id}
               existingAuthToken={syncAuthToken}
               disabled={isSaving}
@@ -309,7 +314,7 @@ export function SyncModePanel() {
                     ...syncProfile,
                     hostedSyncEnabled: true,
                     mode: "hosted_opt_in",
-                    postgresSyncUrl: postgresSyncUrl.trim() || undefined,
+                    postgresSyncUrl: resolveSyncEndpoint(postgresSyncUrl) || undefined,
                     syncAuthToken: syncAuthToken.trim() || undefined,
                     updatedAt: timestamp,
                   });
