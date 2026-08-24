@@ -65,7 +65,7 @@ export function MobileNavigation({
 
   return (
     <>
-      <div className="sticky top-0 z-40 lg:hidden">
+      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-backdrop-filter:bg-background/84 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-1 py-1.5">
           <MoatMark className="h-9 w-9 shrink-0" />
 
