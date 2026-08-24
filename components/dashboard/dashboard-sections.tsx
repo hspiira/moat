@@ -44,7 +44,7 @@ function describeSavingsRate(
   note: string | null;
 } {
   if (!hasIncome) {
-    return { value: "—", tone: "neutral", sign: "none", note: null };
+    return { value: "–", tone: "neutral", sign: "none", note: null };
   }
   if (savingsRate === 0) {
     return { value: "0%", tone: "neutral", sign: "none", note: null };

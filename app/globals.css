@@ -63,7 +63,7 @@
 }
 
 /* Monochrome chrome, colour reserved for money.
-   The organising rule: the primary surface is the inverse of the background —
+   The organising rule: the primary surface is the inverse of the background:
    a near-black pill on white here, a white pill on near-black in .dark. There
    is no brand hue, which is why brand can never again be mistaken for "you
    gained money" the way --primary and --pos were.
@@ -223,7 +223,7 @@
   animation: moat-shake 0.4s ease-in-out;
 }
 
-/* An accent orbiting the padlock ring — slow when idle, fast while verifying. */
+/* An accent orbiting the padlock ring, slow when idle, fast while verifying. */
 @keyframes moat-orbit {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

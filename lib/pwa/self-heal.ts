@@ -44,7 +44,7 @@ function showHealingOverlay(): void {
   overlay.innerHTML = `
     <div class="moat-heal-ring"></div>
     <div style="font-size:16px;font-weight:600;">Updating Moat</div>
-    <div style="font-size:13px;opacity:0.65;max-width:20rem;">Getting the latest version. Your data is safe — this only takes a moment.</div>
+    <div style="font-size:13px;opacity:0.65;max-width:20rem;">Getting the latest version. Your data is safe. This only takes a moment.</div>
     <style>
       #moat-healing .moat-heal-ring{width:36px;height:36px;border-radius:9999px;border:3px solid color-mix(in srgb, currentColor 18%, transparent);border-top-color:var(--primary,#0e4d45);}
       ${reduceMotion ? "" : "@keyframes moat-heal-spin{to{transform:rotate(360deg)}}#moat-healing .moat-heal-ring{animation:moat-heal-spin .8s linear infinite;}"}
@@ -60,7 +60,7 @@ export async function purgeStaleClientAndReload(): Promise<void> {
   try {
     const lastHealedAt = Number(sessionStorage.getItem(HEAL_MARK_KEY) ?? 0);
     if (Number.isFinite(lastHealedAt) && Date.now() - lastHealedAt < HEAL_COOLDOWN_MS) {
-      return; // Healed very recently — avoid a reload loop.
+      return; // Healed very recently, avoid a reload loop.
     }
     sessionStorage.setItem(HEAL_MARK_KEY, String(Date.now()));
   } catch {

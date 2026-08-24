@@ -206,7 +206,7 @@ function CheckOffSheetForm({
         </div>
         {unpricedCount > 0 ? (
           <p className="text-xs text-muted-foreground">
-            {unpricedCount} item{unpricedCount === 1 ? "" : "s"} without a price — recorded
+            {unpricedCount} item{unpricedCount === 1 ? "" : "s"} without a price, recorded
             as bought, but left out of the total and the price history.
           </p>
         ) : null}

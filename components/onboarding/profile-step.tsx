@@ -37,9 +37,9 @@ const salaryCycleLabels: Record<SalaryCycle, string> = {
 };
 
 const riskComfortLabels: Record<RiskComfort, string> = {
-  low: "Low — I prefer safety and liquidity",
-  moderate: "Moderate — I can handle some ups and downs",
-  high: "High — I am comfortable with long-term volatility",
+  low: "Low: I prefer safety and liquidity",
+  moderate: "Moderate: I can handle some ups and downs",
+  high: "High: I am comfortable with long-term volatility",
 };
 
 type Props = {

@@ -140,7 +140,7 @@ export function ProjectsWorkspace() {
   return (
     <FeaturePageShell
       title="Projects"
-      description="A one-off that spans categories and months — a relocation, a wedding, a term of school fees. Tag its spending and see what it really cost."
+      description="A one-off that spans categories and months, a relocation, a wedding, a term of school fees. Tag its spending and see what it really cost."
       profile={profile}
       isLoading={isLoading}
       error={error}

@@ -23,7 +23,7 @@ export function detectBackupFormat(text: string): BackupFormat {
   } catch {
     return {
       kind: "unrecognised",
-      reason: "That file isn't a Moat backup — it couldn't be read as JSON.",
+      reason: "That file isn't a Moat backup, it couldn't be read as JSON.",
     };
   }
 

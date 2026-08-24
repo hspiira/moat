@@ -416,11 +416,11 @@ export function TransactionForm({
               {supportsFee ? (
                 <InputField
                   id="tx-fee"
-                  label="Fee — charges & tax (UGX)"
+                  label="Fee: charges & tax (UGX)"
                   inputMode="decimal"
                   value={form.feeAmount}
                   onChange={(e) => onFormChange((c) => ({ ...c, feeAmount: e.target.value }))}
-                  placeholder="Optional — e.g. 1250"
+                  placeholder="Optional: e.g. 1250"
                 />
               ) : null}
 

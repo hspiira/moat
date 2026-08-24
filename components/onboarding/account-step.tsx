@@ -43,7 +43,7 @@ export function AccountStep({ account, onAccountChange }: Props) {
         onChange={(e) =>
           onAccountChange((c) => ({ ...c, institutionName: e.target.value }))
         }
-        placeholder="Optional — e.g. Stanbic, MTN, your SACCO"
+        placeholder="Optional: e.g. Stanbic, MTN, your SACCO"
       />
 
       <InputField

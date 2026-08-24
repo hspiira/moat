@@ -94,7 +94,7 @@ export function CaptureReviewFields({
         {feeBearingTypes.has(draft.type) ? (
           <AmountField
             id={`capture-review-fee-${draft.id}`}
-            label="Fee — charges & tax (UGX)"
+            label="Fee: charges & tax (UGX)"
             value={draft.feeAmount}
             onValueChange={(value) =>
               onChange((current) => ({ ...current, feeAmount: value ?? undefined }))
@@ -114,7 +114,7 @@ export function CaptureReviewFields({
       {balanceGap && balanceGap.gap < 0 ? (
         <div className="grid gap-2 rounded-lg bg-neg/12 px-3 py-2 text-xs">
           <span className="text-foreground">
-            Bank balance is {formatMoney(Math.abs(balanceGap.gap), "UGX")} lower than recorded —
+            Bank balance is {formatMoney(Math.abs(balanceGap.gap), "UGX")} lower than recorded,
             likely an unrecorded fee.
           </span>
           <button
@@ -127,7 +127,7 @@ export function CaptureReviewFields({
         </div>
       ) : balanceGap && balanceGap.gap > 0 ? (
         <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-          Bank balance is {formatMoney(balanceGap.gap, "UGX")} higher than recorded — an uncaptured
+          Bank balance is {formatMoney(balanceGap.gap, "UGX")} higher than recorded, an uncaptured
           credit?
         </div>
       ) : null}

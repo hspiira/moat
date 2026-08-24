@@ -7,7 +7,7 @@ export type BackupRestorePlan =
   | { action: "encrypted" };
 
 export const LOCKED_FOR_SEALED_RESTORE =
-  "Unlock Moat first — a sealed backup opens with this device's key, not a PIN.";
+  "Unlock Moat first, a sealed backup opens with this device's key, not a PIN.";
 
 export const PIN_NEEDED_FOR_ENCRYPTED_RESTORE =
   "This backup is encrypted. Enter the PIN used to create it.";

@@ -51,7 +51,7 @@ function HiddenFeeNotice({
   return (
     <div className="grid gap-2 rounded-lg border border-clay/40 bg-clay/10 px-3 py-2.5">
       <div className="text-xs leading-5 text-foreground">
-        The stated balance is {formatMoney(fee, "UGX")} lower than this transaction explains —
+        The stated balance is {formatMoney(fee, "UGX")} lower than this transaction explains,
         most likely a charge the message does not print.
       </div>
       {alreadyApplied ? (
@@ -150,7 +150,7 @@ export function TextCapturePanel({
             onClick={() => setDetailsOpen(true)}
             className="w-fit text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
-            Add details — source, exchange rate
+            Add details: source, exchange rate
           </button>
         )}
 
