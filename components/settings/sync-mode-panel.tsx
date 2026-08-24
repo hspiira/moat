@@ -298,15 +298,6 @@ export function SyncModePanel() {
               existingAuthToken={syncAuthToken}
               disabled={isSaving}
             />
-            <InputField
-              id="sync-auth-token"
-              label="Sync bearer token"
-              value={syncAuthToken}
-              onChange={(event) => setSyncAuthToken(event.target.value)}
-              placeholder="Optional bearer token"
-              autoComplete="off"
-              hint="Filled in by signing in. Only type one here if it was minted by hand."
-            />
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
