@@ -14,6 +14,10 @@ const config = [
       // The static export copied into the native shells. Generated, not ours.
       "ios/App/App/public/**",
       "native/android/**/assets/public/**",
+      // Swift package checkouts and artifacts. Xcode recreates this whenever
+      // the project is open, and Capacitor vendors its own bridge script in
+      // there, so every warning it holds belongs to someone else.
+      "ios/App/CapApp-SPM/.build/**",
     ],
   },
   ...nextCoreWebVitals,
