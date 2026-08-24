@@ -5,6 +5,7 @@ import type { SyncPushRequest } from "@/lib/sync/types";
 
 import { closePool, getPool } from "./pool.js";
 import { applyPostgresSyncPush, pullPostgresSyncChanges } from "./postgres-store.js";
+import { dropSyncTablesSql } from "./schema-reset.js";
 import { SCHEMA_SQL } from "./schema.js";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
@@ -32,11 +33,7 @@ function pushRequest(
 
 describeDb("postgres sync store", () => {
   beforeEach(async () => {
-    await getPool().query(`
-      drop table if exists sync_applied_outbox;
-      drop table if exists sync_records;
-      drop table if exists sync_users;
-    `);
+    await getPool().query(dropSyncTablesSql());
     await getPool().query(SCHEMA_SQL);
   });
 

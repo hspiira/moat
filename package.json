@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build:server": "pnpm --filter @moat/sync-server build",
-    "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:e2e",
+    "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:server && pnpm test:e2e",
     "test:e2e": "playwright test",
-    "test:server": "vitest run --no-file-parallelism server/",
+    "test:server": "vitest run --config vitest.server.config.ts",
     "ios": "next build && cap sync ios"
   },
   "dependencies": {
