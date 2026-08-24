@@ -66,5 +66,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- moat:sign-in-scheme -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.741091121242-q9r038d3ng93b4apsvv1l2jl5vjh4ksr</string>
+			</array>
+		</dict>
+	</array>
+	<!-- /moat:sign-in-scheme -->
 </dict>
 </plist>
