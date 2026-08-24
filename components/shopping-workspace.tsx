@@ -39,6 +39,10 @@ export function ShoppingWorkspace() {
     () => new Map(workspace.items.map((item) => [item.id, item])),
     [workspace.items],
   );
+  const lineItemsById = useMemo(
+    () => new Map(workspace.lineItems.map((line) => [line.id, line])),
+    [workspace.lineItems],
+  );
   const transactionsById = useMemo(
     () => new Map(workspace.transactions.map((entry) => [entry.id, entry])),
     [workspace.transactions],
@@ -108,6 +112,7 @@ export function ShoppingWorkspace() {
           priceSummaries={workspace.priceSummaries}
           selectedIds={selectedIds}
           transactionsById={transactionsById}
+          lineItemsById={lineItemsById}
           isSubmitting={workspace.isSubmitting}
           onToggleSelect={toggleSelect}
           onDrop={(purchase) => void workspace.dropPurchase(purchase)}

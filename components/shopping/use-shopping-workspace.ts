@@ -362,6 +362,7 @@ export function useShoppingWorkspace() {
     lastPaidFor,
     againstBudget,
     recentExpenses,
+    lineItems,
     transactions,
     accounts,
     categories,

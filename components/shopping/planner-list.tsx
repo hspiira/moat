@@ -9,8 +9,15 @@ import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
 import Link from "next/link";
 
-import type { Item, ItemPriceSummary, PlannedPurchase, Transaction } from "@/lib/types";
+import type {
+  Item,
+  ItemPriceSummary,
+  PlannedPurchase,
+  Transaction,
+  TransactionLineItem,
+} from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
+import { comparePlannedWithActual } from "@/lib/domain/planned-purchases";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
   if (!summary?.lastPaid) return null;
@@ -131,6 +138,7 @@ export function PlannerList(props: {
   onRestore: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
   transactionsById: Map<string, Transaction>;
+  lineItemsById: Map<string, TransactionLineItem>;
   isSubmitting: boolean;
 }) {
   const shared = props;
@@ -171,6 +179,12 @@ export function PlannerList(props: {
               const expense = purchase.linkedTransactionId
                 ? props.transactionsById.get(purchase.linkedTransactionId)
                 : undefined;
+              const outcome = comparePlannedWithActual(
+                purchase,
+                purchase.linkedLineItemId
+                  ? props.lineItemsById.get(purchase.linkedLineItemId)
+                  : undefined,
+              );
 
               return (
                 <li
@@ -180,13 +194,25 @@ export function PlannerList(props: {
                   <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
 
                   {isPurchased && expense ? (
-                    <Link
-                      href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}
-                      className="shrink-0 text-xs underline underline-offset-2 hover:text-foreground"
-                    >
-                      Bought {formatDate(expense.occurredOn)} ·{" "}
-                      {formatMoney(Math.abs(expense.amount))}
-                    </Link>
+                    <span className="flex shrink-0 items-baseline gap-2">
+                      {outcome.difference != null && outcome.difference !== 0 ? (
+                        <span
+                          className={
+                            outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
+                          }
+                        >
+                          {outcome.difference < 0 ? "under" : "over"} by{" "}
+                          {formatMoney(Math.abs(outcome.difference))}
+                        </span>
+                      ) : null}
+                      <Link
+                        href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}
+                        className="text-xs underline underline-offset-2 hover:text-foreground"
+                      >
+                        Bought {formatDate(expense.occurredOn)} ·{" "}
+                        {formatMoney(outcome.actual ?? Math.abs(expense.amount))}
+                      </Link>
+                    </span>
                   ) : (
                     <Badge variant="outline">{isPurchased ? "Bought" : "Dropped"}</Badge>
                   )}
