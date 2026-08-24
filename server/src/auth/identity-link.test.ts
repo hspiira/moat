@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { decideIdentityLink } from "./identity-link.js";
 
-const unlinked = { linkedUserId: null, proposedIsClaimed: false };
+const unlinked = { linkedUserId: null, proposedIsClaimed: false, proposedIsProven: false };
 
 describe("decideIdentityLink", () => {
   it("signs up when nothing exists on either side", () => {
@@ -22,14 +22,16 @@ describe("decideIdentityLink", () => {
     expect(
       decideIdentityLink({
         proposedUserId: "user:someone-else",
-        state: { linkedUserId: null, proposedIsClaimed: true },
+        state: { linkedUserId: null, proposedIsClaimed: true, proposedIsProven: false },
       }),
     ).toEqual({ outcome: "proposed_id_taken" });
   });
 
   it("signs in when this account already has a ledger and the device offers none", () => {
     expect(
-      decideIdentityLink({ state: { linkedUserId: "user:mine", proposedIsClaimed: false } }),
+      decideIdentityLink({
+        state: { linkedUserId: "user:mine", proposedIsClaimed: false, proposedIsProven: false },
+      }),
     ).toEqual({ outcome: "sign_in", userId: "user:mine" });
   });
 
@@ -37,7 +39,7 @@ describe("decideIdentityLink", () => {
     expect(
       decideIdentityLink({
         proposedUserId: "user:mine",
-        state: { linkedUserId: "user:mine", proposedIsClaimed: false },
+        state: { linkedUserId: "user:mine", proposedIsClaimed: false, proposedIsProven: false },
       }),
     ).toEqual({ outcome: "sign_in", userId: "user:mine" });
   });
@@ -48,9 +50,30 @@ describe("decideIdentityLink", () => {
     expect(
       decideIdentityLink({
         proposedUserId: "user:other",
-        state: { linkedUserId: "user:mine", proposedIsClaimed: false },
+        state: { linkedUserId: "user:mine", proposedIsClaimed: false, proposedIsProven: false },
       }),
     ).toEqual({ outcome: "already_linked_elsewhere" });
+  });
+
+  /* Someone already syncing on a hand-minted token has records, so the
+     unclaimed check alone would shut them out of ever adding Google. Holding a
+     valid token for that ledger is the proof that it is theirs. */
+  it("lets a caller claim a ledger it already holds a token for", () => {
+    expect(
+      decideIdentityLink({
+        proposedUserId: "user:mine",
+        state: { linkedUserId: null, proposedIsClaimed: true, proposedIsProven: true },
+      }),
+    ).toEqual({ outcome: "link", userId: "user:mine" });
+  });
+
+  it("still refuses a claimed ledger when nothing was proven", () => {
+    expect(
+      decideIdentityLink({
+        proposedUserId: "user:mine",
+        state: { linkedUserId: null, proposedIsClaimed: true, proposedIsProven: false },
+      }),
+    ).toEqual({ outcome: "proposed_id_taken" });
   });
 
   it("treats a blank proposal as no proposal", () => {
@@ -63,7 +86,7 @@ describe("decideIdentityLink", () => {
     expect(
       decideIdentityLink({
         proposedUserId: "  user:someone-else  ",
-        state: { linkedUserId: null, proposedIsClaimed: true },
+        state: { linkedUserId: null, proposedIsClaimed: true, proposedIsProven: false },
       }),
     ).toEqual({ outcome: "proposed_id_taken" });
   });

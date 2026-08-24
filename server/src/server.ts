@@ -134,11 +134,24 @@ const server = createServer(async (request, response) => {
         throw new HttpError(401, error instanceof Error ? error.message : "Sign-in failed.");
       }
 
+      // A device already syncing on a hand-minted token proves the ledger is
+      // its own by presenting that token alongside the sign-in.
+      let proposedIsProven = false;
+      if (signIn.proposedUserId && request.headers.authorization) {
+        try {
+          const existing = await authenticateSyncRequest(request.headers.authorization);
+          proposedIsProven = existing.userId === signIn.proposedUserId;
+        } catch {
+          proposedIsProven = false;
+        }
+      }
+
       const resolved = await resolveIdentity({
         issuer: identity.issuer,
         subject: identity.subject,
         email: identity.email,
         proposedUserId: signIn.proposedUserId,
+        proposedIsProven,
       });
 
       if (resolved.status === "already_linked_elsewhere") {

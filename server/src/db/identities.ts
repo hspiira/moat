@@ -12,6 +12,7 @@ async function readState(params: {
   issuer: string;
   subject: string;
   proposedUserId: string | null;
+  proposedIsProven: boolean;
 }) {
   const linked = await getPool().query<{ user_id: string }>(
     "select user_id from sync_identities where issuer = $1 and subject = $2",
@@ -33,6 +34,7 @@ async function readState(params: {
   return {
     linkedUserId: linked.rows[0]?.user_id ?? null,
     proposedIsClaimed,
+    proposedIsProven: params.proposedIsProven,
   };
 }
 
@@ -41,9 +43,15 @@ export async function resolveIdentity(params: {
   subject: string;
   email?: string;
   proposedUserId?: string | null;
+  // True when the caller presented a working token for the id it offered.
+  proposedIsProven?: boolean;
 }): Promise<ResolvedIdentity> {
   const proposedUserId = params.proposedUserId?.trim() || null;
-  const state = await readState({ ...params, proposedUserId });
+  const state = await readState({
+    ...params,
+    proposedUserId,
+    proposedIsProven: params.proposedIsProven === true,
+  });
   const decision: IdentityLinkDecision = decideIdentityLink({ proposedUserId, state });
 
   if (decision.outcome === "already_linked_elsewhere") {

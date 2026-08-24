@@ -4,6 +4,10 @@ export type IdentityLinkState = {
   // Whether the id the device offered is already spoken for, by an identity or
   // by records. Only meaningful when a proposal was made.
   proposedIsClaimed: boolean;
+  // Whether the caller proved it already holds a token for the id it offered.
+  // Someone syncing on a hand-minted token has records, so the unclaimed check
+  // alone would shut them out of ever adding a provider account.
+  proposedIsProven: boolean;
 };
 
 export type IdentityLinkDecision =
@@ -35,7 +39,9 @@ export function decideIdentityLink(params: {
     return { outcome: "sign_up" };
   }
 
-  return proposedIsClaimed
-    ? { outcome: "proposed_id_taken" }
-    : { outcome: "link", userId: proposed };
+  if (proposedIsClaimed && !params.state.proposedIsProven) {
+    return { outcome: "proposed_id_taken" };
+  }
+
+  return { outcome: "link", userId: proposed };
 }

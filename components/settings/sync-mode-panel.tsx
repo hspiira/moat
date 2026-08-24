@@ -10,6 +10,7 @@ import { backfillSyncOutbox, hasBackfilled } from "@/lib/sync/backfill";
 import { migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import { isHostedSyncEnabled } from "@/lib/features";
+import { GoogleSignInButton } from "@/components/sync/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -291,6 +292,12 @@ export function SyncModePanel() {
               autoComplete="off"
               hint="Optional today. Local writes continue even if this is unreachable."
             />
+            <GoogleSignInButton
+              endpoint={postgresSyncUrl}
+              userId={profile.id}
+              existingAuthToken={syncAuthToken}
+              disabled={isSaving}
+            />
             <InputField
               id="sync-auth-token"
               label="Sync bearer token"
@@ -298,7 +305,7 @@ export function SyncModePanel() {
               onChange={(event) => setSyncAuthToken(event.target.value)}
               placeholder="Optional bearer token"
               autoComplete="off"
-              hint="Only needed when the hosted sync backend requires authentication."
+              hint="Filled in by signing in. Only type one here if it was minted by hand."
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button
