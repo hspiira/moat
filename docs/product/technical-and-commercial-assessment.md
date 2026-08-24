@@ -1,4 +1,4 @@
-# Moat — Technical and Commercial Assessment
+# Moat, Technical and Commercial Assessment
 
 **Date:** 2026-07-29
 **Prepared for:** Founder / engineering review
@@ -8,17 +8,17 @@
 
 ## Executive summary
 
-Moat is a local-first personal finance application for the Ugandan market, built to an unusually high engineering standard. Across 27,189 lines of source it carries zero `TODO`s, zero `any` types, zero type-suppression comments, and two lint exceptions — a level of discipline in the top percentile of codebases at this stage.
+Moat is a local-first personal finance application for the Ugandan market, built to an unusually high engineering standard. Across 27,189 lines of source it carries zero `TODO`s, zero `any` types, zero type-suppression comments, and two lint exceptions, a level of discipline in the top percentile of codebases at this stage.
 
-That quality is not the problem. **Allocation is.** The product's stated differentiator — automatically capturing transactions from mobile-money messages — represents 325 lines of the codebase and has never run on a physical handset. Meanwhile, a multi-device sync subsystem that cannot be enabled in production accounts for 1,595 lines.
+That quality is not the problem. **Allocation is.** The product's stated differentiator, automatically capturing transactions from mobile-money messages, represents 325 lines of the codebase and has never run on a physical handset. Meanwhile, a multi-device sync subsystem that cannot be enabled in production accounts for 1,595 lines.
 
-The product does have a real user: the founder has used it for approximately one month, concentrated in July 2026. That usage is meaningful evidence — but on iOS, where automated capture is impossible by platform restriction. It therefore validates the manual-entry ledger and the underlying accounting engine, and leaves the capture thesis entirely untested.
+The product does have a real user: the founder has used it for approximately one month, concentrated in July 2026. That usage is meaningful evidence, but on iOS, where automated capture is impossible by platform restriction. It therefore validates the manual-entry ledger and the underlying accounting engine, and leaves the capture thesis entirely untested.
 
 The company has a well-built and demonstrably usable product pointed at an unproven differentiator. The recommended action is not more engineering; it is a one-week validation exercise that either confirms or kills the capture thesis before further investment.
 
 ---
 
-# Part 1 — Engineering assessment
+# Part 1, Engineering assessment
 
 ## 1.1 Scale and composition
 
@@ -52,17 +52,17 @@ This matters commercially: it means the codebase is an asset that a new engineer
 
 **Review-first capture.** Parsed messages never post directly to the ledger; they land in a review inbox. This is the right default for financial data and a discipline that well-funded competitors frequently get wrong.
 
-**Encryption migration handled properly.** A metadata leak — index fields stored in plaintext to keep IndexedDB queries working — was identified and closed by moving to keyed HMAC blind indexes (`RECORD_ENVELOPE_VERSION = 2`), with transparent re-encryption of existing records via `reblindAllRecords`. Shipping a migration path rather than breaking existing data reflects mature judgment.
+**Encryption migration handled properly.** A metadata leak, index fields stored in plaintext to keep IndexedDB queries working, was identified and closed by moving to keyed HMAC blind indexes (`RECORD_ENVELOPE_VERSION = 2`), with transparent re-encryption of existing records via `reblindAllRecords`. Shipping a migration path rather than breaking existing data reflects mature judgment.
 
 **Storage abstraction is real.** Two backends (IndexedDB for web, SQLite for native shells) sit behind a single `RepositoryBundle` interface, selected at runtime. This is what makes an iOS shell a build rather than a rewrite, and it materially lowers the cost of platform expansion.
 
-**Load discipline.** Thirteen dynamic `await import()` calls defer heavy dependencies (`pdfjs-dist`, `tesseract.js`) so they cost nothing until used — relevant in a market where bandwidth and device capability are constraints.
+**Load discipline.** Thirteen dynamic `await import()` calls defer heavy dependencies (`pdfjs-dist`, `tesseract.js`) so they cost nothing until used, relevant in a market where bandwidth and device capability are constraints.
 
 **Continuous integration.** Typecheck, lint, test, and build run on every push and pull request.
 
 ## 1.3 What is weak
 
-### Finding 1 — The interactive layer has no automated coverage
+### Finding 1, The interactive layer has no automated coverage
 
 | Layer | Source files | Test files |
 |---|---|---|
@@ -75,7 +75,7 @@ Every form, workspace, and the PIN screen that protects user financial data is u
 
 **Impact:** regression risk concentrated in exactly the layer that changes most often and that users experience directly.
 
-### Finding 2 — Effort is allocated inversely to strategic value
+### Finding 2, Effort is allocated inversely to strategic value
 
 | Subsystem | Lines | Production status |
 |---|---|---|
@@ -84,35 +84,35 @@ Every form, workspace, and the PIN screen that protects user financial data is u
 | Capture pipeline (`lib/capture/`) | 1,463 | Working; unvalidated on device |
 | **Parser packs (`lib/capture/providers/`)** | **325** | **The differentiator.** 13 real-message fixtures |
 
-The sync subsystem includes per-entity conflict rules, echo suppression, an outbox, and a dedicated conflict-resolution interface at `/settings/sync-conflicts` — all built against a server that refuses to run. It is approximately 6% of the source tree delivering zero user value today.
+The sync subsystem includes per-entity conflict rules, echo suppression, an outbox, and a dedicated conflict-resolution interface at `/settings/sync-conflicts`, all built against a server that refuses to run. It is approximately 6% of the source tree delivering zero user value today.
 
 Individual parser sizes: `airtel-money-uganda` 80 lines, `mtn-uganda` 70, `shared` 63, `bank-alert-generic` 41, `centenary-uganda` 24, `index` 24, `absa-uganda` 23.
 
 The project's own engineering principles specify *"YAGNI: implement only current requirements, avoid speculative features."* The sync subsystem is a direct departure from that standard.
 
-### Finding 3 — Nothing has been verified on physical hardware
+### Finding 3, Nothing has been verified on physical hardware
 
 The Android host shell (16 files, Kotlin) is complete in source but recorded in `docs/tracker.md` as *"not device-verified."* It has never been compiled to an APK or installed on a handset.
 
-The unverified surface includes the WebView-to-JavaScript bridge, a string-protocol SQLite command layer, and share-intent handoff — precisely the integration points where platform behaviour diverges from expectation.
+The unverified surface includes the WebView-to-JavaScript bridge, a string-protocol SQLite command layer, and share-intent handoff, precisely the integration points where platform behaviour diverges from expectation.
 
 **Impact:** an unquantified risk sitting directly in the critical path to launch.
 
-### Finding 4 — Documentation has drifted on security posture
+### Finding 4, Documentation has drifted on security posture
 
-`docs/architecture/overview.md` (line 49) states that index fields *"stay plaintext so IndexedDB indexes work — a deliberate tradeoff."* The implementation has since moved to envelope version 2 with HMAC blind indexes, closing that gap entirely.
+`docs/architecture/overview.md` (line 49) states that index fields *"stay plaintext so IndexedDB indexes work, a deliberate tradeoff."* The implementation has since moved to envelope version 2 with HMAC blind indexes, closing that gap entirely.
 
 The document describes a vulnerability that no longer exists. Because this is the security section of the designated architecture reference, any reviewer, partner, or investor performing diligence will read a materially inaccurate account of the product's data protection.
 
 A comparable drift exists in `README.md`, which lists PDF statement parsing as not built while `lib/capture/file-extractor.ts` implements PDF text extraction and OCR. (This may be a definitional distinction between text extraction and structured statement parsing, but it reads as a contradiction.)
 
-### Finding 5 — Pilot-readiness gaps in a mobile-first product
+### Finding 5, Pilot-readiness gaps in a mobile-first product
 
-`docs/tracker.md` records an unchecked item: **"Mobile screen sizes verified — required before pilot."** For a product whose primary surface is a phone, this is a foundational gap rather than a refinement.
+`docs/tracker.md` records an unchecked item: **"Mobile screen sizes verified, required before pilot."** For a product whose primary surface is a phone, this is a foundational gap rather than a refinement.
 
-### Finding 6 — Minor housekeeping
+### Finding 6, Minor housekeeping
 
-Four unreferenced assets remain in `public/` (`math (1).png`, `math (1).svg`, `moby.png`, `moby.svg`), and `.moat-sync/hosted-sync.json` — runtime state from the development sync server — is committed to version control rather than ignored.
+Four unreferenced assets remain in `public/` (`math (1).png`, `math (1).svg`, `moby.png`, `moby.svg`), and `.moat-sync/hosted-sync.json`, runtime state from the development sync server, is committed to version control rather than ignored.
 
 ## 1.4 Risk register
 
@@ -126,13 +126,13 @@ Four unreferenced assets remain in `public/` (`math (1).png`, `math (1).svg`, `m
 
 ---
 
-# Part 2 — Founder assessment
+# Part 2, Founder assessment
 
 ## 2.1 What has actually been built
 
-A privacy-preserving personal finance application that works entirely offline, encrypts financial records at rest under a user-derived key, and models the account types that matter in Uganda — cash, mobile money, bank, and SACCO. It is engineered to a standard that would pass institutional diligence.
+A privacy-preserving personal finance application that works entirely offline, encrypts financial records at rest under a user-derived key, and models the account types that matter in Uganda, cash, mobile money, bank, and SACCO. It is engineered to a standard that would pass institutional diligence.
 
-**It also survives contact with a real user.** The founder has run it as a daily tool for roughly a month. For a category where most personal finance software is abandoned within two weeks of install, sustained self-directed use is a genuine signal — it indicates the core loop of recording and reviewing money is coherent enough to build a habit around, independent of any capture automation. This should be treated as the strongest validated asset the product currently holds.
+**It also survives contact with a real user.** The founder has run it as a daily tool for roughly a month. For a category where most personal finance software is abandoned within two weeks of install, sustained self-directed use is a genuine signal, it indicates the core loop of recording and reviewing money is coherent enough to build a habit around, independent of any capture automation. This should be treated as the strongest validated asset the product currently holds.
 
 The qualification is that this usage occurred on iOS, which structurally cannot perform automated capture. A month of use therefore proves the manual product works; it says nothing about the differentiator.
 
@@ -143,10 +143,10 @@ The product's defensibility rests on frictionless capture: money moves, and the 
 | Platform | Automated capture | Status |
 |---|---|---|
 | iOS | Not possible | Apple provides no third-party access to SMS or notification content. This is a permanent platform restriction, not a roadmap item. |
-| Android | Possible | Notification-listener service written but not rolled out — no permission-grant flow, Play Store policy review outstanding, not device-verified. |
+| Android | Possible | Notification-listener service written but not rolled out, no permission-grant flow, Play Store policy review outstanding, not device-verified. |
 | Web / PWA | Manual only | Paste-to-app and CSV import. |
 
-Removing what does not work today, the shipped product is a well-engineered manual-entry ledger — one that has held a real user's attention for a month, which is more than most such products achieve, but which still competes against every budgeting application available, a paper notebook, and the MTN and Airtel applications themselves, without a structural advantage.
+Removing what does not work today, the shipped product is a well-engineered manual-entry ledger, one that has held a real user's attention for a month, which is more than most such products achieve, but which still competes against every budgeting application available, a paper notebook, and the MTN and Airtel applications themselves, without a structural advantage.
 
 **The differentiating thesis rests on 325 lines of code that have never run on a physical handset.** The month of founder usage cannot close this gap, because it occurred on the one platform where the feature can never work.
 
@@ -160,11 +160,11 @@ The consequence is that the person directing product decisions permanently exper
 
 **Decision recorded (2026-07-29): the product remains single-user. Additional users are admitted only on demonstrated demand.**
 
-This is the correct call, and it is the direct application of the lesson in Finding 2. Multi-user support, account provisioning, and usage analytics are all infrastructure for users who do not yet exist — the same category of speculative work that produced 1,595 lines of unusable sync code.
+This is the correct call, and it is the direct application of the lesson in Finding 2. Multi-user support, account provisioning, and usage analytics are all infrastructure for users who do not yet exist, the same category of speculative work that produced 1,595 lines of unusable sync code.
 
-Deferring costs nothing, because the expensive half is already done. Every entity in `lib/types.ts` already carries a `userId`, so the schema is multi-user by construction. What is single-user is only the runtime resolution: `lib/repositories/shared.ts` selects the active profile as `profiles[0]`. Supporting real multi-user later is a profile selector and a change to that one resolution — not a migration.
+Deferring costs nothing, because the expensive half is already done. Every entity in `lib/types.ts` already carries a `userId`, so the schema is multi-user by construction. What is single-user is only the runtime resolution: `lib/repositories/shared.ts` selects the active profile as `profiles[0]`. Supporting real multi-user later is a profile selector and a change to that one resolution, not a migration.
 
-*(Minor latent issue, not worth fixing at n=1: because the active profile is "whichever is first," a second profile arriving by any route — a bug, or restoring another person's backup — would produce arbitrary selection rather than an error. Worth hardening before a second user is ever admitted.)*
+*(Minor latent issue, not worth fixing at n=1: because the active profile is "whichever is first," a second profile arriving by any route, a bug, or restoring another person's backup, would produce arbitrary selection rather than an error. Worth hardening before a second user is ever admitted.)*
 
 ### Constraint: analytics is foreclosed by a public commitment
 
@@ -174,11 +174,11 @@ Deferring costs nothing, because the expensive half is already done. Every entit
 
 | Users | Method | Rationale |
 |---|---|---|
-| 1–10 | Direct observation — sit with the person while they use it | Watching five people use software surfaces the large majority of usability defects. At this scale it is faster, cheaper, and far richer than any instrumentation, and requires no code. |
+| 1–10 | Direct observation, sit with the person while they use it | Watching five people use software surfaces the large majority of usability defects. At this scale it is faster, cheaper, and far richer than any instrumentation, and requires no code. |
 | 10–50 | Observation plus an in-app feedback action | User-composed and explicitly submitted, so it remains consistent with the privacy commitment. |
 | 50+ | Local-only usage journal with voluntary export | The app records interaction counts on-device and never transmits them; the user chooses to export and share, exactly as the existing encrypted-backup flow works. Compatible with both local-first architecture and the published privacy text. |
 
-The final row is the only pattern that scales without contradicting the product's stated principles, and it should be built when — not before — in-person observation stops being practical.
+The final row is the only pattern that scales without contradicting the product's stated principles, and it should be built when, not before, in-person observation stops being practical.
 
 ## 2.5 Unresolved commercial questions
 
@@ -186,13 +186,13 @@ The final row is the only pattern that scales without contradicting the product'
 
 ---
 
-# Part 3 — Commercialisation
+# Part 3, Commercialisation
 
 ## 3.1 The central insight
 
 **The parser library is a more defensible asset than the consumer application.**
 
-The consumer app is replicable by any competent team. The accumulated knowledge of how MTN Uganda, Airtel Money, Stanbic, Centenary, DFCU, and Absa actually format their transaction messages — including edge cases, fee disclosure patterns, and balance-checkpoint behaviour — is not. That asset compounds: every additional real message improves coverage and widens the gap against a new entrant.
+The consumer app is replicable by any competent team. The accumulated knowledge of how MTN Uganda, Airtel Money, Stanbic, Centenary, DFCU, and Absa actually format their transaction messages, including edge cases, fee disclosure patterns, and balance-checkpoint behaviour, is not. That asset compounds: every additional real message improves coverage and widens the gap against a new entrant.
 
 Today that asset is thin (13 fixtures). Deliberately growing it is likely the highest-leverage investment available, and it serves the consumer product and every commercial path below simultaneously.
 
@@ -201,7 +201,7 @@ Today that asset is thin (13 fixtures). Deliberately growing it is likely the hi
 ### A. Consumer subscription
 **Fit: moderate. Timeline: long.**
 
-Mobile-money billing rails exist and recurring micro-payments are culturally established in Uganda through airtime and data bundles, which removes the usual card-penetration obstacle. Against that, consumer personal-finance software has a poor global monetisation record — Mint was acquired and ultimately discontinued despite very large user numbers — and realistic price points in this market imply that meaningful revenue requires substantial scale.
+Mobile-money billing rails exist and recurring micro-payments are culturally established in Uganda through airtime and data bundles, which removes the usual card-penetration obstacle. Against that, consumer personal-finance software has a poor global monetisation record, Mint was acquired and ultimately discontinued despite very large user numbers, and realistic price points in this market imply that meaningful revenue requires substantial scale.
 
 Viable as a long-term destination; unlikely to be the first revenue.
 
@@ -217,7 +217,7 @@ Advantages: business buyers pay commercially meaningful amounts; revenue does no
 
 Uganda's savings and credit cooperative sector is large and comparatively underserved by digital tooling. A cooperative is an institutional buyer with a budget and an existing membership base, which addresses distribution and monetisation in a single relationship.
 
-The product already models SACCO accounts as a first-class type — the domain groundwork is in place. This is likely the shortest path from the current product to institutional revenue.
+The product already models SACCO accounts as a first-class type, the domain groundwork is in place. This is likely the shortest path from the current product to institutional revenue.
 
 ### D. Credit assessment and thin-file scoring
 **Fit: high value, direct architectural conflict.**
@@ -226,7 +226,7 @@ Mobile-money transaction history is among the strongest available credit signals
 
 This path conflicts fundamentally with the local-first architecture. If data never leaves the device, it cannot be scored centrally. Pursuing it would require either an explicit user-consented export mechanism or an on-device attestation model, plus full PDPO compliance work.
 
-This should be treated as a distinct business rather than an extension, and should not be pursued casually — it would compromise the trust position that currently differentiates the product.
+This should be treated as a distinct business rather than an extension, and should not be pursued casually, it would compromise the trust position that currently differentiates the product.
 
 ### E. White-label licensing to banks and microfinance institutions
 **Fit: moderate. Timeline: long.**
@@ -246,14 +246,14 @@ This should be settled deliberately rather than by accumulated engineering decis
 
 ---
 
-# Part 4 — Recommended sequence
+# Part 4, Recommended sequence
 
-**Immediate — this week.** Compile the Android shell to an APK, install it on a physical handset, and process at least 100 genuine MTN and Airtel messages through the capture pipeline. This single exercise validates or invalidates the entire strategic premise at a cost measured in days. Every other decision in this document is downstream of the result.
+**Immediate, this week.** Compile the Android shell to an APK, install it on a physical handset, and process at least 100 genuine MTN and Airtel messages through the capture pipeline. This single exercise validates or invalidates the entire strategic premise at a cost measured in days. Every other decision in this document is downstream of the result.
 
-**If validation succeeds — weeks 2 to 6.**
+**If validation succeeds, weeks 2 to 6.**
 1. Expand the fixture corpus from the collected messages; treat coverage as the primary engineering metric.
 2. Correct the architecture and README documentation drift identified in Findings 4 and 6.
-3. Add component tests covering capture, PIN entry, and transaction entry — the three paths where failure is least acceptable.
+3. Add component tests covering capture, PIN entry, and transaction entry, the three paths where failure is least acceptable.
 4. Complete the mobile screen-size verification outstanding on the pilot checklist.
 5. Freeze all sync development until a paying or piloting user requires multi-device support.
 
@@ -265,6 +265,6 @@ This should be settled deliberately rather than by accumulated engineering decis
 
 ## Assessment limitations
 
-This assessment measures source code and project documentation. It does not evaluate market demand, competitive positioning against specific local products, or parser accuracy against real-world message volume — the existing corpus of 13 fixtures is insufficient to support a claim in either direction. Those questions are precisely what the recommended device validation is designed to answer.
+This assessment measures source code and project documentation. It does not evaluate market demand, competitive positioning against specific local products, or parser accuracy against real-world message volume, the existing corpus of 13 fixtures is insufficient to support a claim in either direction. Those questions are precisely what the recommended device validation is designed to answer.
 
 Usage evidence is founder-reported (approximately one month, concentrated in July 2026) and is not independently measurable, since the application deliberately records no telemetry. It is treated here as directional evidence of product coherence, not as a quantified retention metric.

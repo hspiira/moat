@@ -1,4 +1,4 @@
-# Purchase planner, line items, and price memory — design
+# Purchase planner, line items, and price memory, design
 
 **Date:** 2026-08-07
 **Status:** Approved (design), pending implementation plan
@@ -8,14 +8,14 @@
 
 Three connected gaps, in the user's words:
 
-1. "I need to plan for a few items to buy, I need to track them" — there is no
+1. "I need to plan for a few items to buy, I need to track them", there is no
    place to hold *intended* spending. Goals hold savings targets and budgets hold
    category ceilings, but "buy sugar, a mattress, and school shoes before the
    15th" lives outside Moat.
-2. "I got groceries but not sure how much I spent on each" — a transaction is a
+2. "I got groceries but not sure how much I spent on each", a transaction is a
    single amount. A `UGX 60,000` supermarket run cannot be itemized, so
    category-level truth stops at "Food: 60,000" and per-item knowledge is lost.
-3. "It could also guide on where to go for cheaper items" — with no item-level
+3. "It could also guide on where to go for cheaper items", with no item-level
    history, Moat cannot answer "where was sugar cheapest?"
 
 The existing roadmap ([roadmap-and-opportunities.md](../../research/roadmap-and-opportunities.md))
@@ -39,7 +39,7 @@ Key choices, each chosen over its alternative:
   history; an explicit catalog UI would be entry friction nobody asked for.
 - **Informal itemization**, not strict splits. Line-item amounts are optional
   and never blocked on summing to the transaction amount. The UI shows
-  "itemized 41,500 of 60,000 — 18,500 unitemized". This matches the actual
+  "itemized 41,500 of 60,000, 18,500 unitemized". This matches the actual
   input situation (a crumpled receipt, a half-remembered basket).
 - **Price observations are derived, not stored.** A pure domain function joins
   line items with their parent transaction (`payee` = merchant, `occurredOn` =
@@ -62,7 +62,7 @@ export type Item = {
   userId: string;
   name: string;            // display name, e.g. "Sugar (1kg)"
   normalizedName: string;  // lowercased/trimmed match key
-  unit?: string;           // "kg", "litre", "piece" — free text
+  unit?: string;           // "kg", "litre", "piece", free text
   defaultCategoryId?: string;
   isArchived: boolean;
   createdAt: string;
@@ -140,18 +140,18 @@ Three new stores registered the same way as existing entities, wired into
 
 Pure, unit-tested modules:
 
-- `item-normalization.ts` — `normalizeItemName(raw)`: trim, collapse
+- `item-normalization.ts`, `normalizeItemName(raw)`: trim, collapse
   whitespace, lowercase. Resolution: exact normalized match reuses the Item;
   otherwise create. (No fuzzy matching in v1; renaming/merging items is a
   later admin affordance.)
-- `line-items.ts` — `summarizeItemization(transaction, lineItems)` returns
+- `line-items.ts`, `summarizeItemization(transaction, lineItems)` returns
   itemized total, unitemized remainder, and per-line derived amounts
   (`quantity × unitPrice` when `amount` absent). Never negative UI math:
   over-itemization is reported as `overItemizedBy` rather than clamped.
-- `price-observations.ts` — `derivePriceObservations(lineItems, transactions)`
+- `price-observations.ts`, `derivePriceObservations(lineItems, transactions)`
   and `summarizeItemPrices(observations)` producing `ItemPriceSummary` per
   item (last paid, best recent within 12 months, count).
-- `planned-purchases.ts` — list total estimation
+- `planned-purchases.ts`, list total estimation
   (`Σ (quantity ?? 1) × estimatedUnitPrice` over `planned` rows, missing
   estimates counted as 0 and surfaced as "n items unestimated"), fulfillment
   transitions,
@@ -173,7 +173,7 @@ Pure, unit-tested modules:
 
 ### UI
 
-- **New route `/shopping`** with a nav entry — the planner.
+- **New route `/shopping`** with a nav entry, the planner.
   - Add row: item autocomplete (against non-archived Items; free text creates),
     optional quantity, estimated price, needed-by date, note.
   - Each row shows price memory when it exists, e.g.
@@ -182,16 +182,16 @@ Pure, unit-tested modules:
   - Sections: overdue (`neededBy` past), upcoming, someday (no date).
     Purchased/dropped collapse into a history section.
   - **Check-off flow**: select bought rows → sheet offering
-    (a) *attach to an existing transaction* — recent expenses, e.g. the MoMo
-    capture that just posted — or (b) *record a new expense* prefilled with the
+    (a) *attach to an existing transaction*, recent expenses, e.g. the MoMo
+    capture that just posted, or (b) *record a new expense* prefilled with the
     estimate sum. Either path runs the fulfillment lifecycle above.
-- **Transaction detail — "Items" section** on expense transactions: add/edit/
+- **Transaction detail, "Items" section** on expense transactions: add/edit/
   delete line items (label with autocomplete, quantity, unit price, amount,
   optional category). Shows the itemization summary line
-  (`itemized X of Y — Z unitemized`, or `over-itemized by Z`). Available on any
+  (`itemized X of Y, Z unitemized`, or `over-itemized by Z`). Available on any
   expense, planner-linked or not.
 - **Item history view**: tapping an item (planner row or line item) opens its
-  purchase history — observations over time, per-merchant last/best price.
+  purchase history, observations over time, per-merchant last/best price.
   This *is* the price guidance surface.
 - **Accessibility constraint**: cheapest/priciest and overdue markers must use
   text and icons, never hue alone.
@@ -203,7 +203,7 @@ components as the transaction form.
 
 - Receipt-OCR line-item extraction. The capture pipeline (tesseract/pdf.js)
   already produces raw text; a future parser can deposit rows into
-  `TransactionLineItem.label` — the model is ready, the parser is not this
+  `TransactionLineItem.label`, the model is ready, the parser is not this
   project.
 - Community/external price data, barcode scanning, unit-price conversion
   across pack sizes.
@@ -225,17 +225,17 @@ components as the transaction form.
 - Repository tests against fake-indexeddb for the three new stores and the
   transaction-delete cascade.
 
-## Backlog — what else Moat could track (research, not scope)
+## Backlog, what else Moat could track (research, not scope)
 
 Ranked by leverage given data that already exists:
 
-1. **Projected cash flow** — recurring obligations + salary cycle + balances
+1. **Projected cash flow**, recurring obligations + salary cycle + balances
    already exist; project 30–90 days forward and flag shortfalls.
-2. **Net worth statement over time** — accounts already carry balances incl.
+2. **Net worth statement over time**, accounts already carry balances incl.
    debt/receivable; add a monthly snapshot series.
-3. **Subscription/recurring audit** — reframe recurring obligations with
+3. **Subscription/recurring audit**, reframe recurring obligations with
    cost-per-year and cancel-candidate views.
-4. **Sinking funds** — already on the roadmap; planner items with far-off
+4. **Sinking funds**, already on the roadmap; planner items with far-off
    `neededBy` dates are natural feeders.
 5. **Later**: insurance policies/premiums, asset & warranty inventory,
    household shared-expense settlement on the counterparty ledger.

@@ -1,4 +1,4 @@
-# Moat — Open Strategy Questions
+# Moat, Open Strategy Questions
 
 | Field | Value |
 |-------|-------|
@@ -16,7 +16,7 @@ Each item states the question, why it matters, what exists today, and a suggeste
 
 **Question:** How does Moat make money, and does that thesis shape the roadmap?
 
-**Why it matters:** The roadmap contemplates a BoU sandbox, licensed fund-manager partnerships, USSD deals, and eventually a hosted backend — all of which have real cost. There is currently no revenue thesis to justify or prioritize them. Pricing also shapes core product decisions (e.g. is encrypted cloud sync a paid tier?).
+**Why it matters:** The roadmap contemplates a BoU sandbox, licensed fund-manager partnerships, USSD deals, and eventually a hosted backend, all of which have real cost. There is currently no revenue thesis to justify or prioritize them. Pricing also shapes core product decisions (e.g. is encrypted cloud sync a paid tier?).
 
 **What exists today:** Nothing. The PRD's "Business Goals" are validation goals only ([prd.md](prd.md)).
 
@@ -28,7 +28,7 @@ Each item states the question, why it matters, what exists today, and a suggeste
 
 **Question:** Beyond the <20-user pilot cohort, how do users discover and adopt Moat?
 
-**Why it matters:** There is a defined pilot cohort but no acquisition strategy. WhatsApp appears only as a *capture* channel, never a *growth* channel. Play Store listing/ASO, referral loops, and partnership-led distribution are all unaddressed — and distribution constraints (e.g. Play policy on notification capture) already shape the native roadmap.
+**Why it matters:** There is a defined pilot cohort but no acquisition strategy. WhatsApp appears only as a *capture* channel, never a *growth* channel. Play Store listing/ASO, referral loops, and partnership-led distribution are all unaddressed, and distribution constraints (e.g. Play policy on notification capture) already shape the native roadmap.
 
 **What exists today:** Pilot cohort definition in [../tracker.md](../tracker.md) and [../testing/pilot-readiness.md](../testing/pilot-readiness.md). No growth plan.
 
@@ -40,7 +40,7 @@ Each item states the question, why it matters, what exists today, and a suggeste
 
 **Question:** How are the PRD's success metrics actually measured?
 
-**Why it matters:** The PRD defines concrete activation/engagement targets (70% onboarding completion, 60% with ≥2 accounts, 25% Compass review, etc.), but event instrumentation is explicitly deferred to "once the first pilot identifies bottlenecks." As written, these metrics have **no measurement mechanism** — they exist on paper only. A local-first, privacy-first product also needs an instrumentation approach that doesn't undermine its own privacy promise.
+**Why it matters:** The PRD defines concrete activation/engagement targets (70% onboarding completion, 60% with ≥2 accounts, 25% Compass review, etc.), but event instrumentation is explicitly deferred to "once the first pilot identifies bottlenecks." As written, these metrics have **no measurement mechanism**, they exist on paper only. A local-first, privacy-first product also needs an instrumentation approach that doesn't undermine its own privacy promise.
 
 **What exists today:** Metric definitions in [prd.md](prd.md). No analytics code, no event pipeline.
 

@@ -1,4 +1,4 @@
-# Transaction fees & charges — design
+# Transaction fees & charges, design
 
 **Date:** 2026-07-25
 **Status:** Approved (design), pending implementation plan
@@ -12,7 +12,7 @@ withdrawals, plus bank charges and the 0.5% excise/tax lines. Moat currently has
 
 - No `fee`/`charge` field anywhere in the transaction model (`lib/types.ts`).
 - The MoMo/bank parsers (`lib/capture/providers/*`) extract only the principal
-  amount, payee and date — they silently drop the `Fee`/`Tax`/`Charge` lines.
+  amount, payee and date, they silently drop the `Fee`/`Tax`/`Charge` lines.
 - The manual transaction form has no fee input.
 
 Consequence: a `UGX 50,000` send that actually cost `UGX 51,250` is recorded as
@@ -22,8 +22,8 @@ one.
 
 ## Decision
 
-Record a fee as a **separate, linked expense transaction** — chosen over a
-`feeAmount` field on the parent — because:
+Record a fee as a **separate, linked expense transaction**, chosen over a
+`feeAmount` field on the parent, because:
 
 - Balances and spending reports are automatically correct: a fee is just a normal
   expense flowing through the existing expense path. No consumer of `amount` needs
@@ -49,12 +49,12 @@ A fee is an ordinary transaction with:
 - `type: "expense"`
 - `categoryId`: the canonical fees category (see below)
 - `feeParentId`: the parent payment's id
-- deterministic `id`: `` `${parentId}:fee` `` — mirrors the transfer pair's
+- deterministic `id`: `` `${parentId}:fee` ``, mirrors the transfer pair's
   `` `${groupId}:source` `` so edits upsert in place and deletes are derivable.
 - inherited from the parent: `accountId`, `currency`, `fxRateToUgx`, `occurredOn`,
   `userId`.
 
-The parent payment gains **no** field — the link is one-directional (fee → parent),
+The parent payment gains **no** field, the link is one-directional (fee → parent),
 and the fee id is derivable from the parent id, so cascade needs no back-reference.
 
 ### Fees category (`lib/app-state/defaults.ts`)
@@ -71,7 +71,7 @@ separate migration.
 > `category:mobile-money-charges`. They keep it as a normal user category (their
 > historical data is untouched); new fees route to the new `category:fees-charges`.
 > A user who wants to consolidate can recategorize/hide the old one. This is
-> non-destructive and deliberate — no data migration is performed.
+> non-destructive and deliberate, no data migration is performed.
 
 ### Builder (`components/transactions/transaction-builder.ts`)
 
@@ -89,7 +89,7 @@ applying `validateAmount(raw, { allowZero: false })`. Blank/zero fee → no fee 
 Editing a payment re-runs the builder: a changed fee upserts `` `${parentId}:fee` ``;
 a cleared fee means the fee id is absent from the rebuilt set and the persistence
 layer deletes the orphaned fee (same reconciliation the workspace already does for
-transfer groups). Fee rows are **not independently editable** — the ledger routes an
+transfer groups). Fee rows are **not independently editable**, the ledger routes an
 edit/tap on a fee row to its parent, so payment and fee cannot drift.
 
 ### Persistence / cascade (`components/transactions/use-transactions-workspace.ts`)
@@ -97,14 +97,14 @@ edit/tap on a fee row to its parent, so payment and fee cannot drift.
 - **Save:** persist the full `Transaction[]` the builder returns (parent + optional
   fee), and when editing, delete any previously-existing `` `${parentId}:fee` `` that
   the rebuilt set no longer contains.
-- **Delete:** deleting a payment cascades to `` `${parentId}:fee` `` — extend the
+- **Delete:** deleting a payment cascades to `` `${parentId}:fee` ``, extend the
   existing cascade branch (currently keyed on `transferGroupId`, ~line 506) to also
   remove a transaction's linked fee.
 
 ### Form UX (`components/transactions/transaction-form.tsx`)
 
 Add an optional **"Fee (charges & tax)"** amount input (`inputMode="decimal"`,
-UGX) inside the existing collapsible details section — same placement and
+UGX) inside the existing collapsible details section, same placement and
 auto-expand-when-present behavior as the FX field. Shown for `expense` and
 `transfer` types only; hidden for `income`, `savings_contribution`, `debt_payment`
 in v1. New form-state field `feeAmount: string` (default `""`).
@@ -131,7 +131,7 @@ active concurrent refactoring; doing it as its own pass avoids collisions.
     fee id (drives deletion).
   - blank/zero fee → no fee record.
 - A domain/summary test proving the fee reduces the account balance and counts as
-  expense spending (should pass with no summary-code changes — the point is to prove
+  expense spending (should pass with no summary-code changes, the point is to prove
   the "no new math" claim).
 
 ## Success criteria

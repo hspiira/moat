@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- All new UI uses shadcn/ui primitives from `components/ui/` — no native `input`/`select`/`textarea` in user-facing components.
+- All new UI uses shadcn/ui primitives from `components/ui/`, no native `input`/`select`/`textarea` in user-facing components.
 - Never encode meaning in hue alone: cheapest/overdue markers must carry text or an icon.
 - Comments only for non-obvious decisions, matching the codebase's commenting voice; no narration comments.
 - Commit messages: single sentence, sentence case, no attribution trailers of any kind.
@@ -251,13 +251,13 @@ describe("purchase planner stores", () => {
 Note: if `resetDatabaseForTests` does not exist in `indexeddb/client.ts`, use
 whatever reset helper the existing `lib/repositories/instance.test.ts` and
 `adapter-contract.test.ts` use (they run against fake-indexeddb; follow their
-setup exactly — including any `resetRepositorySingletonForTests` /
+setup exactly, including any `resetRepositorySingletonForTests` /
 database-deletion helpers).
 
 - [ ] **Step 4: Run the test to verify it fails**
 
 Run: `pnpm test lib/repositories/purchase-planner-stores.test.ts`
-Expected: FAIL — `items` does not exist on the bundle / type errors.
+Expected: FAIL, `items` does not exist on the bundle / type errors.
 
 - [ ] **Step 5: Add repository interfaces and implementations**
 
@@ -344,7 +344,7 @@ In `lib/repositories/instance.ts` add to `createBundleProxy`:
     transactionLineItems: lazyRepository("transactionLineItems", ["listByTransactionId"]),
 ```
 
-Do NOT add the new stores to `unsyncedStoreNames` — they sync like
+Do NOT add the new stores to `unsyncedStoreNames`, they sync like
 transactions do.
 
 - [ ] **Step 6: Run the test to verify it passes**
@@ -453,7 +453,7 @@ describe("resolveItem", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm test lib/domain/item-normalization.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -606,7 +606,7 @@ describe("summarizeItemization", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm test lib/domain/line-items.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -790,7 +790,7 @@ describe("summarizeItemPrices", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm test lib/domain/price-observations.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -1013,7 +1013,7 @@ describe("fulfillment", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm test lib/domain/planned-purchases.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -1203,7 +1203,7 @@ describe("planLineItemCascade", () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm test lib/domain/line-item-cascade.test.ts`
-Expected: FAIL — module not found.
+Expected: FAIL, module not found.
 
 - [ ] **Step 3: Implement**
 
@@ -1486,7 +1486,7 @@ export function LineItemsSection({
       <p className="text-xs text-muted-foreground">
         {summary.overItemizedBy > 0
           ? `Items exceed the transaction by ${summary.overItemizedBy.toLocaleString()} UGX.`
-          : `Itemized ${summary.itemizedTotal.toLocaleString()} of ${transaction.amount.toLocaleString()} UGX — ${summary.unitemized.toLocaleString()} unitemized.`}
+          : `Itemized ${summary.itemizedTotal.toLocaleString()} of ${transaction.amount.toLocaleString()} UGX, ${summary.unitemized.toLocaleString()} unitemized.`}
       </p>
 
       <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end">
@@ -1544,7 +1544,7 @@ match them; if it renders differently, adapt the wrapper, not the content.
 
 - [ ] **Step 3: Wire into the detail sheet and both workspaces**
 
-`transaction-detail-sheet.tsx` — add optional props and render the section for
+`transaction-detail-sheet.tsx`, add optional props and render the section for
 non-transfer subjects:
 
 ```tsx
@@ -1627,7 +1627,7 @@ git commit -m "Let a transaction say what was actually in the bag"
 **Interfaces:**
 - Consumes: Tasks 1–5 domain functions and repositories; `FeaturePageShell` (see `components/budgets-workspace.tsx` for exact usage); `useToast`-style feedback if present in other hooks (mirror `use-transactions-workspace`'s `show`).
 - Produces (used by Task 9 and 10):
-  - `useShoppingWorkspace()` returning `{ profile, isLoading, error, items, purchases, groups, estimate, priceSummaries, addPurchase, dropPurchase, refresh, recentExpenses, checkOff }` — exact shapes below.
+  - `useShoppingWorkspace()` returning `{ profile, isLoading, error, items, purchases, groups, estimate, priceSummaries, addPurchase, dropPurchase, refresh, recentExpenses, checkOff }`, exact shapes below.
 
 - [ ] **Step 1: Add the nav entry and route**
 
@@ -1987,7 +1987,7 @@ export function PlannerAddForm({
 
 (`datalist` is a progressive-enhancement autocomplete on the shadcn `Input`;
 if review prefers the existing `select`/`popover` pattern, swap it for the
-`Popover` + filtered list used elsewhere — keep the free-text-creates-item
+`Popover` + filtered list used elsewhere, keep the free-text-creates-item
 behavior either way. The date input: reuse `components/ui/date-picker.tsx` if
 its API takes a string value/onChange; otherwise the native-typed shadcn
 `Input type="date"` above stands.)
@@ -2149,7 +2149,7 @@ export function PlannerList(props: {
 ```
 
 Global-constraint note: the native `input type="checkbox"` above violates the
-"shadcn only" rule if the repo has a checkbox primitive — check
+"shadcn only" rule if the repo has a checkbox primitive, check
 `components/ui/`; there is currently no `checkbox.tsx`, so add one via
 `pnpm dlx shadcn@latest add checkbox` and use it instead of the native input.
 
@@ -2272,7 +2272,7 @@ git commit -m "Give planned purchases a home of their own"
 - Modify: `components/shopping-workspace.tsx` (mount the sheet)
 
 **Interfaces:**
-- Consumes: `workspace.checkOff(selected, target)` and `workspace.recentExpenses` from Task 8; `CheckOffTarget` type from `use-shopping-workspace.ts`; accounts and expense categories need loading — extend the Task 8 hook per Step 1.
+- Consumes: `workspace.checkOff(selected, target)` and `workspace.recentExpenses` from Task 8; `CheckOffTarget` type from `use-shopping-workspace.ts`; accounts and expense categories need loading, extend the Task 8 hook per Step 1.
 
 - [ ] **Step 1: Extend the hook with accounts and categories**
 
@@ -2549,7 +2549,7 @@ git commit -m "Close the loop from planned to bought"
 - Modify: `components/shopping-workspace.tsx` (mount)
 
 **Interfaces:**
-- Consumes: `derivePriceObservations` output — pass observations for one item plus the item, from data already loaded in the Task 8 hook. Export `observations: PriceObservation[]` from the hook (the memo already computes them inside `priceSummaries`; lift the intermediate into its own `useMemo` and export both).
+- Consumes: `derivePriceObservations` output, pass observations for one item plus the item, from data already loaded in the Task 8 hook. Export `observations: PriceObservation[]` from the hook (the memo already computes them inside `priceSummaries`; lift the intermediate into its own `useMemo` and export both).
 
 - [ ] **Step 1: Lift observations out of the summary memo**
 
@@ -2704,7 +2704,7 @@ confirm both planned purchases returned to the active list.
 Add one line to the "What is built and working" list in `docs/tracker.md`:
 
 ```markdown
-- Purchase planner at `/shopping` — planned items with estimates, check-off into transaction line items, and per-item price history derived from the user's own purchases
+- Purchase planner at `/shopping`, planned items with estimates, check-off into transaction line items, and per-item price history derived from the user's own purchases
 ```
 
 - [ ] **Step 4: Commit**

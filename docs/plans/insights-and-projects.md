@@ -1,4 +1,4 @@
-# Moat — Insights that carry a number, and projects that explain a spike
+# Moat, Insights that carry a number, and projects that explain a spike
 
 | Field | Value |
 | --- | --- |
@@ -19,7 +19,7 @@ any rule:
 | Captured | Read by a rule today |
 | --- | --- |
 | Every fee as its own row (`feeParentId`) | No. Never summed anywhere in the app |
-| `count` per category — 35 boda trips | No. Printed as "35×" and nothing else |
+| `count` per category, 35 boda trips | No. Printed as "35×" and nothing else |
 | Previous-period windows, `getChangePercent` | Only on the three Home totals |
 | Counterparty aging (`isOverdue`, `daysSinceLastActivity`) | Only on `/debt` |
 | `statedBalance` from SMS, `balance-gap.ts` | No |
@@ -29,9 +29,9 @@ any rule:
 
 **A number, a comparison, and one action.** All three, or it does not ship.
 
-- "Transport is your biggest category" — none of the three.
+- "Transport is your biggest category", none of the three.
 - "Transport: 306,000 across 35 trips, 8,700 each, up 41% on the last three
-  months" — a number, a comparison, and an obvious lever.
+  months", a number, a comparison, and an obvious lever.
 
 The `Insight` type therefore carries `headline`, `detail` and an optional
 `action`, and a test asserts every rule's headline contains a digit. A rule that
@@ -127,8 +127,8 @@ Genuinely missing, beyond the rules above:
   It does not answer "at this rate, what is left on the 24th".
 - **Income stability.** Irregular income is normal here. Budgeting on the
   lowest of the last six months is safer than budgeting on the average.
-- **Sinking funds.** Accruing monthly toward a known irregular cost — school
-  fees, annual insurance — rather than a goal with a target date.
+- **Sinking funds.** Accruing monthly toward a known irregular cost, school
+  fees, annual insurance, rather than a goal with a target date.
 - **Net worth over time.** "Your moat" is a point in time; the direction is
   what matters.
 - **Seasonality.** School terms and the festive season are predictable spikes.

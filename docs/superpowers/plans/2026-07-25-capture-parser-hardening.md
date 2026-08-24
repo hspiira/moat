@@ -18,7 +18,7 @@
 
 ---
 
-### Task 1: Shared helpers — bounded payee, named-month dates, zero-fee
+### Task 1: Shared helpers, bounded payee, named-month dates, zero-fee
 
 **Files:**
 - Modify: `lib/capture/providers/shared.ts` (`cleanCapturePayee`, named-month in `toIsoDate`, `parseCaptureFee` zero→undefined)
@@ -68,7 +68,7 @@ describe("parseCaptureFee zero", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/shared.test.ts`
-Expected: FAIL — `cleanCapturePayee` not exported; named-month + zero-fee not handled.
+Expected: FAIL, `cleanCapturePayee` not exported; named-month + zero-fee not handled.
 
 - [ ] **Step 3: Implement in `shared.ts`**
 
@@ -104,7 +104,7 @@ Change the last line of `parseCaptureFee` from `return found ? total : undefined
   return found && total > 0 ? total : undefined;
 ```
 
-(The `found` flag can be dropped if unused; `total > 0` is sufficient — keep whichever keeps lint happy.)
+(The `found` flag can be dropped if unused; `total > 0` is sufficient, keep whichever keeps lint happy.)
 
 - [ ] **Step 4: Add named month to the generic `parseCaptureDate`**
 
@@ -138,7 +138,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Add bounded payee, named-mont
 
 ---
 
-### Task 2: MTN — pre-auth skip, withdrawal, bounded payees
+### Task 2: MTN, pre-auth skip, withdrawal, bounded payees
 
 **Files:**
 - Modify: `lib/capture/providers/mtn-uganda.ts`
@@ -152,7 +152,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Add bounded payee, named-mont
 - Produces: `isNonTransactionalMessage(text: string): boolean`.
 
 **Why both levels:** the MTN provider returning `null` only means "not an MTN
-transaction" — the pipeline's generic fallback would still mint a phantom expense
+transaction", the pipeline's generic fallback would still mint a phantom expense
 from a pre-auth message. So the pipeline must drop non-transactional messages
 outright, producing no candidate at all.
 
@@ -208,7 +208,7 @@ describe("parseMtnUgandaMessage", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/mtn-uganda.test.ts`
-Expected: FAIL — pre-auth not skipped, withdrawal unmatched, payee unbounded.
+Expected: FAIL, pre-auth not skipped, withdrawal unmatched, payee unbounded.
 
 - [ ] **Step 3: Rewrite `mtn-uganda.ts`**
 
@@ -372,7 +372,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Harden MTN parser and skip pr
 
 ---
 
-### Task 3: Airtel — Cash deposit, PAID.TID, bounded payees
+### Task 3: Airtel, Cash deposit, PAID.TID, bounded payees
 
 **Files:**
 - Modify: `lib/capture/providers/airtel-money-uganda.ts`
@@ -415,7 +415,7 @@ describe("parseAirtelMoneyUgandaMessage", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/airtel-money-uganda.test.ts`
-Expected: FAIL — neither format matched.
+Expected: FAIL, neither format matched.
 
 - [ ] **Step 3: Add the two formats to `airtel-money-uganda.ts`**
 
@@ -516,7 +516,7 @@ describe("parseAbsaUgandaMessage", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/absa-uganda.test.ts`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Create `absa-uganda.ts`**
 
@@ -624,7 +624,7 @@ describe("parseCentenaryUgandaMessage", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/centenary-uganda.test.ts`
-Expected: FAIL — module does not exist.
+Expected: FAIL, module does not exist.
 
 - [ ] **Step 3: Create `centenary-uganda.ts`**
 
@@ -807,7 +807,7 @@ describe("real message fixtures", () => {
 
 Run: `npx vitest run lib/capture/providers/real-messages.test.ts`
 Expected: PASS for all fixtures. If any payee/date assertion is off by a formatting
-detail, adjust the parser (not the expected value) — the expected values are the
+detail, adjust the parser (not the expected value), the expected values are the
 correct real-world interpretation.
 
 - [ ] **Step 3: Full gate + build + commit**
@@ -830,8 +830,8 @@ git -c commit.gpgsign=false commit --no-verify -m "Lock real MTN/Airtel/Absa/Cen
 - Centenary signed provider + registration → Task 5 ✓
 - 11-message fixture regression → Task 6 ✓
 
-**Placeholder scan:** none — every code step is complete.
+**Placeholder scan:** none, every code step is complete.
 
 **Type consistency:** `cleanCapturePayee(raw): string`, `parseCaptureFee(text): number | undefined`, `toIsoDate(value?): string | undefined`, `parseAmount`, `normalizeCurrency` used consistently. New parsers return `CaptureProviderResult | null` and are registered in `index.ts` before the generic fallback. `parserLabel` values are unique per branch.
 
-**Pre-auth is skipped at two levels:** the MTN provider returns `null` (not an MTN transaction), and the pipeline drops the message via `isNonTransactionalMessage` so the generic fallback can't mint a phantom expense either — Task 6 asserts zero candidates.
+**Pre-auth is skipped at two levels:** the MTN provider returns `null` (not an MTN transaction), and the pipeline drops the message via `isNonTransactionalMessage` so the generic fallback can't mint a phantom expense either, Task 6 asserts zero candidates.

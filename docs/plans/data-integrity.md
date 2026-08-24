@@ -1,4 +1,4 @@
-# Moat — Data Integrity Plan
+# Moat, Data Integrity Plan
 
 | Field | Value |
 | --- | --- |
@@ -27,7 +27,7 @@ so this was worse than it looked.
 
 **Not resumable.** The migration writes replacements before deleting originals,
 so an interruption leaves duplicates rather than gaps. But `alreadyMigrated`
-returns false on a mixed state, so the next attempt renumbers again — and for
+returns false on a mixed state, so the next attempt renumbers again, and for
 seeded records the old-format copy and the already-derived copy both derive the
 same id, tripping the collision guard. The device is then stuck half-migrated,
 with duplicated money, and the migration refusing to repair it.
@@ -80,7 +80,7 @@ UGX has an ISO 4217 exponent of **0**. It has had no subdivision since 2013
 ([Wikipedia](https://en.wikipedia.org/wiki/Ugandan_shilling),
 [ExchangeRate](https://www.exchangerate.com/currency-iso/shilling-UGX.html)).
 
-That matters, because the usual advice — "store cents" — is wrong for the
+That matters, because the usual advice, "store cents", is wrong for the
 primary currency here. `Transaction.amount` is *always* UGX, already normalized.
 So:
 
@@ -137,7 +137,7 @@ becomes a test.
 
 A `savings_contribution` reduces its account and nothing gains it. In the live
 ledger 504,000 of insurance premiums left Absa, count as neither spending nor an
-asset, and never reach the goal — which is linked to a different account. The
+asset, and never reach the goal, which is linked to a different account. The
 money is invisible in net worth.
 
 A transfer is a balanced pair. A savings contribution is a single row. That is
@@ -151,8 +151,8 @@ So a savings contribution requires a destination: either an account already
 modelled, or a new one standing for whatever holds the money.
 
 `savings_contribution` therefore becomes a transfer carrying a savings category
-rather than its own single-row type. The savings figure on screen stays — it
-reads the category, not the type — and the pair balances like every other
+rather than its own single-row type. The savings figure on screen stays, it
+reads the category, not the type, and the pair balances like every other
 transfer.
 
 Anything with no destination is not savings. It is spending, and should carry an
@@ -231,4 +231,4 @@ has not recurred: the same suite passed eight times, and the accounting
 properties passed 200,000 further cases. Those properties are UGX-only, so the
 FX rounding landing in the same commit cannot be the cause. The counterexample
 was lost because the run's output was filtered. If it returns, capture the full
-output and the printed seed before anything else — fast-check replays it.
+output and the printed seed before anything else, fast-check replays it.

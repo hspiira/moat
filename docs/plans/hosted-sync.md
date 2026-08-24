@@ -1,9 +1,9 @@
-# Moat — Hosted Sync Implementation Plan
+# Moat, Hosted Sync Implementation Plan
 
 | Field | Value |
 | --- | --- |
 | Document Version | 1.0 |
-| Status | Implementation plan — phases 1, 2 and 4 landed 2026-08-17 |
+| Status | Implementation plan, phases 1, 2 and 4 landed 2026-08-17 |
 | Owner | Piira |
 | Last Updated | 2026-08-17 |
 | Scope | Moving from local-only storage to an optional, end-to-end encrypted hosted database |

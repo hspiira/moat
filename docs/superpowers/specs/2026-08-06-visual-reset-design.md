@@ -1,4 +1,4 @@
-# Moat — Visual Reset (PIN, dashboard, navigation, PWA)
+# Moat, Visual Reset (PIN, dashboard, navigation, PWA)
 
 | Field | Value |
 | --- | --- |
@@ -70,7 +70,7 @@ Light (derived, rule inverted):
 | `--primary` | `oklch(0.205 0 0)` |
 | `--primary-foreground` | `oklch(0.985 0 0)` |
 
-### 1.3 Semantic colour — the only colour in the system
+### 1.3 Semantic colour, the only colour in the system
 
 Three hues, each ≥45° from the others, and each separated in **lightness** so they remain
 distinguishable with hue removed entirely.
@@ -85,7 +85,7 @@ distinguishable with hue removed entirely.
 `--pos` and `--neg` sit 0.15 apart in lightness, so in/out separate in greyscale.
 
 This resolves a live defect: today `--primary` is `oklch(0.7 0.13 165)` and `--pos` is
-`oklch(0.72 0.13 160)` in dark mode — "brand" and "you gained money" are the same colour.
+`oklch(0.72 0.13 160)` in dark mode, "brand" and "you gained money" are the same colour.
 The new system has no brand hue at all, so the collision cannot recur.
 
 ### 1.4 Redundancy requirement
@@ -115,7 +115,7 @@ Investigation showed two tokens are load-bearing beyond decoration:
 
 - `--radius`: `0.25rem` → `1rem`. Cards ~1.4rem; the nav capsule is fully round.
 - Geist remains the UI face. Bricolage Grotesque is retained but narrowed to hero figures
-  and screen titles — in a monochrome system typography carries the character, so the
+  and screen titles, in a monochrome system typography carries the character, so the
   distinctive face earns its place at large sizes and gets out of the way at small ones.
 - All money figures use `tabular-nums`.
 
@@ -137,8 +137,8 @@ is trapped beneath it. The desktop sidebar is unchanged.
 Two elements in the capsule are filled and high-contrast, so fill cannot tell them apart.
 Shape does:
 
-- **Active tab** — an elongated **pill** that always contains its word.
-- **Capture** — a **circle** that never contains a word, only `+`.
+- **Active tab**, an elongated **pill** that always contains its word.
+- **Capture**, a **circle** that never contains a word, only `+`.
 
 Idle tabs are bare glyphs in `muted-foreground`. The pill animates its width between items,
 which doubles as the "you moved" feedback. This satisfies the redundancy requirement in
@@ -199,10 +199,10 @@ Nine blocks become five.
 
 ### 4.1 Removed
 
-- **Quick-actions row** — the `+` in the nav reaches the same three actions one
+- **Quick-actions row**, the `+` in the nav reaches the same three actions one
   thumb-reach closer.
-- **Account-balances card** — a duplicate of the Accounts tab, one tap away.
-- **Chart-mode switcher** — three views offered before the user has read one. The
+- **Account-balances card**, a duplicate of the Accounts tab, one tap away.
+- **Chart-mode switcher**, three views offered before the user has read one. The
   cash-flow view becomes the only view.
 
 ### 4.2 Relocated, not deleted
@@ -224,14 +224,14 @@ useful once a month and costs prime vertical space the other twenty-nine days.
 
 ### 5.2 Service worker
 
-- A "new version ready — reload" prompt. Today a `CACHE_NAME` bump upgrades in place, but
+- A "new version ready, reload" prompt. Today a `CACHE_NAME` bump upgrades in place, but
   the running page keeps the old worker until every tab closes.
 - **Background Sync that drains the existing outbox.** Moat is local-first: captures
   already write to IndexedDB and already work offline, and `lib/sync/engine.ts` already
   implements an outbox with `status`, `attempts` and conflict payloads. The gap is that it
   only drains while the app is open. Registering Background Sync to replay it closes that
   gap without building a second queue.
-- A per-transaction pending indicator — a glyph, not a colour — so an unsynced capture is
+- A per-transaction pending indicator, a glyph, not a colour, so an unsynced capture is
   visible.
 
 ### 5.3 Verification
@@ -245,12 +245,12 @@ iOS, where `env(safe-area-inset-bottom)` differs from its value in a browser tab
 
 - Unit tests for any changed domain logic (dashboard block merging for "Needs attention").
 - Existing suites must stay green: `npx tsc --noEmit && npm run lint && npm run test && npm run build`.
-- Manual: greyscale check — screenshot the dashboard and lock screen, desaturate, and
+- Manual: greyscale check, screenshot the dashboard and lock screen, desaturate, and
   confirm every signal is still readable.
 - Manual: iOS standalone safe-area check per §5.3.
 
 ## Follow-up (not this spec)
 
-Rolling the new system across the remaining workspace routes — accounts, budgets, debt,
+Rolling the new system across the remaining workspace routes, accounts, budgets, debt,
 goals, recurring, learn, investment compass, settings, onboarding, and the transaction
-sub-routes — including removal of the `tone` prop plumbing described in §1.5.
+sub-routes, including removal of the `tone` prop plumbing described in §1.5.

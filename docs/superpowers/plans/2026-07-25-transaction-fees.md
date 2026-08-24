@@ -4,7 +4,7 @@
 
 **Goal:** Let users record mobile-money and bank fees so account balances stay correct, by attaching an optional fee to a transaction that is persisted as a separate linked "Fees & charges" expense.
 
-**Architecture:** A fee is an ordinary `expense` transaction with a deterministic id `` `${parentId}:fee` `` and a `feeParentId` back-link — mirroring the existing transfer-pair pattern. Because a fee is just another expense, the existing balance/summary math (`getTransactionBalanceDelta`) handles it with no changes. The manual form gains an optional UGX fee input; save/edit/delete in the workspace hook create, upsert, or cascade-delete the linked fee.
+**Architecture:** A fee is an ordinary `expense` transaction with a deterministic id `` `${parentId}:fee` `` and a `feeParentId` back-link, mirroring the existing transfer-pair pattern. Because a fee is just another expense, the existing balance/summary math (`getTransactionBalanceDelta`) handles it with no changes. The manual form gains an optional UGX fee input; save/edit/delete in the workspace hook create, upsert, or cascade-delete the linked fee.
 
 **Tech Stack:** Next.js 16 / React 19, TypeScript strict, Vitest, IndexedDB repositories.
 
@@ -12,9 +12,9 @@
 
 - Commit with NO Claude affiliation: `git -c commit.gpgsign=false commit --no-verify -m "…"`. Author is Henry Piira.
 - Gate every task: `npx tsc --noEmit && npm run lint && npm run test`. Run `npm run build` before the final commit.
-- Fee is stored in **UGX only** (`currency: "UGX"`, no `fxRateToUgx`) — MoMo/bank charges are always levied in UGX.
+- Fee is stored in **UGX only** (`currency: "UGX"`, no `fxRateToUgx`), MoMo/bank charges are always levied in UGX.
 - Fee category is the canonical `category:fees-charges` ("Fees & charges", `kind: "expense"`).
-- Do NOT run rules (`applyTransactionRules`) on a fee — it is a system-derived charge.
+- Do NOT run rules (`applyTransactionRules`) on a fee, it is a system-derived charge.
 - Fee currently applies to `expense` and `transfer` types only. Income/savings/debt are out of scope for v1.
 - Non-destructive: no migration of existing users' "Mobile money charges" category.
 
@@ -64,7 +64,7 @@ describe("fees category", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run lib/app-state/defaults.test.ts`
-Expected: FAIL — `buildFeesCategory` / `FEES_CATEGORY_ID` not exported.
+Expected: FAIL, `buildFeesCategory` / `FEES_CATEGORY_ID` not exported.
 
 - [ ] **Step 3: Add `feeParentId` to the Transaction type**
 
@@ -127,7 +127,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Add feeParentId field and can
 
 **Interfaces:**
 - Consumes: `Transaction` (with `feeParentId`), `FEES_CATEGORY_ID` from Task 1.
-- Produces: `buildFeeTransaction(parent: Transaction, feeAmountRaw: string, feesCategoryId: string): Transaction | null` — returns a UGX fee expense, or `null` when the raw input is blank / non-positive / non-finite.
+- Produces: `buildFeeTransaction(parent: Transaction, feeAmountRaw: string, feesCategoryId: string): Transaction | null`, returns a UGX fee expense, or `null` when the raw input is blank / non-positive / non-finite.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -185,7 +185,7 @@ describe("buildFeeTransaction", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run components/transactions/transaction-builder.test.ts`
-Expected: FAIL — `buildFeeTransaction` not exported.
+Expected: FAIL, `buildFeeTransaction` not exported.
 
 - [ ] **Step 3: Implement `buildFeeTransaction`**
 
@@ -288,11 +288,11 @@ In the `{detailsOpen ? (` details `<div>` (after the Currency `SelectField`, bef
               {form.type === "expense" || form.type === "transfer" ? (
                 <InputField
                   id="tx-fee"
-                  label="Fee — charges & tax (UGX)"
+                  label="Fee, charges & tax (UGX)"
                   inputMode="decimal"
                   value={form.feeAmount}
                   onChange={(e) => onFormChange((c) => ({ ...c, feeAmount: e.target.value }))}
-                  placeholder="Optional — e.g. 1250"
+                  placeholder="Optional, e.g. 1250"
                 />
               ) : null}
 ```
@@ -302,13 +302,13 @@ In the `{detailsOpen ? (` details `<div>` (after the Currency `SelectField`, bef
 Update the collapsed button label so the fee is discoverable. Replace:
 
 ```tsx
-              Add details — payee, note, currency
+              Add details, payee, note, currency
 ```
 with:
 ```tsx
               {form.type === "expense" || form.type === "transfer"
-                ? "Add details — fee, payee, note, currency"
-                : "Add details — payee, note, currency"}
+                ? "Add details, fee, payee, note, currency"
+                : "Add details, payee, note, currency"}
 ```
 
 - [ ] **Step 5: Hide Edit on linked fee rows in the list**
@@ -341,7 +341,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Add optional fee input to the
 
 **Files:**
 - Modify: `components/transactions/use-transactions-workspace.ts` (save, edit-prefill, delete cascade)
-- Test: `lib/domain/accounts.test.ts` (balance proof — the fee reduces the balance with no summary-code change)
+- Test: `lib/domain/accounts.test.ts` (balance proof, the fee reduces the balance with no summary-code change)
 
 **Interfaces:**
 - Consumes: `buildFeeTransaction` (Task 2), `buildFeesCategory` + `FEES_CATEGORY_ID` (Task 1), `TransactionFormState.feeAmount` (Task 3), existing `repositories.transactions.upsert/remove` and `repositories.categories.upsert`.
@@ -384,7 +384,7 @@ describe("reconcileAccountBalances with a linked fee", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run lib/domain/accounts.test.ts`
-Expected: FAIL — `feeParentId` unknown OR (once Task 1 is merged) it should actually PASS, proving "no new math." If it already passes, that is the point of the test; keep it as a regression guard and continue.
+Expected: FAIL, `feeParentId` unknown OR (once Task 1 is merged) it should actually PASS, proving "no new math." If it already passes, that is the point of the test; keep it as a regression guard and continue.
 
 - [ ] **Step 3: Import the fee builder and category helper in the workspace**
 
@@ -441,7 +441,7 @@ Directly above `handleTransactionSubmit` (inside the hook body), add:
         await repositories.categories.upsert(buildFeesCategory(userId));
         await repositories.transactions.upsert(fee);
       } else if (transactions.some((entry) => entry.id === feeId)) {
-        // Editing cleared a previously-recorded fee — drop the orphan.
+        // Editing cleared a previously-recorded fee, drop the orphan.
         await repositories.transactions.remove(feeId);
       }
     },
@@ -511,7 +511,7 @@ git -c commit.gpgsign=false commit --no-verify -m "Persist, prefill, and cascade
 **Spec coverage:**
 - Data model `feeParentId` → Task 1 ✓
 - Fees category rename + upsert-on-save → Task 1 (seed + `buildFeesCategory`), Task 4 Step 5 (upsert) ✓
-- Builder returns payment + optional fee (expense + transfer) → Task 2 (`buildFeeTransaction`) composed in Task 4 Steps 4–5 ✓ (refined from "return `Transaction[]`" to a composable helper to avoid churn to existing builder tests — same behavior, cleaner blast radius)
+- Builder returns payment + optional fee (expense + transfer) → Task 2 (`buildFeeTransaction`) composed in Task 4 Steps 4–5 ✓ (refined from "return `Transaction[]`" to a composable helper to avoid churn to existing builder tests, same behavior, cleaner blast radius)
 - Fee on **source** account for transfers → Task 4 Step 4 (`persistFee(source, …)`) ✓
 - Form input in details, expense/transfer only, auto-expand → Task 3 Steps 1–4 ✓
 - Edit re-derives / clears fee → Task 4 Steps 5–6 ✓
@@ -520,6 +520,6 @@ git -c commit.gpgsign=false commit --no-verify -m "Persist, prefill, and cascade
 - Tests: builder pair, deterministic id, blank→none, balance proof → Tasks 2 & 4 ✓
 - Fee stored UGX-only → Task 2 Step 3 + Global Constraints ✓
 
-**Placeholder scan:** none — every code step shows full content.
+**Placeholder scan:** none, every code step shows full content.
 
 **Type consistency:** `buildFeeTransaction(parent, feeAmountRaw, feesCategoryId)`, `FEES_CATEGORY_ID`, `buildFeesCategory(userId)`, `feeParentId`, `feeAmount` used identically across Tasks 1–4. Deterministic fee id `` `${parent.id}:fee` `` matches between builder (Task 2), persist/edit (Task 4 Steps 5–6), and cascade (Task 4 Step 7).

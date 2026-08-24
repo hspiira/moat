@@ -1,15 +1,15 @@
-# Capture fee extraction — design
+# Capture fee extraction, design
 
 **Date:** 2026-07-25
 **Status:** Approved (design), pending implementation plan
 **Scope owner:** Henry Piira
-**Follows:** [2026-07-25-transaction-fees-design.md](2026-07-25-transaction-fees-design.md) (v1 manual fees — shipped)
+**Follows:** [2026-07-25-transaction-fees-design.md](2026-07-25-transaction-fees-design.md) (v1 manual fees, shipped)
 
 ## Problem
 
 v1 lets users record fees manually. But the whole point of capture is to avoid
 manual entry: a pasted/shared/SMS mobile-money message already states its fee. The
-parsers currently drop it — they extract only the principal amount — so a captured
+parsers currently drop it, they extract only the principal amount, so a captured
 `UGX 50,000` send that actually cost `51,250` still under-records by the fee, and
 the user has to notice and re-add it by hand. This closes that gap: extract the fee
 from the message, carry it through review, and materialize it as the linked fee
@@ -21,8 +21,8 @@ Extract a `feeAmount` in the parser, carry it through the existing capture pipel
 (candidate → review item → editor → approve), and on approve reuse the **v1**
 `buildFeeTransaction` + `buildFeesCategory` helpers to create the linked fee. The
 fee is **editable in the review queue** (prefilled from the parse) so a mis-parse is
-correctable, not silently wrong. "Fee" means the **sum of all charge lines** —
-`Fee` + `Tax` + `Charge` + `Excise duty` — because a Ugandan MoMo withdrawal shows
+correctable, not silently wrong. "Fee" means the **sum of all charge lines**,
+`Fee` + `Tax` + `Charge` + `Excise duty`, because a Ugandan MoMo withdrawal shows
 them as separate lines that together are the real cost.
 
 ## Design
@@ -62,7 +62,7 @@ snapshot.
 
 ### 4. Review-queue editor (`components/transactions/capture-review-queue.tsx`)
 
-In `ReviewItemEditor`, add an editable **"Fee — charges & tax (UGX)"** `InputField`
+In `ReviewItemEditor`, add an editable **"Fee, charges & tax (UGX)"** `InputField`
 bound to `draft.feeAmount` (shown when `draft.type === "expense"`), using the same
 `setDraft` pattern as the amount/payee fields. Empty input → `undefined`.
 
@@ -93,7 +93,7 @@ fee. Rejecting/duplicating a review item never created a fee, so nothing to clea
   message → `feeAmount` undefined; a message with no charge lines → undefined.
 - `parseCaptureFee` unit tests: single fee, fee+tax+excise summed, none.
 - `lib/capture/pipeline.test.ts`: candidate carries `feeAmount` from the provider.
-- Approve path: approving an item with `feeAmount` writes two transactions — the
+- Approve path: approving an item with `feeAmount` writes two transactions, the
   payment and a linked `` `${paymentId}:fee` `` expense in the fees category.
 
 ## Success criteria
