@@ -43,6 +43,8 @@ export async function completeGoogleSignIn(params: {
   try {
     response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/auth/callback`, {
       method: "POST",
+      // A stalled connection would otherwise leave the screen finishing for good.
+      signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(20_000) : undefined,
       headers: {
         "Content-Type": "application/json",
         // Proof that a ledger already syncing on this device is this device's, so
