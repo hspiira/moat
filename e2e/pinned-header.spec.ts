@@ -19,7 +19,7 @@ for (const route of ROUTES) {
 
     // The desktop bar is sticky too but display:none at this width, so the
     // phone one is named directly rather than by what it contains.
-    const header = page.locator("div.sticky.lg\\:hidden");
+    const header = page.locator("header.sticky.lg\\:hidden");
     await expect(header).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, 900));
