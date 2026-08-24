@@ -22,10 +22,15 @@ pnpm ios
 ```
 
 Builds, writes the sign-in callback scheme into Info.plist, copies the app into
-the iOS project, then deletes `ios/App/CapApp-SPM/.build`. That last step
-matters: `cap sync` resolves the Swift package from the command line and leaves
-its state behind, and Xcode then refuses to open the same package, saying it is
-"already opened from another project or workspace".
+the iOS project, then deletes `ios/App/CapApp-SPM/.build`.
+
+That last step is hygiene rather than a known cure. `.build` is command-line
+Swift package state, and Xcode keeps its own resolution in DerivedData, so
+clearing it means only one tool has resolved the package. Xcode recreates the
+directory while the project is open, which is normal. If Xcode still reports a
+package as "already opened from another project or workspace", or a plugin
+product as missing, reset its own state with File, Packages, Reset Package
+Caches.
 
 ## Where things are
 
