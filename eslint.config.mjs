@@ -11,6 +11,9 @@ const config = [
       "server/migrate.js",
       "test-results/**",
       "playwright-report/**",
+      // The static export copied into the native shells. Generated, not ours.
+      "ios/App/App/public/**",
+      "native/android/**/assets/public/**",
     ],
   },
   ...nextCoreWebVitals,

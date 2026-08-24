@@ -2,7 +2,7 @@ export type LedgerCheck = { ok: true } | { ok: false; reason: string };
 
 // Adopting a vault's key re-seals this device's records under it. That is right
 // when both sides are the same ledger, and wrong when they are two ledgers that
-// happen to belong to the same person — the plan refuses to merge those.
+// happen to belong to the same person, the plan refuses to merge those.
 export function checkVaultBelongsToLedger(params: {
   vaultUserId: string;
   localUserId: string | null;

@@ -234,7 +234,7 @@ export function BackupPanel() {
           lastRestoredName: file.name,
         }));
         setSuccess(
-          "Unencrypted export restored. Reload the app to see your data. Consider deleting that file — it holds your records in plain text.",
+          "Unencrypted export restored. Reload the app to see your data. Consider deleting that file, it holds your records in plain text.",
         );
         reset();
         return;
@@ -485,7 +485,7 @@ export function BackupPanel() {
     const dek = getActiveRecordCryptoKey();
 
     if (isSealed && !dek) {
-      setError("Unlock Moat first — a sealed backup opens with this device's key.");
+      setError("Unlock Moat first, a sealed backup opens with this device's key.");
       return;
     }
 
@@ -646,7 +646,7 @@ export function BackupPanel() {
           <form className="grid gap-4" onSubmit={(e) => void handleBackup(e)}>
             <PinInputField
               id="backup-pin"
-              label={`Backup PIN (minimum ${MIN_PIN_LENGTH} digits — you need this to restore)`}
+              label={`Backup PIN (minimum ${MIN_PIN_LENGTH} digits, you need this to restore)`}
               value={backupPin}
               onChange={setBackupPin}
               placeholder="Choose a PIN for this backup"
@@ -765,7 +765,7 @@ export function BackupPanel() {
                       />
                       <p className="text-xs text-muted-foreground">
                         Your key is stored in the same Drive app folder, wrapped so only this
-                        passphrase — or a passkey, on a device that carries one — opens it. Neither
+                        passphrase, or a passkey, on a device that carries one, opens it. Neither
                         Moat nor Google can read your records with it. If you forget it and lose
                         your devices, nobody can recover the data.
                       </p>
@@ -776,7 +776,7 @@ export function BackupPanel() {
                         />
                         <span>
                           Back up automatically once a day while Moat is unlocked. These uploads
-                          need no PIN — they are sealed with your key — and Moat keeps the most
+                          need no PIN, they are sealed with your key, and Moat keeps the most
                           recent ones, removing older automatic backups.
                         </span>
                       </label>

@@ -136,7 +136,7 @@ function AccountFormBody({
             label="Institution name"
             value={form.institutionName}
             onChange={(e) => onFormChange((c) => ({ ...c, institutionName: e.target.value }))}
-            placeholder="Optional — e.g. Stanbic Bank"
+            placeholder="Optional: e.g. Stanbic Bank"
           />
 
           <InputField

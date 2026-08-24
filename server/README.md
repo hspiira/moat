@@ -18,7 +18,7 @@ DATABASE_URL=postgres://... MOAT_SYNC_BEARER_TOKEN=... pnpm --filter @moat/sync-
 
 `build` bundles with esbuild because the handlers share `lib/sync` with the web
 app through the `@/` alias. The bundle lands at `server.js` in this directory,
-which is also what makes the package deployable to Vercel — see below.
+which is also what makes the package deployable to Vercel. See below.
 
 ## Environment
 
@@ -46,7 +46,7 @@ environment variables, and answer on one domain.
 Vercel captures a Node HTTP server: it looks for `server.js` in the service root
 and turns the `listen()` call into a function. The esbuild step produces exactly
 that, which also sidesteps Vercel's lack of support for TypeScript path mappings
-— `@/lib/sync/...` is resolved at build time rather than at runtime.
+`@/lib/sync/...` is resolved at build time rather than at runtime.
 
 Routing sends `/v1/sync/*` and `/health` here and everything else to the web
 app. Because both answer on the same origin, sync requests are not cross-origin,

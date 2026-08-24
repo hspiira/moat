@@ -33,7 +33,7 @@ function labelFor(
   accounts: Account[],
   categories: Category[],
 ) {
-  if (value === undefined || value === "") return "—";
+  if (value === undefined || value === "") return "–";
   if (field === "accountId") {
     return accounts.find((entry) => entry.id === value)?.name ?? String(value);
   }
@@ -208,7 +208,7 @@ export function CaptureReviewDetailSheet({
                         <DetailRow label="Exchange rate">
                           {subject.fxRateToUgx
                             ? `1 ${subject.currency} = ${subject.fxRateToUgx} UGX`
-                            : "—"}
+                            : "–"}
                         </DetailRow>
                       </>
                     ) : null}

@@ -302,14 +302,14 @@ export function AccountLedgerWorkspace({ accountId }: { accountId: string }) {
                                 {row.debit > 0 ? (
                                   <Money amount={row.debit} tone="negative" signed className="text-sm" />
                                 ) : (
-                                  <span className="text-muted-foreground">—</span>
+                                  <span className="text-muted-foreground">, </span>
                                 )}
                               </TableCell>
                               <TableCell className="whitespace-nowrap text-right align-top">
                                 {row.credit > 0 ? (
                                   <Money amount={row.credit} tone="positive" signed className="text-sm" />
                                 ) : (
-                                  <span className="text-muted-foreground">—</span>
+                                  <span className="text-muted-foreground">, </span>
                                 )}
                               </TableCell>
                               <TableCell className="whitespace-nowrap text-right align-top">

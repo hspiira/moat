@@ -263,7 +263,7 @@ export function CsvPreviewCard({
                 </span>
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
-                {row.occurredOn || "no date"} · {account?.name ?? "—"} · {category?.name ?? "—"}
+                {row.occurredOn || "no date"} · {account?.name ?? "–"} · {category?.name ?? "–"}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {row.currency !== "UGX" && row.fxRateToUgx ? (

@@ -121,7 +121,7 @@ const feeLoadRule: InsightRule = ({ transactions, periodLabel }) => {
   const load = getFeeLoad(transactions);
   if (load.fees < MIN_FEE_TOTAL) return null;
 
-  const share = load.share > 0 ? ` — ${percent(load.share)} of the ${formatMoney(load.moved)} you moved` : "";
+  const share = load.share > 0 ? `, ${percent(load.share)} of the ${formatMoney(load.moved)} you moved` : "";
 
   return {
     id: "insight:fees",

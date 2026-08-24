@@ -41,7 +41,7 @@ export function DataExportPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Export your data</CardTitle>
         <CardDescription>
-          A portable copy of your accounts, transactions, goals, and categories — readable by
+          A portable copy of your accounts, transactions, goals, and categories, readable by
           spreadsheets and other tools.
         </CardDescription>
       </CardHeader>

@@ -114,7 +114,7 @@ export function MonthClosePanel({
   const checks = getMonthCloseChecks({ evaluation, recurringEvaluations });
   const isClosed = monthClose?.state === "closed";
   const checkedOn = monthClose?.closedAt ? formatDate(monthClose.closedAt) : null;
-  const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name ?? "—";
+  const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name ?? "–";
 
   return (
     <div className="grid min-w-0 gap-3">

@@ -51,7 +51,7 @@ export function SecurityStep({ security, onSecurityChange }: Props) {
           />
 
           <p className="text-xs text-muted-foreground">
-            Moat locks after 5 minutes of inactivity. There is no PIN recovery —
+            Moat locks after 5 minutes of inactivity. There is no PIN recovery,
             if you forget it, restore from an encrypted backup instead.
           </p>
         </>

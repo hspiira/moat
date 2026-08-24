@@ -24,8 +24,8 @@ learned twice:
   purchase from a desktop one, and it cannot be committed here the way an OFL
   font can. `.gitignore` keeps `helvetica-now-*.woff2` out of git.
 - The files tried were **Helvetica Now Micro**, drawn for very small type. At
-  the 14–16px this UI uses it set 28.6% wider than Helvetica — 378px against
-  294px for the same string — wrapping headings onto two lines and truncating
+  the 14–16px this UI uses it set 28.6% wider than Helvetica, 378px against
+  294px for the same string, wrapping headings onto two lines and truncating
   the search placeholder. The optical size a UI wants is **Text**.
 - Their name tables were malformed: empty family name, a `☞` subfamily.
   Legitimate releases do not look like that, so check where any files came from.

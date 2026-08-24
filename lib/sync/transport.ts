@@ -8,7 +8,7 @@ import type {
   SyncPushResponse,
 } from "@/lib/sync/types";
 
-function normalizeEndpoint(endpoint: string) {
+export function normalizeEndpoint(endpoint: string) {
   return endpoint.replace(/\/+$/, "");
 }
 

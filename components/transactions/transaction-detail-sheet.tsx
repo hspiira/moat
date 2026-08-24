@@ -154,7 +154,7 @@ export function TransactionDetailSheet({
                     <DetailRow label="Exchange rate">
                       {subject.fxRateToUgx
                         ? `1 ${subject.currency} = ${subject.fxRateToUgx} UGX`
-                        : "—"}
+                        : "–"}
                     </DetailRow>
                   </>
                 ) : null}

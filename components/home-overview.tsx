@@ -66,7 +66,7 @@ export function HomeOverview({ modulePreviews }: HomeOverviewProps) {
 
         <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
           {[
-            "Works offline — your records stay on this device",
+            "Works offline, your records stay on this device",
             "Import MTN or bank statements via CSV",
             "Locked behind a PIN, encrypted at rest",
           ].map((item) => (

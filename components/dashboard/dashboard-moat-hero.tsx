@@ -78,7 +78,7 @@ export function DashboardMoatHero({
     ? runwayMonths >= 100
       ? "99+"
       : runwayMonths.toFixed(1)
-    : "—";
+    : "–";
   const coverAria = hasCoverSignal
     ? `Emergency cover: ${runwayMonths.toFixed(1)} of ${TARGET_MONTHS} target months of expenses`
     : "Emergency cover: not enough data yet";

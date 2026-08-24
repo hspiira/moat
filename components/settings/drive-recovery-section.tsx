@@ -444,7 +444,7 @@ export function DriveRecoverySection({
 
           <PinInputField
             id="adopt-device-pin"
-            label={`PIN for this device (at least ${MIN_PIN_LENGTH} digits — this becomes the PIN you unlock with)`}
+            label={`PIN for this device (at least ${MIN_PIN_LENGTH} digits, this becomes the PIN you unlock with)`}
             value={devicePin}
             onChange={setDevicePin}
             autoComplete="new-password"

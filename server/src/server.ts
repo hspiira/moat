@@ -8,6 +8,10 @@ import {
 } from "@/lib/sync/server-contract";
 
 import { authenticateSyncRequest } from "./auth.js";
+import { allowedRedirectUris, validateAuthCallbackRequest } from "./auth/callback-request.js";
+import { exchangeGoogleCode } from "./auth/google.js";
+import { mintSyncCredential } from "./db/credentials.js";
+import { resolveIdentity } from "./db/identities.js";
 
 import { getPool } from "./db/pool.js";
 import { applyPostgresSyncPush, pullPostgresSyncChanges } from "./db/postgres-store.js";
@@ -23,6 +27,9 @@ const MINUTE = 60_000;
 const perAddress = createRateLimiter({ limit: 600, windowMs: MINUTE });
 const perUser = createRateLimiter({ limit: 300, windowMs: MINUTE });
 const perFailedAuth = createRateLimiter({ limit: 10, windowMs: MINUTE });
+// Signing in is rare and costs a round trip to the provider, so it is held
+// tighter than syncing.
+const perSignIn = createRateLimiter({ limit: 20, windowMs: MINUTE });
 
 function callerAddress(request: IncomingMessage): string {
   // Behind a proxy the socket is the proxy, so the forwarded address is used
@@ -103,6 +110,70 @@ const server = createServer(async (request, response) => {
 
     if (request.method !== "POST") {
       throw new HttpError(405, "Method not allowed.");
+    }
+
+    // Sign-in comes before authentication, because it is how a caller gets a
+    // token in the first place.
+    if (url.pathname === "/v1/auth/callback") {
+      const address = callerAddress(request);
+      limit(perAddress, address, Date.now(), "Too many requests. Try again shortly.");
+      limit(perSignIn, address, Date.now(), "Too many sign-in attempts. Try again shortly.");
+
+      const body = await readJsonBody(request);
+      const signIn = validate(() =>
+        validateAuthCallbackRequest(
+          body,
+          allowedRedirectUris(),
+          process.env.MOAT_OIDC_GOOGLE_IOS_CLIENT_ID?.trim(),
+        ),
+      );
+
+      let identity;
+      try {
+        identity = await exchangeGoogleCode({
+          code: signIn.code,
+          codeVerifier: signIn.codeVerifier,
+          redirectUri: signIn.redirectUri,
+          nonce: signIn.nonce,
+          client: signIn.client,
+        });
+      } catch (error) {
+        throw new HttpError(401, error instanceof Error ? error.message : "Sign-in failed.");
+      }
+
+      // A device already syncing on a hand-minted token proves the ledger is
+      // its own by presenting that token alongside the sign-in.
+      let proposedIsProven = false;
+      if (signIn.proposedUserId && request.headers.authorization) {
+        try {
+          const existing = await authenticateSyncRequest(request.headers.authorization);
+          proposedIsProven = existing.userId === signIn.proposedUserId;
+        } catch {
+          proposedIsProven = false;
+        }
+      }
+
+      const resolved = await resolveIdentity({
+        issuer: identity.issuer,
+        subject: identity.subject,
+        email: identity.email,
+        proposedUserId: signIn.proposedUserId,
+        proposedIsProven,
+      });
+
+      if (resolved.status === "already_linked_elsewhere") {
+        throw new HttpError(409, "This account is already syncing another Moat ledger.");
+      }
+      if (resolved.status === "proposed_id_taken") {
+        throw new HttpError(409, "That ledger already belongs to another account.");
+      }
+
+      sendJson(response, 200, {
+        userId: resolved.userId,
+        isNewUser: resolved.isNewUser,
+        syncAuthToken: await mintSyncCredential(resolved.userId, "sign-in"),
+      });
+      return;
     }
 
     const address = callerAddress(request);

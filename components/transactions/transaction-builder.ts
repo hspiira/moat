@@ -162,7 +162,7 @@ export function buildDebtPaymentTransactions(
     throw new Error("Choose which loan you are paying.");
   }
   if (form.accountId === form.destinationAccountId) {
-    throw new Error("A loan cannot be paid from itself — choose different accounts.");
+    throw new Error("A loan cannot be paid from itself, choose different accounts.");
   }
 
   const previousPaymentOn = lastLoanPaymentOn(loan.id, input.existingTransactions);

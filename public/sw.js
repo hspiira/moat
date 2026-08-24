@@ -2,12 +2,12 @@
 // a cache it has not seen, so an installed app would otherwise keep serving the
 // old shell and never fetch a newly added route. The activate handler below
 // drops superseded caches, so this upgrades in place with no user action.
-const CACHE_NAME = "moat-v11";
+const CACHE_NAME = "moat-v12";
 const OFFLINE_URL = "/offline";
 
 // Every statically-rendered route is precached at install, not just on first
 // visit. Offline support is advertised on the landing page, and a route that
-// has never been opened while online previously fell through to /offline —
+// has never been opened while online previously fell through to /offline,
 // which reads as "the app is broken" rather than "you're offline".
 // There are no dynamic routes left to miss: the account ledger reads its id
 // from ?id= on one static page, so every route in the app is a file listed
@@ -38,6 +38,8 @@ const APP_SHELL_URLS = [
   "/settings/categories",
   "/transactions",
   "/transactions/capture",
+  // Where Google returns after a sign-in.
+  "/auth/callback",
   // Old paths, kept as redirects so bookmarks and installed shortcuts still work.
   "/transactions/import",
   "/transactions/review",
@@ -137,7 +139,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // React Server Component payloads. Client-side navigation (next/link) never
-  // issues a `navigate` request — it fetches the route's RSC payload instead,
+  // issues a `navigate` request, it fetches the route's RSC payload instead,
   // so without this branch tapping a nav link offline bypasses the cache
   // entirely and fails, even when the route's HTML is precached.
   const isRscRequest =

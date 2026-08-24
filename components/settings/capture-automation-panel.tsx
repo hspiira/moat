@@ -71,7 +71,7 @@ export function CaptureAutomationPanel() {
           <div className="text-sm text-foreground">Read money messages automatically</div>
           <div className="text-sm text-muted-foreground">
             When on, Moat reads new money messages from the apps you allow below and sends them to
-            review — nothing posts to your ledger without your say-so.
+            review, nothing posts to your ledger without your say-so.
           </div>
         </div>
 

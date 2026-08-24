@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { getPool } from "./db/pool.js";
 import { mintSyncCredential } from "./db/credentials.js";
+import { dropSyncTablesSql } from "./db/schema-reset.js";
 import { SCHEMA_SQL } from "./db/schema.js";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
@@ -79,12 +80,7 @@ describeServer("sync server tenancy", () => {
   let intruderToken: string;
 
   beforeAll(async () => {
-    await getPool().query(`
-      drop table if exists sync_applied_outbox;
-      drop table if exists sync_records;
-      drop table if exists sync_users;
-      drop table if exists sync_credentials;
-    `);
+    await getPool().query(dropSyncTablesSql());
     await getPool().query(SCHEMA_SQL);
 
     ownerToken = await mintSyncCredential(OWNER, "owner device");

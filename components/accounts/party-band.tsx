@@ -119,7 +119,7 @@ export function PartyBand({
 export const LENDING_BAND_COPY: PartyBandCopy = {
   title: "Owed to you",
   description:
-    "Money you have lent out. Lending does not count as spending, and it does not change your net worth — the cash simply moved.",
+    "Money you have lent out. Lending does not count as spending, and it does not change your net worth, the cash simply moved.",
   settledMessage: "Everyone has settled up.",
   advancedLabel: "Lent",
   cancelledLabel: "Written off",
@@ -132,7 +132,7 @@ export const LENDING_BAND_COPY: PartyBandCopy = {
 export const BORROWING_BAND_COPY: PartyBandCopy = {
   title: "You owe",
   description:
-    "Money borrowed from people rather than institutions. There is no interest and no schedule here — Moat only shows a date when you have agreed to one.",
+    "Money borrowed from people rather than institutions. There is no interest and no schedule here, Moat only shows a date when you have agreed to one.",
   settledMessage: "You have settled up with everyone.",
   advancedLabel: "Borrowed",
   cancelledLabel: "Forgiven",

@@ -39,7 +39,7 @@ export function ReconcileBand({
 
       <div className="grid gap-1">
         <p className="text-xs text-muted-foreground">
-          It happened between {formatDate(window_.openedOn)} and {formatDate(window_.statedOn)} —{" "}
+          It happened between {formatDate(window_.openedOn)} and {formatDate(window_.statedOn)} , {" "}
           {window_.entries.length} {window_.entries.length === 1 ? "entry" : "entries"} below,
           nothing older. Either one is missing, or one is there twice.
         </p>

@@ -114,8 +114,8 @@ describe("fees per account", () => {
       ...(isFee ? { feeParentId: `${id}-parent` } : {}),
     });
 
-  // Momo: 300,000 moved for 3,000 in charges — 10 per thousand.
-  // Bank: 1,000,000 moved for 5,000 — 5 per thousand, dearer in total, cheaper to use.
+  // Momo: 300,000 moved for 3,000 in charges, 10 per thousand.
+  // Bank: 1,000,000 moved for 5,000, 5 per thousand, dearer in total, cheaper to use.
   const rows = [
     row("momo-out", "acc:momo", 300_000),
     row("momo-fee", "acc:momo", 3_000, true),
