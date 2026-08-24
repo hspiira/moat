@@ -86,3 +86,24 @@ describe("isIosRedirect", () => {
     expect(isIosRedirect("https://moat.example.com/auth/callback", clientId)).toBe(false);
   });
 });
+
+describe("reusing the web client for the app", () => {
+  it("is refused, because one client cannot be both types", () => {
+    expect(() =>
+      readGoogleClient("ios", {
+        MOAT_OIDC_GOOGLE_IOS_CLIENT_ID: "shared.apps.googleusercontent.com",
+        MOAT_OIDC_GOOGLE_CLIENT_ID: "shared.apps.googleusercontent.com",
+        MOAT_OIDC_GOOGLE_CLIENT_SECRET: "secret",
+      }),
+    ).toThrow(/is the web client id/i);
+  });
+
+  it("allows the app's own id alongside a different web one", () => {
+    expect(
+      readGoogleClient("ios", {
+        MOAT_OIDC_GOOGLE_IOS_CLIENT_ID: "app.apps.googleusercontent.com",
+        MOAT_OIDC_GOOGLE_CLIENT_ID: "web.apps.googleusercontent.com",
+      }),
+    ).toEqual({ kind: "ios", clientId: "app.apps.googleusercontent.com" });
+  });
+});

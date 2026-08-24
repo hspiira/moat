@@ -81,14 +81,14 @@ export function SettingsWorkspace() {
       <div className="space-y-1">
         <h1 className="sr-only">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Security, privacy, and data management for your Moat account.
+          Security, privacy and data management.
         </p>
       </div>
 
       <SettingsSection
         icon={IconShieldLock}
         title="Security"
-        description="Protect your data on shared devices. Your PIN and keys stay on this device and are never sent anywhere."
+        description="Your PIN and keys never leave this device."
       >
         <PinLockPanel />
         <PasskeyPanel />
@@ -97,7 +97,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconTags}
         title="Categories"
-        description="What each one has cost you, and where duplicates crept in."
+        description="What each has cost, and where duplicates crept in."
       >
         <SettingsNavRow
           href="/settings/categories"
@@ -119,7 +119,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconCloudLock}
         title="Storage"
-        description="Where your data lives and how to move it between devices."
+        description="Where your data lives, and how to move it."
       >
         <SyncModePanel />
       </SettingsSection>
@@ -135,7 +135,7 @@ export function SettingsWorkspace() {
       <SettingsSection
         icon={IconDatabaseExport}
         title="Your data"
-        description="Export or delete everything stored on this device. See the Privacy Policy for your rights."
+        description="Export or delete everything on this device."
       >
         <DataExportPanel />
         <DeleteAccountPanel />

@@ -220,6 +220,8 @@ export type PlannedPurchase = {
   itemId: string;
   quantity?: number;
   estimatedUnitPrice?: number;
+  /** The agreed full price when paying in parts. Absent means paid in one go. */
+  expectedTotal?: number;
   neededBy?: string;
   note?: string;
   status: PlannedPurchaseStatus;
@@ -367,8 +369,9 @@ export type CaptureReviewSnapshot = {
   feeAmount?: number;
   statedBalance?: number;
   normalizedAmount: number;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   categoryId: string;
+  destinationAccountId?: string;
   payee: string;
   note: string;
   parserLabel?: string;
@@ -390,8 +393,9 @@ export type CaptureReviewItem = {
   feeAmount?: number;
   statedBalance?: number;
   normalizedAmount: number;
-  type: Exclude<TransactionType, "transfer">;
+  type: TransactionType;
   categoryId: string;
+  destinationAccountId?: string;
   payee: string;
   note: string;
   messageHash: string;

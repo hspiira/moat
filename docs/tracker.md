@@ -1,4 +1,4 @@
-# Moat — Project Tracker
+# Moat, Project Tracker
 
 | Field        | Value                                |
 | ------------ | ------------------------------------ |
@@ -11,7 +11,7 @@
 
 ## What This Document Is
 
-A living tracker for project state, decisions, open questions, ideation backlog, and automation research. It is the single place to record anything that does not belong in the PRD, architecture doc, or code — including hypotheses, rejected ideas, and future research threads.
+A living tracker for project state, decisions, open questions, ideation backlog, and automation research. It is the single place to record anything that does not belong in the PRD, architecture doc, or code, including hypotheses, rejected ideas, and future research threads.
 
 ---
 
@@ -34,24 +34,24 @@ A consolidation pass reconciled the docs with the code and closed several review
 
 ### What is built and working
 
-- Onboarding flow at `/onboarding` — creates profile, seeds categories and resources, redirects to dashboard
-- Account management at `/accounts` — full CRUD via IndexedDB repository, balance reconciliation
-- Transaction recording at `/transactions` — manual entry for all types, transfer pair logic, CSV import with column mapping and duplicate detection
-- Accounting depth baseline — running ledgers, period opening/movement/closing balances, reconciliation states, rule engine, recurring obligations, month close, and property-based accounting tests
-- Phase 2 capture inbox baseline — pasted/shared/file-derived captures persist as envelopes and review items before posting
-- Capture review route at `/transactions/review/capture` — supports `New`, `Needs review`, `Duplicates`, and `Resolved` style review-first capture handling
-- In-app text, image, and document extraction capture — reviewed candidates can be sent into the capture inbox instead of directly creating transactions
-- Parser and dedupe foundation — message hash linkage, duplicate hints, source metadata, and first MTN/Airtel/bank-style template matching
-- Goals at `/goals` — target-based goals, monthly contribution math, progress from savings transactions, emergency fund priority
-- Investment Compass at `/investment-compass` — rule-based guidance engine, horizon + liquidity + emergency coverage + debt signals
-- Learn Uganda at `/learn` — official and research resources grouped by topic
-- Purchase planner at `/shopping` — planned items with estimates, check-off into transaction line items, and per-item price history derived from the user's own purchases
-- Dashboard at `/` — monthly summary, top categories, account balances, monthly prompts
+- Onboarding flow at `/onboarding`, creates profile, seeds categories and resources, redirects to dashboard
+- Account management at `/accounts`, full CRUD via IndexedDB repository, balance reconciliation
+- Transaction recording at `/transactions`, manual entry for all types, transfer pair logic, CSV import with column mapping and duplicate detection
+- Accounting depth baseline, running ledgers, period opening/movement/closing balances, reconciliation states, rule engine, recurring obligations, month close, and property-based accounting tests
+- Phase 2 capture inbox baseline, pasted/shared/file-derived captures persist as envelopes and review items before posting
+- Capture review route at `/transactions/review/capture`, supports `New`, `Needs review`, `Duplicates`, and `Resolved` style review-first capture handling
+- In-app text, image, and document extraction capture, reviewed candidates can be sent into the capture inbox instead of directly creating transactions
+- Parser and dedupe foundation, message hash linkage, duplicate hints, source metadata, and first MTN/Airtel/bank-style template matching
+- Goals at `/goals`, target-based goals, monthly contribution math, progress from savings transactions, emergency fund priority
+- Investment Compass at `/investment-compass`, rule-based guidance engine, horizon + liquidity + emergency coverage + debt signals
+- Learn Uganda at `/learn`, official and research resources grouped by topic
+- Purchase planner at `/shopping`, planned items with estimates, check-off into transaction line items, and per-item price history derived from the user's own purchases
+- Dashboard at `/`, monthly summary, top categories, account balances, monthly prompts
 - Light / dark theme toggle in navigation
-- All forms use shadcn/ui components — no native input/select/textarea in any user-facing component
+- All forms use shadcn/ui components, no native input/select/textarea in any user-facing component
 - Local-first persistence via IndexedDB (web) and SQLite (native bridge) behind one repository interface
-- PIN lock with at-rest record encryption — onboarding default, min 6 digits, throttled unlock
-- Encrypted backup and restore — local `.enc` file and Google Drive (appdata scope)
+- PIN lock with at-rest record encryption, onboarding default, min 6 digits, throttled unlock
+- Encrypted backup and restore, local `.enc` file and Google Drive (appdata scope)
 - PWA install, offline shell, and share-target intake; hand-rolled Android WebView host shell with share-to-app capture implemented in code (not device-verified)
 - Client-side sync engine, outbox, and per-entity conflict rules with a manual-review queue at `/settings/sync-conflicts`
 - First-sync backfill: opting in queues records created before opt-in, which previously never reached the server
@@ -67,7 +67,7 @@ A consolidation pass reconciled the docs with the code and closed several review
 
 Hosted sync stays behind `NEXT_PUBLIC_ENABLE_HOSTED_SYNC` until the items above are done. Tenancy and payload privacy are closed, so the remaining risk is access rather than data: there is no way in but a hand-minted token, and nothing limits how often a caller can try. Sequencing is in [plans/hosted-sync.md](plans/hosted-sync.md).
 - PDF statement parsing (MTN, Stanbic, DFCU)
-- Android notification listener rollout — service code exists but there is no permission-grant UX and it is not device-verified
+- Android notification listener rollout, service code exists but there is no permission-grant UX and it is not device-verified
 - Correction logging and parser refinement workflow
 - Provider-grade parser packs with broad MTN, Airtel, and bank fixture coverage
 - Push notifications / reminders
@@ -110,14 +110,14 @@ Reference: `docs/testing/pilot-readiness.md`
 
 | Decision | Options | Status |
 |----------|---------|--------|
-| Data backup / restore | JSON export/import, server sync, none | **Resolved** — encrypted `.enc` backup/restore to file and Google Drive (plaintext JSON export also exists) |
-| Encryption posture | Opt-in PIN, default PIN, mandatory PIN | **Resolved (2026-07-19)** — PIN + encryption is the onboarding default, ≥6 digits, throttled unlock; explicit opt-out with warning |
-| Auth model | Local-only forever, optional account, required account | **Decided (2026-08-17)** — optional account; local-only stays the default and an account unlocks hosted sync. Not yet implemented |
-| Sync encryption posture | Server-readable, end-to-end encrypted, hybrid | **Decided (2026-08-17)** — end-to-end encrypted blobs; the server never holds readable financial data. Not yet implemented |
+| Data backup / restore | JSON export/import, server sync, none | **Resolved**, encrypted `.enc` backup/restore to file and Google Drive (plaintext JSON export also exists) |
+| Encryption posture | Opt-in PIN, default PIN, mandatory PIN | **Resolved (2026-07-19)**, PIN + encryption is the onboarding default, ≥6 digits, throttled unlock; explicit opt-out with warning |
+| Auth model | Local-only forever, optional account, required account | **Decided (2026-08-17)**, optional account; local-only stays the default and an account unlocks hosted sync. Not yet implemented |
+| Sync encryption posture | Server-readable, end-to-end encrypted, hybrid | **Decided (2026-08-17)**, end-to-end encrypted blobs; the server never holds readable financial data. Not yet implemented |
 | Goal–account linking in UI | Required, optional, not shown | Optional (implemented) |
 | Reminders | In-app only, push/email, none in v1 | None in v1 |
-| CSV parser scope | Current column-mapping approach | Decided — keep |
-| PDF statement parsing | Build parser per institution | Future — post-pilot |
+| CSV parser scope | Current column-mapping approach | Decided, keep |
+| PDF statement parsing | Build parser per institution | Future, post-pilot |
 
 ### Open strategy questions
 
@@ -137,22 +137,22 @@ Four product/business questions are unanswered and need founder decisions rather
 - Access: apply via developer portal; sandbox is free; production requires business approval
 
 **Airtel Money API**
-- Similar model to MTN — payments in/out, not statement retrieval
+- Similar model to MTN, payments in/out, not statement retrieval
 - Uganda coverage exists; developer portal access is more restricted
 
 ### What actually works for automation
 
 | Method | What it gives you | Works on web? | Effort |
 |--------|-------------------|---------------|--------|
-| MTN/Airtel API — Collections | Payment confirmation webhooks | Yes | Medium |
-| MTN/Airtel API — Balance | Current wallet balance | Yes | Low |
-| SMS parsing | Full transaction history from confirmation messages | No — Android native only | High |
+| MTN/Airtel API, Collections | Payment confirmation webhooks | Yes | Medium |
+| MTN/Airtel API, Balance | Current wallet balance | Yes | Low |
+| SMS parsing | Full transaction history from confirmation messages | No, Android native only | High |
 | PDF statement upload | Full history from exported statements | Yes | Medium |
 | CSV import | Full history from exported statements | Yes | Done |
 
 ### Recommended automation roadmap
 
-**Phase 1 (now):** CSV import — already built. Covers MTN mini-statements, Stanbic, DFCU, Centenary exports.
+**Phase 1 (now):** CSV import, already built. Covers MTN mini-statements, Stanbic, DFCU, Centenary exports.
 
 **Phase 2 (current implementation plan):** simple capture platform. Start with share-to-app, capture inbox, Android notification listener, parser packs, confidence, deduplication, and correction logging. Reference: `docs/plans/phase-2-capture.md`.
 
@@ -183,7 +183,7 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 - **Debt payoff planner**: User records a debt (e.g. SACCO loan), sets monthly repayment, sees payoff date and interest cost estimate.
 - **Household / shared planning**: Multiple profiles under one account. Important for families or couples managing money together.
 - **Multi-currency support**: For Ugandans who travel or receive remittances in USD/KES. Low priority for MVP pilot.
-- **Onboarding tour / empty state guidance**: First-time user walkthroughs for each route. Currently empty states use plain text — could be richer.
+- **Onboarding tour / empty state guidance**: First-time user walkthroughs for each route. Currently empty states use plain text, could be richer.
 - **Goal funding reminders**: Monthly push/SMS reminder when a savings goal contribution is due.
 
 ### Long-term / infrastructure
@@ -230,24 +230,24 @@ Items here are not prioritised. They move to GitHub issues when they are ready t
 
 Suggested priority order after current state:
 
-1. **Android host shell and native bridge** — tracked in `#55`
-2. **Share-to-app intake completion on native Android** — tracked in `#27`
-3. **Android notification capture** — tracked in `#25`
-4. **Deterministic parse pipeline hardening** — tracked in `#34`
-5. **MTN, Airtel, and bank parser packs expansion** — tracked in `#30`
-6. **Correction logging for parser refinement** — tracked in `#54`
+1. **Android host shell and native bridge**, tracked in `#55`
+2. **Share-to-app intake completion on native Android**, tracked in `#27`
+3. **Android notification capture**, tracked in `#25`
+4. **Deterministic parse pipeline hardening**, tracked in `#34`
+5. **MTN, Airtel, and bank parser packs expansion**, tracked in `#30`
+6. **Correction logging for parser refinement**, tracked in `#54`
 
 ### Phase 2 status snapshot
 
 | Issue | Scope | Status |
 |------|--------|--------|
-| `#56` | Phase 2 epic | In progress — foundation work exists, native/mobile channels still missing |
+| `#56` | Phase 2 epic | In progress, foundation work exists, native/mobile channels still missing |
 | `#53` | Capture inbox and review queue | Implemented in code; ready for review/board update |
-| `#27` | Share-to-app and paste-to-app intake | Implemented in code — Android share intent, host-shell handoff, and capture-review inbox routing are wired; validate on device |
-| `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial — canonical pipeline modules, source adapters, provider packs, hashes, duplicate hints, and field warnings exist; provider coverage and refinement loop still incomplete |
-| `#30` | MTN, Airtel, and bank parser templates | Partial — first generic templates exist; not yet provider-grade or fixture-complete |
-| `#55` | Android host shell and native bridge | Implemented in code — WebView host, payload queue, JS bridge, and review-route handoff are present; needs device verification and notification-specific follow-up |
-| `#25` | Android notification listener ingestion | Implemented in code (manifest service, allowlist gating, settings sync) but **not rolled out** — no permission-grant UX, no device verification, Play policy review pending |
+| `#27` | Share-to-app and paste-to-app intake | Implemented in code, Android share intent, host-shell handoff, and capture-review inbox routing are wired; validate on device |
+| `#34` | Deterministic parse pipeline, confidence, dedupe, source metadata | Partial, canonical pipeline modules, source adapters, provider packs, hashes, duplicate hints, and field warnings exist; provider coverage and refinement loop still incomplete |
+| `#30` | MTN, Airtel, and bank parser templates | Partial, first generic templates exist; not yet provider-grade or fixture-complete |
+| `#55` | Android host shell and native bridge | Implemented in code, WebView host, payload queue, JS bridge, and review-route handoff are present; needs device verification and notification-specific follow-up |
+| `#25` | Android notification listener ingestion | Implemented in code (manifest service, allowlist gating, settings sync) but **not rolled out**, no permission-grant UX, no device verification, Play policy review pending |
 | `#54` | Correction logging and parser refinement workflow | Not started |
 
 ---

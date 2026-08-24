@@ -8,8 +8,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        let controller = CAPBridgeViewController()
+        window?.rootViewController = controller
         window?.makeKeyAndVisible()
+
+        // Swiping from the left edge goes back, as it does everywhere else on
+        // iOS. The web view exists once the window has loaded the controller.
+        controller.webView?.allowsBackForwardNavigationGestures = true
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }

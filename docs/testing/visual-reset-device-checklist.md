@@ -1,4 +1,4 @@
-# Visual reset — device verification checklist
+# Visual reset, device verification checklist
 
 | Field | Value |
 | --- | --- |
@@ -23,7 +23,7 @@ off in place; note failures inline with the device and OS version.
 - [ ] Rotate through Home, Transactions, Accounts, Report: the active pill in
       the capsule names each page; no page shows a large heading repeating the
       pill.
-- [ ] Bottom of every list clears the capsule — the last row can be read and
+- [ ] Bottom of every list clears the capsule, the last row can be read and
       tapped, not hidden behind it.
 
 ## Android Chrome, installed
@@ -54,7 +54,7 @@ off in place; note failures inline with the device and OS version.
 ## Screenshots to capture while there (for the manifest install card)
 
 Take two portrait screenshots on the Android device once the seeded data looks
-presentable — the dashboard and the report page — and drop them in
+presentable, the dashboard and the report page, and drop them in
 `public/screenshots/` as `dashboard.png` and `report.png` (1080×2400 or the
 device's native resolution). Then add to `app/manifest.ts`:
 
@@ -65,7 +65,7 @@ screenshots: [
 ],
 ```
 
-Real screenshots only — the install card is a promise about what the app looks
+Real screenshots only, the install card is a promise about what the app looks
 like.
 
 ## Failure notes

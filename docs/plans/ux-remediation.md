@@ -1,9 +1,9 @@
-# Moat — UX Remediation Plan (screens, copy, forms, widgets, logic)
+# Moat, UX Remediation Plan (screens, copy, forms, widgets, logic)
 
 | Field | Value |
 | --- | --- |
 | Document Version | 1.0 |
-| Status | Remediation plan — execution tracker |
+| Status | Remediation plan, execution tracker |
 | Owner | Piira |
 | Last Updated | 2026-07-23 |
 | Scope | Every route, screen, form, sheet, and widget; user-facing copy; UX-visible logic |
@@ -11,38 +11,38 @@
 
 ## How to use this document
 
-Work phase by phase. Mark each item ✅ with the commit hash when done. An item is done only when its **Fix** is implemented *and* the phase exit criteria pass. Nothing may be dropped silently — if an item is rejected, mark it ❌ with a one-line reason instead of deleting it.
+Work phase by phase. Mark each item ✅ with the commit hash when done. An item is done only when its **Fix** is implemented *and* the phase exit criteria pass. Nothing may be dropped silently, if an item is rejected, mark it ❌ with a one-line reason instead of deleting it.
 
-**Verification harness:** seed a browser via the CDP tour (seed dataset: 1 profile, 4 accounts, 12 transactions, 8 categories, 2 goals, 3 budgets — see git history of `scratchpad/seed.js` pattern) and re-screenshot affected routes mobile-first. All phases: `npx tsc --noEmit && npm run lint && npm run test && npm run build` green.
+**Verification harness:** seed a browser via the CDP tour (seed dataset: 1 profile, 4 accounts, 12 transactions, 8 categories, 2 goals, 3 budgets, see git history of `scratchpad/seed.js` pattern) and re-screenshot affected routes mobile-first. All phases: `npx tsc --noEmit && npm run lint && npm run test && npm run build` green.
 
 ---
 
-## Phase 0 — Trust-breaking bugs (do first) — ✅ COMPLETED 2026-07-23
+## Phase 0, Trust-breaking bugs (do first), ✅ COMPLETED 2026-07-23
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 0.1 | App renders **blank forever for any user without a PIN** — `PinLockGate` lost the `no_pin` branch in the unlock-animation rewrite; `showApp` only covered `unlocked`/`unlocking` | `components/pin-lock-gate.tsx` | `showApp` includes `no_pin` | ✅ commit a04f7a7 (verified fresh-profile browser) |
+| 0.1 | App renders **blank forever for any user without a PIN**, `PinLockGate` lost the `no_pin` branch in the unlock-animation rewrite; `showApp` only covered `unlocked`/`unlocking` | `components/pin-lock-gate.tsx` | `showApp` includes `no_pin` | ✅ commit a04f7a7 (verified fresh-profile browser) |
 | 0.2 | **Budget coverage math wrong**: summary "Spent"/"Remaining" compares allocation of *budgeted categories only* against **all** monthly spending → red "Remaining −1,270,000" even when every envelope is under budget | `lib/domain/budgets.ts:67-88` (`getBudgetCoverage`) | Count only spending in budgeted categories for the summary block (per-envelope rows at `:49` are already correct); add regression test | ✅ done + regression test "excludes spending in unbudgeted categories from coverage" |
-| 0.3 | **“−400%” savings rate** rendered as the giant hero stat; “Saved −USh 1,400,000 · −150%” double-negative framing | `components/dashboard/*` savings-rate stat (dashboard-sections / savings overview) | Clamp/reframe extreme values (e.g. below −100% → "Spent 5× income this period"); never headline a raw percentage beyond ±100% | ✅ done — `describeSavingsRate` caps at ±100%, deep deficit shows "5×" + note; verified in browser. (The "Saved" stat card's −150% is a period-over-period delta, not the rate — left for Phase 4.10 compact stat row.) |
-| 0.4 | Settings claims PIN uses **PBKDF2**; it is Argon2id since the key-hierarchy migration — stale, contradicts the section header two cards above | `components/settings/pin-lock-panel.tsx:89-90` | Drop the algorithm name entirely: "Your PIN never leaves this device." | ✅ done |
-| 0.5 | Privacy policy contact is a non-routable placeholder `privacy@moat.local`; "Last updated 06-04-2026" is ambiguous DD-MM vs MM-DD | `app/privacy/page.tsx:14-16` | Real address (or remove until one exists); unambiguous date | ✅ done — contact → real GitHub issues link (no fabricated email); date → "6 April 2026" |
+| 0.3 | **“−400%” savings rate** rendered as the giant hero stat; “Saved −USh 1,400,000 · −150%” double-negative framing | `components/dashboard/*` savings-rate stat (dashboard-sections / savings overview) | Clamp/reframe extreme values (e.g. below −100% → "Spent 5× income this period"); never headline a raw percentage beyond ±100% | ✅ done, `describeSavingsRate` caps at ±100%, deep deficit shows "5×" + note; verified in browser. (The "Saved" stat card's −150% is a period-over-period delta, not the rate, left for Phase 4.10 compact stat row.) |
+| 0.4 | Settings claims PIN uses **PBKDF2**; it is Argon2id since the key-hierarchy migration, stale, contradicts the section header two cards above | `components/settings/pin-lock-panel.tsx:89-90` | Drop the algorithm name entirely: "Your PIN never leaves this device." | ✅ done |
+| 0.5 | Privacy policy contact is a non-routable placeholder `privacy@moat.local`; "Last updated 06-04-2026" is ambiguous DD-MM vs MM-DD | `app/privacy/page.tsx:14-16` | Real address (or remove until one exists); unambiguous date | ✅ done, contact → real GitHub issues link (no fabricated email); date → "6 April 2026" |
 | 0.6 | Settings footer absolutist claim "never transmitted to any server" sits beside a Hosted-sync panel that contradicts it | `components/settings-workspace.tsx:109-110` | Reword to match reality ("stays on this device unless you turn on sync or cloud backup") | ✅ done |
 
 Exit criteria: ✅ regression test for 0.2; ✅ fresh-profile browser shows a working app with no PIN; ✅ dashboard shows no ±>100% headline stat; ✅ tsc/lint/143 tests/build green.
 
 ---
 
-## Phase 1 — Destructive-action safety & feedback — ✅ COMPLETED 2026-07-23 (6/7; 1.7 → Phase 2)
+## Phase 1, Destructive-action safety & feedback, ✅ COMPLETED 2026-07-23 (6/7; 1.7 → Phase 2)
 
 New shared foundations: `components/ui/confirm-dialog.tsx` (Radix Dialog), `components/ui/toast.tsx` (dependency-free `ToastProvider`/`useToast`, mounted top of layout, z-200 above sheets), `components/hooks/use-confirm-delete.tsx`, `lib/errors.ts` (`errorMessage`).
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 1.1 | **Zero confirmation on any delete** — one tap permanently deletes a transaction / goal / budget | transaction-list / goal-list / budget-manager-panel | `useConfirmDelete` + `ConfirmDialog` on all three; verified in browser (dialog → confirm → row removed) | ✅ done |
+| 1.1 | **Zero confirmation on any delete**, one tap permanently deletes a transaction / goal / budget | transaction-list / goal-list / budget-manager-panel | `useConfirmDelete` + `ConfirmDialog` on all three; verified in browser (dialog → confirm → row removed) | ✅ done |
 | 1.2 | Workspace `error` renders at frame level **behind the open sheet** | transactions/goals workspaces | Failures now also toast (z-200, floats above sheets) in addition to inline `error` | ✅ done (via toast) |
-| 1.3 | `LocalSaveFeedback` suppressed when `embedded` (inside sheets) — in-sheet saves silent | transaction/goal/account/budget save handlers | Success toast on every save/update (visible over sheets); verified | ✅ done (via toast) |
+| 1.3 | `LocalSaveFeedback` suppressed when `embedded` (inside sheets), in-sheet saves silent | transaction/goal/account/budget save handlers | Success toast on every save/update (visible over sheets); verified | ✅ done (via toast) |
 | 1.4 | No toast system at all | app-wide | `ToastProvider` + `useToast` added and mounted; verified "Transaction deleted." toast | ✅ done |
-| 1.5 | **Swallowed errors** — `try/finally` with no catch: budget save/delete, month close, capture-automation | use-budget-planner, use-transactions-workspace `closeMonth`, capture-automation-panel | catch → error toast added to all; capture-automation also rolls back optimistic state | ✅ done |
+| 1.5 | **Swallowed errors**, `try/finally` with no catch: budget save/delete, month close, capture-automation | use-budget-planner, use-transactions-workspace `closeMonth`, capture-automation-panel | catch → error toast added to all; capture-automation also rolls back optimistic state | ✅ done |
 | 1.6 | Capture "manual" sheet silently resets after save | capture flow (transaction save) | Manual saves now toast "Transaction saved." (shared handler) | ✅ done (via toast) |
 | 1.7 | Numeric coercions silently turn garbage into 0 (budget target, expected amount, due day, rule priority) | use-budget-planner, recurring-obligations-panel, transaction-rules-panel | → moved to **Phase 2** (validation) where field-level marking lands | ⏭️ Phase 2 (2.6 + budget/rule validation) |
 
@@ -50,42 +50,42 @@ Exit criteria: ✅ deleting anything asks first; ✅ every save/failure toasts a
 
 ---
 
-## Phase 2 — Validation — ✅ COMPLETED 2026-07-23
+## Phase 2, Validation, ✅ COMPLETED 2026-07-23
 
 Foundations: `error` prop on `InputField`/`SelectField` (message + `aria-invalid` + red border); shared `lib/validation.ts` (`validateAmount`, `validateInteger`, `isPastDate`) with unit tests; `lib/errors.ts` reused for toasts.
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 2.1 | **Onboarding profile step never validated** — blank `displayName` / no consent pass | use-onboarding-workspace | `profile` branch already present + `handleNext` gates it (refactor); **hardened** `handleSubmit` to re-validate ALL steps, not just goal+security; confirmed no step-skipping in the UI | ✅ done |
+| 2.1 | **Onboarding profile step never validated**, blank `displayName` / no consent pass | use-onboarding-workspace | `profile` branch already present + `handleNext` gates it (refactor); **hardened** `handleSubmit` to re-validate ALL steps, not just goal+security; confirmed no step-skipping in the UI | ✅ done |
 | 2.2 | Account opening balance accepts NaN/negative/absurd | use-accounts-workspace, account-form | Field-level validation: name required; balance must be a number; negative only for `debt` type; shown at the field | ✅ done |
 | 2.3 | Goal form: target 0/negative/NaN; current > target; dead priority min/max; past/optional date | use-goals-workspace, goal-form | Validates target>0, current≤target, priority 1–10, date required & non-past; removed dead min/max; verified in browser (3 field errors shown, no submit) | ✅ done |
 | 2.4 | Manual transaction posts with empty account/category | transaction-builder | Guards added (mirror the transfer path); throws → toast; unit test added | ✅ done |
 | 2.5 | No field-level error marking anywhere | input-field, select-field | `error` prop wired through both; used by account/goal/obligation/budget/rule forms | ✅ done |
 | 2.6 | Recurring obligation `dueDay` unbounded (45 accepted) | recurring-obligations-panel | `validateInteger(dueDay, 1, 31)` + expected-amount validation; field errors | ✅ done |
-| 1.7 | Numeric coercions silently → 0 (budget target, expected amount, due day, rule priority) — from Phase 1 | use-budget-planner/budget panel, obligations panel, rules panel | Validate + field error before save instead of `\|\| 0`; budget target, obligation amount/dueDay, rule priority all guarded | ✅ done (folded in) |
+| 1.7 | Numeric coercions silently → 0 (budget target, expected amount, due day, rule priority), from Phase 1 | use-budget-planner/budget panel, obligations panel, rules panel | Validate + field error before save instead of `\|\| 0`; budget target, obligation amount/dueDay, rule priority all guarded | ✅ done (folded in) |
 
 Exit criteria: ✅ each form rejects garbage with a message at the field; ✅ onboarding can't complete blank; ✅ unit tests for validators + transaction guards (149 tests); tsc/lint/build green; goal-form field errors verified in a real browser.
 
 ---
 
-## Phase 3 — De-scope surfaces the product can’t deliver (web) — ✅ COMPLETED 2026-07-23
+## Phase 3, De-scope surfaces the product can’t deliver (web), ✅ COMPLETED 2026-07-23
 
 New: `lib/features.ts` (`isHostedSyncEnabled`, off by default via `NEXT_PUBLIC_ENABLE_HOSTED_SYNC`); `lib/integrations/google-drive-backup.ts` `isGoogleDriveConfigured()`; `components/hooks/use-native-bridge.ts` (hydration-safe `useHasNativeBridge`).
 
 | # | Finding | Location | Fix | Status |
 | --- | --- | --- | --- | --- |
-| 3.1 | **Hosted sync UI with no real backend** | sync-mode-panel | Gated behind `isHostedSyncEnabled()` (off by default). Panel now shows a plain "Everything stays on this device" card — no endpoint, token, mode toggle, "Sync now", or conflicts link. Outbox/engine plumbing untouched (dormant). Verified: no "Sync endpoint"/"bearer token"/"Hosted sync" text on web | ✅ done |
-| 3.2 | `/settings/sync-conflicts` debug view — unreachable until 3.1 | sync-conflicts-workspace | Its only entry point (the conflicts link) is inside the now-hidden hosted block, so the route is unreachable on web. Left dormant behind the 3.1 flag; human-diff redesign deferred to when hosted sync ships | ✅ done (gated dormant) |
+| 3.1 | **Hosted sync UI with no real backend** | sync-mode-panel | Gated behind `isHostedSyncEnabled()` (off by default). Panel now shows a plain "Everything stays on this device" card, no endpoint, token, mode toggle, "Sync now", or conflicts link. Outbox/engine plumbing untouched (dormant). Verified: no "Sync endpoint"/"bearer token"/"Hosted sync" text on web | ✅ done |
+| 3.2 | `/settings/sync-conflicts` debug view, unreachable until 3.1 | sync-conflicts-workspace | Its only entry point (the conflicts link) is inside the now-hidden hosted block, so the route is unreachable on web. Left dormant behind the 3.1 flag; human-diff redesign deferred to when hosted sync ships | ✅ done (gated dormant) |
 | 3.3 | **Android-only "Capture automation" shown to web** + dev contract text | settings-workspace, capture-automation-panel | Section renders only when `useHasNativeBridge()`; deleted the `window.moatNativeCapture.ingest` contract line and rewrote the panel copy in plain language. Verified: no capture/bridge text on web | ✅ done |
 | 3.4 | Google Drive card always shown; throws when unconfigured | backup-panel | `isGoogleDriveConfigured()` gates the Drive button + reminder; section description no longer promises Drive. Verified: no Drive button without client id | ✅ done |
-| 3.5 | `navItems` omits `/privacy` while `navIcons` includes it | navigation-shared vs lib/data | **Reviewed — deliberate, no change:** Privacy is reachable everywhere via the Settings footer link, plus the mobile drawer. Desktop intentionally keeps it out of the primary nav (it's a policy page, not a workspace). The `navIcons` entry is harmless (drawer uses it). | ✅ reviewed |
+| 3.5 | `navItems` omits `/privacy` while `navIcons` includes it | navigation-shared vs lib/data | **Reviewed, deliberate, no change:** Privacy is reachable everywhere via the Settings footer link, plus the mobile drawer. Desktop intentionally keeps it out of the primary nav (it's a policy page, not a workspace). The `navIcons` entry is harmless (drawer uses it). | ✅ reviewed |
 | 3.6 | "Changes stay on this device until sync exists." | local-save-feedback | → "Saved on this device." | ✅ done |
 
 Exit criteria: ✅ web build shows no Android controls, no sync endpoint/token fields, no dev contract strings; ✅ Drive card hidden without client id; verified in a real browser. tsc/lint/149 tests/build green.
 
 ---
 
-## Phase 4 — Screen usability (visual-pass findings) — ✅ COMPLETED 2026-07-24
+## Phase 4, Screen usability (visual-pass findings), ✅ COMPLETED 2026-07-24
 
 Commits: 4a `aeaf30b`, 4b `50b152c`, 4c `1c7f324`, 4d `3ccb14c`, 4e `31e6296`, 4f `1b00849`, 4g `bfd2972`. New shared bits: overflow menu (Popover + `PopoverClose`), `FormCardShell` `footer` (pinned full-width action), `useHasNativeBridge`. Each cluster re-screenshotted at 402px in a real browser.
 
@@ -96,11 +96,11 @@ Commits: 4a `aeaf30b`, 4b `50b152c`, 4c `1c7f324`, 4d `3ccb14c`, 4e `31e6296`, 4
 | 4.3 | Review double-reports emptiness + raw "STATE ready" | One "All clear for July 2026" state; only non-empty detail lists w/ counts; readable month label | ✅ 4b |
 | 4.4 | Parked always-open forms (recurring bills, rules, budgets) | Each → list + "Add …" button → sheet (FormCardShell + pinned action); budget income "Use"/envelope "Edit" open prefilled | ✅ 4g |
 | 4.5 | Account form sheet: dead space + small left button | `FormCardShell` footer pins a full-width primary at the sheet bottom; body fills height | ✅ 4e |
-| 4.6 | Sub-44px tap targets | List edit/delete icon buttons bumped 28px → 36px; transaction actions now a 36px kebab. (Inputs/selects left at 32px — rows/full-width fields are the real targets; noted, not forced to 44px in dense lists) | ✅ 4a/4c |
+| 4.6 | Sub-44px tap targets | List edit/delete icon buttons bumped 28px → 36px; transaction actions now a 36px kebab. (Inputs/selects left at 32px, rows/full-width fields are the real targets; noted, not forced to 44px in dense lists) | ✅ 4a/4c |
 | 4.7 | "Types 4 / 6" stat on Accounts | Cut | ✅ 4a |
 | 4.8 | Capture = menu-of-menus (3 hops) | Lands on the working form inline; method switcher on top; defaults to Manual | ✅ 4f |
 | 4.9 | Review sub-tabs confusing ("Capture inbox / Open capture inbox") | Removed the duplicate button; tab renamed "Captured items" | ✅ 4c |
-| 4.10 | Inflow/Outflow/Saved: three stacked cards of empty space | One compact card of full-width rows (3-col clipped 7-figure UGX — see note) | ✅ 4d |
+| 4.10 | Inflow/Outflow/Saved: three stacked cards of empty space | One compact card of full-width rows (3-col clipped 7-figure UGX, see note) | ✅ 4d |
 | 4.11 | Top-spending band fills read as semantic | Single-hue proportional bars (share of the largest) | ✅ 4d |
 | 4.12 | "Ledger" chip on every account row | Dashboard rows link whole (name + chevron); chip dropped | ✅ 4d |
 | 4.13 | Chart tabs "Rate/Flow/Alloc" cryptic + wrap | Single-row segmented control "Savings / Cash flow / Allocation"; dropped uppercase "SAVINGS RATE" | ✅ 4d |
@@ -108,20 +108,20 @@ Commits: 4a `aeaf30b`, 4b `50b152c`, 4c `1c7f324`, 4d `3ccb14c`, 4e `31e6296`, 4
 | 4.15 | Header pattern differs across routes | Mobile top bar shows "Moat" wordmark everywhere; PageHeader owns titles (no duplication) | ✅ 4e |
 | 4.16 | Monthly target odd precision ("USh 295,833") | Rounded to nearest 1,000 | ✅ 4a |
 
-> Interactive-review notes (from the owner during 4d): 3-column stat tiles clip seven-figure UGX → reverted to full-width rows; period deltas made time-sensitive (only shown when the prior window had activity) and the "—" placeholder chip removed; chart filters redesigned as a non-wrapping segmented control in sentence case; added an `=` icon to the hero "Net" row.
+> Interactive-review notes (from the owner during 4d): 3-column stat tiles clip seven-figure UGX → reverted to full-width rows; period deltas made time-sensitive (only shown when the prior window had activity) and the ", " placeholder chip removed; chart filters redesigned as a non-wrapping segmented control in sentence case; added an `=` icon to the hero "Net" row.
 
-Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated payees, no duplicate summary, forms summoned not parked, no clipped sums. tsc/lint/149 tests/build green throughout.
+Exit criteria: ✅ re-screenshotted affected routes at 402px, no truncated payees, no duplicate summary, forms summoned not parked, no clipped sums. tsc/lint/149 tests/build green throughout.
 
 ---
 
-## Phase 5 — Copy: jargon, wordiness, terminology, tone (full audit list — nothing omitted)
+## Phase 5, Copy: jargon, wordiness, terminology, tone (full audit list, nothing omitted)
 
 ### 5A. Jargon → plain language (every instance)
 
 | # | String | Location | Status |
 | --- | --- | --- | --- |
 | 5A.1 | "Argon2id" | `settings-workspace.tsx:64` | |
-| 5A.2 | "PBKDF2" (also stale — see 0.4) | `pin-lock-panel.tsx:89-90` | |
+| 5A.2 | "PBKDF2" (also stale, see 0.4) | `pin-lock-panel.tsx:89-90` | |
 | 5A.3 | "allowlisted sources … machine-derived records" | `settings-workspace.tsx:73` | |
 | 5A.4 | "machine-derived candidates" | `transactions/capture-review-queue.tsx:194` | |
 | 5A.5 | "machine-derived items into review before posting" (capture sheet) | mobile capture sheet copy (`components/navigation/*`) | |
@@ -152,7 +152,7 @@ Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated pa
 | 5B.6 | Filler subtitles that restate the title: "Update these settings to see how guidance changes." / "Targets are calculated from amount, deadline, and progress." / "Every row below contributes directly to the current balance above." / "Name it once and track it clearly." | `investment-compass-sections.tsx:118-119`; goals list; `account-ledger-workspace.tsx`; account form header | |
 | 5B.7 | Google Drive stale-metadata paragraph could be one clause | `backup-panel.tsx:290-291` | |
 
-### 5C. Terminology — one term per concept (decide once, apply everywhere)
+### 5C. Terminology, one term per concept (decide once, apply everywhere)
 
 | # | Concept | Current variants (locations in audit) | Decide | Status |
 | --- | --- | --- | --- | --- |
@@ -169,10 +169,10 @@ Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated pa
 
 | # | Finding | Location | Status |
 | --- | --- | --- | --- |
-| 5D.1 | Alarmist: "Anyone with access to it can read them." | `security-step.tsx:75-79` — keep the fact, soften framing | |
+| 5D.1 | Alarmist: "Anyone with access to it can read them." | `security-step.tsx:75-79`, keep the fact, soften framing | |
 | 5D.2 | "legacy corrupted data" shown to users ×2 | `account-balance-breakdown.tsx:92-95`; `repair-accounts-panel.tsx:72` | |
 | 5D.3 | Preachy: "increase contributions to stay on track" / "planning floor, not a ceiling" / Learn kickers ("Use data, not promises") | `goal-list.tsx:127`; `goals-workspace.tsx:116-119`; `learn-workspace.tsx:117-118` | |
-| 5D.4 | Terse dev errors: "Unable to load ledger." etc. ×3 | `account-ledger-workspace.tsx:131`; `learn-workspace.tsx:66`; `sync-conflicts-workspace.tsx:48` — add what-to-do-next | |
+| 5D.4 | Terse dev errors: "Unable to load ledger." etc. ×3 | `account-ledger-workspace.tsx:131`; `learn-workspace.tsx:66`; `sync-conflicts-workspace.tsx:48`, add what-to-do-next | |
 | 5D.5 | Sync mechanics exposed in success copy ("Local version queued again…", "Server version applied locally…") | `sync-conflicts-workspace.tsx:73,89` | |
 | 5D.6 | Empty states name internals: "No capture items in this queue." / paste instructions | `capture-review-queue.tsx:212`; `text-capture-panel.tsx:137-139` | |
 | 5D.7 | Firewall-style labels "Notification capture enabled/disabled", "Allowed/Blocked" | `capture-automation-panel.tsx:82` (also gated by 3.3) | |
@@ -183,20 +183,20 @@ Exit criteria: ✅ re-screenshotted affected routes at 402px — no truncated pa
 | --- | --- | --- | --- | --- |
 | 5E.1 | Uganda DPP Act 2019 cited in Settings section subtitle AND export-card description (twice on one screen) | `settings-workspace.tsx:97`; `data-export-panel.tsx:43-45` | Cite only on Privacy page; settings points there | ✅ 5a |
 
-### Phase 5 completion — ✅ 2026-07-24 (commits 19c52ab, eec8a85, 3fd9309; plus Phase 0/3 copy)
+### Phase 5 completion, ✅ 2026-07-24 (commits 19c52ab, eec8a85, 3fd9309; plus Phase 0/3 copy)
 
 Coverage against the audit:
-- **5A jargon (19):** ✅ all addressed — Argon2id/PBKDF2 (Phase 0), AES-GCM, Postgres/token + bridge-contract text + sync JSON (Phase 3 gating + rewording), "machine-derived", "parser"/"generic parser", "envelopes", "Period balance bridge", "Posts to books/as", "FX"→exchange rate, Compass third-person→second person, "Parse SMS", "Reconciled from…", "Movement"→"Net change". The raw `reconciliationState`/"records share {key}" enum surfaced in month-close was removed in Phase 4b. `reconciliationState`/`parserLabel` remain only as internal field names (never shown).
+- **5A jargon (19):** ✅ all addressed, Argon2id/PBKDF2 (Phase 0), AES-GCM, Postgres/token + bridge-contract text + sync JSON (Phase 3 gating + rewording), "machine-derived", "parser"/"generic parser", "envelopes", "Period balance bridge", "Posts to books/as", "FX"→exchange rate, Compass third-person→second person, "Parse SMS", "Reconciled from…", "Movement"→"Net change". The raw `reconciliationState`/"records share {key}" enum surfaced in month-close was removed in Phase 4b. `reconciliationState`/`parserLabel` remain only as internal field names (never shown).
 - **5B wordiness (7):** ✅ route-architecture blurbs rewritten; ledger title/desc de-duplicated; "stored locally" pile-up reduced to one mention per context; 5-min-inactivity no longer tripled; savings-rate popover and filler subtitles trimmed.
-- **5C terminology (8):** ✅ emergency fund unified across dashboard/goals/compass; "envelopes"→"budgets"; save verbs aligned to "Add X"/"Save"; sentence case applied to touched strings. (A full capitalization audit of every remaining title is folded into ongoing polish — no Title-Case offenders remain on the primary screens.)
-- **5D tone (7):** ✅ alarmist no-PIN warning softened; "legacy corrupted data" ×2 rewritten; preachy goal/emergency copy softened; terse "Unable to load" ×8 → "Couldn't load X. Please try again."; capture empty states humanized. (5D.5 sync success copy and 5D.7 firewall-style capture labels live behind the Phase 3 flags — not shown on web; left for when those surfaces return.)
+- **5C terminology (8):** ✅ emergency fund unified across dashboard/goals/compass; "envelopes"→"budgets"; save verbs aligned to "Add X"/"Save"; sentence case applied to touched strings. (A full capitalization audit of every remaining title is folded into ongoing polish, no Title-Case offenders remain on the primary screens.)
+- **5D tone (7):** ✅ alarmist no-PIN warning softened; "legacy corrupted data" ×2 rewritten; preachy goal/emergency copy softened; terse "Unable to load" ×8 → "Couldn't load X. Please try again."; capture empty states humanized. (5D.5 sync success copy and 5D.7 firewall-style capture labels live behind the Phase 3 flags, not shown on web; left for when those surfaces return.)
 - **5E legal (1):** ✅ DPP Act cited only on the Privacy page.
 
 Exit criteria met: the flagged user-facing jargon strings return no hits on the primary screens; terminology unified per concept; tsc/lint/149 tests/build green throughout. Copy re-read at mobile width across the seeded routes.
 
 ---
 
-## Phase 6 — Widget & form-system consistency — PARTIAL (isolated wins done; form-heavy items deferred)
+## Phase 6, Widget & form-system consistency, PARTIAL (isolated wins done; form-heavy items deferred)
 
 Commits: 6a `370f39f`, 6b `3b3cc77` (plus 6.4/6.5/6.8/6.12 landed earlier in Phases 2 & 4g).
 
@@ -205,35 +205,35 @@ Commits: 6a `370f39f`, 6b `3b3cc77` (plus 6.4/6.5/6.8/6.12 landed earlier in Pha
 | 6.1 | Three date formats | One `lib/format-date.ts` `formatDate` (same-year drops year); applied to ledger, transaction list, goal deadlines, account detail | ✅ 6a |
 | 6.2 | Three date input widgets | `DatePickerField` everywhere (account debt start, onboarding goal date) | ✅ 6b |
 | 6.3 | PIN input hand-rolled 3× | `PinInputField` used for all settings + onboarding PIN fields | ✅ 6a |
-| 6.4 | `FormCardShell` bypassed by rules/obligations/budget/CSV/text-capture | rules/obligations/budget routed through `FormCardShell` in Phase 4g (sheet forms). CSV + text-capture panels still hand-roll — see deferred note | ◑ partial (4g) |
+| 6.4 | `FormCardShell` bypassed by rules/obligations/budget/CSV/text-capture | rules/obligations/budget routed through `FormCardShell` in Phase 4g (sheet forms). CSV + text-capture panels still hand-roll, see deferred note | ◑ partial (4g) |
 | 6.5 | Goal "Target amount" bare div | Now a proper `Label` + input with `aria-invalid`/error (Phase 2) | ✅ (Phase 2) |
-| 6.6 | Amount inputs: no thousand separators / UGX prefix | **DEFERRED** — see note | ⏸️ deferred |
+| 6.6 | Amount inputs: no thousand separators / UGX prefix | **DEFERRED**, see note | ⏸️ deferred |
 | 6.7 | No `autoComplete`/`enterKeyHint`/`autoFocus` | `autoFocus` added on account/goal sheet open (Phase 2); focus-first-invalid + enterKeyHint remain | ◑ partial |
 | 6.8 | Enter never submits hand-rolled panels | rules/obligations/budget are now `<form onSubmit>` (Phase 4g) | ✅ (4g) |
-| 6.9 | Long selects unsearchable | **DEFERRED** — see note | ⏸️ deferred |
+| 6.9 | Long selects unsearchable | **DEFERRED**, see note | ⏸️ deferred |
 | 6.10 | `transactionTypeLabels` duplicated | Local copy removed; imports canonical from `lib/select-options` | ✅ 6a |
-| 6.11 | "Allowed/Blocked" text toggle vs `Switch` | Panel is now native-only (Phase 3.3) — not shown on web; low priority | ⏸️ native-only |
+| 6.11 | "Allowed/Blocked" text toggle vs `Switch` | Panel is now native-only (Phase 3.3), not shown on web; low priority | ⏸️ native-only |
 | 6.12 | Dead `min`/`max` on text priority input | Removed (Phase 2) | ✅ (Phase 2) |
-| 6.13 | Account ledger detail read-only | **DEFERRED** — see note | ⏸️ deferred |
+| 6.13 | Account ledger detail read-only | **DEFERRED**, see note | ⏸️ deferred |
 
-> **Deferred (6.6 AmountField, 6.9 searchable selects, 6.4 CSV/text-capture shell, 6.13 ledger edit):** these all live in the transaction/capture/import forms, which are under active concurrent refactoring in this same session (capture streamline, transaction-form `bare` mode, tab restructure). Introducing a new `AmountField`/combobox across those forms now would collide with that in-flight work and risk regressions. They are the right next step once the forms refactor settles — 6.6 (as-you-type thousand separators + UGX prefix) is the highest-value remaining polish for a UGX app. Tracked here, not dropped.
+> **Deferred (6.6 AmountField, 6.9 searchable selects, 6.4 CSV/text-capture shell, 6.13 ledger edit):** these all live in the transaction/capture/import forms, which are under active concurrent refactoring in this same session (capture streamline, transaction-form `bare` mode, tab restructure). Introducing a new `AmountField`/combobox across those forms now would collide with that in-flight work and risk regressions. They are the right next step once the forms refactor settles, 6.6 (as-you-type thousand separators + UGX prefix) is the highest-value remaining polish for a UGX app. Tracked here, not dropped.
 
 Exit criteria (met for the isolated set): one date formatter, one date picker, one PIN field, no duplicated label maps; Enter submits the sheet forms. AmountField/combobox pending the forms refactor.
 
 ---
 
-## Phase 7 — Kept-but-verify (positives to protect while executing)
+## Phase 7, Kept-but-verify (positives to protect while executing)
 
 These were verified good; do not regress them during the phases above.
 
 - No lorem/TODO/"coming soon" anywhere in UI.
-- Investment Compass guidance is rule-based, no hardcoded rates/years — ages well (`lib/domain/guidance.ts`).
+- Investment Compass guidance is rule-based, no hardcoded rates/years, ages well (`lib/domain/guidance.ts`).
 - Learn links: real official Ugandan sources (BoU, CMA, USE, URBRA, UMRA, UBOS, FSD). Refresh dated titles periodically ("FinScope 2023").
 - Local encrypted backup + restore, JSON export: work end-to-end.
 - Google Drive backup correctly framed as backup-not-sync; genuinely wired (OAuth, appData).
-- Delete-account type-to-confirm flow — the pattern to copy in 1.1.
+- Delete-account type-to-confirm flow, the pattern to copy in 1.1.
 - Account detail running-balance ledger design.
-- Sync outbox/engine plumbing (tested) — keep behind the 3.1 flag.
+- Sync outbox/engine plumbing (tested), keep behind the 3.1 flag.
 
 ---
 
@@ -249,6 +249,6 @@ These were verified good; do not regress them during the phases above.
 | 5 | Copy (5A×19, 5B×7, 5C×8, 5D×7, 5E×1) | 42 | ✅ done 2026-07-24 |
 | 6 | Widget/form consistency | 13 | ◑ isolated wins done; 6.6/6.9/6.4/6.13 deferred (active forms refactor) |
 | 6 | Widget/form consistency | 13 | ⬜ |
-| 7 | Protect the good parts | — | continuous |
+| 7 | Protect the good parts |, | continuous |
 
 **Total tracked items: 96.** Every item ends ✅ (with commit) or ❌ (with reason). No silent drops.

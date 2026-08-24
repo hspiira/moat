@@ -1,4 +1,5 @@
 import type { RepositoryBundle } from "@/lib/repositories/types";
+import { resolveSyncEndpoint } from "@/lib/sync/endpoint";
 import type { SyncOutboxItem, SyncProfile, SyncVersion } from "@/lib/types";
 import type { SyncPullRecord, SyncPushResult, SyncRunSummary } from "@/lib/sync/types";
 
@@ -100,7 +101,7 @@ async function pullAllPages(params: {
 
   for (let page = 0; page < MAX_PULL_PAGES; page += 1) {
     const response = await pullSyncBatch({
-      endpoint: profile.postgresSyncUrl as string,
+      endpoint: resolveSyncEndpoint(profile.postgresSyncUrl),
       authToken: profile.syncAuthToken,
       request: { userId: profile.userId, since, limit: DEFAULT_PULL_PAGE_SIZE },
     });
@@ -205,7 +206,8 @@ export async function runHostedSync(params: {
     return { attempted: 0, synced: 0, failed: 0, conflicts: 0, error: "Hosted sync is not enabled." };
   }
 
-  if (!params.profile.postgresSyncUrl?.trim()) {
+  const endpoint = resolveSyncEndpoint(params.profile.postgresSyncUrl);
+  if (!endpoint) {
     return { attempted: 0, synced: 0, failed: 0, conflicts: 0, error: "No sync endpoint is configured." };
   }
 
@@ -254,7 +256,7 @@ export async function runHostedSync(params: {
       const batch = pendingItems.slice(start, start + PUSH_BATCH_SIZE);
 
       const response = await pushSyncBatch({
-        endpoint: params.profile.postgresSyncUrl,
+        endpoint,
         request: await createSyncPushRequest({
           userId: params.profile.userId,
           items: batch,

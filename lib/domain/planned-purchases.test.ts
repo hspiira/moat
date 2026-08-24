@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildFulfillmentLineItem,
+  comparePlannedWithActual,
   estimatePlannedTotal,
   fulfillPurchase,
   groupPlannerRows,
@@ -222,5 +223,52 @@ describe("estimatePlannedTotal with what you last paid", () => {
     const result = estimatePlannedTotal([purchase({ itemId: "item:rice" })]);
 
     expect(result).toMatchObject({ total: 0, unknownCount: 1 });
+  });
+});
+
+describe("comparePlannedWithActual", () => {
+  const purchase = {
+    id: "p1",
+    userId: "u1",
+    itemId: "i1",
+    quantity: 1,
+    estimatedUnitPrice: 500_000,
+    status: "purchased" as const,
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+  };
+
+  it("reports what was planned, what was paid, and the gap", () => {
+    expect(comparePlannedWithActual(purchase, { quantity: 1, unitPrice: 200_000 })).toEqual({
+      planned: 500_000,
+      actual: 200_000,
+      difference: -300_000,
+    });
+  });
+
+  it("multiplies the estimate by the quantity planned", () => {
+    expect(
+      comparePlannedWithActual({ ...purchase, quantity: 3 }, { quantity: 3, unitPrice: 100_000 }),
+    ).toMatchObject({ planned: 1_500_000, actual: 300_000 });
+  });
+
+  it("prefers the line's own total over multiplying it out", () => {
+    expect(
+      comparePlannedWithActual(purchase, { quantity: 2, unitPrice: 90_000, amount: 175_000 }),
+    ).toMatchObject({ actual: 175_000 });
+  });
+
+  it("gives no gap when the purchase was never estimated", () => {
+    expect(
+      comparePlannedWithActual({ ...purchase, estimatedUnitPrice: undefined }, { unitPrice: 200 }),
+    ).toEqual({ planned: undefined, actual: 200, difference: undefined });
+  });
+
+  it("gives no gap while nothing has been bought yet", () => {
+    expect(comparePlannedWithActual(purchase, undefined)).toEqual({
+      planned: 500_000,
+      actual: undefined,
+      difference: undefined,
+    });
   });
 });

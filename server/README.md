@@ -12,9 +12,13 @@ offered to anyone. See [../docs/plans/hosted-sync.md](../docs/plans/hosted-sync.
 
 ```bash
 pnpm --filter @moat/sync-server build
-DATABASE_URL=postgres://... MOAT_SYNC_BEARER_TOKEN=... pnpm --filter @moat/sync-server migrate
-DATABASE_URL=postgres://... MOAT_SYNC_BEARER_TOKEN=... pnpm --filter @moat/sync-server start
+DATABASE_URL=postgres://... pnpm --filter @moat/sync-server migrate
+DATABASE_URL=postgres://... pnpm --filter @moat/sync-server start
 ```
+
+The server reads its configuration from the real environment and loads no
+`.env` of its own, so the variables have to be exported in the shell that
+starts it, or supplied by the host.
 
 `build` bundles with esbuild because the handlers share `lib/sync` with the web
 app through the `@/` alias. The bundle lands at `server.js` in this directory,
@@ -27,7 +31,10 @@ Set these in the Vercel project, or copy the repository's `.env.example` to `.en
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string |
-| `MOAT_SYNC_BEARER_TOKEN` | yes | Shared token. Endpoints return 503 without it |
+| `MOAT_OIDC_GOOGLE_CLIENT_ID` | to sign in | Google **Web** client id, the same one the browser starts with |
+| `MOAT_OIDC_GOOGLE_CLIENT_SECRET` | to sign in | Secret for that web client |
+| `MOAT_OIDC_REDIRECT_URIS` | to sign in | Comma-separated allowlist, matched exactly against what the caller asks for |
+| `MOAT_OIDC_GOOGLE_IOS_CLIENT_ID` | for the app | Google **iOS** client id. A web client id will not work here |
 | `MOAT_SYNC_ALLOWED_ORIGINS` | for browsers | Comma-separated origin allowlist for CORS |
 | `PORT` | no | Defaults to 8787 |
 | `DATABASE_SSL` | no | `disable`, or `no-verify` to skip certificate checks |
@@ -104,7 +111,6 @@ rather than another user's rows.
 ```bash
 createdb moat_dev
 export DATABASE_URL=postgres://localhost/moat_dev DATABASE_SSL=disable
-export MOAT_SYNC_BEARER_TOKEN=<generate one, e.g. openssl rand -hex 32>
 pnpm --filter @moat/sync-server build
 pnpm --filter @moat/sync-server migrate
 pnpm --filter @moat/sync-server start
@@ -122,6 +128,9 @@ createdb moat_test
 DATABASE_SSL=disable DATABASE_URL=postgres://localhost/moat_test pnpm test
 ```
 
-One of them creates a temporary unprivileged role to check row-level security
-actually enforces tenancy. The role that runs the suite is usually a superuser,
-and superusers bypass RLS, so without that the policies would go untested.
+Two of them create temporary roles to check row-level security actually
+enforces tenancy. The role that runs the suite is usually a superuser, and
+superusers bypass RLS, so without them the policies would go untested. One role
+merely holds grants. The other owns the tables, which is what a deployment
+connects as, and Postgres lets an owner past its own policies unless the table
+forces them.

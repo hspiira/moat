@@ -151,8 +151,10 @@ export function useShoppingWorkspace() {
   const addPurchase = useCallback(
     async (input: {
       name: string;
+      unit?: string;
       quantity?: number;
       estimatedUnitPrice?: number;
+      expectedTotal?: number;
       neededBy?: string;
       note?: string;
     }) => {
@@ -166,6 +168,7 @@ export function useShoppingWorkspace() {
           rawName: input.name,
           userId: profile.id,
           timestamp,
+          unit: input.unit,
         });
         if (resolved.isNew) {
           await repositories.items.upsert(resolved.item);
@@ -176,6 +179,7 @@ export function useShoppingWorkspace() {
           itemId: resolved.item.id,
           quantity: input.quantity,
           estimatedUnitPrice: input.estimatedUnitPrice,
+          expectedTotal: input.expectedTotal,
           neededBy: input.neededBy,
           note: input.note,
           status: "planned",
@@ -362,6 +366,7 @@ export function useShoppingWorkspace() {
     lastPaidFor,
     againstBudget,
     recentExpenses,
+    lineItems,
     transactions,
     accounts,
     categories,

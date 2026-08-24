@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract the fee/tax/charge from captured mobile-money and bank messages, carry it through the review queue, and materialize it as the linked fee expense on approve — reusing the shipped v1 fee helpers.
+**Goal:** Extract the fee/tax/charge from captured mobile-money and bank messages, carry it through the review queue, and materialize it as the linked fee expense on approve, reusing the shipped v1 fee helpers.
 
 **Architecture:** A `feeAmount?: number` (UGX) rides five hops: parser → pipeline candidate → review item (+ snapshot) → review-queue editor → approve. Extraction is a whole-message scan independent of the amount/payee regexes, so the principal is untouched. On approve, the existing `buildFeeTransaction` + `buildFeesCategory` (from v1) create the linked `` `${paymentId}:fee` `` expense.
 
@@ -15,7 +15,7 @@
 - Fee is UGX and expense-only. Income/credited messages never extract a fee.
 - "Fee" = the **sum** of all `Fee` / `Tax` / `Charge` / `Excise duty` lines in the message.
 - Reuse v1 helpers verbatim: `buildFeeTransaction` (`components/transactions/transaction-builder.ts`), `FEES_CATEGORY_ID` + `buildFeesCategory` (`lib/app-state/defaults.ts`).
-- Do not change principal-amount extraction — existing parser tests must stay green.
+- Do not change principal-amount extraction, existing parser tests must stay green.
 
 ---
 
@@ -75,7 +75,7 @@ describe("parseMtnUgandaMessage fee extraction", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run lib/capture/providers/shared.test.ts`
-Expected: FAIL — `parseCaptureFee` not exported.
+Expected: FAIL, `parseCaptureFee` not exported.
 
 - [ ] **Step 3: Add `feeAmount` to `CaptureProviderResult`**
 
@@ -178,7 +178,7 @@ Append to `lib/capture/pipeline.test.ts` (inside the existing `describe("parseCa
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run lib/capture/pipeline.test.ts`
-Expected: FAIL — `feeAmount` is `undefined` / not on the candidate type.
+Expected: FAIL, `feeAmount` is `undefined` / not on the candidate type.
 
 - [ ] **Step 3: Add `feeAmount` to `CapturePipelineCandidate`**
 
@@ -260,7 +260,7 @@ and a `categories` fixture matching the one in `message-parser.test.ts` (income/
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run lib/capture/review-queue.test.ts`
-Expected: FAIL — `feeAmount` not on the item / snapshot.
+Expected: FAIL, `feeAmount` not on the item / snapshot.
 
 - [ ] **Step 3: Add `feeAmount` to the types**
 
@@ -310,7 +310,7 @@ In `components/transactions/capture-review-queue.tsx`, directly after the amount
         {draft.type === "expense" ? (
           <InputField
             id={`capture-review-fee-${draft.id}`}
-            label="Fee — charges & tax (UGX)"
+            label="Fee, charges & tax (UGX)"
             inputMode="decimal"
             value={draft.feeAmount ? String(draft.feeAmount) : ""}
             onChange={(event) =>
@@ -393,6 +393,6 @@ git -c commit.gpgsign=false commit --no-verify -m "Materialize the linked fee wh
 - No new cascade (v1 delete-cascade covers deletion) → noted in spec; nothing to build ✓
 - Tests: parseCaptureFee unit, parser fee, pipeline carry, factory carry → Tasks 1–3 ✓
 
-**Placeholder scan:** none — all code steps show full content.
+**Placeholder scan:** none, all code steps show full content.
 
 **Type consistency:** `feeAmount?: number` used identically on `CaptureProviderResult`, `CapturePipelineCandidate`, `CaptureReviewItem`, `CaptureReviewSnapshot`. `parseCaptureFee(text): number | undefined`, `buildFeeTransaction(parent, String(feeAmount), FEES_CATEGORY_ID)`, `buildFeesCategory(userId)`, `FEES_CATEGORY_ID` match their v1 definitions. Fee id `` `${proposed.id}:fee` `` derived inside `buildFeeTransaction` matches the v1 cascade key.

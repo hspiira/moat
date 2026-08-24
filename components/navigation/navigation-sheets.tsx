@@ -190,31 +190,6 @@ export function MobileUtilitySheet({
   );
 }
 
-export function MobileNavTrigger({
-  pathname,
-  onToggleTheme,
-}: {
-  pathname: string;
-  onToggleTheme: () => void;
-}) {
-  return (
-    <MobileUtilitySheet
-      pathname={pathname}
-      onToggleTheme={onToggleTheme}
-      trigger={
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Open navigation and actions"
-          className="h-9 w-9"
-        >
-          <IconMenu2 className="h-4.5 w-4.5" />
-        </Button>
-      }
-    />
-  );
-}
-
 export function MobileMoreButton({
   pathname,
   onToggleTheme,

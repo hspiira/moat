@@ -13,7 +13,7 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm build:server && pnpm test && pnpm test:server && pnpm test:e2e",
     "test:e2e": "playwright test",
     "test:server": "vitest run --config vitest.server.config.ts",
-    "ios": "next build && node scripts/sync-ios-url-scheme.mjs && cap sync ios"
+    "ios": "next build && node scripts/sync-ios-url-scheme.mjs && cap sync ios && rm -rf ios/App/CapApp-SPM/.build"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -28,9 +28,9 @@
     "date-fns": "^4.1.0",
     "geist": "^1.7.2",
     "hash-wasm": "^4.12.0",
-    "next": "16.2.2",
+    "next": "16.3.2",
     "next-themes": "^0.4.6",
-    "pdfjs-dist": "^5.6.205",
+    "pdfjs-dist": "^6.2.108",
     "radix-ui": "^1.4.3",
     "react": "19.2.0",
     "react-day-picker": "^9.14.0",
@@ -55,6 +55,6 @@
     "shadcn": "4.1.2",
     "tailwindcss": "^4.3.3",
     "typescript": "5.8.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.11"
   }
 }

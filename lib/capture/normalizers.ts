@@ -35,15 +35,39 @@ export function isNonTransactionalMessage(text: string): boolean {
   return /you have requested|authorize the transaction/i.test(text);
 }
 
-export function inferCaptureType(text: string): Exclude<TransactionType, "transfer"> {
+/**
+ * Moving money between your own accounts, which is not income or spending.
+ * Bank and mobile money wording differ, and "to your own" is the giveaway that
+ * separates a transfer from a payment to someone else.
+ */
+export function looksLikeTransfer(text: string): boolean {
   const normalized = normalizeCaptureName(text);
+
+  if (/(transferred|transfer of|moved|withdraw(n|al)? to|bank transfer)/.test(normalized)) {
+    return true;
+  }
+  return /(to your (own )?(bank|wallet|account)|from your (own )?(bank|wallet|account)|own account)/.test(
+    normalized,
+  );
+}
+
+export function inferCaptureType(text: string): TransactionType {
+  const normalized = normalizeCaptureName(text);
+
+  // Checked first: a transfer often also says "received", which would otherwise
+  // book the same movement as income.
+  if (looksLikeTransfer(text)) {
+    return "transfer";
+  }
+
+  // Before income: a repayment usually says "received" too, and the more
+  // specific wording is the one that describes the movement.
+  if (/(loan repayment|loan paid|repayment|installment|instalment)/.test(normalized)) {
+    return "debt_payment";
+  }
 
   if (/(salary|received|deposit|credited|cash in|payment received|sent you)/.test(normalized)) {
     return "income";
-  }
-
-  if (/(loan repayment|loan paid|repayment|installment|instalment)/.test(normalized)) {
-    return "debt_payment";
   }
 
   return "expense";

@@ -570,8 +570,7 @@ export function BackupPanel() {
         <CardHeader className="pb-3">
         <CardTitle className="text-base">Encrypted backup</CardTitle>
         <CardDescription>
-          Download an encrypted backup of all your data, locked with a PIN you choose. Use it to
-          guard against accidental data loss or to move your data to another device.
+          Locked with a PIN you choose. Use it to recover, or to move to another device.
         </CardDescription>
       </CardHeader>
         <CardContent className="space-y-4">

@@ -14,7 +14,7 @@ test("settings says plainly that no PIN means no encryption", async ({ page }) =
   await page.waitForTimeout(2000);
 
   await expect(page.getByText(/records are stored unencrypted/i).first()).toBeVisible();
-  await expect(page.getByText(/encrypts your records on this device/i).first()).toBeVisible();
+  await expect(page.getByText(/encrypts your records/i).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 

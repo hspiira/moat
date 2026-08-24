@@ -74,6 +74,9 @@
    leaves them only 0.05 apart. Making --pos lighter fails WCAG AA there. */
 :root {
     color-scheme: light;
+    /* The status bar inset. The painted strip and the pinned header both read
+       this, so they cannot disagree. */
+    --safe-top: env(safe-area-inset-top, 0px);
     --radius: 0.5rem;
     --background: oklch(0.985 0 0);
     --foreground: oklch(0.205 0 0);

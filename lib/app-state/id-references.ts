@@ -70,6 +70,7 @@ export const idReferences: Partial<Record<StoreName, IdReference[]>> = {
   captureReviewItems: [
     { path: "envelopeId", target: "captureEnvelopes" },
     { path: "accountId", target: "accounts" },
+    { path: "destinationAccountId", target: "accounts" },
     { path: "categoryId", target: "categories" },
     { path: "duplicateTransactionId", target: "transactions" },
     { path: "duplicateCaptureReviewItemId", target: "captureReviewItems" },

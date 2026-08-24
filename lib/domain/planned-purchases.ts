@@ -116,3 +116,34 @@ export function revertPurchase(purchase: PlannedPurchase, timestamp: string): Pl
     updatedAt: timestamp,
   };
 }
+
+export type PlannedOutcome = {
+  planned?: number;
+  actual?: number;
+  difference?: number;
+};
+
+/**
+ * What a purchase was estimated to cost against what was actually paid for it.
+ * A plan is a forecast rather than money set aside, so the gap is feedback for
+ * the next estimate, not a balance to settle.
+ */
+export function comparePlannedWithActual(
+  purchase: PlannedPurchase,
+  lineItem?: Pick<TransactionLineItem, "quantity" | "unitPrice" | "amount">,
+): PlannedOutcome {
+  const planned =
+    purchase.estimatedUnitPrice != null
+      ? (purchase.quantity ?? 1) * purchase.estimatedUnitPrice
+      : undefined;
+
+  const actual =
+    lineItem?.amount ??
+    (lineItem?.unitPrice != null ? (lineItem.quantity ?? 1) * lineItem.unitPrice : undefined);
+
+  return {
+    planned,
+    actual,
+    difference: planned != null && actual != null ? actual - planned : undefined,
+  };
+}

@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AgainstBudgetNote } from "@/components/shopping/against-budget-note";
+import { PriceTrendsPanel } from "./shopping/price-trends-panel";
 import { estimateBasis } from "@/components/shopping/estimate-basis";
 import { Money } from "@/components/ui/money";
 
@@ -38,6 +39,10 @@ export function ShoppingWorkspace() {
   const itemsById = useMemo(
     () => new Map(workspace.items.map((item) => [item.id, item])),
     [workspace.items],
+  );
+  const lineItemsById = useMemo(
+    () => new Map(workspace.lineItems.map((line) => [line.id, line])),
+    [workspace.lineItems],
   );
   const transactionsById = useMemo(
     () => new Map(workspace.transactions.map((entry) => [entry.id, entry])),
@@ -86,6 +91,11 @@ export function ShoppingWorkspace() {
 
         <AgainstBudgetNote rows={workspace.againstBudget} />
 
+        <section className="grid gap-2">
+          <h2 className="text-sm font-medium text-foreground">What prices are doing</h2>
+          <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
+        </section>
+
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
             <IconPlus className="size-4" /> Add an item
@@ -108,6 +118,7 @@ export function ShoppingWorkspace() {
           priceSummaries={workspace.priceSummaries}
           selectedIds={selectedIds}
           transactionsById={transactionsById}
+          lineItemsById={lineItemsById}
           isSubmitting={workspace.isSubmitting}
           onToggleSelect={toggleSelect}
           onDrop={(purchase) => void workspace.dropPurchase(purchase)}

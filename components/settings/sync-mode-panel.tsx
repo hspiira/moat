@@ -11,6 +11,8 @@ import { migrateIdsToCuid2 } from "@/lib/app-state/id-migration";
 import { readGoogleDriveBackupPreferences } from "@/lib/preferences/google-drive-backup";
 import { isHostedSyncEnabled } from "@/lib/features";
 import { GoogleSignInButton } from "@/components/sync/google-sign-in-button";
+import { needsManualSyncEndpoint, resolveSyncEndpoint } from "@/lib/sync/endpoint";
+import { isKnownOffline } from "@/lib/sync/connectivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InputField } from "@/components/forms/input-field";
@@ -83,10 +85,10 @@ export function SyncModePanel() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setIsOnline(window.navigator.onLine);
+    setIsOnline(!isKnownOffline());
 
     const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => setIsOnline(!isKnownOffline());
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -244,8 +246,7 @@ export function SyncModePanel() {
         <div className="grid gap-1">
           <div className="text-sm text-foreground">Storage and sync</div>
           <div className="text-sm text-muted-foreground">
-            Moat always saves on this device first. Cloud sync is optional and only sends the
-            changes you make while offline.
+            Saved on this device first. Sync is optional.
           </div>
         </div>
 
@@ -264,7 +265,9 @@ export function SyncModePanel() {
                     mode: option.value,
                     hostedSyncEnabled: option.value === "hosted_opt_in",
                     postgresSyncUrl:
-                      option.value === "hosted_opt_in" ? postgresSyncUrl.trim() || undefined : undefined,
+                      option.value === "hosted_opt_in"
+                        ? resolveSyncEndpoint(postgresSyncUrl) || undefined
+                        : undefined,
                     syncAuthToken:
                       option.value === "hosted_opt_in" ? syncAuthToken.trim() || undefined : undefined,
                     updatedAt: timestamp,
@@ -283,29 +286,22 @@ export function SyncModePanel() {
 
         {syncProfile.mode === "hosted_opt_in" ? (
           <div className="grid gap-3">
-            <InputField
-              id="postgres-sync-url"
-              label="Sync endpoint"
-              value={postgresSyncUrl}
-              onChange={(event) => setPostgresSyncUrl(event.target.value)}
-              placeholder="https://sync.example.com"
-              autoComplete="off"
-              hint="Optional today. Local writes continue even if this is unreachable."
-            />
+            {needsManualSyncEndpoint() ? (
+              <InputField
+                id="postgres-sync-url"
+                label="Sync endpoint"
+                value={postgresSyncUrl}
+                onChange={(event) => setPostgresSyncUrl(event.target.value)}
+                placeholder="https://sync.example.com"
+                autoComplete="off"
+                hint="This build was not given a sync server, so it needs one here."
+              />
+            ) : null}
             <GoogleSignInButton
-              endpoint={postgresSyncUrl}
+              endpoint={resolveSyncEndpoint(postgresSyncUrl)}
               userId={profile.id}
               existingAuthToken={syncAuthToken}
               disabled={isSaving}
-            />
-            <InputField
-              id="sync-auth-token"
-              label="Sync bearer token"
-              value={syncAuthToken}
-              onChange={(event) => setSyncAuthToken(event.target.value)}
-              placeholder="Optional bearer token"
-              autoComplete="off"
-              hint="Filled in by signing in. Only type one here if it was minted by hand."
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -318,7 +314,7 @@ export function SyncModePanel() {
                     ...syncProfile,
                     hostedSyncEnabled: true,
                     mode: "hosted_opt_in",
-                    postgresSyncUrl: postgresSyncUrl.trim() || undefined,
+                    postgresSyncUrl: resolveSyncEndpoint(postgresSyncUrl) || undefined,
                     syncAuthToken: syncAuthToken.trim() || undefined,
                     updatedAt: timestamp,
                   });

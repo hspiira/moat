@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isKnownOffline } from "@/lib/sync/connectivity";
 import { useEffect, useState } from "react";
 import { IconShare, IconSquareRoundedPlus, IconX } from "@tabler/icons-react";
 
@@ -76,7 +77,7 @@ export function PwaStatus() {
   const [dismissed, setDismissed] = useState<StorageNoticeKind[]>([]);
 
   useEffect(() => {
-    setIsOnline(window.navigator.onLine);
+    setIsOnline(!isKnownOffline());
     setIsInstalled(isStandaloneDisplay());
     setIsIos(isIosDevice());
     const { lastBackupAt } = readGoogleDriveBackupPreferences();
@@ -94,7 +95,7 @@ export function PwaStatus() {
     }
 
     function handleOffline() {
-      setIsOnline(false);
+      setIsOnline(!isKnownOffline());
     }
 
     function handleBeforeInstallPrompt(event: Event) {
@@ -170,7 +171,7 @@ export function PwaStatus() {
     : isAtRisk
       ? {
           kind: "evictable",
-          text: "This browser has not promised to keep your records, so it may clear them to free space.",
+          text: "This device has not promised to keep your records, so it may clear them to free space.",
         }
       : shouldShowBackupNudge
         ? {

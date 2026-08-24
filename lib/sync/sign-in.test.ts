@@ -99,3 +99,28 @@ describe("completeGoogleSignIn", () => {
     expect((await completeGoogleSignIn(BASE)).status).toBe("refused");
   });
 });
+
+describe("when the sync server cannot be reached", () => {
+  it("refuses in words instead of throwing, which left the screen spinning", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.reject(new TypeError("Failed to fetch"))) as typeof fetch;
+
+    try {
+      const result = await completeGoogleSignIn({
+        endpoint: "https://sync.example.com",
+        code: "c",
+        codeVerifier: "v",
+        redirectUri: "https://moat.example.com/auth/callback",
+        nonce: "n",
+      });
+
+      expect(result).toEqual({
+        status: "refused",
+        message: "The sync server could not be reached.",
+        nextStep: "Check the connection and try again from Settings.",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});

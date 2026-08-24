@@ -86,8 +86,8 @@ export function GoogleSignInButton({
         {isStarting ? "Opening Google…" : "Sign in with Google"}
       </Button>
       <p className="text-xs leading-5 text-muted-foreground">
-        Links this device&apos;s ledger to your Google account and gets its own sync token. Your
-        records stay sealed; signing in does not move the key that opens them.
+        Links this device to your Google account. Your records stay encrypted; the key
+        that opens them does not leave this device.
       </p>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>

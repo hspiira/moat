@@ -331,6 +331,12 @@ export function useOnboardingWorkspace() {
     [account, consentGiven, form, goal, security, step],
   );
 
+  // Clears the banner the moment the step stops being blocked, so it cannot
+  // outlive the problem it described.
+  useEffect(() => {
+    if (!stepError) setError(null);
+  }, [stepError, step]);
+
   async function handleNext() {
     setError(null);
 

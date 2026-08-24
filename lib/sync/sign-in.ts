@@ -39,26 +39,37 @@ export async function completeGoogleSignIn(params: {
   existingAuthToken?: string;
   client?: "web" | "ios";
 }): Promise<SignInResult> {
-  const response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/auth/callback`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // Proof that a ledger already syncing on this device is this device's, so
-      // adding a Google account to it is not refused as someone else's.
-      ...(params.existingAuthToken?.trim()
-        ? { Authorization: `Bearer ${params.existingAuthToken.trim()}` }
-        : {}),
-    },
-    body: JSON.stringify({
-      provider: "google",
-      client: params.client ?? "web",
-      code: params.code,
-      codeVerifier: params.codeVerifier,
-      redirectUri: params.redirectUri,
-      nonce: params.nonce,
-      proposedUserId: params.proposedUserId,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/auth/callback`, {
+      method: "POST",
+      // A stalled connection would otherwise leave the screen finishing for good.
+      signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(20_000) : undefined,
+      headers: {
+        "Content-Type": "application/json",
+        // Proof that a ledger already syncing on this device is this device's, so
+        // adding a Google account to it is not refused as someone else's.
+        ...(params.existingAuthToken?.trim()
+          ? { Authorization: `Bearer ${params.existingAuthToken.trim()}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        provider: "google",
+        client: params.client ?? "web",
+        code: params.code,
+        codeVerifier: params.codeVerifier,
+        redirectUri: params.redirectUri,
+        nonce: params.nonce,
+        proposedUserId: params.proposedUserId,
+      }),
+    });
+  } catch {
+    return {
+      status: "refused",
+      message: "The sync server could not be reached.",
+      nextStep: "Check the connection and try again from Settings.",
+    };
+  }
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { error?: string };

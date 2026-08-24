@@ -18,7 +18,6 @@ import {
 import {
   MobileCaptureSheet,
   MobileMoreButton,
-  MobileNavTrigger,
 } from "./navigation-sheets";
 
 export function MobileNavigation({
@@ -65,29 +64,30 @@ export function MobileNavigation({
 
   return (
     <>
-      <div className="sticky top-0 z-40 bg-background/92 backdrop-blur supports-backdrop-filter:bg-background/84 lg:hidden">
+      {/* Parks below the status bar, not at 0, which would be under the clock. */}
+      <header className="sticky top-(--safe-top) z-40 border-b border-border/60 bg-background/95 backdrop-blur-md supports-backdrop-filter:bg-background/90 lg:hidden">
         <div className="flex items-center justify-between gap-3 px-1 py-1.5">
-          <MoatMark className="h-9 w-9 shrink-0" />
+          <Link
+            href="/"
+            aria-label="Moat home"
+            className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <MoatMark className="h-9 w-9" />
+          </Link>
 
-          {hasProfile ? (
-            <div className="flex shrink-0 items-center gap-1">
-              {hasPinLock && lockState.status === "unlocked" ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Lock Moat now"
-                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                  onClick={lock}
-                >
-                  <IconLock className="h-4.5 w-4.5" />
-                </Button>
-              ) : null}
-              <MobileNavTrigger pathname={pathname} onToggleTheme={onToggleTheme} />
-            </div>
+          {hasProfile && hasPinLock && lockState.status === "unlocked" ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Lock Moat now"
+              className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={lock}
+            >
+              <IconLock className="h-4.5 w-4.5" />
+            </Button>
           ) : null}
         </div>
-
-      </div>
+      </header>
 
       {hasProfile ? (
         <div

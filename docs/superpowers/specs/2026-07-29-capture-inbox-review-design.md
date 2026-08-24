@@ -1,4 +1,4 @@
-# Capture inbox review — sections, resolved items, and transaction detail
+# Capture inbox review, sections, resolved items, and transaction detail
 
 Date: 2026-07-29
 Status: approved for planning
@@ -18,7 +18,7 @@ of the page's defects:
    `status` from scratch (`duplicate` → `needs_review` → `new`) and never
    consults the existing status or clears `approvedTransactionId`. An approved
    item edited by accident drops back into New while its ledger transaction
-   stays behind — the second route to duplicate rows.
+   stays behind, the second route to duplicate rows.
 
 3. **Items are visually indistinguishable.** A row header shows payee, source,
    parser label, confidence and amount. It shows neither the date nor the
@@ -28,7 +28,7 @@ of the page's defects:
 4. **Duplicates never say what they duplicate.** `duplicateTransactionId` and
    `duplicateCaptureReviewItemId` are persisted but never rendered. Worse,
    `markDuplicate` never sets either field, so a manually-marked duplicate has
-   no link, fails to gain the "Likely duplicate" issue, and passes validation —
+   no link, fails to gain the "Likely duplicate" issue, and passes validation,
    it can be approved anyway. There is no way to undo the mark.
 
 5. **"Resolved" hides a real distinction.** Approved and rejected items are
@@ -81,7 +81,7 @@ Tapping a row opens a right-side `Sheet` containing:
 - amount, and the original-currency amount plus FX rate when currency ≠ UGX
 - fee, when present
 - source · parser label · confidence
-- **what changed vs. the original capture** — a field-by-field diff of
+- **what changed vs. the original capture**, a field-by-field diff of
   `originalSnapshot` against the item's current values
 - the linked ledger transaction (for approved items), with its id and a link to
   the ledger
@@ -94,7 +94,7 @@ Nothing in this sheet is editable. Approved items are records, not drafts.
 The Duplicates section keeps the editable form (a duplicate may still need
 correcting before it is dismissed or approved) and adds a comparison panel
 showing the counterpart resolved from `duplicateTransactionId` or
-`duplicateCaptureReviewItemId` — same fields, side by side, so the user sees
+`duplicateCaptureReviewItemId`, same fields, side by side, so the user sees
 what the match actually is.
 
 A **"Not a duplicate"** action clears both link fields, drops the "Likely
@@ -133,7 +133,7 @@ Stated balance             1,240,300 UGX
 
 The fee is resolved through the existing `feeParentId` link, so it works for
 fees created by capture approval and by manual entry alike. Tapping a fee row
-opens its **parent's** sheet — a fee is never a standalone subject. The sheet
+opens its **parent's** sheet, a fee is never a standalone subject. The sheet
 also shows FX details when currency ≠ UGX, the reconciliation state, and the
 matched rule when one applied.
 
@@ -154,13 +154,13 @@ Two new pure modules keep the logic testable and the components thin.
 **`lib/domain/capture-review.ts`**
 
 - `CaptureReviewSection` type and `captureReviewSections` ordered list
-- `getSectionItems(items, section)` — section filtering
-- `isCaptureItemEditable(item)` — false for `approved` and `rejected`
-- `canApproveCaptureItem(item)` — false when already approved, when
+- `getSectionItems(items, section)`, section filtering
+- `isCaptureItemEditable(item)`, false for `approved` and `rejected`
+- `canApproveCaptureItem(item)`, false when already approved, when
   `approvedTransactionId` is set, or when issues remain
-- `resolveDuplicateCounterpart(item, transactions, items)` — returns the linked
+- `resolveDuplicateCounterpart(item, transactions, items)`, returns the linked
   transaction or sibling capture, or null
-- `diffCaptureFromOriginal(item)` — `Array<{ field, from, to }>` comparing
+- `diffCaptureFromOriginal(item)`, `Array<{ field, from, to }>` comparing
   `originalSnapshot` to current values
 
 **`lib/domain/transaction-detail.ts`**
@@ -174,10 +174,10 @@ Two new pure modules keep the logic testable and the components thin.
 | File | Change |
 |---|---|
 | `components/transactions/capture-review-queue.tsx` | Rewritten: section tabs with counts, dispatches to editor or row |
-| `components/transactions/capture-review-item-editor.tsx` | New — the editable form extracted from the queue, with date+account in the header, wider fee support, and the duplicate counterpart panel |
-| `components/transactions/capture-review-row.tsx` | New — compact read-only row |
-| `components/transactions/capture-review-detail-sheet.tsx` | New — read-only capture record |
-| `components/transactions/transaction-detail-sheet.tsx` | New — read-only transaction record with fee |
+| `components/transactions/capture-review-item-editor.tsx` | New, the editable form extracted from the queue, with date+account in the header, wider fee support, and the duplicate counterpart panel |
+| `components/transactions/capture-review-row.tsx` | New, compact read-only row |
+| `components/transactions/capture-review-detail-sheet.tsx` | New, read-only capture record |
+| `components/transactions/transaction-detail-sheet.tsx` | New, read-only transaction record with fee |
 | `components/transactions/transaction-list.tsx` | Rows become clickable, opening the detail sheet |
 | `components/transactions-ledger-workspace.tsx` | Holds the selected-transaction state for the sheet |
 | `components/transactions/use-capture-review-workspace.ts` | The four hook fixes above |
@@ -207,11 +207,11 @@ keep their current shape; the work is reading fields that are already stored
 
 New vitest suites, following the existing pure-module test convention:
 
-- `lib/domain/capture-review.test.ts` — section filtering across all five
+- `lib/domain/capture-review.test.ts`, section filtering across all five
   statuses, `canApproveCaptureItem` false for approved and for items with
   issues, counterpart resolution for both link kinds and for dangling links,
   diff output for changed and unchanged fields.
-- `lib/domain/transaction-detail.test.ts` — parent with fee, parent without fee,
+- `lib/domain/transaction-detail.test.ts`, parent with fee, parent without fee,
   fee resolving to its parent, fee with a deleted parent, and
   `totalOffAccount` arithmetic.
 

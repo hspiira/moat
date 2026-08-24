@@ -4,7 +4,7 @@
 
 **Goal:** Recover hidden bank fees by capturing the stated balance from each message, detecting the gap between checkpoints, and offering a one-tap "Add as fee" in the review queue that prefills the existing fee field.
 
-**Architecture:** `statedBalance` rides parser→candidate→review item→transaction. A pure `detectBalanceGaps` compares consecutive stated-balance checkpoints by delta (no opening-balance dependency). The review queue computes the gap for a pending item against the ledger and, on a shortfall, prefills `feeAmount` — reusing the shipped capture-fee approval path.
+**Architecture:** `statedBalance` rides parser→candidate→review item→transaction. A pure `detectBalanceGaps` compares consecutive stated-balance checkpoints by delta (no opening-balance dependency). The review queue computes the gap for a pending item against the ledger and, on a shortfall, prefills `feeAmount`, reusing the shipped capture-fee approval path.
 
 **Tech Stack:** TypeScript strict, Vitest, React 19.
 
@@ -75,7 +75,7 @@ Append to `lib/capture/pipeline.test.ts` (inside the existing describe):
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `npx vitest run lib/capture/normalizers.test.ts lib/capture/pipeline.test.ts`
-Expected: FAIL — `parseStatedBalance` missing; candidate has no `statedBalance`.
+Expected: FAIL, `parseStatedBalance` missing; candidate has no `statedBalance`.
 
 - [ ] **Step 3: Implement `parseStatedBalance`**
 
@@ -211,7 +211,7 @@ describe("pendingReviewGap", () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run lib/domain/balance-gap.test.ts`
-Expected: FAIL — module missing.
+Expected: FAIL, module missing.
 
 - [ ] **Step 3: Implement `lib/domain/balance-gap.ts`**
 
@@ -231,7 +231,7 @@ const TOLERANCE = 1;
 /**
  * Compares consecutive stated-balance checkpoints for a single account's
  * transactions. gap = (statedNow − statedPrev) − Σ(deltas since prev checkpoint).
- * A negative gap is money that left without being recorded — a suspected fee.
+ * A negative gap is money that left without being recorded, a suspected fee.
  */
 export function detectBalanceGaps(transactions: Transaction[]): BalanceGap[] {
   const sorted = [...transactions].sort((a, b) =>
@@ -359,7 +359,7 @@ Immediately above the actions row (the `Save changes` / `Approve to ledger` butt
       {gap && gap.gap < 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-2 border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
           <span className="text-foreground">
-            Bank balance is {formatMoney(Math.abs(gap.gap), "UGX")} lower than recorded — likely an
+            Bank balance is {formatMoney(Math.abs(gap.gap), "UGX")} lower than recorded, likely an
             unrecorded fee.
           </span>
           <button
@@ -372,7 +372,7 @@ Immediately above the actions row (the `Save changes` / `Approve to ledger` butt
         </div>
       ) : gap && gap.gap > 0 ? (
         <div className="border border-border/30 px-3 py-2 text-xs text-muted-foreground">
-          Bank balance is {formatMoney(gap.gap, "UGX")} higher than recorded — an uncaptured credit?
+          Bank balance is {formatMoney(gap.gap, "UGX")} higher than recorded, an uncaptured credit?
         </div>
       ) : null}
 ```

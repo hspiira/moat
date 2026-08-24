@@ -1,4 +1,4 @@
-# Balance-gap detection — design
+# Balance-gap detection, design
 
 **Date:** 2026-07-25
 **Status:** Approved (design), autonomous implementation authorized
@@ -7,7 +7,7 @@
 
 ## Problem
 
-Banks like Centenary charge fees that never appear in the SMS — only the resulting
+Banks like Centenary charge fees that never appear in the SMS, only the resulting
 `Bal:` is printed. A `−100,000` message that leaves the balance 2,875 lower than
 expected hides a 2,875 charge. We can recover it because the message states the
 balance: the delta between two stated-balance checkpoints, minus the transactions we
@@ -19,7 +19,7 @@ Capture the stated balance from every message that prints one; compute the gap
 between consecutive checkpoints using a **delta-based** method (independent of
 opening-balance calibration); and when approving a captured message whose stated
 balance implies a shortfall, offer a one-tap **"Add as fee"** that prefills the
-existing `feeAmount` field — reusing the entire capture-fee path.
+existing `feeAmount` field, reusing the entire capture-fee path.
 
 ## Design
 
@@ -37,7 +37,7 @@ all providers). A `statedBalance?: number` field is added to `CapturePipelineCan
 factory and the transaction factory carry it through, so approved transactions retain
 the checkpoint.
 
-### 2. Gap math (pure, testable) — `lib/domain/balance-gap.ts`
+### 2. Gap math (pure, testable), `lib/domain/balance-gap.ts`
 
 ```ts
 type BalanceGap = { transactionId: string; gap: number; statedBalance: number; expectedBalance: number };
@@ -72,14 +72,14 @@ the gap for the item's id.
 
 When a **negative** gap exists, `ReviewItemEditor` shows a one-line hint above the
 actions:
-> *"Bank balance is UGX 2,875 lower than recorded — likely an unrecorded fee."*
+> *"Bank balance is UGX 2,875 lower than recorded, likely an unrecorded fee."*
 > **[Add as fee]**
 
 **Add as fee** sets `draft.feeAmount = |gap|` (added to any already-parsed fee is out
-of scope — it replaces, since a stated fee and a balance gap are mutually exclusive in
+of scope, it replaces, since a stated fee and a balance gap are mutually exclusive in
 practice). Approving then creates the linked "Fees & charges" expense through the
-existing path — no new fee-creation code. A positive gap shows an informational note
-only ("balance is higher than recorded — an uncaptured credit?"), no fee button.
+existing path, no new fee-creation code. A positive gap shows an informational note
+only ("balance is higher than recorded, an uncaptured credit?"), no fee button.
 
 ## Testing
 
@@ -91,14 +91,14 @@ only ("balance is higher than recorded — an uncaptured credit?"), no fee butto
 
 ## Success criteria
 
-- Approving the second Centenary message surfaces "UGX 2,875 lower — Add as fee", and
+- Approving the second Centenary message surfaces "UGX 2,875 lower, Add as fee", and
   tapping it prefills the fee so approval books a 2,875 "Fees & charges" expense.
 - `tsc`, `lint`, `test`, `build` green.
 
 ## Out of scope / limits
 
 - Needs ≥2 stated-balance captures per account (first anchors).
-- Only as good as capture completeness — the resolve step always allows "it was
+- Only as good as capture completeness, the resolve step always allows "it was
   another transaction" (dismiss) rather than silently booking a fee.
 - Absa (no stated balance) cannot participate.
 - Combining a parsed fee *and* a balance gap on the same message (they don't co-occur).

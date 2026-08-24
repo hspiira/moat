@@ -1,4 +1,4 @@
-# Moat — Threat Model
+# Moat, Threat Model
 
 | Field | Value |
 |-------|-------|
@@ -6,7 +6,7 @@
 | Owner | Piira |
 | Last updated | 2026-08-20 |
 
-Moat is a local-first personal finance app. Financial records are stored and encrypted **on the user's device**; there is no server that holds plaintext. This document states what that protects against and — just as importantly — what it does not.
+Moat is a local-first personal finance app. Financial records are stored and encrypted **on the user's device**; there is no server that holds plaintext. This document states what that protects against and, just as importantly, what it does not.
 
 ## Assets
 

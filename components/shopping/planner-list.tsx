@@ -9,8 +9,16 @@ import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
 import Link from "next/link";
 
-import type { Item, ItemPriceSummary, PlannedPurchase, Transaction } from "@/lib/types";
+import type {
+  Item,
+  ItemPriceSummary,
+  PlannedPurchase,
+  Transaction,
+  TransactionLineItem,
+} from "@/lib/types";
 import type { PlannerGroups } from "@/lib/domain/planned-purchases";
+import { buildShoppingHistory } from "@/lib/domain/shopping-history";
+import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
   if (!summary?.lastPaid) return null;
@@ -39,6 +47,7 @@ function PlannerSection({
   onDrop,
   onEdit,
   onOpenHistory,
+  lineItemsById,
 }: {
   title: string;
   purchases: PlannedPurchase[];
@@ -49,8 +58,10 @@ function PlannerSection({
   onDrop: (purchase: PlannedPurchase) => void;
   onEdit: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
+  lineItemsById: Map<string, TransactionLineItem>;
 }) {
   if (purchases.length === 0) return null;
+  const lineItems = [...lineItemsById.values()];
   return (
     <section className="grid gap-2">
       <h3 className="text-xs font-medium text-muted-foreground">
@@ -60,6 +71,9 @@ function PlannerSection({
         {purchases.map((purchase) => {
           const item = itemsById.get(purchase.itemId);
           const memory = priceMemoryLine(priceSummaries.get(purchase.itemId));
+          const plan = isInstallmentPurchase(purchase)
+            ? summariseInstallments(purchase, lineItems)
+            : undefined;
           const isSelected = selectedIds.has(purchase.id);
           return (
             <li key={purchase.id} className="flex items-start justify-between gap-3">
@@ -93,6 +107,26 @@ function PlannerSection({
                     >
                       {memory}
                     </button>
+                  ) : null}
+
+                  {plan && plan.expected > 0 ? (
+                    <span className="mt-1 block">
+                      <span className="block text-xs text-muted-foreground">
+                        {formatMoney(plan.paid)} of {formatMoney(plan.expected)} paid
+                        {plan.remaining > 0
+                          ? ` · ${formatMoney(plan.remaining)} to go`
+                          : " · settled"}
+                      </span>
+                      <span
+                        aria-hidden
+                        className="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted"
+                      >
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{ width: `${plan.percentPaid}%` }}
+                        />
+                      </span>
+                    </span>
                   ) : null}
                 </span>
               </label>
@@ -131,9 +165,16 @@ export function PlannerList(props: {
   onRestore: (purchase: PlannedPurchase) => void;
   onOpenHistory: (itemId: string) => void;
   transactionsById: Map<string, Transaction>;
+  lineItemsById: Map<string, TransactionLineItem>;
   isSubmitting: boolean;
 }) {
   const shared = props;
+  const history = buildShoppingHistory({
+    purchases: props.groups.history,
+    itemsById: props.itemsById,
+    transactionsById: props.transactionsById,
+    lineItemsById: props.lineItemsById,
+  });
   const isEmpty =
     props.groups.overdue.length === 0 &&
     props.groups.upcoming.length === 0 &&
@@ -159,52 +200,95 @@ export function PlannerList(props: {
       <PlannerSection title="Overdue" purchases={props.groups.overdue} {...shared} />
       <PlannerSection title="Upcoming" purchases={props.groups.upcoming} {...shared} />
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
-      {props.groups.history.length > 0 ? (
+      {history.trips.length > 0 ? (
         <details className="grid gap-2">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-            History ({props.groups.history.length})
+            Bought ({history.trips.length} trip{history.trips.length === 1 ? "" : "s"})
           </summary>
-          <ul className="mt-2 grid gap-2">
-            {props.groups.history.map((purchase) => {
-              const item = props.itemsById.get(purchase.itemId);
-              const isPurchased = purchase.status === "purchased";
-              const expense = purchase.linkedTransactionId
-                ? props.transactionsById.get(purchase.linkedTransactionId)
-                : undefined;
-
-              return (
-                <li
-                  key={purchase.id}
-                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
-                >
-                  <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
-
-                  {isPurchased && expense ? (
+          <ul className="mt-2 grid gap-4">
+            {history.trips.map((trip) => (
+              <li key={trip.transactionId} className="grid gap-1">
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  {trip.accountId ? (
                     <Link
-                      href={`/accounts/detail?id=${encodeURIComponent(expense.accountId)}`}
-                      className="shrink-0 text-xs underline underline-offset-2 hover:text-foreground"
+                      href={`/accounts/detail?id=${encodeURIComponent(trip.accountId)}`}
+                      className="font-medium text-foreground underline underline-offset-2"
                     >
-                      Bought {formatDate(expense.occurredOn)} ·{" "}
-                      {formatMoney(Math.abs(expense.amount))}
+                      {formatDate(trip.occurredOn)}
                     </Link>
                   ) : (
-                    <Badge variant="outline">{isPurchased ? "Bought" : "Dropped"}</Badge>
+                    <span className="font-medium text-foreground">
+                      {formatDate(trip.occurredOn)}
+                    </span>
                   )}
+                  <span className="text-muted-foreground">
+                    {trip.entries.length} item{trip.entries.length === 1 ? "" : "s"} ·{" "}
+                    <span className="text-foreground">{formatMoney(trip.total)}</span>
+                  </span>
+                </div>
 
-                  {purchase.status === "dropped" ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="shrink-0"
-                      disabled={props.isSubmitting}
-                      onClick={() => props.onRestore(purchase)}
+                <ul className="grid gap-1 border-l border-border pl-3">
+                  {trip.entries.map((entry) => (
+                    <li
+                      key={entry.purchase.id}
+                      className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground"
                     >
-                      Put back
-                    </Button>
-                  ) : null}
-                </li>
-              );
-            })}
+                      <span className="min-w-0 flex-1 truncate">
+                        {entry.item?.name ?? "Unknown item"}
+                        {entry.pricePerUnit != null && entry.item?.unit ? (
+                          <span className="text-xs">
+                            {" "}
+                            · {formatMoney(entry.pricePerUnit)}/{entry.item.unit}
+                          </span>
+                        ) : null}
+                      </span>
+
+                      {entry.outcome.difference != null && entry.outcome.difference !== 0 ? (
+                        <span
+                          className={
+                            entry.outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
+                          }
+                        >
+                          {entry.outcome.difference < 0 ? "under" : "over"} by{" "}
+                          {formatMoney(Math.abs(entry.outcome.difference))}
+                        </span>
+                      ) : null}
+
+                      <span className="shrink-0 text-xs">
+                        {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+
+      {history.dropped.length > 0 ? (
+        <details className="grid gap-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            Dropped ({history.dropped.length})
+          </summary>
+          <ul className="mt-2 grid gap-2">
+            {history.dropped.map(({ purchase, item }) => (
+              <li
+                key={purchase.id}
+                className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+              >
+                <span className="min-w-0 flex-1 truncate">{item?.name ?? "Unknown item"}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0"
+                  disabled={props.isSubmitting}
+                  onClick={() => props.onRestore(purchase)}
+                >
+                  Put back
+                </Button>
+              </li>
+            ))}
           </ul>
         </details>
       ) : null}

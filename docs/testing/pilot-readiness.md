@@ -1,4 +1,4 @@
-# Moat — Pilot Readiness Checklist
+# Moat, Pilot Readiness Checklist
 
 
 | Field         | Value      |

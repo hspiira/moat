@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Document Version | 1.3 |
-| Status | Active contract — **payloads are still plaintext** |
+| Status | Active contract, **payloads are still plaintext** |
 | Owner | Piira |
 | Last Updated | 2026-08-19 |
 

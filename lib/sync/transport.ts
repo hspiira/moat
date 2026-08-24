@@ -8,6 +8,17 @@ import type {
   SyncPushResponse,
 } from "@/lib/sync/types";
 
+// A stalled connection never settles on its own, which leaves the caller
+// waiting for good. Sync is a background errand, so it gives up rather than
+// hangs.
+const REQUEST_TIMEOUT_MS = 20_000;
+
+function requestSignal(): AbortSignal | undefined {
+  return typeof AbortSignal?.timeout === "function"
+    ? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    : undefined;
+}
+
 export function normalizeEndpoint(endpoint: string) {
   return endpoint.replace(/\/+$/, "");
 }
@@ -62,6 +73,7 @@ export async function pushSyncBatch(params: {
   authToken?: string;
 }): Promise<SyncPushResponse> {
   const response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/sync/push`, {
+    signal: requestSignal(),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -85,6 +97,7 @@ export async function pullSyncBatch(params: {
   authToken?: string;
 }): Promise<SyncPullResponse> {
   const response = await fetch(`${normalizeEndpoint(params.endpoint)}/v1/sync/pull`, {
+    signal: requestSignal(),
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -50,59 +50,67 @@ export function SignInCallbackWorkspace() {
     started.current = true;
 
     void (async () => {
-      const attempt = takeSignInAttempt();
-      // On the phone the code arrives on a custom scheme through a deep link,
-      // which the shell hands over as a query rather than a page load.
-      const search = window.location.search || readStashedNativeQuery();
-      const redirect = readSignInRedirect(search);
+      try {
+        const attempt = takeSignInAttempt();
+        // On the phone the code arrives on a custom scheme through a deep link,
+        // which the shell hands over as a query rather than a page load.
+        const search = window.location.search || readStashedNativeQuery();
+        const redirect = readSignInRedirect(search);
 
-      if ("error" in redirect) {
-        setOutcome({ state: "refused", message: redirect.error });
-        return;
-      }
+        if ("error" in redirect) {
+          setOutcome({ state: "refused", message: redirect.error });
+          return;
+        }
 
-      if (!matchesAttempt(attempt, redirect.state)) {
+        if (!matchesAttempt(attempt, redirect.state)) {
+          setOutcome({
+            state: "refused",
+            message: "This sign-in did not start on this device. Start again from Settings.",
+          });
+          return;
+        }
+
+        const result = await completeGoogleSignIn({
+          endpoint: attempt!.endpoint,
+          code: redirect.code,
+          codeVerifier: attempt!.verifier,
+          redirectUri: attempt!.redirectUri,
+          nonce: attempt!.nonce,
+          proposedUserId: attempt!.proposedUserId,
+          existingAuthToken: attempt!.existingAuthToken,
+          client: attempt!.client,
+        });
+
+        if (result.status === "refused") {
+          setOutcome({ state: "refused", message: result.message, nextStep: result.nextStep });
+          return;
+        }
+
+        const profile = await repositories.syncProfiles.getByUser(result.userId);
+        const timestamp = new Date().toISOString();
+
+        // Anything already on the profile is kept, then the sign-in's own answers
+        // are written over it. The other order would discard the token just minted.
+        await repositories.syncProfiles.save({
+          ...profile,
+          id: profile?.id ?? `sync-profile:${result.userId}`,
+          userId: result.userId,
+          mode: "hosted_opt_in",
+          hostedSyncEnabled: true,
+          postgresSyncUrl: attempt!.endpoint,
+          syncAuthToken: result.syncAuthToken,
+          createdAt: profile?.createdAt ?? timestamp,
+          updatedAt: timestamp,
+        });
+
+        setOutcome({ state: "done", isNewUser: result.isNewUser });
+      } catch {
         setOutcome({
           state: "refused",
-          message: "This sign-in did not start on this device. Start again from Settings.",
+          message: "Sign-in could not be completed on this device.",
+          nextStep: "Try again from Settings.",
         });
-        return;
       }
-
-      const result = await completeGoogleSignIn({
-        endpoint: attempt!.endpoint,
-        code: redirect.code,
-        codeVerifier: attempt!.verifier,
-        redirectUri: attempt!.redirectUri,
-        nonce: attempt!.nonce,
-        proposedUserId: attempt!.proposedUserId,
-        existingAuthToken: attempt!.existingAuthToken,
-        client: attempt!.client,
-      });
-
-      if (result.status === "refused") {
-        setOutcome({ state: "refused", message: result.message, nextStep: result.nextStep });
-        return;
-      }
-
-      const profile = await repositories.syncProfiles.getByUser(result.userId);
-      const timestamp = new Date().toISOString();
-
-      // Anything already on the profile is kept, then the sign-in's own answers
-      // are written over it. The other order would discard the token just minted.
-      await repositories.syncProfiles.save({
-        ...profile,
-        id: profile?.id ?? `sync-profile:${result.userId}`,
-        userId: result.userId,
-        mode: "hosted_opt_in",
-        hostedSyncEnabled: true,
-        postgresSyncUrl: attempt!.endpoint,
-        syncAuthToken: result.syncAuthToken,
-        createdAt: profile?.createdAt ?? timestamp,
-        updatedAt: timestamp,
-      });
-
-      setOutcome({ state: "done", isNewUser: result.isNewUser });
     })();
   }, []);
 

@@ -1,9 +1,9 @@
-# Moat — Sign in with Google, Microsoft or Apple
+# Moat, Sign in with Google, Microsoft or Apple
 
 | Field | Value |
 | --- | --- |
 | Document Version | 1.4 |
-| Status | Plan — second device works via Drive; provider sign-in not started |
+| Status | Plan, second device works via Drive; provider sign-in not started |
 | Owner | Piira |
 | Last Updated | 2026-08-20 |
 | Scope | How a user gets a sync account without being handed a token by hand |
@@ -34,7 +34,7 @@ Both wrap the same device key, and either one opens it:
 
 **The vault lives in Drive `appdata`, and the passphrase is asked for at backup
 time.** Every user on either path already has a Google account, so Drive reaches
-both, and it keeps key material off the sync server entirely — a sync server
+both, and it keeps key material off the sync server entirely, a sync server
 breach yields ciphertext and no wrapped key to attack. The cost is that losing
 the Google account loses the vault, so the vault is also worth exporting to a
 file; that is not built yet.
@@ -122,7 +122,7 @@ question is about. The device sends the user id it already has along with the
 auth code. The server links `(iss, sub)` to that id and mints a token.
 
 The condition that makes this safe: the server accepts a proposed user id only
-if it is **unclaimed** — no `sync_identities` row and no `sync_records` for it.
+if it is **unclaimed**, no `sync_identities` row and no `sync_records` for it.
 Without that check anyone could attach their own Google account to someone
 else's user id and pull their ledger. cuid2s are unguessable, but that should
 not be the only thing standing between two accounts.
@@ -145,7 +145,7 @@ is no longer the only way through, but something the user holds still is.
 
 Adopting a vault re-seals whatever is already on the device under the ledger's
 key, so records entered before adopting are kept rather than dropped. It is
-refused when the local ledger has records and a different user id — case C,
+refused when the local ledger has records and a different user id, case C,
 which the plan does not merge. An empty ledger is allowed through, because the
 restore that follows replaces the profile anyway.
 
@@ -182,7 +182,7 @@ worth it. Reconsider if this ever needs many providers, SSO or SCIM.
 from the Cloud console, no rotation. Covers most people. Start here.
 
 **Microsoft.** Entra ID via the `common` endpoint, which covers both work and
-personal accounts. Client id and secret, secret expires and must be rotated —
+personal accounts. Client id and secret, secret expires and must be rotated,
 by default in 6 to 24 months depending on how it is created.
 
 **Apple.** The awkward one, and worth knowing before promising it. There is no

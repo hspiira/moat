@@ -1,4 +1,4 @@
-# Lending as a receivable account — design
+# Lending as a receivable account, design
 
 **Date:** 2026-07-29
 **Status:** Implemented, with the revisions in "Revision: pooling" below
@@ -8,8 +8,8 @@
 ## Summary
 
 Record money lent to people as a **receivable account**. Lending and repayment
-are balanced transfer pairs, so the two invariants the app is built on — net
-worth is unchanged by lending, and repayment is not income — hold by
+are balanced transfer pairs, so the two invariants the app is built on, net
+worth is unchanged by lending, and repayment is not income, hold by
 construction rather than by assertion.
 
 Giving and tips need one seeded category each. They are not a feature.
@@ -23,9 +23,9 @@ They do not, and building on them would be actively harmful.
 
 | Primitive | Verdict |
 |---|---|
-| `getDebtSummary` | Partial. Strip the interest/payoff/minimum-payment logic and ~15 trivial lines remain — not worth sharing. |
+| `getDebtSummary` | Partial. Strip the interest/payoff/minimum-payment logic and ~15 trivial lines remain, not worth sharing. |
 | `buildDebtPayoffPlan` | No. It optimises **the user's own choice** of where to send extra money. You do not choose when a borrower repays. Snowball/avalanche is meaningless for receivables. |
-| `getDebtRepaymentActions` | No. Same reason — it allocates a budget the user controls. |
+| `getDebtRepaymentActions` | No. Same reason, it allocates a budget the user controls. |
 | Sign flip | Not needed. `getDebtSummary` already `Math.abs`es the balance ([debt.ts:124](../../../lib/domain/debt.ts)), which would *hide* a borrower overpayment rather than model it. |
 
 **The interest machinery is a correctness hazard here.** Informal loans are
@@ -39,7 +39,7 @@ never agreed to.
 `lib/domain/lending.ts` is therefore written fresh and imports nothing from
 `debt.ts`.
 
-### The account and transfer layer *does* generalise — and it is the valuable half
+### The account and transfer layer *does* generalise, and it is the valuable half
 
 - `buildTransferPair` ([transaction-builder.ts:68](../../../components/transactions/transaction-builder.ts))
   already emits a pair that sums to zero and shares one `transferGroupId`.
@@ -70,7 +70,7 @@ The account `name` is the borrower ("Loan to Sarah"). Date lent and last
 repayment are derived from the ledger, so they get no fields.
 
 `expectedRepaymentDate` is the only new field, and it is user-stated by design.
-The app must never infer a repayment date — that is the specific failure mode
+The app must never infer a repayment date, that is the specific failure mode
 identified in `debt.ts` above.
 
 `normalizeOpeningBalance` gains a `receivable` branch forcing the value positive,
@@ -112,7 +112,7 @@ export type ReceivableSummary = {
   amountLent: number;
   amountRepaid: number;
   amountWrittenOff: number;
-  outstanding: number;            // signed — NOT Math.abs'd
+  outstanding: number;            // signed, NOT Math.abs'd
   lentOn: string | null;
   lastRepaymentOn: string | null;
   expectedRepaymentDate?: string;
@@ -175,19 +175,19 @@ All sums are over transactions where `accountId` matches the receivable.
 ### Status derivation
 
 Evaluated in order, against a module-local `BALANCE_EPSILON = 0.01`. The
-constant is declared in `lending.ts`, not imported — the module imports nothing
+constant is declared in `lending.ts`, not imported, the module imports nothing
 from `debt.ts`.
 
-1. `overpaid` — `outstanding < -BALANCE_EPSILON`
-2. `written_off` — `|outstanding| <= BALANCE_EPSILON` and `amountWrittenOff > 0`
-3. `settled` — `|outstanding| <= BALANCE_EPSILON`
-4. `outstanding` — otherwise
+1. `overpaid`, `outstanding < -BALANCE_EPSILON`
+2. `written_off`, `|outstanding| <= BALANCE_EPSILON` and `amountWrittenOff > 0`
+3. `settled`, `|outstanding| <= BALANCE_EPSILON`
+4. `outstanding`, otherwise
 
 A partial write-off that leaves a balance is `outstanding`, not `written_off`.
 
 ## UI
 
-### `/debt` — extended to both directions
+### `/debt`, extended to both directions
 
 The page currently holds a `PageHeader` and the payoff planner, which the
 [IA review](../../product/information-architecture-review.md) flags as thin.
@@ -200,16 +200,16 @@ No new route, so `APP_SHELL_URLS` in `public/sw.js` and the nav registry in
 ### Account form
 
 A `receivable` branch: borrower name, amount lent, optional expected repayment
-date. Follows the onboarding mobile treatment — 44px controls, no card padding
+date. Follows the onboarding mobile treatment, 44px controls, no card padding
 stacked on the app shell's gutter.
 
 ### Other touch points
 
-- [account-list.tsx:121](../../../components/accounts/account-list.tsx) — add a
+- [account-list.tsx:121](../../../components/accounts/account-list.tsx), add a
   receivable branch beside the existing debt one.
-- `getAccountTotals` — its `Record<Account["type"], number>` produces a compile
+- `getAccountTotals`, its `Record<Account["type"], number>` produces a compile
   error that forces the new key. The type system does this discovery for us.
-- `defaults.ts` — add `"receivable"` to `defaultAccountTypes`; seed two expense
+- `defaults.ts`, add `"receivable"` to `defaultAccountTypes`; seed two expense
   categories, **"Tips"** and **"Money written off"**.
 
 ### Deliberately unchanged
@@ -225,7 +225,7 @@ no transaction types, so it is untouched.
 ## Verification
 
 Extended in `lib/domain/accounting.property.test.ts` rather than tested in
-isolation — the point is that lending does not break existing identities.
+isolation, the point is that lending does not break existing identities.
 
 1. **Lending preserves net worth.** A lending transfer pair leaves the sum of
    balances across the source and receivable accounts unchanged.
@@ -244,7 +244,7 @@ against a fixed `asOf`, the overpaid case, and empty-portfolio behaviour.
 - Payoff-strategy ordering for receivables.
 - A `counterparty` field or concept.
 - A `/lending` route.
-- A "Gifts & family" category — already covered by existing seeds.
+- A "Gifts & family" category, already covered by existing seeds.
 
 ## Known risk
 
@@ -286,7 +286,7 @@ beside real institutions in the account list.
 Every borrower's `outstanding` must sum to the pool account's reconciled
 balance. Otherwise the band shows per-borrower figures that do not add up to the
 account they all live in. The arbitrary generates write-offs as well as loans
-and repayments — without them the invariant holds even when the write-off maths
+and repayments, without them the invariant holds even when the write-off maths
 is broken, which was verified by mutation.
 
 **Still open**

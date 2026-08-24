@@ -17,6 +17,12 @@ export function readGoogleClient(
     if (!clientId) {
       throw new Error("MOAT_OIDC_GOOGLE_IOS_CLIENT_ID is not set, so the app cannot sign in.");
     }
+    // One client is registered as one type, so the same id in both is always wrong.
+    if (clientId === env.MOAT_OIDC_GOOGLE_CLIENT_ID?.trim()) {
+      throw new Error(
+        "MOAT_OIDC_GOOGLE_IOS_CLIENT_ID is the web client id. The app needs its own iOS client.",
+      );
+    }
     return { kind, clientId };
   }
 

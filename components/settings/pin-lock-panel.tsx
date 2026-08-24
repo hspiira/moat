@@ -8,6 +8,15 @@ import {
   PIN_REQUIREMENT_MESSAGE,
   isValidPin,
 } from "@/lib/security/pin-policy";
+import {
+  LOCK_TIMEOUT_CHOICES,
+  describeLockTimeout,
+  isLockTimeout,
+  readLockTimeout,
+  writeLockTimeout,
+  type LockTimeoutMinutes,
+} from "@/lib/preferences/lock-timeout";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +32,7 @@ type Mode = "idle" | "set" | "remove";
 export function PinLockPanel() {
   const { hasPinLock, setPin, removePin, lock } = usePinLock();
   const [mode, setMode] = useState<Mode>("idle");
+  const [lockTimeout, setLockTimeout] = useState<LockTimeoutMinutes>(readLockTimeout);
   const [pin, setPinValue] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [currentPin, setCurrentPin] = useState("");
@@ -85,18 +95,41 @@ export function PinLockPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">PIN lock</CardTitle>
         <CardDescription>
-          A PIN locks the app and encrypts your records on this device. It never leaves
-          the device, and the app locks itself after 5 minutes of inactivity.
+          Encrypts your records and locks the app when it sits idle.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!hasPinLock ? (
           <p className="text-xs text-foreground">
-            No PIN is set, so your records are stored unencrypted on this device.
+            No PIN set. Records are stored unencrypted.
           </p>
         ) : null}
         {success ? (
           <p className="text-xs text-muted-foreground">{success}</p>
+        ) : null}
+
+        {mode === "idle" && hasPinLock ? (
+          <div className="grid max-w-xs gap-1">
+            <Label htmlFor="lock-timeout">Lock when idle</Label>
+            <select
+              id="lock-timeout"
+              value={lockTimeout}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                if (!isLockTimeout(next)) return;
+                setLockTimeout(next);
+                writeLockTimeout(next);
+                setSuccess(`Moat will lock ${describeLockTimeout(next).toLowerCase()}.`);
+              }}
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+              {LOCK_TIMEOUT_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {describeLockTimeout(choice)}
+                </option>
+              ))}
+            </select>
+          </div>
         ) : null}
 
         {mode === "idle" ? (
@@ -144,7 +177,7 @@ export function PinLockPanel() {
               label={`New PIN (minimum ${MIN_PIN_LENGTH} digits)`}
               value={pin}
               onChange={setPinValue}
-              placeholder="e.g. 1234"
+              placeholder={`at least ${MIN_PIN_LENGTH} digits`}
               autoComplete="new-password"
             />
             <PinInputField

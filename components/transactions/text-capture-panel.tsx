@@ -91,7 +91,6 @@ export function TextCapturePanel({
     accountSelectOptions,
     typeOptions,
     captureSourceOptions,
-    parseMessages,
     appendFiles,
     resetReview,
     updateCandidate,
@@ -113,9 +112,10 @@ export function TextCapturePanel({
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder={
-            "Example:\nReceived UGX 500,000 from Employer Ltd on 27-03-2026\n\nPaid USh 45,000 to Grocery store on 06-04-2026"
+            "Received UGX 500,000 from Employer Ltd on 27-03-2026\n\nPaid USh 45,000 to Grocery store on 06-04-2026"
           }
           className="min-h-32"
+          hint="One message per block, separated by a blank line. Reading happens as you paste."
         />
 
         <SelectField
@@ -176,20 +176,21 @@ export function TextCapturePanel({
           {fileError ? <div className="text-xs text-destructive">{fileError}</div> : null}
         </div>
 
-        <div className="flex gap-2">
-          <Button type="button" size="sm" disabled={!input.trim()} onClick={parseMessages}>
-            Parse messages
-          </Button>
-          {candidates.length > 0 ? (
+        {candidates.length > 0 ? (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Read {candidates.length} message{candidates.length === 1 ? "" : "s"}. Check
+              each one below before saving.
+            </p>
             <Button type="button" size="sm" variant="outline" onClick={resetReview}>
-              Clear review
+              Clear
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {candidates.length === 0 ? (
           <EmptyState className="py-6">
-            Paste one or more money messages (separate each with a blank line) and Moat will read them.
+            Paste a money message above and it appears here, read and ready to check.
           </EmptyState>
         ) : (
           <div className="grid gap-3">
@@ -197,7 +198,9 @@ export function TextCapturePanel({
               <div key={candidate.id} className="grid gap-3 px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-sm font-medium text-foreground">Candidate {index + 1}</div>
+                    <div className="text-sm font-medium text-foreground">
+                      {candidate.payee?.trim() || `Message ${index + 1}`}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       Confidence {Math.round(candidate.confidence * 100)}%
                     </div>
@@ -216,6 +219,23 @@ export function TextCapturePanel({
                   }
                 />
 
+                {candidate.type === "transfer" ? (
+                  <SelectField
+                    id={`capture-destination-${candidate.id}`}
+                    label="Moved into"
+                    value={candidate.destinationAccountId ?? ""}
+                    options={accountSelectOptions.filter(
+                      (option) => option.value !== candidate.accountId,
+                    )}
+                    onValueChange={(value) =>
+                      updateCandidate(candidate.id, (entry) => ({
+                        ...entry,
+                        destinationAccountId: value,
+                      }))
+                    }
+                  />
+                ) : null}
+
                 <div className="grid gap-3 md:grid-cols-2">
                   <SelectField
                     id={`capture-type-${candidate.id}`}
@@ -225,7 +245,7 @@ export function TextCapturePanel({
                     onValueChange={(value) =>
                       updateCandidate(candidate.id, (entry) => ({
                         ...entry,
-                        type: value as Exclude<TransactionType, "transfer">,
+                        type: value as TransactionType,
                         categoryId: coerceCategoryForType(
                           categories,
                           value as TransactionType,
