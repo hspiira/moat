@@ -11,9 +11,15 @@ export function configuredSyncEndpoint(
   return env.NEXT_PUBLIC_SYNC_ENDPOINT?.trim() ?? "";
 }
 
+// Only an http origin can be the sync server. The app is served from a
+// capacitor: scheme, which is the device itself, so it has to be told.
 function currentOrigin(origin?: string): string {
-  if (origin !== undefined) return origin.trim();
-  return typeof window === "undefined" ? "" : window.location.origin;
+  const value = origin !== undefined
+    ? origin.trim()
+    : typeof window === "undefined"
+      ? ""
+      : window.location.origin;
+  return /^https?:\/\//i.test(value) ? value : "";
 }
 
 /**

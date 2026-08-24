@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { IconChevronDown } from "@tabler/icons-react";
+
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ export function PlannerAddForm({
   }) => void;
 }) {
   const [draft, setDraft] = useState(emptyDraft);
+  const [showDetails, setShowDetails] = useState(false);
 
   const matchedItem = items.find(
     (item) =>
@@ -49,28 +52,57 @@ export function PlannerAddForm({
       note: draft.note.trim() || undefined,
     });
     setDraft(emptyDraft);
+    setShowDetails(false);
   };
 
   return (
     <div className="grid gap-2">
-      <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end">
-      <div className="grid gap-1">
-        <Label htmlFor="planner-name">Item</Label>
-        <Input
-          id="planner-name"
-          list="planner-item-suggestions"
-          value={draft.name}
-          placeholder="Sugar (1kg)"
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
-        <datalist id="planner-item-suggestions">
-          {items
-            .filter((item) => !item.isArchived)
-            .map((item) => (
-              <option key={item.id} value={item.name} />
-            ))}
-        </datalist>
+      <div className="flex items-end gap-2">
+        <div className="grid flex-1 gap-1">
+          <Label htmlFor="planner-name">Item</Label>
+          <Input
+            id="planner-name"
+            list="planner-item-suggestions"
+            value={draft.name}
+            placeholder="Sugar (1kg)"
+            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit();
+            }}
+          />
+          <datalist id="planner-item-suggestions">
+            {items
+              .filter((item) => !item.isArchived)
+              .map((item) => (
+                <option key={item.id} value={item.name} />
+              ))}
+          </datalist>
+        </div>
+        <Button disabled={isSubmitting || !draft.name.trim()} onClick={submit}>
+          Add
+        </Button>
       </div>
+
+      {remembered != null && !draft.estimatedUnitPrice ? (
+        <p className="text-xs text-muted-foreground">
+          You last paid {formatMoneyShort(remembered)}. Leave this blank to use that.
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        aria-expanded={showDetails}
+        onClick={() => setShowDetails((open) => !open)}
+        className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <IconChevronDown
+          className={`size-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
+        />
+        {showDetails ? "Fewer details" : "Quantity, price, date"}
+      </button>
+
+      {showDetails ? (
+      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr] sm:items-end">
       <div className="grid gap-1">
         <Label htmlFor="planner-quantity">Qty</Label>
         <Input
@@ -89,11 +121,6 @@ export function PlannerAddForm({
           placeholder={remembered != null ? String(remembered) : undefined}
           onChange={(event) => setDraft({ ...draft, estimatedUnitPrice: event.target.value })}
         />
-        {remembered != null && !draft.estimatedUnitPrice ? (
-          <p className="text-xs text-muted-foreground">
-            You last paid {formatMoneyShort(remembered)}. Leave this blank to use that.
-          </p>
-        ) : null}
       </div>
       <div className="grid gap-1">
         <Label htmlFor="planner-needed-by">Needed by</Label>
@@ -103,10 +130,9 @@ export function PlannerAddForm({
           onChange={(value) => setDraft({ ...draft, neededBy: value })}
         />
       </div>
-        <Button disabled={isSubmitting || !draft.name.trim()} onClick={submit}>
-          Add to list
-        </Button>
       </div>
+      ) : null}
+      {showDetails ? (
       <div className="grid gap-1">
         <Label htmlFor="planner-note">Note (optional)</Label>
         <Input
@@ -116,6 +142,7 @@ export function PlannerAddForm({
           onChange={(event) => setDraft({ ...draft, note: event.target.value })}
         />
       </div>
+      ) : null}
     </div>
   );
 }

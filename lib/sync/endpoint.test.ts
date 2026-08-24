@@ -44,3 +44,17 @@ describe("needsManualSyncEndpoint", () => {
     expect(needsManualSyncEndpoint({}, "")).toBe(true);
   });
 });
+
+describe("inside the app, where the origin is the device", () => {
+  const CAPACITOR = "capacitor://localhost";
+
+  it("does not mistake the app's own scheme for a sync server", () => {
+    expect(resolveSyncEndpoint(undefined, {}, CAPACITOR)).toBe("");
+    expect(needsManualSyncEndpoint({}, CAPACITOR)).toBe(true);
+  });
+
+  it("uses the address the build was given instead", () => {
+    expect(resolveSyncEndpoint(undefined, CONFIGURED, CAPACITOR)).toBe("https://sync.moat.app");
+    expect(needsManualSyncEndpoint(CONFIGURED, CAPACITOR)).toBe(false);
+  });
+});
