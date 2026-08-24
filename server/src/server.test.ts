@@ -45,7 +45,8 @@ async function requireFreePort(port: number) {
 
 async function start(port: number, env: Record<string, string>): Promise<ChildProcess> {
   await requireFreePort(port);
-  const child = spawn("node", [path.join(process.cwd(), "server/dist/server.js")], {
+// The same entrypoint the deployment runs, so this exercises what ships.
+  const child = spawn("node", [path.join(process.cwd(), "server/server.js")], {
     env: { ...process.env, PORT: String(port), ...env },
     stdio: "ignore",
   });

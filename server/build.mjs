@@ -12,7 +12,10 @@ const options = {
     path.join(here, "src/migrate.ts"),
     path.join(here, "src/mint-token.ts"),
   ],
-  outdir: path.join(here, "dist"),
+  // Beside package.json, because that is the file the scripts run and the file
+  // the deployment uses as its entrypoint. Building anywhere else lets a stale
+  // committed bundle ship instead.
+  outdir: here,
   bundle: true,
   platform: "node",
   target: "node22",

@@ -9,7 +9,7 @@
     }
   },
   "rewrites": [
-    { "source": "/v1/sync/(.*)", "destination": { "service": "sync" } },
+    { "source": "/v1/(.*)", "destination": { "service": "sync" } },
     { "source": "/health", "destination": { "service": "sync" } },
     { "source": "/(.*)", "destination": { "service": "web" } }
   ]
