@@ -85,14 +85,13 @@ export function PinLockPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">PIN lock</CardTitle>
         <CardDescription>
-          A PIN locks the app and encrypts your records on this device. It never leaves
-          the device, and the app locks itself after 5 minutes of inactivity.
+          Encrypts your records and locks the app after 5 minutes idle.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!hasPinLock ? (
           <p className="text-xs text-foreground">
-            No PIN is set, so your records are stored unencrypted on this device.
+            No PIN set. Records are stored unencrypted.
           </p>
         ) : null}
         {success ? (

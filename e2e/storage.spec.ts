@@ -34,7 +34,7 @@ test("says plainly when the browser will not promise to keep the data", async ({
 
   const { errors } = await openSeededApp(page, "/settings");
   await expect(
-    page.getByText(/has not agreed to keep your records/i).first(),
+    page.getByText(/has not promised to keep your records/i).first(),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });

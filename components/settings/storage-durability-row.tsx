@@ -30,10 +30,10 @@ export function StorageDurabilityRow() {
 
   const state =
     durability.state === "persisted"
-      ? "This browser has agreed to keep your records and will not clear them to free space."
+      ? "This device has promised to keep your records and will not clear them."
       : durability.state === "best-effort"
-        ? "This browser has not agreed to keep your records, so it may clear them to free space. Keep a backup."
-        : "This browser does not report whether it will keep your records. Keep a backup.";
+        ? "This device has not promised to keep your records, so it may clear them. Keep a backup."
+        : "This device does not report whether it will keep your records. Keep a backup.";
 
   return (
     <p

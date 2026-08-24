@@ -170,7 +170,7 @@ export function PwaStatus() {
     : isAtRisk
       ? {
           kind: "evictable",
-          text: "This browser has not promised to keep your records, so it may clear them to free space.",
+          text: "This device has not promised to keep your records, so it may clear them to free space.",
         }
       : shouldShowBackupNudge
         ? {

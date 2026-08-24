@@ -46,8 +46,7 @@ export function DeleteAccountPanel() {
   return (
     <div className="grid content-start gap-3">
       <p className="text-sm leading-6 text-muted-foreground">
-        Permanently remove all your financial records from this device. This cannot be undone.
-        Export your data first if you want a copy.
+        Permanently removes every record on this device. This cannot be undone.
       </p>
 
       <Button
