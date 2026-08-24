@@ -38,12 +38,12 @@ import {
   setActiveRecordCryptoKey,
 } from "./record-crypto";
 import { decryptAllRecords, encryptAllRecordsWithDek, reblindAllRecords } from "./data-migration";
+import { lockTimeoutMs, readLockTimeout } from "@/lib/preferences/lock-timeout";
 
 const KEY_MATERIAL_KEY = "moat:key_material";
 const LEGACY_PIN_HASH_KEY = "moat:pin_hash";
 const BLIND_INDEX_VERSION_KEY = "moat:blind_index_version";
 const BLIND_INDEX_VERSION = "2";
-const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const BACKGROUND_LOCK_MS = 60 * 1000;
 const LOCK_CHANNEL_NAME = "moat:lock";
 
@@ -209,7 +209,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
     }
-    inactivityTimer.current = setTimeout(() => applyLock(), INACTIVITY_TIMEOUT_MS);
+    inactivityTimer.current = setTimeout(() => applyLock(), lockTimeoutMs(readLockTimeout()));
   }, [applyLock]);
 
   useEffect(() => {
@@ -229,7 +229,7 @@ export function PinLockProvider({ children }: { children: React.ReactNode }) {
       hiddenAt.current = null;
       if (
         hiddenFor > BACKGROUND_LOCK_MS ||
-        now - lastActivityAt.current > INACTIVITY_TIMEOUT_MS
+        now - lastActivityAt.current > lockTimeoutMs(readLockTimeout())
       ) {
         applyLock();
         return;
