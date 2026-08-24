@@ -51,7 +51,7 @@
     "eslint-config-next": "^16.2.2",
     "fake-indexeddb": "^6.2.5",
     "fast-check": "^4.6.0",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.23",
     "shadcn": "4.1.2",
     "tailwindcss": "^4.3.3",
     "typescript": "5.8.3",
