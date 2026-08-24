@@ -227,6 +227,62 @@ describeDb("postgres sync store", () => {
     }
   });
 
+  it("applies the policies to the role that owns the tables", async () => {
+    // The role above holds grants but owns nothing, and Postgres exempts a
+    // table's owner from its own policies unless the table forces them. A
+    // deployment connects as the owner, because that role ran the migration,
+    // so `force` is the clause that actually holds there and only an owning
+    // role can show it works.
+    await getPool().query(`
+      do $$
+      begin
+        if exists (select 1 from pg_roles where rolname = 'moat_rls_owner_test') then
+          execute format('reassign owned by moat_rls_owner_test to %I', current_user);
+          drop owned by moat_rls_owner_test;
+          drop role moat_rls_owner_test;
+        end if;
+      end
+      $$;
+      create role moat_rls_owner_test login;
+      grant usage on schema public to moat_rls_owner_test;
+    `);
+
+    await applyPostgresSyncPush(pushRequest("u1", ["category:1"]));
+    await applyPostgresSyncPush(pushRequest("u2", ["category:2"]));
+    await getPool().query("alter table sync_records owner to moat_rls_owner_test");
+
+    const url = new URL(process.env.DATABASE_URL as string);
+    url.username = "moat_rls_owner_test";
+    url.password = "";
+    const owned = new pg.Pool({ connectionString: url.toString(), ssl: undefined });
+
+    try {
+      const client = await owned.connect();
+      try {
+        await client.query("begin");
+        await client.query("select set_config('moat.user_id', $1, true)", ["u1"]);
+
+        const visible = await client.query("select user_id from sync_records");
+
+        expect(visible.rows.map((row: { user_id: string }) => row.user_id)).toEqual(["u1"]);
+        await client.query("rollback");
+      } finally {
+        client.release();
+      }
+    } finally {
+      await owned.end();
+      await getPool().query(`
+        do $$
+        begin
+          execute format('reassign owned by moat_rls_owner_test to %I', current_user);
+          drop owned by moat_rls_owner_test;
+        end
+        $$;
+        drop role if exists moat_rls_owner_test;
+      `);
+    }
+  });
+
   it("keeps one user's records out of another user's pull", async () => {
     await applyPostgresSyncPush(pushRequest("u1", ["category:1", "category:2"]));
     await applyPostgresSyncPush(pushRequest("u2", ["category:9"]));

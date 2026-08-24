@@ -122,6 +122,9 @@ createdb moat_test
 DATABASE_SSL=disable DATABASE_URL=postgres://localhost/moat_test pnpm test
 ```
 
-One of them creates a temporary unprivileged role to check row-level security
-actually enforces tenancy. The role that runs the suite is usually a superuser,
-and superusers bypass RLS, so without that the policies would go untested.
+Two of them create temporary roles to check row-level security actually
+enforces tenancy. The role that runs the suite is usually a superuser, and
+superusers bypass RLS, so without them the policies would go untested. One role
+merely holds grants. The other owns the tables, which is what a deployment
+connects as, and Postgres lets an owner past its own policies unless the table
+forces them.
