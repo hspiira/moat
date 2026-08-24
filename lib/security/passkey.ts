@@ -1,6 +1,10 @@
 type PrfInputs = { prf?: { eval?: { first: BufferSource } } };
 type PrfOutputs = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
 
+/** Said without naming the extension, which means nothing to the person reading it. */
+export const NO_BIOMETRIC_KEY =
+  "This device can check your face but cannot use it to unlock your records. Use a PIN instead.";
+
 export type PasskeyEnrollment = {
   credentialId: string;
   prfSalt: Uint8Array;
@@ -66,7 +70,7 @@ async function evaluatePrf(credentialId: string, prfSalt: Uint8Array): Promise<A
   const results = assertion.getClientExtensionResults() as PrfOutputs;
   const first = results.prf?.results?.first;
   if (!first) {
-    throw new Error("This device's passkey does not support PRF-based encryption.");
+    throw new Error(NO_BIOMETRIC_KEY);
   }
   return first;
 }
@@ -100,6 +104,13 @@ export async function registerPasskey(params: {
 
   if (!credential) {
     throw new Error("Passkey setup was cancelled.");
+  }
+
+  // Asked here rather than after the round trip, so setup fails before it looks
+  // like it worked.
+  const created = credential.getClientExtensionResults() as PrfOutputs;
+  if (created.prf?.enabled === false) {
+    throw new Error(NO_BIOMETRIC_KEY);
   }
 
   const credentialId = bufferToBase64Url(credential.rawId);
