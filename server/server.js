@@ -885,19 +885,23 @@ function validate(run) {
   }
 }
 async function checkHealth() {
-  const problems = [];
   try {
-    await getPool().query("select 1");
     const credentials = await getPool().query(
       "select count(*)::text as count from sync_credentials"
     );
-    if (credentials.rows[0]?.count === "0") {
-      problems.push("No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.");
-    }
+    return credentials.rows[0]?.count === "0" ? [
+      200,
+      {
+        status: "ok",
+        notes: [
+          "No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`."
+        ]
+      }
+    ] : [200, { status: "ok" }];
   } catch (error) {
-    problems.push(error instanceof Error ? error.message : "Database is unreachable.");
+    console.error("Health check could not reach the database.", error);
+    return [503, { status: "unhealthy", problems: ["Database is unreachable."] }];
   }
-  return problems.length > 0 ? [503, { status: "unhealthy", problems }] : [200, { status: "ok" }];
 }
 async function authenticate(authorization) {
   try {

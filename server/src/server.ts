@@ -62,21 +62,31 @@ function validate<T>(run: () => T): T {
 }
 
 async function checkHealth(): Promise<[number, unknown]> {
-  const problems: string[] = [];
-
   try {
-    await getPool().query("select 1");
     const credentials = await getPool().query<{ count: string }>(
       "select count(*)::text as count from sync_credentials",
     );
-    if (credentials.rows[0]?.count === "0") {
-      problems.push("No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.");
-    }
-  } catch (error) {
-    problems.push(error instanceof Error ? error.message : "Database is unreachable.");
-  }
 
-  return problems.length > 0 ? [503, { status: "unhealthy", problems }] : [200, { status: "ok" }];
+    // A note for whoever is watching, never a failed probe: a platform that
+    // gates routing on health would leave a fresh deployment no way to reach
+    // the sign-in that would create the first one.
+    return credentials.rows[0]?.count === "0"
+      ? [
+          200,
+          {
+            status: "ok",
+            notes: [
+              "No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.",
+            ],
+          },
+        ]
+      : [200, { status: "ok" }];
+  } catch (error) {
+    // Nothing authenticates this endpoint and the driver's own message names the
+    // host, port, database and role.
+    console.error("Health check could not reach the database.", error);
+    return [503, { status: "unhealthy", problems: ["Database is unreachable."] }];
+  }
 }
 
 async function authenticate(authorization: string | undefined): Promise<SyncPrincipal> {
