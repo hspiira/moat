@@ -13,10 +13,28 @@ import { normalizeItemName } from "@/lib/domain/item-normalization";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Item } from "@/lib/types";
 
-// What people buy here, so the unit is a tap rather than a guess.
+// What a shop here actually sells things by, so the unit is a tap not a guess.
 const UNIT_SUGGESTIONS = ["kg", "g", "litre", "ml", "piece", "packet", "bunch", "tray", "bar"];
 
-const emptyDraft = { name: "", quantity: "", unit: "", estimatedUnitPrice: "", expectedTotal: "", neededBy: "", note: "" };
+const emptyDraft = {
+  name: "",
+  quantity: "",
+  unit: "",
+  estimatedUnitPrice: "",
+  expectedTotal: "",
+  neededBy: "",
+  note: "",
+};
+
+export type PlannerAddInput = {
+  name: string;
+  unit?: string;
+  quantity?: number;
+  estimatedUnitPrice?: number;
+  expectedTotal?: number;
+  neededBy?: string;
+  note?: string;
+};
 
 export function PlannerAddForm({
   items,
@@ -27,28 +45,17 @@ export function PlannerAddForm({
   items: Item[];
   lastPaidFor?: (itemId: string) => number | undefined;
   isSubmitting: boolean;
-  onAdd: (input: {
-    name: string;
-    unit?: string;
-    quantity?: number;
-    estimatedUnitPrice?: number;
-    expectedTotal?: number;
-    neededBy?: string;
-    note?: string;
-  }) => void;
+  onAdd: (input: PlannerAddInput) => void;
 }) {
   const [draft, setDraft] = useState(emptyDraft);
   const [showDetails, setShowDetails] = useState(false);
 
   const matchedItem = items.find(
-    (item) =>
-      !item.isArchived &&
-      normalizeItemName(item.name) === normalizeItemName(draft.name),
+    (item) => !item.isArchived && normalizeItemName(item.name) === normalizeItemName(draft.name),
   );
   const remembered = matchedItem ? lastPaidFor?.(matchedItem.id) : undefined;
-  const rememberedUnit = matchedItem?.unit;
 
-  const submit = () => {
+  function submit() {
     if (!draft.name.trim()) return;
     onAdd({
       name: draft.name,
@@ -61,123 +68,130 @@ export function PlannerAddForm({
     });
     setDraft(emptyDraft);
     setShowDetails(false);
-  };
+  }
 
   return (
-    <div className="grid gap-2">
-      <div className="flex items-end gap-2">
-        <div className="grid flex-1 gap-1">
-          <Label htmlFor="planner-name">Item</Label>
-          <Input
-            id="planner-name"
-            list="planner-item-suggestions"
-            value={draft.name}
-            placeholder="Sugar (1kg)"
-            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-          />
-          <datalist id="planner-item-suggestions">
-            {items
-              .filter((item) => !item.isArchived)
-              .map((item) => (
-                <option key={item.id} value={item.name} />
-              ))}
-          </datalist>
-        </div>
-        <Button disabled={isSubmitting || !draft.name.trim()} onClick={submit}>
-          Add
-        </Button>
+    <form
+      className="grid gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
+      <div className="grid gap-1">
+        <Label htmlFor="planner-name">Item</Label>
+        <Input
+          id="planner-name"
+          list="planner-item-suggestions"
+          value={draft.name}
+          placeholder="Sugar"
+          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+        />
+        <datalist id="planner-item-suggestions">
+          {items
+            .filter((item) => !item.isArchived)
+            .map((item) => (
+              <option key={item.id} value={item.name} />
+            ))}
+        </datalist>
+        {remembered != null && !draft.estimatedUnitPrice ? (
+          <p className="text-xs text-muted-foreground">
+            You last paid {formatMoneyShort(remembered)}. Leave the price out to use that.
+          </p>
+        ) : null}
       </div>
-
-      {remembered != null && !draft.estimatedUnitPrice ? (
-        <p className="text-xs text-muted-foreground">
-          You last paid {formatMoneyShort(remembered)}. Leave this blank to use that.
-        </p>
-      ) : null}
 
       <button
         type="button"
         aria-expanded={showDetails}
         onClick={() => setShowDetails((open) => !open)}
-        className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        className="flex w-full items-center justify-between border-y border-border/60 py-2 text-sm text-muted-foreground hover:text-foreground"
       >
+        <span>Quantity, price and date</span>
         <IconChevronDown
-          className={`size-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
+          className={`size-4 transition-transform ${showDetails ? "rotate-180" : ""}`}
         />
-        {showDetails ? "Fewer details" : "Quantity, price, date"}
       </button>
 
       {showDetails ? (
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr] sm:items-end">
-      <div className="grid gap-1">
-        <Label htmlFor="planner-quantity">Qty</Label>
-        <Input
-          id="planner-quantity"
-          inputMode="numeric"
-          value={draft.quantity}
-          onChange={(event) => setDraft({ ...draft, quantity: event.target.value })}
-        />
-      </div>
-      <div className="grid gap-1">
-        <Label htmlFor="planner-unit">Unit</Label>
-        <Input
-          id="planner-unit"
-          list="planner-unit-suggestions"
-          value={draft.unit}
-          placeholder={rememberedUnit ?? "kg, litre, packet"}
-          onChange={(event) => setDraft({ ...draft, unit: event.target.value })}
-        />
-        <datalist id="planner-unit-suggestions">
-          {UNIT_SUGGESTIONS.map((unit) => (
-            <option key={unit} value={unit} />
-          ))}
-        </datalist>
-      </div>
-      <div className="grid gap-1">
-        <Label htmlFor="planner-estimate">Est. price</Label>
-        <Input
-          id="planner-estimate"
-          inputMode="numeric"
-          value={draft.estimatedUnitPrice}
-          placeholder={remembered != null ? String(remembered) : undefined}
-          onChange={(event) => setDraft({ ...draft, estimatedUnitPrice: event.target.value })}
-        />
-      </div>
-      <div className="grid gap-1">
-        <Label htmlFor="planner-needed-by">Needed by</Label>
-        <DatePicker
-          id="planner-needed-by"
-          value={draft.neededBy}
-          onChange={(value) => setDraft({ ...draft, neededBy: value })}
-        />
-      </div>
-      </div>
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-1">
+              <Label htmlFor="planner-quantity">Quantity</Label>
+              <Input
+                id="planner-quantity"
+                inputMode="numeric"
+                value={draft.quantity}
+                placeholder="1"
+                onChange={(event) => setDraft({ ...draft, quantity: event.target.value })}
+              />
+            </div>
+
+            <div className="grid gap-1">
+              <Label htmlFor="planner-unit">Unit</Label>
+              <Input
+                id="planner-unit"
+                list="planner-unit-suggestions"
+                value={draft.unit}
+                placeholder={matchedItem?.unit ?? "kg"}
+                onChange={(event) => setDraft({ ...draft, unit: event.target.value })}
+              />
+              <datalist id="planner-unit-suggestions">
+                {UNIT_SUGGESTIONS.map((unit) => (
+                  <option key={unit} value={unit} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="planner-estimate">Estimated price each (UGX)</Label>
+            <Input
+              id="planner-estimate"
+              inputMode="numeric"
+              value={draft.estimatedUnitPrice}
+              placeholder={remembered != null ? String(remembered) : undefined}
+              onChange={(event) =>
+                setDraft({ ...draft, estimatedUnitPrice: event.target.value })
+              }
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="planner-needed-by">Needed by</Label>
+            <DatePicker
+              id="planner-needed-by"
+              value={draft.neededBy}
+              onChange={(value) => setDraft({ ...draft, neededBy: value })}
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="planner-expected-total">Full price if paying in instalments (UGX)</Label>
+            <Input
+              id="planner-expected-total"
+              inputMode="numeric"
+              value={draft.expectedTotal}
+              placeholder="Leave blank if paying at once"
+              onChange={(event) => setDraft({ ...draft, expectedTotal: event.target.value })}
+            />
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="planner-note">Note (optional)</Label>
+            <Input
+              id="planner-note"
+              value={draft.note}
+              placeholder="Brand, size, or where to buy it"
+              onChange={(event) => setDraft({ ...draft, note: event.target.value })}
+            />
+          </div>
+        </div>
       ) : null}
-      {showDetails ? (
-      <div className="grid gap-1">
-        <Label htmlFor="planner-expected-total">Paying in instalments? Full price</Label>
-        <Input
-          id="planner-expected-total"
-          inputMode="numeric"
-          value={draft.expectedTotal}
-          placeholder="Leave blank if paying at once"
-          onChange={(event) => setDraft({ ...draft, expectedTotal: event.target.value })}
-        />
-      </div>
-      ) : null}
-      {showDetails ? (
-      <div className="grid gap-1">
-        <Label htmlFor="planner-note">Note (optional)</Label>
-        <Input
-          id="planner-note"
-          value={draft.note}
-          placeholder="Brand, size, or where to buy it"
-          onChange={(event) => setDraft({ ...draft, note: event.target.value })}
-        />
-      </div>
-      ) : null}
-    </div>
+
+      <Button type="submit" size="lg" disabled={isSubmitting || !draft.name.trim()} className="w-full">
+        Add to list
+      </Button>
+    </form>
   );
 }
