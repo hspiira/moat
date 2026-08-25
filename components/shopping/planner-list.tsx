@@ -1,13 +1,12 @@
 "use client";
 
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconPencil, IconX } from "@tabler/icons-react";
+import { IconCircleCheck, IconPencil, IconX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
-import Link from "next/link";
 
 import type {
   Item,
@@ -216,69 +215,38 @@ export function PlannerList(props: {
       <PlannerSection title="Upcoming" purchases={props.groups.upcoming} {...shared} />
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
       {history.trips.length > 0 ? (
-        <details className="grid gap-2">
-          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-            Bought ({history.trips.length} trip{history.trips.length === 1 ? "" : "s"})
-          </summary>
-          <ul className="mt-2 grid gap-4">
-            {history.trips.map((trip) => (
-              <li key={trip.transactionId} className="grid gap-1">
-                <div className="flex items-baseline justify-between gap-3 text-xs">
-                  {trip.accountId ? (
-                    <Link
-                      href={`/accounts/detail?id=${encodeURIComponent(trip.accountId)}`}
-                      className="font-medium text-foreground underline underline-offset-2"
-                    >
-                      {formatDate(trip.occurredOn)}
-                    </Link>
-                  ) : (
-                    <span className="font-medium text-foreground">
-                      {formatDate(trip.occurredOn)}
+        <section className="grid gap-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Bought
+          </h3>
+          <ul className="grid gap-0.5">
+            {history.trips.flatMap((trip) =>
+              trip.entries.map((entry) => (
+                <li
+                  key={entry.purchase.id}
+                  className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-2"
+                >
+                  <IconCircleCheck aria-hidden className="size-4 shrink-0 text-pos" />
+                  <span className="min-w-0 flex-1 overflow-hidden">
+                    <span className="block truncate text-sm text-muted-foreground line-through">
+                      {entry.item?.name ?? "Unknown item"}
+                      {entry.quantity != null ? ` \u00d7 ${entry.quantity}` : ""}
                     </span>
-                  )}
-                  <span className="text-muted-foreground">
-                    {trip.entries.length} item{trip.entries.length === 1 ? "" : "s"} ·{" "}
-                    <span className="text-foreground">{formatMoney(trip.total)}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {formatDate(trip.occurredOn)}
+                      {entry.pricePerUnit != null && entry.item?.unit
+                        ? ` \u00b7 ${formatMoney(entry.pricePerUnit)}/${entry.item.unit}`
+                        : ""}
+                    </span>
                   </span>
-                </div>
-
-                <ul className="grid gap-1 border-l border-border pl-3">
-                  {trip.entries.map((entry) => (
-                    <li
-                      key={entry.purchase.id}
-                      className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground"
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        {entry.item?.name ?? "Unknown item"}
-                        {entry.pricePerUnit != null && entry.item?.unit ? (
-                          <span className="text-xs">
-                            {" "}
-                            · {formatMoney(entry.pricePerUnit)}/{entry.item.unit}
-                          </span>
-                        ) : null}
-                      </span>
-
-                      {entry.outcome.difference != null && entry.outcome.difference !== 0 ? (
-                        <span
-                          className={
-                            entry.outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
-                          }
-                        >
-                          {entry.outcome.difference < 0 ? "under" : "over"} by{" "}
-                          {formatMoney(Math.abs(entry.outcome.difference))}
-                        </span>
-                      ) : null}
-
-                      <span className="shrink-0 text-xs">
-                        {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
+                  <span className="shrink-0 whitespace-nowrap text-right text-sm tabular-nums text-muted-foreground">
+                    {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
+                  </span>
+                </li>
+              )),
+            )}
           </ul>
-        </details>
+        </section>
       ) : null}
 
       {history.dropped.length > 0 ? (

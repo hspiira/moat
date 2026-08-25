@@ -10,7 +10,7 @@ import {
   revertPurchase,
   sumFulfillmentCost,
 } from "@/lib/domain/planned-purchases";
-import type { Item, PlannedPurchase } from "@/lib/types";
+import type { Item, PlannedPurchase, TransactionLineItem } from "@/lib/types";
 import { isValidId } from "@/lib/ids";
 
 const now = "2026-08-07T00:00:00.000Z";
@@ -270,5 +270,66 @@ describe("comparePlannedWithActual", () => {
       actual: undefined,
       difference: undefined,
     });
+  });
+});
+
+describe("paying for something in parts", () => {
+  const timestamp = "2026-08-25T00:00:00.000Z";
+
+  function sofa(over: Partial<PlannedPurchase> = {}): PlannedPurchase {
+    return {
+      id: "pp-sofa",
+      userId: "u1",
+      itemId: "it-sofa",
+      status: "planned",
+      expectedTotal: 500_000,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      ...over,
+    } as PlannedPurchase;
+  }
+
+  function payment(amount: number): TransactionLineItem {
+    return {
+      id: "li-1",
+      userId: "u1",
+      transactionId: "tx-1",
+      label: "sofa",
+      amount,
+    } as TransactionLineItem;
+  }
+
+  it("stays on the list while it is still part paid", () => {
+    const result = fulfillPurchase(sofa(), payment(200_000), timestamp);
+
+    expect(result.status).toBe("planned");
+  });
+
+  it("counts what was paid before, so the last instalment settles it", () => {
+    const result = fulfillPurchase(sofa(), payment(300_000), timestamp, 200_000);
+
+    expect(result.status).toBe("purchased");
+    expect(result.linkedLineItemId).toBe("li-1");
+  });
+
+  it("settles when a single payment covers the whole price", () => {
+    expect(fulfillPurchase(sofa(), payment(500_000), timestamp).status).toBe("purchased");
+  });
+
+  it("settles when more than the agreed price is paid", () => {
+    expect(fulfillPurchase(sofa(), payment(600_000), timestamp).status).toBe("purchased");
+  });
+
+  it("marks anything without an agreed full price bought outright", () => {
+    const result = fulfillPurchase(sofa({ expectedTotal: undefined }), payment(1), timestamp);
+
+    expect(result.status).toBe("purchased");
+  });
+
+  it("works out the payment from a quantity and a price", () => {
+    const line = { ...payment(0), amount: undefined, quantity: 2, unitPrice: 250_000 };
+    const result = fulfillPurchase(sofa(), line as TransactionLineItem, timestamp);
+
+    expect(result.status).toBe("purchased");
   });
 });

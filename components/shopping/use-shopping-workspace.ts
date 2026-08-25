@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { learnItemCategory } from "@/lib/domain/item-category";
 import { comparePlannedWithBudget } from "@/lib/domain/planned-against-budget";
+import { summariseInstallments } from "@/lib/domain/installments";
 import { resolveItem } from "@/lib/domain/item-normalization";
 import {
   buildFulfillmentLineItem,
@@ -204,6 +205,7 @@ export function useShoppingWorkspace() {
       patch: {
         quantity?: number;
         estimatedUnitPrice?: number;
+        expectedTotal?: number;
         neededBy?: string;
         note?: string;
       },
@@ -327,8 +329,11 @@ export function useShoppingWorkspace() {
             actual,
           );
           await repositories.transactionLineItems.upsert(lineItem);
+          // What is already paid decides whether this payment settles the item
+          // or leaves it on the list with a balance.
+          const paidBefore = summariseInstallments(purchase, lineItems).paid;
           await repositories.plannedPurchases.upsert(
-            fulfillPurchase(purchase, lineItem, timestamp),
+            fulfillPurchase(purchase, lineItem, timestamp, paidBefore),
           );
 
           // Where the spending was filed is the item's category. Learned here so
@@ -349,7 +354,7 @@ export function useShoppingWorkspace() {
         setIsSubmitting(false);
       }
     },
-    [items, profile, refresh, transactions],
+    [items, lineItems, profile, refresh, transactions],
   );
 
   return {

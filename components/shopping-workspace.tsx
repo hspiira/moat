@@ -166,6 +166,7 @@ export function ShoppingWorkspace() {
         recentExpenses={workspace.recentExpenses}
         accounts={workspace.accounts}
         expenseCategories={workspace.expenseCategories}
+        lineItems={workspace.lineItems}
         isSubmitting={workspace.isSubmitting}
         onConfirm={(target, actuals) => {
           void workspace.checkOff(selectedPurchases, target, actuals).then((succeeded) => {

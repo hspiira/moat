@@ -19,6 +19,7 @@ import type { Item, PlannedPurchase } from "@/lib/types";
 export type PlannerEditPatch = {
   quantity?: number;
   estimatedUnitPrice?: number;
+  expectedTotal?: number;
   neededBy?: string;
   note?: string;
 };
@@ -73,6 +74,7 @@ function PlannerEditForm({
     quantity: purchase.quantity != null ? String(purchase.quantity) : "",
     estimatedUnitPrice:
       purchase.estimatedUnitPrice != null ? String(purchase.estimatedUnitPrice) : "",
+    expectedTotal: purchase.expectedTotal != null ? String(purchase.expectedTotal) : "",
     neededBy: purchase.neededBy ?? "",
     note: purchase.note ?? "",
   });
@@ -81,12 +83,13 @@ function PlannerEditForm({
     onSave(purchase, {
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       estimatedUnitPrice: parseAmountInput(draft.estimatedUnitPrice) ?? undefined,
+      expectedTotal: parseAmountInput(draft.expectedTotal) ?? undefined,
       neededBy: draft.neededBy || undefined,
       note: draft.note.trim() || undefined,
     });
 
   return (
-    <div className="grid gap-3 p-4">
+    <div className="grid gap-4 p-4">
       <div className="grid gap-1">
         <Label htmlFor="planner-edit-quantity">Quantity</Label>
         <Input
@@ -97,7 +100,7 @@ function PlannerEditForm({
         />
       </div>
       <div className="grid gap-1">
-        <Label htmlFor="planner-edit-estimate">Estimated price each</Label>
+        <Label htmlFor="planner-edit-estimate">Estimated price each (UGX)</Label>
         <Input
           id="planner-edit-estimate"
           inputMode="decimal"
@@ -116,7 +119,20 @@ function PlannerEditForm({
         />
       </div>
       <div className="grid gap-1">
-        <Label htmlFor="planner-edit-note">Note</Label>
+        <Label htmlFor="planner-edit-expected-total">
+          Full price if paying in instalments (UGX)
+        </Label>
+        <Input
+          id="planner-edit-expected-total"
+          inputMode="numeric"
+          value={draft.expectedTotal}
+          placeholder="Leave blank if paying at once"
+          onChange={(event) => setDraft({ ...draft, expectedTotal: event.target.value })}
+        />
+      </div>
+
+      <div className="grid gap-1">
+        <Label htmlFor="planner-edit-note">Note (optional)</Label>
         <Input
           id="planner-edit-note"
           value={draft.note}

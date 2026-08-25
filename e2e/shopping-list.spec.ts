@@ -82,3 +82,24 @@ test("folds price trends away rather than spending the top of the page on them",
   const trendsBox = await trends.boundingBox();
   expect(trendsBox!.y).toBeGreaterThan(addButton!.y);
 });
+
+test("something part paid stays on the list, and what is bought is crossed out", async ({
+  page,
+}) => {
+  await openStockedShoppingList(page);
+
+  // The sofa is 200,000 into an agreed 500,000, so it is not bought yet.
+  const sofa = page.locator("li", { hasText: "Sofa set" }).first();
+  await expect(sofa).toBeVisible();
+  await expect(sofa).toContainText("to go");
+
+  // What is genuinely bought shows in its own section rather than a dropdown.
+  await expect(page.getByText("Bought", { exact: true })).toBeVisible();
+  const boughtRow = page.locator("li", { hasText: "Sugar" }).filter({ hasText: "Jun" }).first();
+  const decoration = await boughtRow
+    .locator("span.line-through")
+    .first()
+    .evaluate((node) => getComputedStyle(node).textDecorationLine);
+
+  expect(decoration).toContain("line-through");
+});

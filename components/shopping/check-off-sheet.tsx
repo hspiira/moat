@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { formatMoney } from "@/lib/currency";
+import { cn } from "@/lib/utils";
+import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -25,7 +27,14 @@ import {
 import { sumFulfillmentCost } from "@/lib/domain/planned-purchases";
 import { formatDate } from "@/lib/format-date";
 import { parseAmountInput } from "@/lib/parse-amount";
-import type { Account, Category, Item, PlannedPurchase, Transaction } from "@/lib/types";
+import type {
+  Account,
+  Category,
+  Item,
+  PlannedPurchase,
+  Transaction,
+  TransactionLineItem,
+} from "@/lib/types";
 
 import type { CheckOffTarget, FulfillmentActual } from "./use-shopping-workspace";
 import { todayIso } from "@/lib/today";
@@ -47,6 +56,7 @@ export function CheckOffSheet({
   recentExpenses,
   accounts,
   expenseCategories,
+  lineItems,
   isSubmitting,
   onConfirm,
   onOpenChange,
@@ -57,6 +67,7 @@ export function CheckOffSheet({
   recentExpenses: Transaction[];
   accounts: Account[];
   expenseCategories: Category[];
+  lineItems: TransactionLineItem[];
   isSubmitting: boolean;
   onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
   onOpenChange: (open: boolean) => void;
@@ -86,6 +97,7 @@ export function CheckOffSheet({
           recentExpenses={recentExpenses}
           accounts={accounts}
           expenseCategories={expenseCategories}
+          lineItems={lineItems}
           isSubmitting={isSubmitting}
           onConfirm={onConfirm}
         />
@@ -100,6 +112,7 @@ function CheckOffSheetForm({
   recentExpenses,
   accounts,
   expenseCategories,
+  lineItems,
   isSubmitting,
   onConfirm,
 }: {
@@ -108,10 +121,17 @@ function CheckOffSheetForm({
   recentExpenses: Transaction[];
   accounts: Account[];
   expenseCategories: Category[];
+  /** Payments already made, so a part-paid item can show what is left. */
+  lineItems: TransactionLineItem[];
   isSubmitting: boolean;
   onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
 }) {
   const [mode, setMode] = useState<"attach" | "create">("attach");
+  const plans = new Map(
+    selected
+      .filter(isInstallmentPurchase)
+      .map((purchase) => [purchase.id, summariseInstallments(purchase, lineItems)] as const),
+  );
   const [transactionId, setTransactionId] = useState("");
   const [form, setForm] = useState(emptyForm);
   const itemsById = new Map(items.map((item) => [item.id, item]));
@@ -174,8 +194,16 @@ function CheckOffSheetForm({
 
             return (
               <li key={purchase.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                <span className="min-w-0 truncate text-sm">
-                  {itemsById.get(purchase.itemId)?.name ?? "Item"}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm">
+                    {itemsById.get(purchase.itemId)?.name ?? "Item"}
+                  </span>
+                  {plans.get(purchase.id) ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {formatMoney(plans.get(purchase.id)!.remaining)} of{" "}
+                      {formatMoney(plans.get(purchase.id)!.expected)} still to pay
+                    </span>
+                  ) : null}
                 </span>
                 <Input
                   aria-label="Quantity"
@@ -212,21 +240,28 @@ function CheckOffSheetForm({
         ) : null}
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={mode === "attach" ? "default" : "outline"}
-          onClick={() => setMode("attach")}
-        >
-          Existing expense
-        </Button>
-        <Button
-          size="sm"
-          variant={mode === "create" ? "default" : "outline"}
-          onClick={() => setMode("create")}
-        >
-          New expense
-        </Button>
+      <div
+        role="tablist"
+        aria-label="Where the money came from"
+        className="grid grid-cols-2 gap-1 rounded-lg bg-muted/30 p-0.5"
+      >
+        {(["attach", "create"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="tab"
+            aria-selected={mode === option}
+            onClick={() => setMode(option)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              mode === option
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {option === "attach" ? "An expense I have" : "A new expense"}
+          </button>
+        ))}
       </div>
 
       {mode === "attach" ? (
