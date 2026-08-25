@@ -30,6 +30,7 @@ describe("withUrlScheme", () => {
 
     expect(out).toContain("<key>CFBundleURLTypes</key>");
     expect(out).toContain("<string>com.googleusercontent.apps.123-abc</string>");
+    expect(out).toContain("<string>moat</string>");
   });
 
   it("keeps what was already in the file", () => {
