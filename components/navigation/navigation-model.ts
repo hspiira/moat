@@ -9,7 +9,6 @@ import {
   IconFolders,
   IconHome2,
   IconInbox,
-  IconRepeat,
   IconSchool,
   IconSettings,
   IconShoppingCart,
@@ -26,10 +25,9 @@ export const navIcons: Record<string, Icon> = {
   "/accounts": IconBuildingBank,
   "/transactions": IconTransfer,
   "/goals": IconBusinessplan,
-  "/budgets": IconWallet,
+  "/plan": IconWallet,
   "/shopping": IconShoppingCart,
   "/debt": IconCreditCard,
-  "/recurring": IconRepeat,
   "/projects": IconFolders,
   "/learn": IconSchool,
   "/report": IconChartHistogram,
@@ -48,7 +46,7 @@ export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 // groups, so a destination cannot be reachable on one and missing on the other.
 export const navGroups = [
   { title: "As things arrive", hrefs: ["/inbox"] },
-  { title: "Every month", hrefs: ["/month", "/budgets", "/recurring"] },
+  { title: "Every month", hrefs: ["/month", "/plan"] },
   { title: "Look back", hrefs: ["/report", "/projects"] },
   { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt"] },
   { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories", "/settings"] },

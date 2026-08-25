@@ -25,6 +25,8 @@ const MOVED = [
   // three ways of bringing transactions in.
   { from: "/transactions/import", to: "/transactions/capture" },
   { from: "/import", to: "/transactions/capture" },
+  { from: "/budgets", to: "/plan" },
+  { from: "/recurring", to: "/plan" },
   { from: "/transactions/tools", to: "/settings/rules" },
   { from: "/investment-compass", to: "/goals" },
 ];

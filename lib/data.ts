@@ -32,19 +32,14 @@ export const navItems: NavItem[] = [
     description: "Emergency fund and savings goal tracking.",
   },
   {
-    href: "/budgets",
-    label: "Budgets",
-    description: "Monthly spending limits per category.",
+    href: "/plan",
+    label: "Monthly plan",
+    description: "Bills that repeat, and a spending limit per category.",
   },
   {
     href: "/debt",
     label: "Money owed",
     description: "What you owe, what you are owed, and when each clears.",
-  },
-  {
-    href: "/recurring",
-    label: "Recurring bills",
-    description: "Rent, school fees, and other repeating obligations.",
   },
   {
     href: "/projects",
