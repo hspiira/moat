@@ -4,6 +4,7 @@ import {
   SHORTCUT_TEST_MESSAGE,
   SHORTCUT_TEXT_TOKEN,
   buildCaptureUrl,
+  buildIntentSteps,
   buildShortcutSteps,
   buildShortcutUrlTemplate,
   buildTestCaptureUrl,
@@ -105,5 +106,25 @@ describe("buildTestCaptureUrl", () => {
 
   it("says it is a test when no sender was configured", () => {
     expect(parseNativeCaptureUrl(buildTestCaptureUrl())?.sourceTitle).toBe("Moat test");
+  });
+});
+
+describe("buildIntentSteps", () => {
+  /* The shorter recipe for a phone that has the action. No url is built, so
+     there is no line to paste and nothing to url-encode. */
+  it("names the senders and never mentions a url", () => {
+    const steps = buildIntentSteps(["MTN MoMo", "Stanbic"]);
+
+    expect(steps.join(" ")).toContain("MTN MoMo, Stanbic");
+    expect(steps.join(" ")).toContain("Capture money message");
+    expect(steps.join(" ")).not.toContain("moat://");
+  });
+
+  it("is shorter than the url recipe it replaces", () => {
+    expect(buildIntentSteps([]).length).toBeLessThan(buildShortcutSteps([]).length);
+  });
+
+  it("still reads as instructions before any sender is added", () => {
+    expect(buildIntentSteps([]).join(" ")).toContain("the bank or wallet you want captured");
   });
 });

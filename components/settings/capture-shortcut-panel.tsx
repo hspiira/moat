@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import {
+  buildIntentSteps,
   buildShortcutSteps,
   buildShortcutUrlTemplate,
   buildTestCaptureUrl,
@@ -34,7 +35,8 @@ export function CaptureShortcutPanel() {
   const [draft, setDraft] = useState("");
 
   const template = buildShortcutUrlTemplate(preferences.senders[0]);
-  const steps = buildShortcutSteps(preferences.senders);
+  const intentSteps = buildIntentSteps(preferences.senders);
+  const urlSteps = buildShortcutSteps(preferences.senders);
 
   function update(next: CaptureShortcutPreferences) {
     setPreferences(next);
@@ -139,23 +141,42 @@ export function CaptureShortcutPanel() {
         </div>
 
         <div className="grid gap-2">
-          <div className="text-xs text-muted-foreground">Your Shortcut recipe</div>
+          <div className="text-xs text-foreground">
+            If Shortcuts offers Moat&rsquo;s &ldquo;Capture money message&rdquo; action
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Use this one. The message is handed over as a value, so it never becomes part of a
+            web address.
+          </div>
           <ol className="grid list-decimal gap-1 pl-5 text-xs text-muted-foreground">
-            {steps.map((step) => (
+            {intentSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="grid gap-2">
+          <div className="text-xs text-foreground">If it does not</div>
+          <div className="text-xs text-muted-foreground">
+            An older iPhone opens Moat with a link instead. It works the same way once it lands.
+          </div>
+          <ol className="grid list-decimal gap-1 pl-5 text-xs text-muted-foreground">
+            {urlSteps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
           <code className="overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs text-foreground">
             {template}
           </code>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => void copyTemplate()}>
-              Copy the line
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={sendTestCapture}>
-              Send a test capture
-            </Button>
-          </div>
+          <Button type="button" size="sm" variant="outline" onClick={() => void copyTemplate()}>
+            Copy the line
+          </Button>
+        </div>
+
+        <div>
+          <Button type="button" size="sm" variant="outline" onClick={sendTestCapture}>
+            Send a test capture
+          </Button>
         </div>
       </CardContent>
     </Card>

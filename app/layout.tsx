@@ -10,6 +10,8 @@ import { DailyDriveBackup } from "@/components/daily-drive-backup";
 import { AppSelfHeal } from "@/components/app-self-heal";
 import { ToastProvider } from "@/components/ui/toast";
 import { NativeCaptureBridgeRegister } from "@/components/native-capture-bridge-register";
+import { NativeCaptureIntentIntake } from "@/components/native-capture-intent-intake";
+import { NativeCaptureUrlListener } from "@/components/native-capture-url-listener";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://moat.local"),
@@ -64,6 +66,8 @@ export default function RootLayout({
               <DailyDriveBackup />
               <AppSelfHeal />
               <NativeCaptureBridgeRegister />
+              <NativeCaptureUrlListener />
+              <NativeCaptureIntentIntake />
               <PinLockGate>{children}</PinLockGate>
             </PinLockProvider>
           </ToastProvider>

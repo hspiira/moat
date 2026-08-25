@@ -1,4 +1,5 @@
 import type { NativeCapturePayload } from "./capture-bridge";
+import { readCaptureTimestamp } from "./capture-timestamp";
 
 const CAPTURE_SCHEME = "moat:";
 const CAPTURE_HOST = "capture";
@@ -9,15 +10,6 @@ const CAPTURE_HOST = "capture";
  * A custom URL is untrusted input, so it is accepted only for the capture
  * scheme/host and always enters the existing review queue as shared text.
  */
-// This becomes the stored and synced timestamp on the review item, so a shortcut
-// that sends something other than a date must not write one. Dropped rather than
-// refused, because the message is worth more than the time it claims to be from.
-function readTimestamp(value: string | null): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  return Number.isNaN(new Date(trimmed).getTime()) ? undefined : trimmed;
-}
-
 export function parseNativeCaptureUrl(rawUrl: string): NativeCapturePayload | null {
   let url: URL;
   try {
@@ -42,6 +34,6 @@ export function parseNativeCaptureUrl(rawUrl: string): NativeCapturePayload | nu
     source: "shared_text",
     rawContent,
     sourceTitle: sourceTitle || undefined,
-    occurredAt: readTimestamp(url.searchParams.get("occurredAt")),
+    occurredAt: readCaptureTimestamp(url.searchParams.get("occurredAt")),
   };
 }

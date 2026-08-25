@@ -28,6 +28,26 @@ export function buildShortcutUrlTemplate(sender?: string): string {
   return `${CAPTURE_URL}?text=${SHORTCUT_TEXT_TOKEN}${suffix}`;
 }
 
+/**
+ * The shorter recipe, for a phone where Moat's own Shortcuts action is present.
+ * It carries the message as a value rather than inside a url, so the text never
+ * reaches anywhere a url is kept.
+ */
+export function buildIntentSteps(senders: string[]): string[] {
+  const named = senders.filter((sender) => sender.trim());
+  const senderStep = named.length
+    ? `Set "Sender" to ${named.join(", ")}.`
+    : 'Set "Sender" to the bank or wallet you want captured.';
+
+  return [
+    'In Shortcuts, open Automation and add a new "Message" automation.',
+    senderStep,
+    "Choose Run Immediately if your iPhone offers it, so nothing has to be confirmed.",
+    'Add Moat\'s "Capture money message" action.',
+    "Pass the message content to Message, and the sender to Sender.",
+  ];
+}
+
 export function buildShortcutSteps(senders: string[]): string[] {
   const named = senders.filter((sender) => sender.trim());
   const senderStep = named.length
