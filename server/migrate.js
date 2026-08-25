@@ -90,6 +90,15 @@ create table if not exists sync_identities (
 create index if not exists sync_identities_user
   on sync_identities (user_id);
 
+-- One clock for every timestamp the server writes: an updated_at stamped by a
+-- machine running behind lands under a cursor a client already holds, and that
+-- record is then one it can never pull. Milliseconds because these are compared
+-- as text, and a wider fraction would not sort against the values already written.
+create or replace function moat_now_iso() returns text
+  language sql
+  stable
+  as $$ select to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') $$;
+
 alter table sync_records enable row level security;
 alter table sync_records force row level security;
 alter table sync_applied_outbox enable row level security;

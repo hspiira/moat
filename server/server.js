@@ -571,9 +571,9 @@ function createServerVersionToken() {
 async function ensureUser(client, userId) {
   await client.query(
     `insert into sync_users (user_id, created_at)
-     values ($1, $2)
+     values ($1, moat_now_iso())
      on conflict (user_id) do nothing`,
-    [userId, (/* @__PURE__ */ new Date()).toISOString()]
+    [userId]
   );
 }
 async function writeRecord(client, params) {
@@ -582,7 +582,7 @@ async function writeRecord(client, params) {
        user_id, entity_type, entity_id, payload, deleted,
        updated_at, server_version_token, last_outbox_id, last_device_id
      )
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     values ($1, $2, $3, $4, $5, moat_now_iso(), $6, $7, $8)
      on conflict (user_id, entity_type, entity_id) do update set
        payload = excluded.payload,
        deleted = excluded.deleted,
@@ -597,7 +597,6 @@ async function writeRecord(client, params) {
       params.entityId,
       params.payload,
       params.deleted,
-      (/* @__PURE__ */ new Date()).toISOString(),
       createServerVersionToken(),
       params.outboxId,
       params.deviceId ?? null
@@ -608,9 +607,9 @@ async function writeRecord(client, params) {
 async function markOutboxApplied(client, userId, outboxId) {
   await client.query(
     `insert into sync_applied_outbox (user_id, outbox_id, applied_at)
-     values ($1, $2, $3)
+     values ($1, $2, moat_now_iso())
      on conflict (user_id, outbox_id) do nothing`,
-    [userId, outboxId, (/* @__PURE__ */ new Date()).toISOString()]
+    [userId, outboxId]
   );
 }
 function isBasedOnCurrent(params) {
