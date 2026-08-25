@@ -12,9 +12,10 @@ import {
   type Icon,
 } from "@tabler/icons-react";
 
-import { useHasNativeBridge } from "@/components/hooks/use-native-bridge";
+import { useHasNativeBridge, useIsIosApp } from "@/components/hooks/use-native-bridge";
 import { BackupPanel } from "./settings/backup-panel";
 import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
+import { CaptureShortcutPanel } from "./settings/capture-shortcut-panel";
 import { DataExportPanel } from "./settings/data-export-panel";
 import { DeleteAccountPanel } from "./settings/delete-account-panel";
 import { PasskeyPanel } from "./settings/passkey-panel";
@@ -76,6 +77,7 @@ function SettingsNavRow({
 
 export function SettingsWorkspace() {
   const hasNativeBridge = useHasNativeBridge();
+  const isIos = useIsIosApp();
   return (
     <div className="grid gap-8">
       <div className="space-y-1">
@@ -113,6 +115,16 @@ export function SettingsWorkspace() {
           description="Let Moat pick up money messages from your phone and send them to review before they post."
         >
           <CaptureAutomationPanel />
+        </SettingsSection>
+      ) : null}
+
+      {isIos ? (
+        <SettingsSection
+          icon={IconRss}
+          title="Capture automation"
+          description="Hand your money messages to Moat with a Shortcut, and review them before they post."
+        >
+          <CaptureShortcutPanel />
         </SettingsSection>
       ) : null}
 

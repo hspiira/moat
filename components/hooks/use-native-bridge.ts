@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { isIosApp } from "@/lib/native/platform";
 import { hasNativeStorageBridge } from "@/lib/native/storage-bridge";
 
 export function useHasNativeBridge(): boolean {
@@ -11,4 +12,13 @@ export function useHasNativeBridge(): boolean {
     setHasBridge(hasNativeStorageBridge());
   }, []);
   return hasBridge;
+}
+
+export function useIsIosApp(): boolean {
+  const [isIos, setIsIos] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsIos(isIosApp());
+  }, []);
+  return isIos;
 }
