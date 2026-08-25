@@ -41,6 +41,8 @@ type Props = {
   month: string;
   categories: Category[];
   budgets: BudgetTarget[];
+  /** Off when the page states the month's position above this panel. */
+  showSummary?: boolean;
   transactions: Transaction[];
   form: {
     budgetId: string | null;
@@ -75,6 +77,7 @@ export function BudgetManagerPanel({
   onEdit,
   onDelete,
   onCancelEdit,
+  showSummary = true,
 }: Props) {
   const del = useConfirmDelete<{ budgetId: string }>((envelope) => onDelete(envelope.budgetId));
   const [targetError, setTargetError] = useState<string | null>(null);
@@ -144,6 +147,7 @@ export function BudgetManagerPanel({
 
   return (
     <div id="budgets" className="grid min-w-0 scroll-mt-20 gap-4">
+      {showSummary ? (
       <div className="grid gap-1 pt-2">
         {position.allocated === 0 ? (
           <>
@@ -192,6 +196,7 @@ export function BudgetManagerPanel({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       <div className="flex gap-2">
         <Button type="button" onClick={openForCreate} className="flex-1 sm:flex-none sm:px-6">

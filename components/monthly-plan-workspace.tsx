@@ -2,6 +2,7 @@
 
 import { BudgetManagerPanel } from "@/components/budgets/budget-manager-panel";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { MonthlyPlanHeadline } from "@/components/monthly-plan-headline";
 import { todayIso } from "@/lib/today";
 
 import { RecurringObligationsPanel } from "./transactions/recurring-obligations-panel";
@@ -26,6 +27,14 @@ export function MonthlyPlanWorkspace() {
       setupMessage="Complete onboarding and add at least one account before planning a month."
     >
       <div className="grid gap-8">
+        <MonthlyPlanHeadline
+          month={workspace.closePeriod}
+          budgets={workspace.budgets}
+          categories={workspace.categories}
+          transactions={workspace.transactions}
+          evaluations={workspace.recurringEvaluations}
+        />
+
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">Bills that repeat</h2>
           <p className="text-sm text-muted-foreground">
@@ -40,6 +49,7 @@ export function MonthlyPlanWorkspace() {
             isSubmitting={workspace.isSubmitting}
             onSaveObligation={(obligation) => void workspace.saveObligation(obligation)}
             onToggleObligation={(obligation) => void workspace.toggleObligation(obligation)}
+            showSummary={false}
           />
         </section>
 
@@ -60,6 +70,7 @@ export function MonthlyPlanWorkspace() {
             onEdit={workspace.editBudget}
             onDelete={(budgetId) => void workspace.deleteBudget(budgetId)}
             onCancelEdit={workspace.cancelBudgetEdit}
+            showSummary={false}
           />
         </section>
       </div>

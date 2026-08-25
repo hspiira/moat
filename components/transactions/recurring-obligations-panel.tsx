@@ -87,6 +87,8 @@ type Props = {
   obligations: RecurringObligation[];
   today: string;
   isSubmitting: boolean;
+  /** Off when the page states the month's position above this panel. */
+  showSummary?: boolean;
   onSaveObligation: (
     obligation: Omit<RecurringObligation, "id" | "userId" | "createdAt" | "updatedAt">,
   ) => void;
@@ -100,6 +102,7 @@ export function RecurringObligationsPanel({
   obligations,
   today,
   isSubmitting,
+  showSummary = true,
   onSaveObligation,
   onToggleObligation,
 }: Props) {
@@ -169,6 +172,7 @@ export function RecurringObligationsPanel({
 
   return (
     <div id="recurring" className="grid min-w-0 scroll-mt-20 gap-4">
+      {showSummary ? (
       <div className="grid gap-1 pt-2">
         <p className="text-sm text-muted-foreground">Still to pay this month</p>
         <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
@@ -184,6 +188,7 @@ export function RecurringObligationsPanel({
           {sections.paused.length > 0 ? ` · ${sections.paused.length} paused` : ""}
         </p>
       </div>
+      ) : null}
 
       <div className="flex gap-2">
         <Button type="button" onClick={() => openForCreate()} className="flex-1 sm:flex-none sm:px-6">
