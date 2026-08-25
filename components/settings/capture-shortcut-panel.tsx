@@ -14,6 +14,7 @@ import {
   buildTestCaptureUrl,
 } from "@/lib/capture/shortcut-recipe";
 import { enqueueNativeCapturePayload } from "@/lib/native/capture-bridge";
+import { drainIntentCaptures } from "@/lib/native/capture-intent-bridge";
 import { parseNativeCaptureUrl } from "@/lib/native/capture-deep-link";
 import {
   addCaptureShortcutSender,
@@ -79,6 +80,33 @@ export function CaptureShortcutPanel() {
 
     enqueueNativeCapturePayload(payload);
     show("Test message sent. Look for it in capture review.");
+  }
+
+  /* Three outcomes worth telling apart when a shortcut run does not show up:
+     the action is not in this build, it ran but wrote nothing, or it wrote and
+     the messages are here. Reported rather than swallowed, because guessing
+     between them from an empty inbox is the hard way. */
+  async function checkQueue() {
+    const drained = await drainIntentCaptures();
+
+    if (drained.status === "unreachable") {
+      show(`Moat's capture action is not reachable: ${drained.detail}`, "error");
+      return;
+    }
+
+    if (drained.payloads.length === 0) {
+      show("The action answered, and nothing was waiting.");
+      return;
+    }
+
+    for (const payload of drained.payloads) {
+      enqueueNativeCapturePayload(payload);
+    }
+    show(
+      `Took ${drained.payloads.length} waiting ${
+        drained.payloads.length === 1 ? "message" : "messages"
+      }. Look in capture review.`,
+    );
   }
 
   return (
@@ -173,9 +201,12 @@ export function CaptureShortcutPanel() {
           </Button>
         </div>
 
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={sendTestCapture}>
             Send a test capture
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => void checkQueue()}>
+            Check for queued captures
           </Button>
         </div>
       </CardContent>

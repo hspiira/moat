@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { toNativeCapturePayload, toNativeCapturePayloads } from "./capture-intent-bridge";
 
@@ -85,5 +85,70 @@ describe("toNativeCapturePayloads", () => {
 
   it("reads nothing out of an empty queue", () => {
     expect(toNativeCapturePayloads([])).toEqual([]);
+  });
+});
+
+describe("drainIntentCaptures", () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.unstubAllGlobals();
+    vi.doUnmock("@capacitor/core");
+  });
+
+  /* An empty queue and an absent action look the same from the inbox, and only
+     one of them means the build is missing the action. */
+  it("says the action answered when the queue is empty", async () => {
+    vi.stubGlobal("window", {});
+    vi.doMock("@capacitor/core", () => ({
+      registerPlugin: () => ({ takePending: async () => ({ payloads: [] }) }),
+    }));
+
+    const { drainIntentCaptures } = await import("./capture-intent-bridge");
+
+    expect(await drainIntentCaptures()).toEqual({ status: "ok", payloads: [] });
+  });
+
+  it("hands back what the action queued", async () => {
+    vi.stubGlobal("window", {});
+    vi.doMock("@capacitor/core", () => ({
+      registerPlugin: () => ({
+        takePending: async () => ({
+          payloads: [{ message: "Sent UGX 5,000", sender: "MTN MoMo" }],
+        }),
+      }),
+    }));
+
+    const { drainIntentCaptures } = await import("./capture-intent-bridge");
+    const drained = await drainIntentCaptures();
+
+    expect(drained.status).toBe("ok");
+    expect(drained.status === "ok" && drained.payloads[0]).toMatchObject({
+      rawContent: "Sent UGX 5,000",
+      sourceTitle: "MTN MoMo",
+    });
+  });
+
+  it("says why when the action cannot be reached", async () => {
+    vi.stubGlobal("window", {});
+    vi.doMock("@capacitor/core", () => ({
+      registerPlugin: () => ({
+        takePending: async () => {
+          throw new Error('"MoatCapture" plugin is not implemented on ios');
+        },
+      }),
+    }));
+
+    const { drainIntentCaptures } = await import("./capture-intent-bridge");
+
+    expect(await drainIntentCaptures()).toEqual({
+      status: "unreachable",
+      detail: '"MoatCapture" plugin is not implemented on ios',
+    });
+  });
+
+  it("takes nothing rather than throwing when there is no window", async () => {
+    const { drainIntentCaptures } = await import("./capture-intent-bridge");
+
+    expect((await drainIntentCaptures()).status).toBe("unreachable");
   });
 });

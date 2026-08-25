@@ -43,6 +43,11 @@ enum MoatCaptureQueue {
             pending.removeFirst(pending.count - limit)
         }
         UserDefaults.standard.set(pending, forKey: storageKey)
+
+        // The action runs without bringing the app to the front, so the process
+        // that wrote this can be gone moments later. Written out now rather than
+        // whenever the system would have got round to it.
+        UserDefaults.standard.synchronize()
     }
 
     /// Hands over everything held and clears it in the same breath, so a payload

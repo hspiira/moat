@@ -12,6 +12,16 @@ export type MoatCapturePlugin = {
   takePending(): Promise<{ payloads?: unknown }>;
 };
 
+/**
+ * Told apart on purpose. A queue that answered and was empty means the action
+ * never wrote; a queue that could not be reached means the action is not
+ * installed in this build. Swallowing both as "nothing to do" is what made the
+ * difference invisible.
+ */
+export type IntentCaptureDrain =
+  | { status: "ok"; payloads: NativeCapturePayload[] }
+  | { status: "unreachable"; detail: string };
+
 function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -45,22 +55,26 @@ export function toNativeCapturePayloads(payloads: unknown): NativeCapturePayload
     .filter((payload): payload is NativeCapturePayload => payload !== null);
 }
 
-/**
- * Takes whatever the Shortcuts action has queued.
- *
- * The plugin is absent on the web and on any build that predates it, and a
- * missing action is not a failure worth surfacing, so nothing is thrown either
- * way.
- */
-export async function takePendingIntentCaptures(): Promise<NativeCapturePayload[]> {
-  if (typeof window === "undefined") return [];
+/** Takes whatever the Shortcuts action has queued, and says so when it cannot. */
+export async function drainIntentCaptures(): Promise<IntentCaptureDrain> {
+  if (typeof window === "undefined") {
+    return { status: "unreachable", detail: "Not running in the app." };
+  }
 
   try {
     const { registerPlugin } = await import("@capacitor/core");
     const plugin = registerPlugin<MoatCapturePlugin>("MoatCapture");
     const result = await plugin.takePending();
-    return toNativeCapturePayloads(result?.payloads);
-  } catch {
-    return [];
+    return { status: "ok", payloads: toNativeCapturePayloads(result?.payloads) };
+  } catch (error) {
+    return {
+      status: "unreachable",
+      detail: error instanceof Error ? error.message : "The capture action did not answer.",
+    };
   }
+}
+
+export async function takePendingIntentCaptures(): Promise<NativeCapturePayload[]> {
+  const drained = await drainIntentCaptures();
+  return drained.status === "ok" ? drained.payloads : [];
 }
