@@ -278,11 +278,10 @@ function resolveSsl() {
       return { rejectUnauthorized: true };
   }
 }
-async function withUserTransaction(userId, run) {
+async function withTransaction(run) {
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
     const result = await run(client);
     await client.query("commit");
     return result;
@@ -294,6 +293,12 @@ async function withUserTransaction(userId, run) {
     client.release();
   }
 }
+async function withUserTransaction(userId, run) {
+  return withTransaction(async (client) => {
+    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
+    return run(client);
+  });
+}
 
 // src/db/credentials.ts
 function hashSyncToken(token) {
@@ -304,11 +309,19 @@ function generateSyncToken() {
 }
 async function mintSyncCredential(userId, label) {
   const token = generateSyncToken();
-  await getPool().query(
-    `insert into sync_credentials (token_sha256, user_id, label, created_at)
-     values ($1, $2, $3, $4)`,
-    [hashSyncToken(token), userId, label ?? null, (/* @__PURE__ */ new Date()).toISOString()]
-  );
+  await withTransaction(async (client) => {
+    await client.query(
+      `insert into sync_users (user_id, created_at)
+       values ($1, moat_now_iso())
+       on conflict (user_id) do nothing`,
+      [userId]
+    );
+    await client.query(
+      `insert into sync_credentials (token_sha256, user_id, label, created_at)
+       values ($1, $2, $3, moat_now_iso())`,
+      [hashSyncToken(token), userId, label ?? null]
+    );
+  });
   return token;
 }
 async function resolveSyncCredential(token) {

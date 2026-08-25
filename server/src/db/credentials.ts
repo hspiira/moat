@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { getPool } from "./pool.js";
+import { getPool, withTransaction } from "./pool.js";
 
 export function hashSyncToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
@@ -13,11 +13,21 @@ export function generateSyncToken(): string {
 export async function mintSyncCredential(userId: string, label?: string): Promise<string> {
   const token = generateSyncToken();
 
-  await getPool().query(
-    `insert into sync_credentials (token_sha256, user_id, label, created_at)
-     values ($1, $2, $3, $4)`,
-    [hashSyncToken(token), userId, label ?? null, new Date().toISOString()],
-  );
+  // The credential references the user now, so a token minted by hand for a
+  // ledger that has never synced has to bring that row with it.
+  await withTransaction(async (client) => {
+    await client.query(
+      `insert into sync_users (user_id, created_at)
+       values ($1, moat_now_iso())
+       on conflict (user_id) do nothing`,
+      [userId],
+    );
+    await client.query(
+      `insert into sync_credentials (token_sha256, user_id, label, created_at)
+       values ($1, $2, $3, moat_now_iso())`,
+      [hashSyncToken(token), userId, label ?? null],
+    );
+  });
 
   return token;
 }

@@ -37,15 +37,13 @@ export async function closePool() {
   pool = null;
 }
 
-export async function withUserTransaction<T>(
-  userId: string,
+export async function withTransaction<T>(
   run: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
   const client = await getPool().connect();
 
   try {
     await client.query("begin");
-    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
     const result = await run(client);
     await client.query("commit");
     return result;
@@ -55,4 +53,14 @@ export async function withUserTransaction<T>(
   } finally {
     client.release();
   }
+}
+
+export async function withUserTransaction<T>(
+  userId: string,
+  run: (client: pg.PoolClient) => Promise<T>,
+): Promise<T> {
+  return withTransaction(async (client) => {
+    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
+    return run(client);
+  });
 }

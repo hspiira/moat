@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { closePool, getPool } from "./pool.js";
+import { dropSyncTablesSql } from "./schema-reset.js";
 import {
   hashSyncToken,
   mintSyncCredential,
@@ -14,7 +15,7 @@ const describeDb = hasDatabase ? describe : describe.skip;
 
 describeDb("sync credentials", () => {
   beforeEach(async () => {
-    await getPool().query("drop table if exists sync_credentials");
+    await getPool().query(dropSyncTablesSql());
     await getPool().query(SCHEMA_SQL);
   });
 
@@ -74,5 +75,56 @@ describeDb("sync credentials", () => {
       "select last_used_at from sync_credentials",
     );
     expect(rows.rows[0].last_used_at).not.toBeNull();
+  });
+
+  it("stops resolving a token once its user is deleted", async () => {
+    const token = await mintSyncCredential("user:ada");
+
+    await getPool().query("delete from sync_users where user_id = $1", ["user:ada"]);
+
+    expect(await resolveSyncCredential(token)).toBeNull();
+  });
+
+  it("brings the user row with a token minted for a ledger that has never synced", async () => {
+    await mintSyncCredential("user:unsynced");
+
+    const users = await getPool().query("select user_id from sync_users where user_id = $1", [
+      "user:unsynced",
+    ]);
+
+    expect(users.rows).toHaveLength(1);
+  });
+
+  /* The table shipped without the key, so the deployments that matter are the
+     ones already holding rows. Dropping their tokens to add the constraint
+     would sign every device out. */
+  it("keeps the tokens on a credentials table that predates the key", async () => {
+    await getPool().query("drop table if exists sync_credentials cascade");
+    await getPool().query(`
+      create table sync_credentials (
+        token_sha256 text primary key,
+        user_id      text not null,
+        label        text,
+        created_at   text not null,
+        last_used_at text
+      );
+    `);
+    await getPool().query(
+      `insert into sync_credentials (token_sha256, user_id, label, created_at)
+       values ($1, 'user:legacy', 'hand-minted', '2026-01-01T00:00:00.000Z')`,
+      [hashSyncToken("legacy-token")],
+    );
+
+    await getPool().query(SCHEMA_SQL);
+
+    expect(await resolveSyncCredential("legacy-token")).toBe("user:legacy");
+
+    const constraint = await getPool().query(
+      "select 1 from pg_constraint where conname = 'sync_credentials_user_fk'",
+    );
+    expect(constraint.rowCount).toBe(1);
+
+    await getPool().query("delete from sync_users where user_id = $1", ["user:legacy"]);
+    expect(await resolveSyncCredential("legacy-token")).toBeNull();
   });
 });

@@ -6,7 +6,9 @@ create table if not exists sync_users (
 
 create table if not exists sync_credentials (
   token_sha256 text primary key,
-  user_id      text not null,
+  user_id      text not null
+                 constraint sync_credentials_user_fk
+                 references sync_users(user_id) on delete cascade,
   label        text,
   created_at   text not null,
   last_used_at text
@@ -62,6 +64,27 @@ create or replace function moat_now_iso() returns text
   language sql
   stable
   as $$ select to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') $$;
+
+-- Applied by name because an existing deployment skips the create above. Until
+-- it holds, deleting a user leaves its tokens working: resolving one reads only
+-- sync_credentials, and the next push recreates the user row it named.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'sync_credentials_user_fk') then
+    -- Hand-minted tokens for a ledger that has not synced yet have no user row
+    -- and are legitimate, so the rows are filled in rather than the tokens cut.
+    insert into sync_users (user_id, created_at)
+    select distinct c.user_id, moat_now_iso()
+      from sync_credentials c
+     where not exists (select 1 from sync_users u where u.user_id = c.user_id)
+    on conflict (user_id) do nothing;
+
+    alter table sync_credentials
+      add constraint sync_credentials_user_fk
+      foreign key (user_id) references sync_users(user_id) on delete cascade;
+  end if;
+end
+$$;
 
 alter table sync_records enable row level security;
 alter table sync_records force row level security;
