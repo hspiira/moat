@@ -5,7 +5,7 @@ import { IconAlertTriangle, IconCheck, IconChevronRight, IconCopy } from "@table
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { formatDate } from "@/lib/format-date";
-import { canApproveCaptureItem } from "@/lib/domain/capture-review";
+import { canApproveCaptureItem, describeCaptureReviewReason } from "@/lib/domain/capture-review";
 import type { Account, CaptureReviewItem, Category } from "@/lib/types";
 
 const inflowTypes = new Set(["income"]);
@@ -33,6 +33,7 @@ export function CaptureReviewRow({
   const label = item.payee || category?.name || "Unlabeled capture";
   const isSettled = item.status === "approved" || item.status === "rejected";
   const canApprove = canApproveCaptureItem(item);
+  const reason = describeCaptureReviewReason(item);
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -48,15 +49,24 @@ export function CaptureReviewRow({
               {formatDate(item.occurredOn)} · {account?.name ?? "Unknown account"}
             </span>
             {item.status === "duplicate" ? (
-              <IconCopy aria-label="Possible duplicate" className="size-3.5 shrink-0 text-muted-foreground" />
+              <IconCopy aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
             ) : item.status === "needs_review" ? (
-              <IconAlertTriangle aria-label="Needs a second look" className="size-3.5 shrink-0 text-neg" />
+              <IconAlertTriangle aria-hidden className="size-3.5 shrink-0 text-neg" />
             ) : null}
           </div>
           <div className="truncate text-xs text-muted-foreground">
             {label}
             {category ? ` · ${category.name}` : ""}
           </div>
+          {reason ? (
+            <div
+              className={`truncate text-xs ${
+                item.status === "duplicate" ? "text-muted-foreground" : "text-neg"
+              }`}
+            >
+              {reason}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-0.5">

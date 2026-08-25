@@ -128,11 +128,11 @@ describe("createCaptureReviewItem", () => {
     ).toBe("duplicate");
   });
 
-  /* The status follows what the parse raised, and the listed issues are worked
-     out again from the amount and currency alone. A capture whose only problem
-     was its date therefore asks to be reviewed while listing no issue, and the
-     reason is carried in its field warnings instead. Worth knowing before
-     anything renders `issues` as the whole answer to why an item is here. */
+  /* The status follows what the parse raised, while the listed issues are worked
+     out again from the amount and currency alone, so the two can disagree. No
+     real message reaches this today, because a date that cannot be read falls
+     back to today rather than going missing. Held here so that the day one does,
+     it is a failing test rather than a row that says nothing. */
   it("can ask for review while listing no issue of its own", () => {
     const item = createCaptureReviewItem({
       ...identity,

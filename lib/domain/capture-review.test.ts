@@ -5,6 +5,7 @@ import type { CaptureReviewItem, CaptureReviewSnapshot, Transaction } from "@/li
 import {
   canApproveCaptureItem,
   captureReviewSections,
+  describeCaptureReviewReason,
   diffCaptureFromOriginal,
   getSectionCounts,
   getSectionItems,
@@ -250,5 +251,80 @@ describe("diffCaptureFromOriginal", () => {
     expect(diffCaptureFromOriginal(item({ id: "a", feeAmount: 500 }))).toEqual([
       { field: "feeAmount", label: "Fee", from: undefined, to: 500 },
     ]);
+  });
+});
+
+describe("describeCaptureReviewReason", () => {
+  /* A row has one line for this. Without it the only sign an item was held is a
+     coloured triangle, and the reason sits behind opening the item. */
+  it("says nothing about an item nothing was raised on", () => {
+    expect(describeCaptureReviewReason(item({ id: "capture-review:1", status: "new", issues: [] }))).toBeNull();
+  });
+
+  it("says nothing about an item already settled", () => {
+    expect(describeCaptureReviewReason(item({ id: "capture-review:2", status: "approved", issues: [] }))).toBeNull();
+    expect(describeCaptureReviewReason(item({ id: "capture-review:3", status: "rejected", issues: [] }))).toBeNull();
+  });
+
+  it("gives the first issue as the reason", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({ id: "capture-review:4", status: "needs_review", issues: ["Missing FX rate", "Invalid amount"] }),
+      ),
+    ).toBe("Missing FX rate");
+  });
+
+  /* The status is decided from what the parse raised while the issues are worked
+     out again from the amount and currency, so an item can be held with nothing
+     listed. The warnings are what is left to answer with. */
+  it("falls back to a warning when the issue list is empty", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({
+          id: "capture-review:x7",
+          status: "needs_review",
+          issues: [],
+          fieldWarnings: [
+            { field: "date", level: "warning", message: "Date was not found in the captured text." },
+          ],
+        }),
+      ),
+    ).toBe("Date was not found in the captured text.");
+  });
+
+  it("passes over a warning that only informs", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({
+          id: "capture-review:x7",
+          status: "needs_review",
+          issues: [],
+          fieldWarnings: [
+            { field: "payee", level: "info", message: "Payee or counterparty could not be identified." },
+          ],
+        }),
+      ),
+    ).toBe("Needs a second look");
+  });
+
+  it("still answers when there is nothing at all to go on", () => {
+    expect(
+      describeCaptureReviewReason(item({ id: "capture-review:5", status: "needs_review", issues: [], fieldWarnings: [] })),
+    ).toBe("Needs a second look");
+  });
+
+  /* Which side it repeats changes what the reviewer should do about it: one is
+     already posted, the other is still waiting beside it. */
+  it("says which side a duplicate repeats", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({ id: "capture-review:6", status: "duplicate", duplicateTransactionId: "transaction:1" }),
+      ),
+    ).toBe("Already in the ledger");
+    expect(
+      describeCaptureReviewReason(
+        item({ id: "capture-review:7", status: "duplicate", duplicateCaptureReviewItemId: "capture-review:9" }),
+      ),
+    ).toBe("Already in the inbox");
   });
 });

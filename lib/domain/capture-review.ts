@@ -65,6 +65,28 @@ export function canApproveCaptureItem(item: CaptureReviewItem) {
   return item.issues.length === 0;
 }
 
+/**
+ * The short reason a capture is being held, for a list row that has space for
+ * one line. The status alone only says that something is wrong.
+ *
+ * Read from the issue list first and the field warnings second, because the
+ * status is decided from what the parse raised while the issues are worked out
+ * again from the amount and currency, and the two can disagree.
+ */
+export function describeCaptureReviewReason(item: CaptureReviewItem): string | null {
+  if (item.status === "duplicate") {
+    return item.duplicateTransactionId ? "Already in the ledger" : "Already in the inbox";
+  }
+
+  if (item.status !== "needs_review") return null;
+
+  return (
+    item.issues[0] ??
+    item.fieldWarnings.find((warning) => warning.level === "warning")?.message ??
+    "Needs a second look"
+  );
+}
+
 export type DuplicateCounterpart = {
   kind: "transaction" | "capture";
   occurredOn: string;
