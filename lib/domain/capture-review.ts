@@ -62,6 +62,9 @@ export function isCaptureItemEditable(item: CaptureReviewItem) {
 export function canApproveCaptureItem(item: CaptureReviewItem) {
   if (item.status === "approved" || item.status === "rejected") return false;
   if (item.approvedTransactionId) return false;
+  // A capture is no longer given a category it did not name, so posting one
+  // without a category would put money in the ledger under nothing at all.
+  if (!item.categoryId) return false;
   return item.issues.length === 0;
 }
 
@@ -77,6 +80,10 @@ export function describeCaptureReviewReason(item: CaptureReviewItem): string | n
   if (item.status === "duplicate") {
     return item.duplicateTransactionId ? "Already in the ledger" : "Already in the inbox";
   }
+
+  // Said before the issue list, because this is the one thing the reviewer has
+  // to supply rather than check.
+  if (!item.categoryId) return "Needs a category";
 
   if (item.status !== "needs_review") return null;
 

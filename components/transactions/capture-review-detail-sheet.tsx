@@ -12,7 +12,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatDate } from "@/lib/format-date";
+import { formatDate, formatDateTime } from "@/lib/format-date";
+import { occurrenceCountOf } from "@/lib/capture/occurrences";
 import {
   canApproveCaptureItem,
   diffCaptureFromOriginal,
@@ -96,6 +97,8 @@ export function CaptureReviewDetailSheet({
   const category = subject ? categories.find((entry) => entry.id === subject.categoryId) : undefined;
   const changes = subject ? diffCaptureFromOriginal(subject) : [];
   const counterpart = item ? resolveDuplicateCounterpart(item, transactions, items) : null;
+  const occurrences = item ? occurrenceCountOf(item) : 1;
+  const moments = item?.occurrenceCapturedAt ?? [];
   const ledgerTransaction = item?.approvedTransactionId
     ? (transactions.find((entry) => entry.id === item.approvedTransactionId) ?? null)
     : null;
@@ -148,6 +151,29 @@ export function CaptureReviewDetailSheet({
                   {item.issues.map((issue, index) => (
                     <div key={`${item.id}:issue:${index}`}>{issue}</div>
                   ))}
+                </div>
+              ) : null}
+
+              {occurrences > 1 ? (
+                <div className="grid gap-1 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="text-foreground">
+                    This message arrived {occurrences} times, kept as one entry.
+                  </div>
+                  {moments.length > 0 ? (
+                    <ul className="grid gap-0.5">
+                      {moments.map((moment, index) => (
+                        <li key={`${item.id}:occurrence:${index}`}>
+                          {formatDateTime(moment)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {occurrences > moments.length && moments.length > 0 ? (
+                    <div>
+                      The {occurrences - moments.length} before these are counted but not
+                      listed.
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

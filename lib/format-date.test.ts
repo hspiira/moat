@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatDate, formatDayHeading } from "@/lib/format-date";
+import { formatDate, formatDateTime, formatDayHeading } from "@/lib/format-date";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -34,5 +34,30 @@ describe("formatDate", () => {
   it("still reads short, for the places that sit beside other text", () => {
     expect(formatDate("2026-08-17")).toBe("17 Aug");
     expect(formatDate("2025-12-31")).toBe("31 Dec 2025");
+  });
+});
+
+describe("formatDateTime", () => {
+  /* Repeats of one captured message usually land on the same day, so a date on
+     its own would print the same line five times. */
+  it("says the time as well as the day", () => {
+    const shown = formatDateTime("2026-04-07T14:35:00.000Z");
+
+    expect(shown).toContain("Apr");
+    expect(shown).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it("gives two arrivals on one day different lines", () => {
+    expect(formatDateTime("2026-04-07T09:00:00.000Z")).not.toBe(
+      formatDateTime("2026-04-07T14:00:00.000Z"),
+    );
+  });
+
+  it("says nothing for nothing", () => {
+    expect(formatDateTime("")).toBe("");
+  });
+
+  it("hands back what it cannot read rather than Invalid Date", () => {
+    expect(formatDateTime("not-a-date")).toBe("not-a-date");
   });
 });

@@ -328,3 +328,45 @@ describe("describeCaptureReviewReason", () => {
     ).toBe("Already in the inbox");
   });
 });
+
+describe("approving without a category", () => {
+  /* Capture no longer hands out a category it did not read from the message, so
+     an item can arrive without one. Posting it would put money in the ledger
+     under no category at all. */
+  it("is refused", () => {
+    expect(
+      canApproveCaptureItem(item({ id: "capture-review:n", status: "new", issues: [], categoryId: "" })),
+    ).toBe(false);
+  });
+
+  it("is allowed once a category is chosen", () => {
+    expect(
+      canApproveCaptureItem(
+        item({ id: "capture-review:n", status: "new", issues: [], categoryId: "category:food" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("says so in the row, whatever the status", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({ id: "capture-review:n", status: "new", issues: [], categoryId: "" }),
+      ),
+    ).toBe("Needs a category");
+  });
+
+  /* The missing category outranks the rest, because it is the one thing the
+     reviewer has to supply rather than merely check. */
+  it("says so ahead of another issue", () => {
+    expect(
+      describeCaptureReviewReason(
+        item({
+          id: "capture-review:n",
+          status: "needs_review",
+          issues: ["Missing FX rate"],
+          categoryId: "",
+        }),
+      ),
+    ).toBe("Needs a category");
+  });
+});

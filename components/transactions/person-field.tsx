@@ -113,7 +113,7 @@ export function PersonField({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search or type a name"
               aria-label="Search people"
-              className="h-9 w-full rounded-md bg-muted/50 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="h-9 w-full rounded-md bg-muted/50 px-3 text-base sm:text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
           </div>
 

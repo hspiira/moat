@@ -21,6 +21,21 @@ export function formatDate(iso: string, options?: FormatOptions): string {
   });
 }
 
+// Occurrences of one captured message often land on the same day, so the time is
+// what tells them apart.
+export function formatDateTime(iso: string, options?: FormatOptions): string {
+  if (!iso) return "";
+  const date = parseIso(iso);
+  if (!date) return iso;
+  return date.toLocaleString("en-UG", {
+    day: "numeric",
+    month: "short",
+    year: yearFor(date, options),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatDayHeading(iso: string, options?: FormatOptions): string {
   if (!iso) return "";
   const date = parseIso(iso);

@@ -160,7 +160,7 @@ export function TransactionsLedgerWorkspace() {
             }}
             placeholder="Search payee, category, note, or amount"
             aria-label="Search transactions"
-            className="h-11 w-full rounded-lg bg-muted/50 pr-10 pl-10 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-11 w-full rounded-lg bg-muted/50 pr-10 pl-10 text-base sm:text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           {query ? (
             <button
