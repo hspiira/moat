@@ -12,7 +12,6 @@ const ROUTES = [
   "/budgets",
   "/debt",
   "/goals",
-  "/import",
   "/inbox",
   "/learn",
   "/month",

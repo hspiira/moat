@@ -7,7 +7,7 @@ import { openSeededApp } from "./harness";
 // record anything. These two are the pages a button sends you to, so the form
 // is the point of arriving. Onboarding is in neither list: it is a wizard, and
 // its first step has nothing to fill in.
-const FORM_IS_THE_PAGE = ["/transactions/capture", "/import"];
+const FORM_IS_THE_PAGE = ["/transactions/capture"];
 
 const ROUTES = [
   "/",

@@ -48,7 +48,7 @@ export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
 // groups, so a destination cannot be reachable on one and missing on the other.
 export const navGroups = [
   { title: "As things arrive", hrefs: ["/inbox"] },
-  { title: "Every month", hrefs: ["/month", "/budgets", "/recurring", "/import"] },
+  { title: "Every month", hrefs: ["/month", "/budgets", "/recurring"] },
   { title: "Look back", hrefs: ["/report", "/projects"] },
   { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt"] },
   { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories", "/settings"] },

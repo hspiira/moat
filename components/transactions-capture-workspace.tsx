@@ -7,20 +7,23 @@ import { cn } from "@/lib/utils";
 import { todayIso } from "@/lib/today";
 import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import type { TransactionType } from "@/lib/types";
+import { CsvImportPanel } from "./transactions/csv-import-panel";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
 import { TransactionForm } from "./transactions/transaction-form";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
-type CaptureMethod = "manual" | "message";
+type CaptureMethod = "manual" | "message" | "statement";
 
 const methods: { id: CaptureMethod; label: string }[] = [
-  { id: "manual", label: "Enter manually" },
-  { id: "message", label: "From a message" },
+  { id: "manual", label: "Type it" },
+  { id: "message", label: "Message" },
+  { id: "statement", label: "Statement" },
 ];
 
 function methodFromCaptureParam(param: string | null): CaptureMethod | null {
   if (param === "text") return "message";
+  if (param === "csv" || param === "statement") return "statement";
   if (param === "expense" || param === "income" || param === "transfer") return "manual";
   return null;
 }
@@ -74,7 +77,7 @@ export function TransactionsCaptureWorkspace() {
         <div
           role="tablist"
           aria-label="Capture method"
-          className="grid grid-cols-2 gap-1 rounded-lg bg-muted/30 p-0.5"
+          className="grid grid-cols-3 gap-1 rounded-lg bg-muted/30 p-0.5"
         >
           {methods.map((entry) => (
             <button
@@ -114,6 +117,15 @@ export function TransactionsCaptureWorkspace() {
             onFormChange={workspace.setTransactionForm}
             onSubmit={(event) => void workspace.handleTransactionSubmit(event)}
             onCancelEdit={workspace.cancelEdit}
+          />
+        ) : method === "statement" ? (
+          <CsvImportPanel
+            accounts={workspace.accounts}
+            categories={workspace.categories}
+            transactions={workspace.transactions}
+            profile={workspace.profile!}
+            onImportSuccess={() => void workspace.loadWorkspace()}
+            onError={workspace.setError}
           />
         ) : (
           <TextCapturePanel

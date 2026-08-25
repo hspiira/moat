@@ -1,14 +1,7 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { TransactionsImportWorkspace } from "@/components/transactions-import-workspace";
-
+// Bringing transactions in is one job with three ways of doing it, so the
+// statement upload lives with the other two rather than as its own destination.
 export default function ImportPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <TransactionsImportWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+  redirect("/transactions/capture?capture=csv");
 }
