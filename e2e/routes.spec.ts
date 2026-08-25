@@ -5,7 +5,6 @@ import { expectNoSidewaysScroll, openSeededApp } from "./harness";
 const DESTINATIONS = [
   { path: "/inbox", heading: /Capture review/i },
   { path: "/month", heading: /Month check/i },
-  { path: "/import", heading: /Import/i },
   { path: "/settings/rules", heading: /Rules/i },
   { path: "/settings/categories", heading: /Categories/i },
 ];
@@ -22,7 +21,12 @@ for (const { path, heading } of DESTINATIONS) {
 const MOVED = [
   { from: "/transactions/review", to: "/inbox" },
   { from: "/transactions/review/month-close", to: "/month" },
-  { from: "/transactions/import", to: "/import" },
+  // Both old import routes now land on the capture page, which owns all
+  // three ways of bringing transactions in.
+  { from: "/transactions/import", to: "/transactions/capture" },
+  { from: "/import", to: "/transactions/capture" },
+  { from: "/budgets", to: "/plan" },
+  { from: "/recurring", to: "/plan" },
   { from: "/transactions/tools", to: "/settings/rules" },
   { from: "/investment-compass", to: "/goals" },
 ];
@@ -30,6 +34,7 @@ const MOVED = [
 for (const { from, to } of MOVED) {
   test(`${from} still lands on ${to}`, async ({ page }) => {
     await openSeededApp(page, from);
-    await expect(page).toHaveURL(new RegExp(`${to}$`));
+    // A destination may carry a query, so the path is what is asserted.
+    await expect(page).toHaveURL(new RegExp(`${to}(\\?.*)?$`));
   });
 }

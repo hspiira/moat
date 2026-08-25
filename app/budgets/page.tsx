@@ -1,14 +1,6 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
-import { BudgetsWorkspace } from "@/components/budgets-workspace";
-
+// Budgets and recurring bills are two halves of one month's plan.
 export default function BudgetsPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <BudgetsWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+  redirect("/plan");
 }

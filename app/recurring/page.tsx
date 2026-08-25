@@ -1,14 +1,5 @@
-import { Suspense } from "react";
-
-import { AppShell } from "@/components/app-shell";
-import { RecurringWorkspace } from "@/components/recurring-workspace";
+import { redirect } from "next/navigation";
 
 export default function RecurringPage() {
-  return (
-    <AppShell>
-      <Suspense fallback={null}>
-        <RecurringWorkspace />
-      </Suspense>
-    </AppShell>
-  );
+  redirect("/plan");
 }

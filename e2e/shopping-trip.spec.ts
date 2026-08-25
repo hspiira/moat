@@ -9,11 +9,11 @@ test("an item can be planned with a unit", async ({ page }) => {
 
   await page.getByRole("button", { name: "Add an item" }).click();
   await page.locator("#planner-name").fill("Sugar");
-  await page.getByRole("button", { name: /quantity, price, date/i }).click();
+  await page.getByRole("button", { name: /quantity, price and date/i }).click();
   await page.locator("#planner-quantity").fill("2");
   await page.locator("#planner-unit").fill("kg");
   await page.locator("#planner-estimate").fill("5000");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add to list" }).click();
   await page.waitForTimeout(1000);
 
   await expect(page.getByText("Sugar").first()).toBeVisible();
@@ -23,7 +23,7 @@ test("the unit offered is one the shop actually uses", async ({ page }) => {
   await openSeededApp(page, "/shopping");
 
   await page.getByRole("button", { name: "Add an item" }).click();
-  await page.getByRole("button", { name: /quantity, price, date/i }).click();
+  await page.getByRole("button", { name: /quantity, price and date/i }).click();
 
   const options = page.locator("#planner-unit-suggestions option");
   await expect(options.first()).toHaveAttribute("value", "kg");

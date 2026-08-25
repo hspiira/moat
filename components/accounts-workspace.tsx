@@ -123,7 +123,7 @@ export function AccountsWorkspace() {
                 Add account
               </Button>
               <Button asChild variant="secondary" className="flex-1 sm:flex-none sm:px-6">
-                <Link href="/import">Import</Link>
+                <Link href="/transactions/capture?capture=csv">Import</Link>
               </Button>
             </div>
           </section>

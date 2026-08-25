@@ -4,9 +4,9 @@ import { openSeededApp } from "./harness";
 // Cards reach the screen edge on a phone; everything else keeps the shell's
 // 16px gutter. This fails if new content lands outside a card without it.
 const ROUTES = [
-  "/", "/transactions", "/transactions/capture", "/accounts", "/budgets", "/debt",
-  "/goals", "/import", "/inbox", "/learn", "/month",
-  "/privacy", "/recurring", "/report", "/settings", "/settings/categories",
+  "/", "/transactions", "/transactions/capture", "/accounts", "/plan", "/debt",
+  "/goals", "/inbox", "/learn", "/month",
+  "/privacy", "/report", "/settings", "/settings/categories",
   "/settings/rules", "/settings/sync-conflicts", "/shopping", "/onboarding",
 ];
 

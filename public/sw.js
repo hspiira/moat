@@ -19,6 +19,7 @@ const APP_SHELL_URLS = [
   "/accounts",
   "/accounts/detail",
   "/budgets",
+  "/plan",
   "/debt",
   "/goals",
   "/investment-compass",

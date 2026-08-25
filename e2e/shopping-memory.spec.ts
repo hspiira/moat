@@ -16,7 +16,7 @@ test("an item with no price still counts towards the trip", async ({ page }) => 
 
   await page.getByRole("button", { name: "Add an item" }).click();
   await page.locator("#planner-name").fill("Rice");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add to list" }).click();
   await page.waitForTimeout(1500);
 
   await expect(page.getByText("This trip will cost about")).toBeVisible();
@@ -28,9 +28,9 @@ test("a price you set is named as yours, not a guess", async ({ page }) => {
 
   await page.getByRole("button", { name: "Add an item" }).click();
   await page.locator("#planner-name").fill("Cooking oil");
-  await page.getByRole("button", { name: /quantity, price, date/i }).click();
+  await page.getByRole("button", { name: /quantity, price and date/i }).click();
   await page.locator("#planner-estimate").fill("12000");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add to list" }).click();
   await page.waitForTimeout(1500);
 
   await expect(page.getByText("All from prices you set.")).toBeVisible();
@@ -78,11 +78,11 @@ test("what you paid before prices the trip without you typing it", async ({ page
   await page.locator("#planner-name").fill("Rice");
 
   // The form says what it remembers before you decide to override it.
-  await expect(page.getByText("Leave this blank to use that")).toBeVisible();
+  await expect(page.getByText(/Leave the price out to use that/i)).toBeVisible();
 
-  await page.getByRole("button", { name: /quantity, price, date/i }).click();
+  await page.getByRole("button", { name: /quantity, price and date/i }).click();
   await page.locator("#planner-quantity").fill("2");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add to list" }).click();
   await page.waitForTimeout(1500);
 
   // Two at 8,000, none of it typed by hand.
