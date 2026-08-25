@@ -278,6 +278,10 @@ function resolveSsl() {
       return { rejectUnauthorized: true };
   }
 }
+async function closePool() {
+  await pool?.end();
+  pool = null;
+}
 async function withTransaction(run) {
   const client = await getPool().connect();
   try {
@@ -594,6 +598,7 @@ ${params.subject}`
 }
 
 // src/db/postgres-store.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
 function toPullRecord(row) {
   return {
     entityType: row.entity_type,
@@ -605,7 +610,7 @@ function toPullRecord(row) {
   };
 }
 function createServerVersionToken() {
-  return `sv:${crypto.randomUUID()}`;
+  return `sv:${randomUUID2()}`;
 }
 async function ensureUser(client, userId) {
   await client.query(
@@ -764,7 +769,6 @@ async function pullPostgresSyncChanges(request) {
   const cursor = parseCursor(request.since);
   const pageSize = resolvePageSize(request.limit);
   const rows = await withUserTransaction(request.userId, async (client) => {
-    await ensureUser(client, request.userId);
     const result = await client.query(
       `select entity_type, entity_id, payload, deleted, updated_at, server_version_token
          from sync_records
@@ -1051,15 +1055,26 @@ var server = createServer(async (request, response) => {
       return;
     }
     console.error("Sync request failed.", error);
-    sendJson(response, 500, { error: "Sync request failed." });
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: "Sync request failed." });
+    }
   }
 });
+server.requestTimeout = 3e4;
+server.headersTimeout = 15e3;
 server.listen(port, () => {
   console.log(`moat sync server listening on ${port}`);
 });
+var stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
-    server.close(() => process.exit(0));
+    if (stopping) return;
+    stopping = true;
+    const giveUp = setTimeout(() => process.exit(1), 1e4);
+    giveUp.unref();
+    server.close(() => {
+      closePool().catch((error) => console.error("Could not close the pool cleanly.", error)).finally(() => process.exit(0));
+    });
   });
 }
 //# sourceMappingURL=server.js.map

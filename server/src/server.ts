@@ -14,7 +14,7 @@ import { exchangeGoogleCode } from "./auth/google.js";
 import { mintSyncCredential } from "./db/credentials.js";
 import { resolveIdentity } from "./db/identities.js";
 
-import { getPool } from "./db/pool.js";
+import { closePool, getPool } from "./db/pool.js";
 import { applyPostgresSyncPush, pullPostgresSyncChanges } from "./db/postgres-store.js";
 import { HttpError, applyCors, readJsonBody, sendJson } from "./http.js";
 import { createRateLimiter } from "./rate-limit.js";
@@ -223,16 +223,39 @@ const server = createServer(async (request, response) => {
     }
 
     console.error("Sync request failed.", error);
-    sendJson(response, 500, { error: "Sync request failed." });
+    // Reached when the first send already wrote the head, so there is nothing
+    // left to say and saying it would throw where nothing catches.
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: "Sync request failed." });
+    }
   }
 });
+
+// A body that arrives a byte at a time would otherwise hold a connection for as
+// long as the caller likes.
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
 
 server.listen(port, () => {
   console.log(`moat sync server listening on ${port}`);
 });
 
+let stopping = false;
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
-    server.close(() => process.exit(0));
+    if (stopping) return;
+    stopping = true;
+
+    // A keep-alive connection can keep close() from ever calling back, and the
+    // pool holds transactions that should finish rather than be cut.
+    const giveUp = setTimeout(() => process.exit(1), 10_000);
+    giveUp.unref();
+
+    server.close(() => {
+      closePool()
+        .catch((error) => console.error("Could not close the pool cleanly.", error))
+        .finally(() => process.exit(0));
+    });
   });
 }

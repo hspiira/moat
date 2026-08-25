@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type pg from "pg";
 
 import { parseCursor, resolvePageSize, serializeCursor, toEntityKey } from "@/lib/sync/cursor";
@@ -34,7 +36,7 @@ function toPullRecord(row: StoredRecord): SyncPullRecord {
 }
 
 function createServerVersionToken() {
-  return `sv:${crypto.randomUUID()}`;
+  return `sv:${randomUUID()}`;
 }
 
 async function ensureUser(client: pg.PoolClient, userId: string) {
@@ -243,8 +245,6 @@ export async function pullPostgresSyncChanges(
   const pageSize = resolvePageSize(request.limit);
 
   const rows = await withUserTransaction(request.userId, async (client) => {
-    await ensureUser(client, request.userId);
-
     const result = await client.query<StoredRecord>(
       `select entity_type, entity_id, payload, deleted, updated_at, server_version_token
          from sync_records
