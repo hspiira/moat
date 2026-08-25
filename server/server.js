@@ -345,6 +345,20 @@ async function authenticateSyncRequest(authorization) {
   return { userId };
 }
 
+// src/caller-address.ts
+function trustedProxyCount(env = process.env) {
+  return Math.max(0, Math.trunc(Number(env.MOAT_SYNC_TRUSTED_PROXIES ?? 0)) || 0);
+}
+function callerAddress(request, trustedProxies2) {
+  const socketAddress = (request.socket.remoteAddress ?? "unknown").trim();
+  if (trustedProxies2 === 0) {
+    return socketAddress;
+  }
+  const forwarded = request.headers["x-forwarded-for"];
+  const hops = (Array.isArray(forwarded) ? forwarded.join(",") : forwarded ?? "").split(",").map((hop) => hop.trim()).filter(Boolean);
+  return hops[hops.length - trustedProxies2] ?? socketAddress;
+}
+
 // src/auth/google-clients.ts
 function readGoogleClient(kind, env = process.env) {
   if (kind === "ios") {
@@ -827,18 +841,31 @@ function applyCors(request, response) {
 }
 
 // src/rate-limit.ts
+var DEFAULT_MAX_KEYS = 1e4;
 function createRateLimiter(rule) {
   const windows = /* @__PURE__ */ new Map();
+  const maxKeys = rule.maxKeys ?? DEFAULT_MAX_KEYS;
+  let nextSweepAt = Number.NEGATIVE_INFINITY;
   function sweep(now) {
     for (const [key, window] of windows) {
       if (window.resetAt <= now) windows.delete(key);
     }
+    nextSweepAt = now + rule.windowMs;
+  }
+  function makeRoom(now) {
+    if (windows.size < maxKeys) return;
+    sweep(now);
+    for (const key of windows.keys()) {
+      if (windows.size < maxKeys) break;
+      windows.delete(key);
+    }
   }
   return {
     check(key, now) {
-      if (windows.size > 1e4) sweep(now);
+      if (now >= nextSweepAt) sweep(now);
       const window = windows.get(key);
       if (!window || window.resetAt <= now) {
+        makeRoom(now);
         windows.set(key, { count: 1, resetAt: now + rule.windowMs });
         return { allowed: true, retryAfterSeconds: 0 };
       }
@@ -864,10 +891,9 @@ var perAddress = createRateLimiter({ limit: 600, windowMs: MINUTE });
 var perUser = createRateLimiter({ limit: 300, windowMs: MINUTE });
 var perFailedAuth = createRateLimiter({ limit: 10, windowMs: MINUTE });
 var perSignIn = createRateLimiter({ limit: 20, windowMs: MINUTE });
-function callerAddress(request) {
-  const forwarded = request.headers["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
-  return (first ?? request.socket.remoteAddress ?? "unknown").trim();
+var trustedProxies = trustedProxyCount();
+function addressOf(request) {
+  return callerAddress(request, trustedProxies);
 }
 function limit(limiter, key, now, message) {
   const verdict = limiter.check(key, now);
@@ -931,7 +957,7 @@ var server = createServer(async (request, response) => {
       throw new HttpError(405, "Method not allowed.");
     }
     if (url.pathname === "/v1/auth/callback") {
-      const address2 = callerAddress(request);
+      const address2 = addressOf(request);
       limit(perAddress, address2, Date.now(), "Too many requests. Try again shortly.");
       limit(perSignIn, address2, Date.now(), "Too many sign-in attempts. Try again shortly.");
       const body = await readJsonBody(request);
@@ -983,7 +1009,7 @@ var server = createServer(async (request, response) => {
       });
       return;
     }
-    const address = callerAddress(request);
+    const address = addressOf(request);
     const now = Date.now();
     limit(perAddress, address, now, "Too many requests. Try again shortly.");
     let principal;

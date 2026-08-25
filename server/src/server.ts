@@ -8,6 +8,7 @@ import {
 } from "@/lib/sync/server-contract";
 
 import { authenticateSyncRequest } from "./auth.js";
+import { callerAddress, trustedProxyCount } from "./caller-address.js";
 import { allowedRedirectUris, validateAuthCallbackRequest } from "./auth/callback-request.js";
 import { exchangeGoogleCode } from "./auth/google.js";
 import { mintSyncCredential } from "./db/credentials.js";
@@ -31,12 +32,10 @@ const perFailedAuth = createRateLimiter({ limit: 10, windowMs: MINUTE });
 // tighter than syncing.
 const perSignIn = createRateLimiter({ limit: 20, windowMs: MINUTE });
 
-function callerAddress(request: IncomingMessage): string {
-  // Behind a proxy the socket is the proxy, so the forwarded address is used
-  // when one is present. It is only a rate-limit key, never an identity.
-  const forwarded = request.headers["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
-  return (first ?? request.socket.remoteAddress ?? "unknown").trim();
+const trustedProxies = trustedProxyCount();
+
+function addressOf(request: IncomingMessage): string {
+  return callerAddress(request, trustedProxies);
 }
 
 function limit(
@@ -125,7 +124,7 @@ const server = createServer(async (request, response) => {
     // Sign-in comes before authentication, because it is how a caller gets a
     // token in the first place.
     if (url.pathname === "/v1/auth/callback") {
-      const address = callerAddress(request);
+      const address = addressOf(request);
       limit(perAddress, address, Date.now(), "Too many requests. Try again shortly.");
       limit(perSignIn, address, Date.now(), "Too many sign-in attempts. Try again shortly.");
 
@@ -186,7 +185,7 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const address = callerAddress(request);
+    const address = addressOf(request);
     const now = Date.now();
     limit(perAddress, address, now, "Too many requests. Try again shortly.");
 

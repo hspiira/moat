@@ -36,6 +36,7 @@ Set these in the Vercel project, or copy the repository's `.env.example` to `.en
 | `MOAT_OIDC_REDIRECT_URIS` | to sign in | Comma-separated allowlist, matched exactly against what the caller asks for |
 | `MOAT_OIDC_GOOGLE_IOS_CLIENT_ID` | for the app | Google **iOS** client id. A web client id will not work here |
 | `MOAT_SYNC_ALLOWED_ORIGINS` | for browsers | Comma-separated origin allowlist for CORS |
+| `MOAT_SYNC_TRUSTED_PROXIES` | behind a proxy | How many proxies sit in front of this server. Defaults to `0`, which ignores `x-forwarded-for` |
 | `PORT` | no | Defaults to 8787 |
 | `DATABASE_SSL` | no | `disable`, or `no-verify` to skip certificate checks |
 | `DATABASE_POOL_MAX` | no | Defaults to 10 |
@@ -43,6 +44,14 @@ Set these in the Vercel project, or copy the repository's `.env.example` to `.en
 Certificates are verified by default. `no-verify` exists for providers whose
 certs the default trust store rejects, but it removes the protection TLS gives
 against an interceptor.
+
+`MOAT_SYNC_TRUSTED_PROXIES` decides what the rate limits count. The default of
+`0` reads the connecting socket and ignores `x-forwarded-for`, because a caller
+free to write that header picks a fresh bucket per request and the ten failed
+authentications a minute that stand between someone and a guessed token stop
+counting. **On Vercel set it to `1`**: the socket there is Vercel's edge, so
+leaving it at `0` puts every caller in one bucket and the first busy client
+starts refusing the rest.
 
 ## Deploying to Vercel with Neon
 
