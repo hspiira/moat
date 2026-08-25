@@ -153,6 +153,7 @@ export function useShoppingWorkspace() {
     async (input: {
       name: string;
       unit?: string;
+      group?: string;
       quantity?: number;
       estimatedUnitPrice?: number;
       expectedTotal?: number;
@@ -170,6 +171,7 @@ export function useShoppingWorkspace() {
           userId: profile.id,
           timestamp,
           unit: input.unit,
+          group: input.group,
         });
         if (resolved.isNew) {
           await repositories.items.upsert(resolved.item);

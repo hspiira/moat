@@ -18,6 +18,7 @@ import type {
   TransactionLineItem,
 } from "@/lib/types";
 import type { PlannedOutcome, PlannerGroups } from "@/lib/domain/planned-purchases";
+import { groupPurchasesByItemGroup, isWorthGrouping } from "@/lib/domain/item-groups";
 import type { ShoppingHistory } from "@/lib/domain/shopping-history";
 import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 
@@ -76,15 +77,13 @@ function PlannerSection({
   onOpenHistory: (itemId: string) => void;
   lineItemsById: Map<string, TransactionLineItem>;
 }) {
-  if (purchases.length === 0) return null;
   const lineItems = [...lineItemsById.values()];
-  return (
-    <section className="grid gap-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
-      <ul className="grid gap-0.5">
-        {purchases.map((purchase) => {
+  const grouped = groupPurchasesByItemGroup(purchases, itemsById);
+  // A heading over the whole list says nothing, so they appear only once there
+  // is more than one to give.
+  const showGroups = isWorthGrouping(grouped);
+
+  const renderPurchase = (purchase: PlannedPurchase) => {
           const item = itemsById.get(purchase.itemId);
           const memory = priceMemoryLine(priceSummaries.get(purchase.itemId));
           const plan = isInstallmentPurchase(purchase)
@@ -132,7 +131,8 @@ function PlannerSection({
                 {plan && plan.expected > 0 ? (
                   <span className="mt-1 flex items-center gap-2">
                     <span
-                      aria-hidden
+                      role="img"
+                      aria-label={`${plan.percentPaid}% paid off`}
                       className="h-1 w-16 overflow-hidden rounded-full bg-muted"
                     >
                       <span
@@ -142,8 +142,8 @@ function PlannerSection({
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {plan.remaining > 0
-                        ? `${formatMoney(plan.remaining)} to go`
-                        : "settled"}
+                        ? `${formatMoney(plan.remaining)} left of ${formatMoney(plan.expected)}`
+                        : "paid off"}
                     </span>
                   </span>
                 ) : null}
@@ -179,8 +179,23 @@ function PlannerSection({
               </span>
             </li>
           );
-        })}
-      </ul>
+  };
+
+  if (purchases.length === 0) return null;
+
+  return (
+    <section className="grid gap-2">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
+      {grouped.map((entry) => (
+        <div key={entry.group || "ungrouped"} className="grid gap-1">
+          {showGroups && entry.group ? (
+            <h4 className="px-1 text-xs text-muted-foreground/80">{entry.group}</h4>
+          ) : null}
+          <ul className="grid gap-0.5">{entry.purchases.map(renderPurchase)}</ul>
+        </div>
+      ))}
     </section>
   );
 }

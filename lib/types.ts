@@ -206,6 +206,8 @@ export type Item = {
   name: string;
   normalizedName: string;
   unit?: string;
+  /** What this belongs under, so a shop reads as groceries then the rest. */
+  group?: string;
   defaultCategoryId?: string;
   isArchived: boolean;
   createdAt: string;
@@ -499,7 +501,13 @@ export type RecurringObligationType =
   | "salary"
   | "loan_repayment";
 
+/** Kept so obligations stored before intervals keep working. */
 export type RecurringCadence = "weekly" | "monthly" | "custom";
+
+export type RecurringInterval = {
+  every: number;
+  unit: "week" | "month" | "year";
+};
 
 export type RecurringObligation = {
   id: string;
@@ -509,6 +517,11 @@ export type RecurringObligation = {
   categoryId: string;
   expectedAmount: number;
   cadence: RecurringCadence;
+  /**
+   * What it actually repeats on. Cadence could only say weekly or monthly, and
+   * "custom" carried nothing at all, so anything else was undescribable.
+   */
+  interval?: RecurringInterval;
   dueDay?: number;
   dueDatePattern?: string;
   linkedAccountId?: string;

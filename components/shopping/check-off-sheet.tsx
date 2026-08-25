@@ -73,6 +73,9 @@ export function CheckOffSheet({
   onConfirm: (target: CheckOffTarget, actuals: FulfillmentActual[]) => void;
   onOpenChange: (open: boolean) => void;
 }) {
+  // Paying an instalment is not buying something, and calling it a purchase is
+  // why nobody could find where instalments were recorded.
+  const onInstalments = selected.length > 0 && selected.every(isInstallmentPurchase);
   const [wasOpen, setWasOpen] = useState(open);
   const [sessionKey, setSessionKey] = useState(0);
   if (open !== wasOpen) {
@@ -93,8 +96,12 @@ export function CheckOffSheet({
 
         <FormCardShell
           embedded
-          title={`Record ${selected.length === 1 ? "purchase" : "purchases"}`}
-          description={`Attach ${selected.length === 1 ? "this item" : `these ${selected.length} items`} to the expense that paid for ${selected.length === 1 ? "it" : "them"}.`}
+          title={onInstalments ? "Record a payment" : `Record ${selected.length === 1 ? "purchase" : "purchases"}`}
+          description={
+            onInstalments
+              ? "Enter what was paid this time. What is left stays on the list until it is paid off."
+              : `Attach ${selected.length === 1 ? "this item" : `these ${selected.length} items`} to the expense that paid for ${selected.length === 1 ? "it" : "them"}.`
+          }
         >
           <CheckOffSheetForm
             key={sessionKey}

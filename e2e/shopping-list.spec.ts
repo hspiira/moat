@@ -88,10 +88,12 @@ test("something part paid stays on the list, and what is bought is crossed out",
 }) => {
   await openStockedShoppingList(page);
 
-  // The sofa is 200,000 into an agreed 500,000, so it is not bought yet.
+  // The sofa is 200,000 into an agreed 500,000, so it is not bought yet. The row
+  // says what is left against the whole, so it reads as a total being paid down
+  // rather than an odd amount outstanding.
   const sofa = page.locator("li", { hasText: "Sofa set" }).first();
   await expect(sofa).toBeVisible();
-  await expect(sofa).toContainText("to go");
+  await expect(sofa).toContainText("left of");
 
   // What is genuinely bought is folded away behind its own heading, so the list
   // stays about what is still to buy. Opening it is what shows the crossing out.

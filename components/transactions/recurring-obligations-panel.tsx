@@ -4,7 +4,14 @@ import { useMemo, useState } from "react";
 import { IconAlertTriangle, IconPlus } from "@tabler/icons-react";
 
 import { isSuggestedRecurringObligation } from "@/lib/domain/recurring";
-import type { Account, Category, RecurringObligation } from "@/lib/types";
+import {
+  describeInterval,
+  normaliseInterval,
+  recurringIntervalUnits,
+  resolveInterval,
+} from "@/lib/domain/recurring-interval";
+import { collectPickOptions } from "@/lib/domain/pick-options";
+import type { Account, Category, RecurringInterval, RecurringObligation } from "@/lib/types";
 import type { RecurringEvaluation, SuggestedRecurringObligation } from "@/lib/domain/recurring";
 import {
   getRecurringSections,
@@ -26,10 +33,19 @@ import {
   accountOptions,
   categoryOptions,
   optionsFromRecord,
-  recurringCadenceLabels,
   recurringObligationTypeLabels,
 } from "@/lib/select-options";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PickOrCreateField } from "@/components/ui/pick-or-create-field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
@@ -44,7 +60,8 @@ type ObligationFormState = {
   type: RecurringObligation["type"];
   categoryId: string;
   expectedAmount: string;
-  cadence: RecurringObligation["cadence"];
+  intervalEvery: string;
+  intervalUnit: RecurringInterval["unit"];
   dueDay: string;
   linkedAccountId: string;
   payee: string;
@@ -72,7 +89,8 @@ const defaultObligationForm: ObligationFormState = {
   type: "rent",
   categoryId: "",
   expectedAmount: "",
-  cadence: "monthly",
+  intervalEvery: "1",
+  intervalUnit: "month",
   dueDay: "1",
   linkedAccountId: "",
   payee: "",
@@ -107,6 +125,16 @@ export function RecurringObligationsPanel({
   onToggleObligation,
 }: Props) {
   const [form, setForm] = useState<ObligationFormState>(defaultObligationForm);
+  const interval = normaliseInterval({
+    every: Number(form.intervalEvery),
+    unit: form.intervalUnit,
+  });
+  // The payees already written down, so the same landlord is not typed three
+  // ways and counted as three.
+  const payeeOptions = useMemo(
+    () => collectPickOptions(obligations.map((obligation) => obligation.payee)),
+    [obligations],
+  );
   const [fieldErrors, setFieldErrors] = useState<{
     expectedAmount?: string;
     dueDay?: string;
@@ -151,7 +179,10 @@ export function RecurringObligationsPanel({
       type: form.type,
       categoryId: form.categoryId,
       expectedAmount: parseAmountInput(form.expectedAmount) ?? 0,
-      cadence: form.cadence,
+      // Cadence is still written so anything reading it keeps working, but the
+      // interval is what says when this is actually owed.
+      cadence: interval.unit === "week" && interval.every === 1 ? "weekly" : "monthly",
+      interval,
       dueDay: Number(form.dueDay),
       dueDatePattern: undefined,
       linkedAccountId: form.linkedAccountId || undefined,
@@ -237,6 +268,7 @@ export function RecurringObligationsPanel({
                   <div className="truncate text-sm text-muted-foreground">{obligation.name}</div>
                   <div className="truncate text-xs text-muted-foreground">
                     {formatMoney(obligation.expectedAmount, "UGX")} ·{" "}
+                    {describeInterval(resolveInterval(obligation))} ·{" "}
                     {describeBillWindow(obligation)}
                   </div>
                 </div>
@@ -342,17 +374,43 @@ export function RecurringObligationsPanel({
                     }))
                   }
                 />
-                <SelectField
-                  label="Cadence"
-                  value={form.cadence}
-                  options={optionsFromRecord(recurringCadenceLabels)}
-                  onValueChange={(value) =>
-                    setForm((current) => ({
-                      ...current,
-                      cadence: value as RecurringObligation["cadence"],
-                    }))
-                  }
-                />
+                <div className="grid gap-2">
+                  <Label htmlFor="obligation-interval-every">Repeats</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">every</span>
+                    <Input
+                      id="obligation-interval-every"
+                      inputMode="numeric"
+                      className="w-16"
+                      value={form.intervalEvery}
+                      aria-label="How many"
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, intervalEvery: event.target.value }))
+                      }
+                    />
+                    <Select
+                      value={form.intervalUnit}
+                      onValueChange={(value) =>
+                        setForm((current) => ({
+                          ...current,
+                          intervalUnit: value as RecurringInterval["unit"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-32" aria-label="Weeks, months or years">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {recurringIntervalUnits.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {Number(form.intervalEvery) === 1 ? `${unit}` : `${unit}s`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{describeInterval(interval)}</p>
+                </div>
                 <InputField
                   id="obligation-due-day"
                   label="Due day (1–31)"
@@ -397,12 +455,16 @@ export function RecurringObligationsPanel({
                   }
                 />
               </div>
-              <InputField
+              <PickOrCreateField
                 id="obligation-payee"
                 label="Payee"
-                value={form.payee}
-                onChange={(event) => setForm((current) => ({ ...current, payee: event.target.value }))}
                 placeholder="Landlord"
+                searchPlaceholder="Search or type a payee"
+                emptyHint="No payees yet. Type one to add it."
+                options={payeeOptions}
+                value={form.payee}
+                allowClear
+                onChange={(payee) => setForm((current) => ({ ...current, payee }))}
               />
             </form>
           </FormCardShell>
