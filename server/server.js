@@ -506,14 +506,14 @@ function decideIdentityLink(params) {
 }
 
 // src/db/identities.ts
-async function readState(params) {
-  const linked = await getPool().query(
+async function readState(client, params) {
+  const linked = await client.query(
     "select user_id from sync_identities where issuer = $1 and subject = $2",
     [params.issuer, params.subject]
   );
   let proposedIsClaimed = false;
   if (params.proposedUserId) {
-    const claimed = await getPool().query(
+    const claimed = await client.query(
       `select exists (select 1 from sync_identities where user_id = $1)
            or exists (select 1 from sync_records where user_id = $1) as claimed`,
       [params.proposedUserId]
@@ -528,43 +528,45 @@ async function readState(params) {
 }
 async function resolveIdentity(params) {
   const proposedUserId = params.proposedUserId?.trim() || null;
-  const state = await readState({
-    ...params,
-    proposedUserId,
-    proposedIsProven: params.proposedIsProven === true
+  return withUserTransaction(proposedUserId ?? "", async (client) => {
+    await client.query("select pg_advisory_xact_lock(hashtext($1))", [
+      `${params.issuer}
+${params.subject}`
+    ]);
+    const state = await readState(client, {
+      issuer: params.issuer,
+      subject: params.subject,
+      proposedUserId,
+      proposedIsProven: params.proposedIsProven === true
+    });
+    const decision = decideIdentityLink({ proposedUserId, state });
+    if (decision.outcome === "already_linked_elsewhere") {
+      return { status: "already_linked_elsewhere" };
+    }
+    if (decision.outcome === "proposed_id_taken") {
+      return { status: "proposed_id_taken" };
+    }
+    if (decision.outcome === "sign_in") {
+      return { status: "ok", userId: decision.userId, isNewUser: false };
+    }
+    const userId = decision.outcome === "link" ? decision.userId : `user:${randomUUID()}`;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    await client.query(
+      "insert into sync_users (user_id, created_at) values ($1, $2) on conflict (user_id) do nothing",
+      [userId, now]
+    );
+    await client.query(
+      `insert into sync_identities (issuer, subject, user_id, email, created_at)
+       values ($1, $2, $3, $4, $5)
+       on conflict (issuer, subject) do nothing`,
+      [params.issuer, params.subject, userId, params.email ?? null, now]
+    );
+    return {
+      status: "ok",
+      userId,
+      isNewUser: decision.outcome === "sign_up"
+    };
   });
-  const decision = decideIdentityLink({ proposedUserId, state });
-  if (decision.outcome === "already_linked_elsewhere") {
-    return { status: "already_linked_elsewhere" };
-  }
-  if (decision.outcome === "proposed_id_taken") {
-    return { status: "proposed_id_taken" };
-  }
-  if (decision.outcome === "sign_in") {
-    return { status: "ok", userId: decision.userId, isNewUser: false };
-  }
-  const userId = decision.outcome === "link" ? decision.userId : `user:${randomUUID()}`;
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  await getPool().query(
-    "insert into sync_users (user_id, created_at) values ($1, $2) on conflict (user_id) do nothing",
-    [userId, now]
-  );
-  await getPool().query(
-    `insert into sync_identities (issuer, subject, user_id, email, created_at)
-     values ($1, $2, $3, $4, $5)
-     on conflict (issuer, subject) do nothing`,
-    [params.issuer, params.subject, userId, params.email ?? null, now]
-  );
-  const settled = await getPool().query(
-    "select user_id from sync_identities where issuer = $1 and subject = $2",
-    [params.issuer, params.subject]
-  );
-  const winner = settled.rows[0]?.user_id ?? userId;
-  return {
-    status: "ok",
-    userId: winner,
-    isNewUser: decision.outcome === "sign_up" && winner === userId
-  };
 }
 
 // src/db/postgres-store.ts
