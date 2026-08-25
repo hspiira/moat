@@ -63,13 +63,19 @@ export function DailyDriveBackup() {
         lastBackupAt: now,
         lastBackupName: filename,
         lastAutoBackupAt: now,
+        lastAutoBackupErrorAt: undefined,
       });
       clearStorageNotice("stale-backup");
     } catch {
-      // Nothing here is worth interrupting anyone over, and one failure is
-      // enough: the stale-backup notice is what eventually says uploads stopped
-      // working.
+      // Set before anything else can fail, so one failure stays one attempt.
       givenUpThisSession.current = true;
+
+      // Recorded without the provider's words and without interrupting whatever
+      // the user is doing. The settings panel turns it into a retry.
+      saveGoogleDriveBackupPreferences({
+        ...readGoogleDriveBackupPreferences(),
+        lastAutoBackupErrorAt: new Date().toISOString(),
+      });
     } finally {
       running.current = false;
     }
