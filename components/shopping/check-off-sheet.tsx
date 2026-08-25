@@ -170,7 +170,10 @@ function CheckOffSheetForm({
   const canConfirm =
     mode === "attach"
       ? transactionId !== "" && hasActualForAll
-      : form.accountId !== "" && form.categoryId !== "" && createAmount > 0;
+      : form.accountId !== "" &&
+        form.categoryId !== "" &&
+        createAmount > 0 &&
+        hasActualForAll;
 
   const confirm = () => {
     onConfirm(

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
+
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconCircleCheck, IconPencil, IconX } from "@tabler/icons-react";
+import { IconCircleCheck, IconPencil, IconReceipt, IconX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
@@ -15,8 +17,8 @@ import type {
   Transaction,
   TransactionLineItem,
 } from "@/lib/types";
-import type { PlannerGroups } from "@/lib/domain/planned-purchases";
-import { buildShoppingHistory } from "@/lib/domain/shopping-history";
+import type { PlannedOutcome, PlannerGroups } from "@/lib/domain/planned-purchases";
+import type { ShoppingHistory } from "@/lib/domain/shopping-history";
 import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
@@ -34,6 +36,21 @@ function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
     parts.push(`best ${formatMoney(bestPrice)} @ ${best.merchant}`);
   }
   return parts.join(" · ");
+}
+
+/**
+ * How the price came out against the plan, said once.
+ *
+ * Showing the planned figure and the gap together says the same thing twice, and
+ * three stacked numbers on a phone row is more than anyone reads.
+ */
+function againstPlanLine(outcome: PlannedOutcome): string | null {
+  if (outcome.planned == null || outcome.difference == null) return null;
+  if (outcome.difference === 0) return `on plan, ${formatMoney(outcome.planned)}`;
+
+  return `${formatMoney(Math.abs(outcome.difference))} ${
+    outcome.difference > 0 ? "over" : "under"
+  } plan`;
 }
 
 function PlannerSection({
@@ -180,15 +197,13 @@ export function PlannerList(props: {
   onOpenHistory: (itemId: string) => void;
   transactionsById: Map<string, Transaction>;
   lineItemsById: Map<string, TransactionLineItem>;
+  // Built by the workspace, which needs it for the summary too. Deriving it in
+  // both places lets the total and the list drift apart.
+  history: ShoppingHistory;
   isSubmitting: boolean;
 }) {
   const shared = props;
-  const history = buildShoppingHistory({
-    purchases: props.groups.history,
-    itemsById: props.itemsById,
-    transactionsById: props.transactionsById,
-    lineItemsById: props.lineItemsById,
-  });
+  const history = props.history;
   const isEmpty =
     props.groups.overdue.length === 0 &&
     props.groups.upcoming.length === 0 &&
@@ -215,10 +230,12 @@ export function PlannerList(props: {
       <PlannerSection title="Upcoming" purchases={props.groups.upcoming} {...shared} />
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
       {history.trips.length > 0 ? (
-        <section className="grid gap-2">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Bought
-          </h3>
+        <details className="grid gap-2">
+          <summary className="cursor-pointer">
+            <h3 className="inline text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Bought ({history.trips.reduce((count, trip) => count + trip.entries.length, 0)})
+            </h3>
+          </summary>
           <ul className="grid gap-0.5">
             {history.trips.flatMap((trip) =>
               trip.entries.map((entry) => (
@@ -241,19 +258,44 @@ export function PlannerList(props: {
                   </span>
                   <span className="shrink-0 text-right tabular-nums">
                     <span className="block whitespace-nowrap text-sm text-muted-foreground">
-                      actual {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "not recorded"}
+                      {entry.outcome.actual != null
+                        ? formatMoney(entry.outcome.actual)
+                        : "not recorded"}
                     </span>
-                    {entry.outcome.planned != null ? (
+                    {againstPlanLine(entry.outcome) ? (
                       <span className="block whitespace-nowrap text-xs text-muted-foreground/75">
-                        planned {formatMoney(entry.outcome.planned)}
+                        {againstPlanLine(entry.outcome)}
                       </span>
                     ) : null}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label={`Edit ${entry.item?.name ?? "bought item"}`}
+                      onClick={() => props.onEdit(entry.purchase)}
+                    >
+                      <IconPencil className="size-4" />
+                    </Button>
+                    <Button
+                      asChild
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label={`Open the transaction for ${entry.item?.name ?? "this item"}`}
+                    >
+                      <Link href={`/transactions?transaction=${trip.transactionId}`}>
+                        <IconReceipt className="size-4" />
+                      </Link>
+                    </Button>
                   </span>
                 </li>
               )),
             )}
           </ul>
-        </section>
+        </details>
       ) : null}
 
       {history.dropped.length > 0 ? (

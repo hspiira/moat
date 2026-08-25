@@ -93,9 +93,14 @@ test("something part paid stays on the list, and what is bought is crossed out",
   await expect(sofa).toBeVisible();
   await expect(sofa).toContainText("to go");
 
-  // What is genuinely bought shows in its own section rather than a dropdown.
-  await expect(page.getByText("Bought", { exact: true })).toBeVisible();
+  // What is genuinely bought is folded away behind its own heading, so the list
+  // stays about what is still to buy. Opening it is what shows the crossing out.
+  const bought = page.getByRole("heading", { name: /^Bought \(\d+\)$/ });
+  await expect(bought).toBeVisible();
+  await bought.click();
+
   const boughtRow = page.locator("li", { hasText: "Sugar" }).filter({ hasText: "Jun" }).first();
+  await expect(boughtRow).toBeVisible();
   const decoration = await boughtRow
     .locator("span.line-through")
     .first()

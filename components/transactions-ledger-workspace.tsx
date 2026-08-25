@@ -56,7 +56,11 @@ export function TransactionsLedgerWorkspace() {
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [window_, setWindow] = useState<LedgerWindow>(parseLedgerWindow(params.get("days")));
   const [sort, setSort] = useState<LedgerSort>(parseLedgerSort(params.get("sort")));
-  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
+  // Shopping links a bought item straight at the transaction that paid for it,
+  // so the receipt is one tap from the plan rather than a search away.
+  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(
+    params.get("transaction"),
+  );
 
   const visibleTransactions = useMemo(
     () =>
