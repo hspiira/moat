@@ -96,10 +96,11 @@ create index if not exists sync_identities_user
 -- machine running behind lands under a cursor a client already holds, and that
 -- record is then one it can never pull. Milliseconds because these are compared
 -- as text, and a wider fraction would not sort against the values already written.
-create or replace function moat_now_iso() returns text
+drop function if exists moat_now_iso();
+create or replace function moat_now_iso(at timestamptz default now()) returns text
   language sql
   stable
-  as $$ select to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') $$;
+  as $$ select to_char($1 at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') $$;
 
 -- Applied by name because an existing deployment skips the create above. Until
 -- it holds, deleting a user leaves its tokens working: resolving one reads only

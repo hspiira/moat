@@ -13,6 +13,13 @@ import { SCHEMA_SQL } from "./schema.js";
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
 const describeDb = hasDatabase ? describe : describe.skip;
 
+async function lastUsedAt(): Promise<string | null> {
+  const rows = await getPool().query<{ last_used_at: string | null }>(
+    "select last_used_at from sync_credentials",
+  );
+  return rows.rows[0]?.last_used_at ?? null;
+}
+
 describeDb("sync credentials", () => {
   beforeEach(async () => {
     await getPool().query(dropSyncTablesSql());
@@ -126,5 +133,32 @@ describeDb("sync credentials", () => {
 
     await getPool().query("delete from sync_users where user_id = $1", ["user:legacy"]);
     expect(await resolveSyncCredential("legacy-token")).toBeNull();
+  });
+
+  /* Authentication runs this on every request, so stamping the row each time
+     put a write and a row lock in front of all of them, and two requests
+     carrying one token queued behind each other. */
+  it("leaves a recent stamp alone, so authenticating is a read", async () => {
+    const token = await mintSyncCredential("user:ada");
+    await getPool().query(
+      "update sync_credentials set last_used_at = moat_now_iso(now() - interval '1 minute')",
+    );
+    const before = await lastUsedAt();
+
+    expect(await resolveSyncCredential(token)).toBe("user:ada");
+
+    expect(await lastUsedAt()).toBe(before);
+  });
+
+  it("stamps again once the last one is old enough to be worth the write", async () => {
+    const token = await mintSyncCredential("user:ada");
+    await getPool().query(
+      "update sync_credentials set last_used_at = moat_now_iso(now() - interval '1 hour')",
+    );
+    const before = await lastUsedAt();
+
+    expect(await resolveSyncCredential(token)).toBe("user:ada");
+
+    expect(await lastUsedAt()).not.toBe(before);
   });
 });
