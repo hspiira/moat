@@ -59,6 +59,11 @@ enum MoatCaptureQueue {
         let pending = read()
         if !pending.isEmpty {
             UserDefaults.standard.removeObject(forKey: storageKey)
+
+            // Written out before the messages are handed over. Left to the
+            // system, a process that ended here would come back still holding
+            // them, and every one would be captured a second time.
+            UserDefaults.standard.synchronize()
         }
         return pending
     }
