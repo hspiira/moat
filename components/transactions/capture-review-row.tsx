@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { formatDate } from "@/lib/format-date";
 import { canApproveCaptureItem, describeCaptureReviewReason } from "@/lib/domain/capture-review";
+import { occurrenceCountOf } from "@/lib/capture/occurrences";
 import type { Account, CaptureReviewItem, Category } from "@/lib/types";
 
 const inflowTypes = new Set(["income"]);
@@ -34,6 +35,7 @@ export function CaptureReviewRow({
   const isSettled = item.status === "approved" || item.status === "rejected";
   const canApprove = canApproveCaptureItem(item);
   const reason = describeCaptureReviewReason(item);
+  const occurrences = occurrenceCountOf(item);
 
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -48,6 +50,14 @@ export function CaptureReviewRow({
             <span className="truncate text-sm text-foreground">
               {formatDate(item.occurredOn)} · {account?.name ?? "Unknown account"}
             </span>
+            {occurrences > 1 ? (
+              <span
+                className="shrink-0 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground"
+                aria-label={`Captured ${occurrences} times`}
+              >
+                ×{occurrences}
+              </span>
+            ) : null}
             {item.status === "duplicate" ? (
               <IconCopy aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
             ) : item.status === "needs_review" ? (

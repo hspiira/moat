@@ -407,6 +407,16 @@ export type CaptureReviewItem = {
   originalSnapshot: CaptureReviewSnapshot;
   duplicateTransactionId?: string;
   duplicateCaptureReviewItemId?: string;
+  /**
+   * How many times this same message has been handed over.
+   *
+   * A repeat is counted here rather than given a row of its own: two rows are
+   * two chances to approve the same money twice, and dropping the repeat outright
+   * hides that the shortcut is firing more than once.
+   */
+  occurrenceCount?: number;
+  /** When each of those arrived, newest last, so the count can be accounted for. */
+  occurrenceCapturedAt?: string[];
   approvedTransactionId?: string;
   reviewedAt?: string;
   resolvedAt?: string;

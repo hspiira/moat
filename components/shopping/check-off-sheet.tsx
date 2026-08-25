@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 import { Button } from "@/components/ui/button";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,8 +82,8 @@ export function CheckOffSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
+        <SheetHeader className="sr-only">
           <SheetTitle>Record {selected.length === 1 ? "purchase" : "purchases"}</SheetTitle>
           <SheetDescription>
             Attach {selected.length === 1 ? "this item" : `these ${selected.length} items`} to
@@ -90,17 +91,23 @@ export function CheckOffSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <CheckOffSheetForm
-          key={sessionKey}
-          selected={selected}
-          items={items}
-          recentExpenses={recentExpenses}
-          accounts={accounts}
-          expenseCategories={expenseCategories}
-          lineItems={lineItems}
-          isSubmitting={isSubmitting}
-          onConfirm={onConfirm}
-        />
+        <FormCardShell
+          embedded
+          title={`Record ${selected.length === 1 ? "purchase" : "purchases"}`}
+          description={`Attach ${selected.length === 1 ? "this item" : `these ${selected.length} items`} to the expense that paid for ${selected.length === 1 ? "it" : "them"}.`}
+        >
+          <CheckOffSheetForm
+            key={sessionKey}
+            selected={selected}
+            items={items}
+            recentExpenses={recentExpenses}
+            accounts={accounts}
+            expenseCategories={expenseCategories}
+            lineItems={lineItems}
+            isSubmitting={isSubmitting}
+            onConfirm={onConfirm}
+          />
+        </FormCardShell>
       </SheetContent>
     </Sheet>
   );
@@ -143,8 +150,9 @@ function CheckOffSheetForm({
           purchase.id,
           {
             quantity: String(purchase.quantity ?? 1),
-            unitPrice:
-              purchase.estimatedUnitPrice != null ? String(purchase.estimatedUnitPrice) : "",
+            // The estimate is a reference only. Leaving actual blank must not
+            // silently turn a plan into a recorded price.
+            unitPrice: "",
           },
         ]),
       ),
@@ -157,10 +165,11 @@ function CheckOffSheetForm({
   }));
   const createAmount = sumFulfillmentCost(resolvedActuals);
   const unpricedCount = resolvedActuals.filter((entry) => entry.unitPrice == null).length;
+  const hasActualForAll = unpricedCount === 0;
 
   const canConfirm =
     mode === "attach"
-      ? transactionId !== ""
+      ? transactionId !== "" && hasActualForAll
       : form.accountId !== "" && form.categoryId !== "" && createAmount > 0;
 
   const confirm = () => {
@@ -180,12 +189,24 @@ function CheckOffSheetForm({
   };
 
   return (
-    <div className="grid gap-4 p-4">
+    <div className="grid gap-4">
       <div className="grid gap-2">
-        <p className="text-xs font-medium text-muted-foreground">What did they cost?</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          What did they cost? Enter the actual price; the planned amount is only a reference.
+        </p>
+        <div className="grid grid-cols-[1fr_auto_auto] items-end gap-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span />
+          <span className="w-14 text-right">Qty</span>
+          <span className="w-24 text-right">Actual / unit</span>
+        </div>
         <ul className="grid gap-2">
           {selected.map((purchase) => {
             const draft = actuals[purchase.id] ?? { quantity: "1", unitPrice: "" };
+            const plannedAmount =
+              purchase.estimatedUnitPrice != null
+                ? (purchase.quantity ?? 1) * purchase.estimatedUnitPrice
+                : undefined;
+            const itemName = itemsById.get(purchase.itemId)?.name ?? "Item";
             const update = (patch: Partial<typeof draft>) =>
               setActuals((current) => ({
                 ...current,
@@ -196,8 +217,13 @@ function CheckOffSheetForm({
               <li key={purchase.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
                 <span className="min-w-0">
                   <span className="block truncate text-sm">
-                    {itemsById.get(purchase.itemId)?.name ?? "Item"}
+                    {itemName}
                   </span>
+                  {plannedAmount != null ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      planned {formatMoney(plannedAmount)}
+                    </span>
+                  ) : null}
                   {plans.get(purchase.id) ? (
                     <span className="block truncate text-xs text-muted-foreground">
                       {formatMoney(plans.get(purchase.id)!.remaining)} of{" "}
@@ -213,13 +239,13 @@ function CheckOffSheetForm({
                   onChange={(event) => update({ quantity: event.target.value })}
                 />
                 <Input
-                  aria-label="Unit price"
+                  aria-label={`Actual unit price for ${itemName}`}
                   inputMode="decimal"
                   className="w-24 text-right"
                   placeholder={
                     purchase.estimatedUnitPrice != null
-                      ? `est ${purchase.estimatedUnitPrice}`
-                      : "price"
+                      ? `planned ${formatMoney(purchase.estimatedUnitPrice)}`
+                      : "actual price"
                   }
                   value={draft.unitPrice}
                   onChange={(event) => update({ unitPrice: event.target.value })}
@@ -230,12 +256,16 @@ function CheckOffSheetForm({
         </ul>
         <div className="flex items-baseline justify-between gap-3 text-sm">
           <span className="text-muted-foreground">Total</span>
-          <Money amount={createAmount} tone="neutral" className="font-semibold" />
+          {createAmount > 0 ? (
+            <Money amount={createAmount} tone="neutral" className="font-semibold" />
+          ) : (
+            <span className="text-xs text-muted-foreground">Enter actual prices</span>
+          )}
         </div>
         {unpricedCount > 0 ? (
           <p className="text-xs text-muted-foreground">
-            {unpricedCount} item{unpricedCount === 1 ? "" : "s"} without a price, recorded
-            as bought, but left out of the total and the price history.
+            {unpricedCount} item{unpricedCount === 1 ? "" : "s"} still need
+            {unpricedCount === 1 ? "s" : ""} an actual price before this purchase can be recorded.
           </p>
         ) : null}
       </div>

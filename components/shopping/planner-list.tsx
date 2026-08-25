@@ -239,8 +239,15 @@ export function PlannerList(props: {
                         : ""}
                     </span>
                   </span>
-                  <span className="shrink-0 whitespace-nowrap text-right text-sm tabular-nums text-muted-foreground">
-                    {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
+                  <span className="shrink-0 text-right tabular-nums">
+                    <span className="block whitespace-nowrap text-sm text-muted-foreground">
+                      actual {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "not recorded"}
+                    </span>
+                    {entry.outcome.planned != null ? (
+                      <span className="block whitespace-nowrap text-xs text-muted-foreground/75">
+                        planned {formatMoney(entry.outcome.planned)}
+                      </span>
+                    ) : null}
                   </span>
                 </li>
               )),

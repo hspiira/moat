@@ -15,14 +15,29 @@ import {
 } from "@/lib/capture/normalizers";
 import { parseWithProviderPacks } from "@/lib/capture/providers";
 import type { CapturePipelineCandidate, CapturePipelineInput } from "@/lib/capture/types";
-import { defaultCategoryForType } from "@/lib/domain/transaction-classification";
+import { matchByName } from "@/lib/capture/name-match";
+import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import type { CaptureReviewItem } from "@/lib/types";
 
+/**
+ * Read from the message, or left for the reviewer.
+ *
+ * This used to take the first category of the right kind, so every captured
+ * expense landed in whichever expense category happened to be first. A wrong
+ * label that looks deliberate is worse than none: it gets approved without being
+ * read, and the ledger says something untrue about where the money went.
+ */
 function inferCategoryId(
   categories: CapturePipelineInput["categories"],
   type: CapturePipelineCandidate["type"],
+  text: string,
+  payee: string,
 ) {
-  return defaultCategoryForType(categories, type)?.id ?? "";
+  const named = categories
+    .filter((category) => categoryMatchesType(category, type))
+    .map((category) => ({ id: category.id, names: category.name ? [category.name] : [] }));
+
+  return matchByName(named, [payee, text])?.id ?? "";
 }
 
 export function parseCaptureEnvelope(input: CapturePipelineInput & { existingReviewItems?: CaptureReviewItem[] }) {
@@ -42,8 +57,8 @@ export function parseCaptureEnvelope(input: CapturePipelineInput & { existingRev
           ? input.fallbackFxRate
           : undefined;
     const occurredOn = providerResult?.occurredOn ?? parseCaptureDate(rawText);
-    const categoryId = inferCategoryId(input.categories, type);
     const payee = providerResult?.payee ?? inferCapturePayee(rawText);
+    const categoryId = inferCategoryId(input.categories, type, rawText, payee);
     const normalizedAmount = normalizeAmountToUgx(originalAmount, currency, fxRateToUgx);
     const messageHash = buildStableHash(
       [input.source, input.envelope.sourceApp ?? "", rawText, occurredOn, String(originalAmount)],

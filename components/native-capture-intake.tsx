@@ -10,7 +10,12 @@ import {
   subscribeToNativeCapture,
   type NativeCapturePayload,
 } from "@/lib/native/capture-bridge";
+import { chooseCaptureAccount } from "@/lib/capture/account-match";
 import { loadCaptureAutomationSettings } from "@/lib/native/capture-settings";
+import {
+  accountIdForSender,
+  readCaptureShortcutPreferences,
+} from "@/lib/preferences/capture-shortcut";
 import { repositories } from "@/lib/repositories/instance";
 
 export function NativeCaptureIntake() {
@@ -56,15 +61,26 @@ export function NativeCaptureIntake() {
         }
 
         const accounts = await repositories.accounts.listByUser(userId);
-        const accountId = accounts[0]?.id;
-        if (!accountId) {
+
+        // The sender says which account the money moved on, so a message from
+        // one provider no longer lands on whichever account came back first.
+        const chosen = chooseCaptureAccount({
+          accounts,
+          sender: payload.sourceTitle,
+          text: payload.rawContent,
+          mappedAccountId: accountIdForSender(
+            readCaptureShortcutPreferences(),
+            payload.sourceTitle,
+          ),
+        });
+        if (!chosen) {
           return;
         }
 
         await ingestNativeCapturePayload({
           repositories,
           userId,
-          accountId,
+          accountId: chosen.accountId,
           payload,
         });
 

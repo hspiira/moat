@@ -57,6 +57,6 @@ export type CapturePipelineInput = {
   source: TransactionSource;
   accountId: string;
   fallbackFxRate?: number;
-  categories: CategoryLike[];
+  categories: Array<CategoryLike & { name?: string }>;
   existingTransactions: Transaction[];
 };

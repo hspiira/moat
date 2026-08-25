@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconX } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import {
   buildIntentSteps,
@@ -19,12 +26,16 @@ import { parseNativeCaptureUrl } from "@/lib/native/capture-deep-link";
 import {
   addCaptureShortcutSender,
   canAddCaptureShortcutSender,
+  captureShortcutSenderNames,
   defaultCaptureShortcutPreferences,
   readCaptureShortcutPreferences,
   removeCaptureShortcutSender,
   saveCaptureShortcutPreferences,
+  setCaptureShortcutSenderAccount,
   type CaptureShortcutPreferences,
 } from "@/lib/preferences/capture-shortcut";
+import { repositories } from "@/lib/repositories/instance";
+import type { Account } from "@/lib/types";
 
 export function CaptureShortcutPanel() {
   const { show } = useToast();
@@ -34,10 +45,28 @@ export function CaptureShortcutPanel() {
       : readCaptureShortcutPreferences(),
   );
   const [draft, setDraft] = useState("");
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
-  const template = buildShortcutUrlTemplate(preferences.senders[0]);
-  const intentSteps = buildIntentSteps(preferences.senders);
-  const urlSteps = buildShortcutSteps(preferences.senders);
+  useEffect(() => {
+    let cancelled = false;
+    void repositories.userProfile
+      .get()
+      .then(async (profile) =>
+        profile ? repositories.accounts.listByUser(profile.id) : [],
+      )
+      .then((found) => {
+        if (!cancelled) setAccounts(found);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const senderNames = captureShortcutSenderNames(preferences);
+  const template = buildShortcutUrlTemplate(senderNames[0]);
+  const intentSteps = buildIntentSteps(senderNames);
+  const urlSteps = buildShortcutSteps(senderNames);
 
   function update(next: CaptureShortcutPreferences) {
     setPreferences(next);
@@ -72,7 +101,7 @@ export function CaptureShortcutPanel() {
   // Sent through the same parser the shortcut reaches, so a run that lands in
   // review proves the whole path rather than only that the button works.
   function sendTestCapture() {
-    const payload = parseNativeCaptureUrl(buildTestCaptureUrl(preferences.senders[0]));
+    const payload = parseNativeCaptureUrl(buildTestCaptureUrl(senderNames[0]));
     if (!payload) {
       show("Couldn't build a test capture.", "error");
       return;
@@ -122,24 +151,49 @@ export function CaptureShortcutPanel() {
         </div>
 
         <div className="grid gap-2">
-          <div className="text-xs text-muted-foreground">Senders you want captured</div>
+          <div className="text-xs text-muted-foreground">
+            Senders you want captured, and the account each one&rsquo;s money moves on
+          </div>
           {preferences.senders.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2">
               {preferences.senders.map((sender) => (
-                <span
-                  key={sender}
-                  className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-foreground"
-                >
-                  {sender}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${sender}`}
-                    onClick={() => update(removeCaptureShortcutSender(preferences, sender))}
-                    className="text-muted-foreground"
+                <div key={sender.name} className="flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-foreground">
+                    {sender.name}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${sender.name}`}
+                      onClick={() =>
+                        update(removeCaptureShortcutSender(preferences, sender.name))
+                      }
+                      className="text-muted-foreground"
+                    >
+                      <IconX className="size-3" />
+                    </button>
+                  </span>
+                  <Select
+                    value={sender.accountId ?? ""}
+                    onValueChange={(accountId) =>
+                      update(
+                        setCaptureShortcutSenderAccount(preferences, sender.name, accountId),
+                      )
+                    }
                   >
-                    <IconX className="size-3" />
-                  </button>
-                </span>
+                    <SelectTrigger
+                      className="h-8 w-44 text-xs"
+                      aria-label={`Account for ${sender.name}`}
+                    >
+                      <SelectValue placeholder="Which account?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               ))}
             </div>
           ) : (

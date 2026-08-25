@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { FormCardShell } from "@/components/forms/form-card-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -39,8 +40,8 @@ export function PlannerEditSheet({
 }) {
   return (
     <Sheet open={purchase !== null} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+        <SheetHeader className="sr-only">
           <SheetTitle>Edit {item?.name ?? "item"}</SheetTitle>
           <SheetDescription>
             Change what you plan to buy. The item itself stays the same, so its price
@@ -49,12 +50,18 @@ export function PlannerEditSheet({
         </SheetHeader>
 
         {purchase ? (
-          <PlannerEditForm
-            key={purchase.id}
-            purchase={purchase}
-            isSubmitting={isSubmitting}
-            onSave={onSave}
-          />
+          <FormCardShell
+            embedded
+            title={`Edit ${item?.name ?? "item"}`}
+            description="Change what you plan to buy. The item itself stays the same, so its price history follows it."
+          >
+            <PlannerEditForm
+              key={purchase.id}
+              purchase={purchase}
+              isSubmitting={isSubmitting}
+              onSave={onSave}
+            />
+          </FormCardShell>
         ) : null}
       </SheetContent>
     </Sheet>
@@ -89,7 +96,7 @@ function PlannerEditForm({
     });
 
   return (
-    <div className="grid gap-4 p-4">
+    <div className="grid gap-4">
       <div className="grid gap-1">
         <Label htmlFor="planner-edit-quantity">Quantity</Label>
         <Input
