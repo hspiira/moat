@@ -29,35 +29,53 @@ export function buildShortcutUrlTemplate(sender?: string): string {
 }
 
 /**
+ * A provider name is a sender id, not a contact.
+ *
+ * The Sender field takes such a name, so it is what to set. Whether a trigger on
+ * it then fires is another matter, and there is no way to know but to be sent
+ * one, so "Message Contains" is given as the thing to add when nothing arrives.
+ */
+function triggerSteps(sender: string | undefined): string[] {
+  return [
+    'In Shortcuts, open Automation and add a new "Message" automation.',
+    sender
+      ? `Set Sender to ${sender}. It is a sender id rather than a contact, which the field accepts.`
+      : "Set Sender to the provider's name. It is a sender id rather than a contact, which the field accepts.",
+    'If nothing arrives, add "Message Contains" on a word only that provider sends, which matches on the message itself.',
+    "Choose Run Immediately if your iPhone offers it, so nothing has to be confirmed.",
+  ];
+}
+
+function perSenderNote(senders: string[]): string[] {
+  return senders.length > 1
+    ? [`Repeat this once for each of ${senders.join(", ")}, so each hands over its own name.`]
+    : [];
+}
+
+/**
  * The shorter recipe, for a phone where Moat's own Shortcuts action is present.
  * It carries the message as a value rather than inside a url, so the text never
  * reaches anywhere a url is kept.
  */
 export function buildIntentSteps(senders: string[]): string[] {
   const named = senders.filter((sender) => sender.trim());
-  const senderStep = named.length
-    ? `Set "Sender" to ${named.join(", ")}.`
-    : 'Set "Sender" to the bank or wallet you want captured.';
 
   return [
-    'In Shortcuts, open Automation and add a new "Message" automation.',
-    senderStep,
-    "Choose Run Immediately if your iPhone offers it, so nothing has to be confirmed.",
+    ...triggerSteps(named[0]),
     'Add Moat\'s "Capture money message" action.',
-    "Pass the message content to Message, and the sender to Sender.",
+    "Pass the message content to Message.",
+    named[0]
+      ? `Type ${named[0]} into Sender, rather than taking it from the message.`
+      : "Type the provider's name into Sender, rather than taking it from the message.",
+    ...perSenderNote(named),
   ];
 }
 
 export function buildShortcutSteps(senders: string[]): string[] {
   const named = senders.filter((sender) => sender.trim());
-  const senderStep = named.length
-    ? `Set "Sender" to ${named.join(", ")}.`
-    : 'Set "Sender" to the bank or wallet you want captured.';
 
   return [
-    'In Shortcuts, open Automation and add a new "Message" automation.',
-    senderStep,
-    "Choose Run Immediately if your iPhone offers it, so nothing has to be confirmed.",
+    ...triggerSteps(named[0]),
     'Add a "URL Encode" action and pass it the message content.',
     'Add a "Text" action holding the line below, with the encoded message in place of the token.',
     'Finish with "Open URLs" on that text.',

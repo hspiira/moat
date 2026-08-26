@@ -79,19 +79,27 @@ describe("buildShortcutUrlTemplate", () => {
 });
 
 describe("buildShortcutSteps", () => {
-  it("names the senders that were configured", () => {
-    expect(buildShortcutSteps(["MTN MoMo", "Stanbic"]).join(" ")).toContain("MTN MoMo, Stanbic");
+  /* The Sender field takes a sender id, so that is what to set. Whether a
+     trigger on one fires cannot be known without being sent a message, so the
+     message-content match is offered for when nothing arrives. */
+  it("sets the sender, and offers the message match as the fallback", () => {
+    const steps = buildShortcutSteps(["MTNMobMoney"]).join(" ");
+
+    expect(steps).toContain("Set Sender to MTNMobMoney");
+    expect(steps).toContain("If nothing arrives");
+    expect(steps).toContain("Message Contains");
+  });
+
+  it("says a sender id is not a contact, since that is what it looks like", () => {
+    expect(buildShortcutSteps([]).join(" ")).toContain("rather than a contact");
   });
 
   it("still reads as instructions before any sender is added", () => {
-    const steps = buildShortcutSteps([]);
-
-    expect(steps).toHaveLength(6);
-    expect(steps.join(" ")).toContain("the bank or wallet you want captured");
+    expect(buildShortcutSteps([]).length).toBeGreaterThan(3);
   });
 
   it("ignores a blank sender rather than naming nothing", () => {
-    expect(buildShortcutSteps(["  ", "Stanbic"]).join(" ")).toContain('"Sender" to Stanbic');
+    expect(buildShortcutSteps(["  ", "Stanbic"]).join(" ")).toContain("Stanbic");
   });
 });
 
@@ -110,21 +118,36 @@ describe("buildTestCaptureUrl", () => {
 });
 
 describe("buildIntentSteps", () => {
-  /* The shorter recipe for a phone that has the action. No url is built, so
-     there is no line to paste and nothing to url-encode. */
-  it("names the senders and never mentions a url", () => {
-    const steps = buildIntentSteps(["MTN MoMo", "Stanbic"]);
+  it("uses the action and never mentions a url", () => {
+    const steps = buildIntentSteps(["MTNMobMoney"]).join(" ");
 
-    expect(steps.join(" ")).toContain("MTN MoMo, Stanbic");
-    expect(steps.join(" ")).toContain("Capture money message");
-    expect(steps.join(" ")).not.toContain("moat://");
+    expect(steps).toContain("Capture money message");
+    expect(steps).not.toContain("moat://");
   });
 
-  it("is shorter than the url recipe it replaces", () => {
-    expect(buildIntentSteps([]).length).toBeLessThan(buildShortcutSteps([]).length);
+  /* The name is typed in rather than read off the message, because the app
+     matches it against the account chosen for that sender and iOS may not hand
+     a provider id over at all. */
+  it("has the sender typed in rather than taken from the message", () => {
+    const steps = buildIntentSteps(["MTNMobMoney"]).join(" ");
+
+    expect(steps).toContain("Type MTNMobMoney into Sender");
+    expect(steps).toContain("rather than taking it from the message");
+  });
+
+  /* One automation cannot hand over three different names, so each provider
+     needs its own, and the account each one lands on depends on it. */
+  it("asks for one automation per provider when there is more than one", () => {
+    expect(buildIntentSteps(["MTNMobMoney", "AirtelMoney"]).join(" ")).toContain(
+      "once for each of MTNMobMoney, AirtelMoney",
+    );
+  });
+
+  it("says nothing about repeating when there is only one", () => {
+    expect(buildIntentSteps(["MTNMobMoney"]).join(" ")).not.toContain("Repeat this");
   });
 
   it("still reads as instructions before any sender is added", () => {
-    expect(buildIntentSteps([]).join(" ")).toContain("the bank or wallet you want captured");
+    expect(buildIntentSteps([]).join(" ")).toContain("the provider");
   });
 });
