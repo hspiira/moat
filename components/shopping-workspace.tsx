@@ -103,16 +103,6 @@ export function ShoppingWorkspace() {
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
             <IconPlus className="size-4" /> Add an item
           </Button>
-          {selectedPurchases.length > 0 ? (
-            <Button
-              variant="outline"
-              disabled={workspace.isSubmitting}
-              className="flex-1 sm:flex-none sm:px-6"
-              onClick={() => setIsCheckOffOpen(true)}
-            >
-              Bought {selectedPurchases.length}
-            </Button>
-          ) : null}
         </div>
 
         <PlannerList
@@ -130,6 +120,32 @@ export function ShoppingWorkspace() {
           onRestore={(purchase) => void workspace.restorePurchase(purchase)}
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
+
+        {/* Ticking items off happens down the list, and the action used to be
+            above it, so the last thing you did was scroll back up. It rides
+            the bottom of the viewport instead, clear of the nav bar. */}
+        {selectedPurchases.length > 0 ? (
+          <div className="sticky bottom-[calc(4.5rem+max(0.625rem,env(safe-area-inset-bottom)))] z-30 flex items-center gap-3 rounded-xl border border-border/60 bg-background/95 p-2 pl-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+            <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+              {selectedPurchases.length} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+            <Button
+              disabled={workspace.isSubmitting}
+              className="shrink-0"
+              onClick={() => setIsCheckOffOpen(true)}
+            >
+              Bought {selectedPurchases.length}
+            </Button>
+          </div>
+        ) : null}
 
         <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
       </div>
