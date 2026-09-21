@@ -2,6 +2,8 @@
 
 import { startTransition, useEffect, useMemo, useState } from "react";
 
+import { IconChevronRight } from "@tabler/icons-react";
+
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { EmptyStateCard } from "@/components/page-shell/page-state";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { FilterChips } from "@/components/ui/filter-chips";
 import { Money } from "@/components/ui/money";
 import { useToast } from "@/components/ui/toast";
 import { getProjectSummary, type ProjectSummary } from "@/lib/domain/projects";
@@ -37,6 +40,9 @@ export function ProjectsWorkspace() {
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  // Closed projects are a record, not work in progress, so they wait behind
+  // a filter rather than lengthening the list forever.
+  const [showClosed, setShowClosed] = useState(false);
 
   async function load() {
     setIsLoading(true);
@@ -74,6 +80,12 @@ export function ProjectsWorkspace() {
         .map((project) => getProjectSummary(project, transactions, categories))
         .sort((left, right) => right.spent - left.spent),
     [categories, projects, transactions],
+  );
+
+  const activeCount = summaries.filter((summary) => !summary.project.endedOn).length;
+  const closedCount = summaries.length - activeCount;
+  const visibleSummaries = summaries.filter((summary) =>
+    showClosed ? Boolean(summary.project.endedOn) : !summary.project.endedOn,
   );
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
@@ -140,7 +152,7 @@ export function ProjectsWorkspace() {
   return (
     <FeaturePageShell
       title="Projects"
-      description="A one-off that spans categories and months, a relocation, a wedding, a term of school fees. Tag its spending and see what it really cost."
+      description="Tag the spending that belongs to a one-off and see what it really cost."
       profile={profile}
       isLoading={isLoading}
       error={error}
@@ -205,13 +217,29 @@ export function ProjectsWorkspace() {
         </SheetContent>
       </Sheet>
 
-      {summaries.length === 0 ? (
+      {closedCount > 0 ? (
+        <FilterChips
+          label="Projects"
+          options={[
+            { value: false, label: `Active (${activeCount})` },
+            { value: true, label: `Closed (${closedCount})` },
+          ]}
+          value={showClosed}
+          onChange={setShowClosed}
+        />
+      ) : null}
+
+      {visibleSummaries.length === 0 ? (
         <EmptyStateCard
-          title="No projects yet"
-          message="Start one, then tag the spending that belongs to it."
+          title={showClosed ? "No closed projects" : "No projects yet"}
+          message={
+            showClosed
+              ? "Projects you close will be kept here."
+              : "Start one, then tag the spending that belongs to it."
+          }
         />
       ) : (
-        summaries.map((summary) => (
+        visibleSummaries.map((summary) => (
           <Card key={summary.project.id} className="shadow-none">
             <CardHeader>
               <CardTitle className="text-base">{summary.project.name}</CardTitle>
@@ -236,33 +264,53 @@ export function ProjectsWorkspace() {
                 )}
               </div>
 
-              {summary.byCategory.length > 0 ? (
-                <ul className="grid gap-2">
-                  {summary.byCategory.map((entry) => (
-                    <li key={entry.categoryId} className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate text-sm text-foreground">
-                        {entry.categoryName}
-                      </span>
-                      <Money amount={entry.amount} symbol="short" className="text-sm" />
-                    </li>
-                  ))}
-                </ul>
+              {/* The breakdown grew the page by project count times category
+                  count. It is the detail of one project, so it opens on that
+                  project rather than on all of them at once. */}
+              {summary.byCategory.length > 0 || !summary.project.endedOn ? (
+                <details className="group/project grid gap-3">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+                    <IconChevronRight
+                      aria-hidden
+                      className="size-4 shrink-0 transition-transform group-open/project:rotate-90"
+                    />
+                    Breakdown
+                  </summary>
+
+                  {summary.byCategory.length > 0 ? (
+                    <ul className="grid gap-2">
+                      {summary.byCategory.map((entry) => (
+                        <li
+                          key={entry.categoryId}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <span className="min-w-0 truncate text-sm text-foreground">
+                            {entry.categoryName}
+                          </span>
+                          <Money amount={entry.amount} symbol="short" className="text-sm" />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {summary.project.endedOn ? null : (
+                    <div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={isSubmitting}
+                        onClick={() => void handleEnd(summary.project)}
+                      >
+                        Close project
+                      </Button>
+                    </div>
+                  )}
+                </details>
               ) : null}
 
               {summary.project.endedOn ? (
                 <p className="text-xs text-muted-foreground">Closed {summary.project.endedOn}.</p>
-              ) : (
-                <div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={isSubmitting}
-                    onClick={() => void handleEnd(summary.project)}
-                  >
-                    Close project
-                  </Button>
-                </div>
-              )}
+              ) : null}
             </CardContent>
           </Card>
         ))
