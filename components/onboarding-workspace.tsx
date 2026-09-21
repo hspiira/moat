@@ -51,14 +51,9 @@ export function OnboardingWorkspace() {
   }
 
   if (mode === "choose") {
-    const modeOptions = [
-      {
-        mode: "fresh" as const,
-        icon: IconSparkles,
-        title: "Start fresh",
-        description:
-          "Create a new local profile, first account, and optional first goal on this device.",
-      },
+    // Restoring is the rarer path, and offering it first told a new arrival
+    // they were expected to have been here before.
+    const restoreOptions = [
       {
         mode: "restore_file" as const,
         icon: IconFileShredder,
@@ -80,15 +75,28 @@ export function OnboardingWorkspace() {
         <div className="space-y-2">
           <MoatMark className="h-12 w-12" />
           <h1 className="font-display text-2xl font-semibold tracking-tight">
-            Get back into Moat
+            Welcome to Moat
           </h1>
           <p className="text-sm text-muted-foreground">
-            Start fresh on this device or restore an encrypted backup you already control.
+            Your money stays on this device. Start fresh, or bring back a backup you
+            already control.
+          </p>
+        </div>
+
+        <div className="grid justify-items-start gap-2">
+          <Button size="lg" onClick={() => setMode("fresh")}>
+            <IconSparkles />
+            Start fresh
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Creates a local profile, your first account, and an optional first goal on this
+            device.
           </p>
         </div>
 
         <div className="grid gap-3">
-          {modeOptions.map((option) => {
+          <h2 className="text-sm font-medium text-foreground">Already have a backup?</h2>
+          {restoreOptions.map((option) => {
             const OptionIcon = option.icon;
             return (
               <button
