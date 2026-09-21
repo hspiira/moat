@@ -62,8 +62,8 @@ export function DashboardBalanceSummary({
           <DashboardPeriodFilter period={period} onChange={onPeriodChange} />
         </div>
         <dl className="grid min-w-0 grid-cols-2 gap-4">
-          <div className="min-w-0"><dt className="mb-1 flex items-center gap-1 text-xs text-muted-foreground"><IconArrowUpRight aria-hidden className="size-3.5" />Money in</dt><dd className="text-base font-semibold sm:text-xl"><Money amount={inflow} tone="positive" signed /></dd></div>
-          <div className="min-w-0 border-l border-border/60 pl-4"><dt className="mb-1 flex items-center gap-1 text-xs text-muted-foreground"><IconArrowDownRight aria-hidden className="size-3.5" />Money out</dt><dd className="text-base font-semibold sm:text-xl"><Money amount={outflow} tone="negative" signed /></dd></div>
+          <div className="min-w-0"><dt className="mb-1 flex items-center gap-1 text-xs text-muted-foreground"><IconArrowDownRight aria-hidden className="size-3.5" />Money in</dt><dd className="text-base font-semibold sm:text-xl"><Money amount={inflow} tone="positive" signed /></dd></div>
+          <div className="min-w-0 border-l border-border/60 pl-4"><dt className="mb-1 flex items-center gap-1 text-xs text-muted-foreground"><IconArrowUpRight aria-hidden className="size-3.5" />Money out</dt><dd className="text-base font-semibold sm:text-xl"><Money amount={outflow} tone="negative" signed /></dd></div>
         </dl>
       </div>
     </section>
@@ -74,8 +74,8 @@ const presentationByType: Record<
   TransactionType,
   { icon: typeof IconArrowUpRight; iconClass: string; tone: "positive" | "negative" | "neutral"; signed: boolean }
 > = {
-  income: { icon: IconArrowUpRight, iconClass: "bg-pos/12 text-pos", tone: "positive", signed: true },
-  expense: { icon: IconArrowDownRight, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
+  income: { icon: IconArrowDownRight, iconClass: "bg-pos/12 text-pos", tone: "positive", signed: true },
+  expense: { icon: IconArrowUpRight, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
   debt_payment: { icon: IconReceipt2, iconClass: "bg-neg/12 text-neg", tone: "negative", signed: true },
   savings_contribution: {
     icon: IconPigMoney,
