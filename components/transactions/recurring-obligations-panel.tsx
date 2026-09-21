@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconAlertTriangle, IconPlus } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChevronRight, IconPlus } from "@tabler/icons-react";
 
 import { isSuggestedRecurringObligation } from "@/lib/domain/recurring";
 import {
@@ -195,6 +195,8 @@ export function RecurringObligationsPanel({
     setIsOpen(false);
   }
 
+  const overdue = sections.outstanding.filter((bill) => bill.due.isOverdue);
+  const overdueTotal = overdue.reduce((sum, bill) => sum + bill.stillOwed, 0);
   const isEmpty =
     sections.outstanding.length === 0 &&
     sections.paid.length === 0 &&
@@ -219,6 +221,19 @@ export function RecurringObligationsPanel({
           {sections.paused.length > 0 ? ` · ${sections.paused.length} paused` : ""}
         </p>
       </div>
+      ) : null}
+
+      {overdue.length > 0 ? (
+        <div className="rounded-lg border border-neg/30 bg-neg/8 px-4 py-3">
+          <p className="text-sm font-medium text-neg">
+            {overdue.length === 1
+              ? "1 bill is past its due day"
+              : `${overdue.length} bills are past their due day`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatMoney(overdueTotal, "UGX")} still to pay this month.
+          </p>
+        </div>
       ) : null}
 
       <div className="flex gap-2">
@@ -248,7 +263,7 @@ export function RecurringObligationsPanel({
           ) : null}
 
           {sections.paid.length > 0 ? (
-            <BillSection title="Paid">
+            <BillSection title="Paid" count={sections.paid.length} collapsible>
               {sections.paid.map((bill) => (
                 <BillRow
                   key={bill.obligation.id}
@@ -262,7 +277,7 @@ export function RecurringObligationsPanel({
           ) : null}
 
           {sections.offSchedule.length > 0 ? (
-            <BillSection title="Not due this month">
+            <BillSection title="Not due this month" count={sections.offSchedule.length} collapsible>
               {sections.offSchedule.map((obligation) => (
                 <div key={obligation.id} className="min-w-0 py-3">
                   <div className="truncate text-sm text-muted-foreground">{obligation.name}</div>
@@ -277,7 +292,7 @@ export function RecurringObligationsPanel({
           ) : null}
 
           {sections.paused.length > 0 ? (
-            <BillSection title="Paused">
+            <BillSection title="Paused" count={sections.paused.length} collapsible>
               {sections.paused.map((obligation) => (
                 <div
                   key={obligation.id}
@@ -474,7 +489,35 @@ export function RecurringObligationsPanel({
   );
 }
 
-function BillSection({ title, children }: { title: string; children: React.ReactNode }) {
+function BillSection({
+  title,
+  count,
+  collapsible = false,
+  children,
+}: {
+  title: string;
+  count?: number;
+  collapsible?: boolean;
+  children: React.ReactNode;
+}) {
+  // Paid, paused and not-due are reference rather than work. They fold away so
+  // that what is still owed does not sit below a month of settled rows.
+  if (collapsible) {
+    return (
+      <details className="group/section grid min-w-0">
+        <summary className="flex cursor-pointer list-none items-center gap-1 py-1 text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+          <IconChevronRight
+            aria-hidden
+            className="size-3.5 transition-transform group-open/section:rotate-90"
+          />
+          {title}
+          {count === undefined ? null : ` (${count})`}
+        </summary>
+        <div className="min-w-0">{children}</div>
+      </details>
+    );
+  }
+
   return (
     <section className="grid min-w-0 gap-0">
       <h3 className="pb-1 text-xs font-medium text-muted-foreground">
