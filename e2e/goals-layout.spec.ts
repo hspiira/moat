@@ -12,10 +12,20 @@ test("the goals page asks three separate questions, with one ring", async ({ pag
   // One hero at most, never two competing ones. Both rings used to measure the
   // emergency fund, one as a percentage and one in months.
   await expect(page.getByRole("img", { name: /Emergency fund/ })).toHaveCount(0);
-  await expect(page.getByText("of 3 months")).toBeVisible();
 
   // Nothing set aside yet, so the useful thing is a way to start.
   await expect(page.getByRole("button", { name: "Start an emergency fund" })).toBeVisible();
+});
+
+test("guidance about a surplus waits to be asked for", async ({ page }) => {
+  await openSeededApp(page, "/goals");
+
+  // It is not why anyone opens Goals, so it does not run on below the list.
+  await expect(page.getByText("of 3 months")).toBeHidden();
+
+  await page.getByText("Money you are not spending").click();
+
+  await expect(page.getByText("of 3 months")).toBeVisible();
 });
 
 test("the goal list does not repeat the heading above it", async ({ page }) => {

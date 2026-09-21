@@ -1,6 +1,8 @@
 "use client";
 
-import { AppSectionHeading } from "@/components/app-page";
+import { IconChevronRight } from "@tabler/icons-react";
+
+
 import {
   InvestmentGuidancePanels,
   InvestmentBasis,
@@ -32,12 +34,22 @@ export function InvestmentGuidanceSection() {
     return null;
   }
 
+  // Guidance about a surplus is worth having, but it is not why anyone opens
+  // Goals. It stays one tap away rather than running on below every goal.
   return (
-    <section className="grid gap-4">
-      <AppSectionHeading
-        title="Money you are not spending"
-        description="What to do with a surplus. No stock picks, no guaranteed returns."
-      />
+    <details className="group/guidance grid gap-4">
+      <summary className="flex cursor-pointer list-none items-start gap-1.5 [&::-webkit-details-marker]:hidden">
+        <IconChevronRight
+          aria-hidden
+          className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open/guidance:rotate-90"
+        />
+        <span className="min-w-0 space-y-0.5">
+          <h2 className="text-sm font-medium text-foreground">Money you are not spending</h2>
+          <span className="block text-xs text-muted-foreground">
+            What to do with a surplus. No stock picks, no guaranteed returns.
+          </span>
+        </span>
+      </summary>
 
       <InvestmentBasis
         monthlyOutflow={monthlyOutflow}
@@ -62,6 +74,6 @@ export function InvestmentGuidanceSection() {
           regulatedResources={regulatedResources}
         />
       </div>
-    </section>
+    </details>
   );
 }
