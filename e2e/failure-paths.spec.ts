@@ -50,7 +50,7 @@ test("a write that dies halfway leaves no half-written transfer", async ({ page 
 });
 
 test("a truncated backup file is refused and the ledger is left alone", async ({ page }) => {
-  const { errors } = await openSeededApp(page, "/settings");
+  const { errors } = await openSeededApp(page, "/settings/backup");
   const before = await readTransactions(page);
 
   await page.getByRole("button", { name: /Restore from backup/i }).click();
@@ -71,7 +71,7 @@ test("a truncated backup file is refused and the ledger is left alone", async ({
 });
 
 test("a file that is JSON but not a backup is named as such", async ({ page }) => {
-  await openSeededApp(page, "/settings");
+  await openSeededApp(page, "/settings/backup");
   const before = await readTransactions(page);
 
   await page.getByRole("button", { name: /Restore from backup/i }).click();
@@ -90,7 +90,7 @@ test("a file that is JSON but not a backup is named as such", async ({ page }) =
 });
 
 test("a real backup restored with the wrong PIN changes nothing", async ({ page }) => {
-  await openSeededApp(page, "/settings");
+  await openSeededApp(page, "/settings/backup");
   const before = await readTransactions(page);
 
   await page.getByRole("button", { name: /Download encrypted backup/i }).click();
@@ -139,12 +139,16 @@ test("one unreadable record does not take the ledger down with it", async ({ pag
 
   await expect(page.getByText("Ledger")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Details for / }).first()).toBeVisible();
+
+  // The count of what was read back lives in the summary disclosure now, which
+  // starts closed so the ledger itself is what you land on.
+  await page.getByText("This month’s summary").click();
   await expect(page.getByText(`${readable}`, { exact: true }).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 
 test("repeated wrong PINs stop being guessable", async ({ page }) => {
-  await openSeededApp(page, "/settings");
+  await openSeededApp(page, "/settings/security");
 
   await page.getByRole("button", { name: /^Enable PIN lock$/ }).click();
   await page.locator("#new-pin").fill("111111");
