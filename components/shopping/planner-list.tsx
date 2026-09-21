@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
+
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconPencil, IconX } from "@tabler/icons-react";
+import { IconCircleCheck, IconPencil, IconReceipt, IconX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
 import { formatDate } from "@/lib/format-date";
-import Link from "next/link";
 
 import type {
   Item,
@@ -16,8 +17,9 @@ import type {
   Transaction,
   TransactionLineItem,
 } from "@/lib/types";
-import type { PlannerGroups } from "@/lib/domain/planned-purchases";
-import { buildShoppingHistory } from "@/lib/domain/shopping-history";
+import type { PlannedOutcome, PlannerGroups } from "@/lib/domain/planned-purchases";
+import { groupPurchasesByItemGroup, isWorthGrouping } from "@/lib/domain/item-groups";
+import type { ShoppingHistory } from "@/lib/domain/shopping-history";
 import { isInstallmentPurchase, summariseInstallments } from "@/lib/domain/installments";
 
 function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
@@ -35,6 +37,21 @@ function priceMemoryLine(summary: ItemPriceSummary | undefined): string | null {
     parts.push(`best ${formatMoney(bestPrice)} @ ${best.merchant}`);
   }
   return parts.join(" · ");
+}
+
+/**
+ * How the price came out against the plan, said once.
+ *
+ * Showing the planned figure and the gap together says the same thing twice, and
+ * three stacked numbers on a phone row is more than anyone reads.
+ */
+function againstPlanLine(outcome: PlannedOutcome): string | null {
+  if (outcome.planned == null || outcome.difference == null) return null;
+  if (outcome.difference === 0) return `on plan, ${formatMoney(outcome.planned)}`;
+
+  return `${formatMoney(Math.abs(outcome.difference))} ${
+    outcome.difference > 0 ? "over" : "under"
+  } plan`;
 }
 
 function PlannerSection({
@@ -60,15 +77,13 @@ function PlannerSection({
   onOpenHistory: (itemId: string) => void;
   lineItemsById: Map<string, TransactionLineItem>;
 }) {
-  if (purchases.length === 0) return null;
   const lineItems = [...lineItemsById.values()];
-  return (
-    <section className="grid gap-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
-      <ul className="grid gap-0.5">
-        {purchases.map((purchase) => {
+  const grouped = groupPurchasesByItemGroup(purchases, itemsById);
+  // A heading over the whole list says nothing, so they appear only once there
+  // is more than one to give.
+  const showGroups = isWorthGrouping(grouped);
+
+  const renderPurchase = (purchase: PlannedPurchase) => {
           const item = itemsById.get(purchase.itemId);
           const memory = priceMemoryLine(priceSummaries.get(purchase.itemId));
           const plan = isInstallmentPurchase(purchase)
@@ -116,7 +131,8 @@ function PlannerSection({
                 {plan && plan.expected > 0 ? (
                   <span className="mt-1 flex items-center gap-2">
                     <span
-                      aria-hidden
+                      role="img"
+                      aria-label={`${plan.percentPaid}% paid off`}
                       className="h-1 w-16 overflow-hidden rounded-full bg-muted"
                     >
                       <span
@@ -126,8 +142,8 @@ function PlannerSection({
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {plan.remaining > 0
-                        ? `${formatMoney(plan.remaining)} to go`
-                        : "settled"}
+                        ? `${formatMoney(plan.remaining)} left of ${formatMoney(plan.expected)}`
+                        : "paid off"}
                     </span>
                   </span>
                 ) : null}
@@ -163,8 +179,23 @@ function PlannerSection({
               </span>
             </li>
           );
-        })}
-      </ul>
+  };
+
+  if (purchases.length === 0) return null;
+
+  return (
+    <section className="grid gap-2">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
+      {grouped.map((entry) => (
+        <div key={entry.group || "ungrouped"} className="grid gap-1">
+          {showGroups && entry.group ? (
+            <h4 className="px-1 text-xs text-muted-foreground/80">{entry.group}</h4>
+          ) : null}
+          <ul className="grid gap-0.5">{entry.purchases.map(renderPurchase)}</ul>
+        </div>
+      ))}
     </section>
   );
 }
@@ -181,15 +212,13 @@ export function PlannerList(props: {
   onOpenHistory: (itemId: string) => void;
   transactionsById: Map<string, Transaction>;
   lineItemsById: Map<string, TransactionLineItem>;
+  // Built by the workspace, which needs it for the summary too. Deriving it in
+  // both places lets the total and the list drift apart.
+  history: ShoppingHistory;
   isSubmitting: boolean;
 }) {
   const shared = props;
-  const history = buildShoppingHistory({
-    purchases: props.groups.history,
-    itemsById: props.itemsById,
-    transactionsById: props.transactionsById,
-    lineItemsById: props.lineItemsById,
-  });
+  const history = props.history;
   const isEmpty =
     props.groups.overdue.length === 0 &&
     props.groups.upcoming.length === 0 &&
@@ -217,66 +246,69 @@ export function PlannerList(props: {
       <PlannerSection title="Someday" purchases={props.groups.someday} {...shared} />
       {history.trips.length > 0 ? (
         <details className="grid gap-2">
-          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-            Bought ({history.trips.length} trip{history.trips.length === 1 ? "" : "s"})
+          <summary className="cursor-pointer">
+            <h3 className="inline text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Bought ({history.trips.reduce((count, trip) => count + trip.entries.length, 0)})
+            </h3>
           </summary>
-          <ul className="mt-2 grid gap-4">
-            {history.trips.map((trip) => (
-              <li key={trip.transactionId} className="grid gap-1">
-                <div className="flex items-baseline justify-between gap-3 text-xs">
-                  {trip.accountId ? (
-                    <Link
-                      href={`/accounts/detail?id=${encodeURIComponent(trip.accountId)}`}
-                      className="font-medium text-foreground underline underline-offset-2"
-                    >
-                      {formatDate(trip.occurredOn)}
-                    </Link>
-                  ) : (
-                    <span className="font-medium text-foreground">
-                      {formatDate(trip.occurredOn)}
+          <ul className="grid gap-0.5">
+            {history.trips.flatMap((trip) =>
+              trip.entries.map((entry) => (
+                <li
+                  key={entry.purchase.id}
+                  className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-2"
+                >
+                  <IconCircleCheck aria-hidden className="size-4 shrink-0 text-pos" />
+                  <span className="min-w-0 flex-1 overflow-hidden">
+                    <span className="block truncate text-sm text-muted-foreground line-through">
+                      {entry.item?.name ?? "Unknown item"}
+                      {entry.quantity != null ? ` \u00d7 ${entry.quantity}` : ""}
                     </span>
-                  )}
-                  <span className="text-muted-foreground">
-                    {trip.entries.length} item{trip.entries.length === 1 ? "" : "s"} ·{" "}
-                    <span className="text-foreground">{formatMoney(trip.total)}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {formatDate(trip.occurredOn)}
+                      {entry.pricePerUnit != null && entry.item?.unit
+                        ? ` \u00b7 ${formatMoney(entry.pricePerUnit)}/${entry.item.unit}`
+                        : ""}
+                    </span>
                   </span>
-                </div>
-
-                <ul className="grid gap-1 border-l border-border pl-3">
-                  {trip.entries.map((entry) => (
-                    <li
-                      key={entry.purchase.id}
-                      className="flex items-baseline justify-between gap-3 text-sm text-muted-foreground"
+                  <span className="shrink-0 text-right tabular-nums">
+                    <span className="block whitespace-nowrap text-sm text-muted-foreground">
+                      {entry.outcome.actual != null
+                        ? formatMoney(entry.outcome.actual)
+                        : "not recorded"}
+                    </span>
+                    {againstPlanLine(entry.outcome) ? (
+                      <span className="block whitespace-nowrap text-xs text-muted-foreground/75">
+                        {againstPlanLine(entry.outcome)}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label={`Edit ${entry.item?.name ?? "bought item"}`}
+                      onClick={() => props.onEdit(entry.purchase)}
                     >
-                      <span className="min-w-0 flex-1 truncate">
-                        {entry.item?.name ?? "Unknown item"}
-                        {entry.pricePerUnit != null && entry.item?.unit ? (
-                          <span className="text-xs">
-                            {" "}
-                            · {formatMoney(entry.pricePerUnit)}/{entry.item.unit}
-                          </span>
-                        ) : null}
-                      </span>
-
-                      {entry.outcome.difference != null && entry.outcome.difference !== 0 ? (
-                        <span
-                          className={
-                            entry.outcome.difference < 0 ? "text-xs text-pos" : "text-xs text-neg"
-                          }
-                        >
-                          {entry.outcome.difference < 0 ? "under" : "over"} by{" "}
-                          {formatMoney(Math.abs(entry.outcome.difference))}
-                        </span>
-                      ) : null}
-
-                      <span className="shrink-0 text-xs">
-                        {entry.outcome.actual != null ? formatMoney(entry.outcome.actual) : "-"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
+                      <IconPencil className="size-4" />
+                    </Button>
+                    <Button
+                      asChild
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label={`Open the transaction for ${entry.item?.name ?? "this item"}`}
+                    >
+                      <Link href={`/transactions?transaction=${trip.transactionId}`}>
+                        <IconReceipt className="size-4" />
+                      </Link>
+                    </Button>
+                  </span>
+                </li>
+              )),
+            )}
           </ul>
         </details>
       ) : null}

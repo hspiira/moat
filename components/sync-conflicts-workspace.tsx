@@ -97,7 +97,7 @@ export function SyncConflictsWorkspace() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       <PageHeader
         title="Sync conflicts"
         description="Review ledger-affecting records that need a final choice before hosted sync can continue cleanly."

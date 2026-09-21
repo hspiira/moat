@@ -66,8 +66,16 @@ export function GoalsWorkspace() {
   const emergencyPercent = Math.min(999, Math.round(emergencyProgress * 100));
 
   return (
-    <div className="grid gap-5">
-      <PageHeader title="Goals" srOnlyTitle />
+    <div className="grid gap-4">
+      <PageHeader
+        title="Goals"
+        aside={
+          <Button onClick={openNewGoal} size="sm">
+            <IconPlus />
+            New goal
+          </Button>
+        }
+      />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading goals..." /> : null}
@@ -81,74 +89,48 @@ export function GoalsWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <section className="grid gap-4">
-            <AppSectionHeading
-              title="Your goals"
-              description="What you are saving towards, and how each one is tracking."
-            />
-
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-sm text-muted-foreground">Active goals</p>
-              <p className="font-display text-3xl font-semibold tabular-nums">{goals.length}</p>
-            </div>
-
-            <Button onClick={openNewGoal} className="justify-self-start sm:px-6">
-              <IconPlus />
-              New goal
-            </Button>
-
-            <GoalList
-              accounts={accounts}
-              goals={goals}
-              isSubmitting={isSubmitting}
-              onEdit={openEditGoal}
-              onDelete={(goalId) => void handleDeleteGoal(goalId)}
-            />
-          </section>
-
-          <section className="grid gap-4">
+          {/* The fund comes before the goals it outranks, in one compact
+              row. It used to be a second hero below the whole list, which
+              both buried it and repeated a goal already shown above. */}
+          <section className="grid gap-3">
             <AppSectionHeading
               title="Your emergency fund"
               description="The one goal worth having before any other."
             />
 
             {emergencyFundGoal && emergencyFundSuggestion > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8">
+              <div className="flex items-center gap-4">
                 <MoatRing
                   value={emergencyProgress}
                   tone={emergencyProgress >= 1 ? "positive" : "moat"}
                   ariaLabel={`Emergency fund: ${emergencyPercent}% of the suggested moat`}
                   label={`${emergencyPercent}%`}
                   sublabel="of moat"
-                  size={124}
-                  thickness={10}
-                  className="justify-self-center sm:justify-self-start"
+                  size={76}
+                  thickness={8}
+                  className="shrink-0"
                 />
-                <div className="min-w-0 space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Suggested emergency fund
-                  </p>
-                  <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
+                <div className="min-w-0 space-y-0.5">
+                  <div className="font-display text-xl leading-tight font-semibold tracking-tight">
                     <Money
-                      amount={emergencyFundSuggestion}
+                      amount={emergencyFundGoal.currentAmount}
                       tone="neutral"
                       className="font-display"
                     />
                   </div>
-                  <p className="max-w-lg text-sm leading-6 text-muted-foreground">
-                    Roughly three months of your current spending.
+                  <p className="text-sm text-muted-foreground">
+                    of <Money amount={emergencyFundSuggestion} tone="neutral" /> suggested,
+                    roughly three months of your current spending.
                   </p>
                 </div>
               </div>
             ) : (
               // A ring at nought says nothing you did not already know. What is
               // useful when there is no fund yet is the figure and a way to start.
-              <div className="grid gap-3">
-                <div className="min-w-0 space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Aim for about
-                  </p>
-                  <div className="font-display text-3xl leading-[1.1] font-semibold tracking-tight">
+              <div className="grid justify-items-start gap-2">
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-xs font-medium text-muted-foreground">Aim for about</p>
+                  <div className="font-display text-xl leading-tight font-semibold tracking-tight">
                     <Money
                       amount={emergencyFundSuggestion}
                       tone="neutral"
@@ -159,15 +141,31 @@ export function GoalsWorkspace() {
                     Roughly three months of your current spending. Nothing set aside for it yet.
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={openNewGoal}
-                  className="justify-self-start"
-                >
+                <Button variant="outline" size="sm" onClick={openNewGoal}>
                   Start an emergency fund
                 </Button>
               </div>
             )}
+          </section>
+
+          <section className="grid gap-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <AppSectionHeading
+                title="Your goals"
+                description="What you are saving towards, and how each one is tracking."
+              />
+              <p className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                {goals.length} active
+              </p>
+            </div>
+
+            <GoalList
+              accounts={accounts}
+              goals={goals}
+              isSubmitting={isSubmitting}
+              onEdit={openEditGoal}
+              onDelete={(goalId) => void handleDeleteGoal(goalId)}
+            />
           </section>
 
           <InvestmentGuidanceSection />

@@ -16,6 +16,9 @@ const config = [
       // the project is open, and Capacitor vendors its own bridge script in
       // there, so every warning it holds belongs to someone else.
       "ios/App/CapApp-SPM/.build/**",
+      // Claude Code harness helpers. Hooks are loaded as CommonJS, so their
+      // require() calls are the only thing that works there, not a lapse.
+      ".claude/**",
     ],
   },
   ...nextCoreWebVitals,

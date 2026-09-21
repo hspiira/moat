@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { navItems } from "@/lib/data";
@@ -9,13 +11,17 @@ import {
 } from "./desktop-navigation";
 import {
   getActiveGroupedEntry,
+  getMobileNavLabel,
   getNavEntry,
   groupedHrefs,
   mobileCaptureActions,
+  mobileMenuHrefs,
+  mobileNavLabels,
   mobilePrimaryNav,
   navGroups,
   navGroupsExcluding,
   navIcons,
+  settingsDestinations,
 } from "./navigation-model";
 
 const mobileReachable = new Set<string>([...mobilePrimaryNav, ...groupedHrefs]);
@@ -73,7 +79,7 @@ describe("the grouped menu", () => {
 
   it("never repeats a destination the bar already shows", () => {
     for (const href of mobilePrimaryNav) {
-      expect(groupedHrefs, `${href} would render twice on a phone`).not.toContain(href);
+      expect(mobileMenuHrefs, `${href} would render twice on a phone`).not.toContain(href);
     }
 
     for (const href of [...desktopPrimaryNav, ...desktopShortcutNav]) {
@@ -91,9 +97,12 @@ describe("the grouped menu", () => {
     }
   });
 
-  it("labels the More pill with wherever the reader actually is", () => {
+  // The button is still highlighted from inside the menu, which is what this
+  // reports. What it must not do is rename the button: see the mobile bar
+  // tests below for the label itself.
+  it("knows when the reader is somewhere inside the menu", () => {
     for (const href of groupedHrefs) {
-      expect(getActiveGroupedEntry(href)?.href, `${href} does not label the pill`).toBe(href);
+      expect(getActiveGroupedEntry(href)?.href, `${href} does not mark the menu`).toBe(href);
     }
 
     expect(getActiveGroupedEntry("/")).toBeUndefined();
@@ -104,6 +113,78 @@ describe("the grouped menu", () => {
 
     for (const path of capturePaths) {
       expect(groupedHrefs).not.toContain(path);
+    }
+  });
+});
+
+describe("the mobile bar", () => {
+  it("fills five fixed slots: four destinations and Add", () => {
+    expect(mobilePrimaryNav.length).toBe(4);
+  });
+
+  // More left the bar for the header corner. The bar is the places you go
+  // every day; the menu behind More is everywhere else, and a corner control
+  // reads as a way out of the page rather than a fifth destination.
+  it("keeps More out of the bar and in the header", () => {
+    const bar = readFileSync(new URL("./mobile-navigation.tsx", import.meta.url), "utf8");
+    const header = bar.slice(bar.indexOf("<header"), bar.indexOf("</header>"));
+    const nav = bar.slice(bar.indexOf("<nav"), bar.indexOf("</nav>"));
+
+    expect(header, "More is not in the header").toContain("MobileMoreButton");
+    expect(nav, "More is still taking a slot in the bar").not.toContain("MobileMoreButton");
+  });
+
+  it("gives every slot a name and an icon", () => {
+    for (const href of mobilePrimaryNav) {
+      expect(getMobileNavLabel(href), `${href} has no name in the bar`).toBeTruthy();
+      expect(navIcons[href], `${href} has no icon in the bar`).toBeDefined();
+    }
+  });
+
+  // Slot names are fixed width, so a long one would be truncated on a 320px
+  // screen. Anything longer than this needs a shorthand in mobileNavLabels.
+  it("keeps every slot name short enough to render whole", () => {
+    for (const href of mobilePrimaryNav) {
+      expect(getMobileNavLabel(href).length, `${href} is too long for a slot`).toBeLessThanOrEqual(9);
+    }
+  });
+
+  // A shorthand is allowed to be shorter than the page heading. It is not
+  // allowed to point somewhere the destination does not go.
+  it("only shortens names it has a destination for", () => {
+    for (const href of Object.keys(mobileNavLabels)) {
+      expect(getNavEntry(href)?.href, `${href} is shortened but is not a destination`).toBe(href);
+    }
+  });
+
+  it("falls back to a destination's own name", () => {
+    expect(getMobileNavLabel("/accounts")).toBe("Accounts");
+  });
+});
+
+describe("configuration Settings owns", () => {
+  it("keeps rules and categories out of the destination menu", () => {
+    for (const href of settingsDestinations) {
+      expect(groupedHrefs, `${href} is configuration, not a menu destination`).not.toContain(href);
+    }
+  });
+
+  it("still names and illustrates each of them", () => {
+    for (const href of settingsDestinations) {
+      expect(getNavEntry(href)?.href, `${href} has no entry of its own`).toBe(href);
+      expect(navIcons[href], `${href} has no icon`).toBeDefined();
+    }
+  });
+
+  // Removing them from the menu orphans them unless Settings links to them.
+  it("is linked from the settings page", () => {
+    const settings = readFileSync(
+      new URL("../settings-workspace.tsx", import.meta.url),
+      "utf8",
+    );
+
+    for (const href of settingsDestinations) {
+      expect(settings, `Settings has no row for ${href}`).toContain(`"${href}"`);
     }
   });
 });

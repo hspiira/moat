@@ -8,6 +8,8 @@ import { SelectField } from "@/components/forms/select-field";
 import { TextareaField } from "@/components/forms/textarea-field";
 import { accountOptions } from "@/lib/select-options";
 import { CategoryField } from "@/components/transactions/category-field";
+import { PickOrCreateField } from "@/components/ui/pick-or-create-field";
+import { collectPickOptions } from "@/lib/domain/pick-options";
 import type { Account, CaptureReviewItem, Category, Transaction, TransactionType } from "@/lib/types";
 import { formatMoney } from "@/lib/currency";
 import { pendingReviewGap } from "@/lib/domain/balance-gap";
@@ -36,6 +38,12 @@ export function CaptureReviewFields({
   transactions: Transaction[];
   onChange: (update: (current: CaptureReviewItem) => CaptureReviewItem) => void;
 }) {
+  // The payees already in the ledger, so a parsed name is corrected onto one
+  // that exists rather than becoming a second spelling of it.
+  const payeeOptions = useMemo(
+    () => collectPickOptions(transactions.map((transaction) => transaction.payee)),
+    [transactions],
+  );
   const balanceGap = useMemo(() => pendingReviewGap(draft, transactions), [draft, transactions]);
 
   const amountLabel =
@@ -77,11 +85,16 @@ export function CaptureReviewFields({
             onChange((current) => ({ ...current, categoryId: picked.id }))
           }
         />
-        <InputField
+        <PickOrCreateField
           id={`capture-review-payee-${draft.id}`}
           label="Payee"
+          placeholder="Who was paid"
+          searchPlaceholder="Search or type a payee"
+          emptyHint="No payees yet. Type one to add it."
+          options={payeeOptions}
           value={draft.payee}
-          onChange={(event) => onChange((current) => ({ ...current, payee: event.target.value }))}
+          allowClear
+          onChange={(payee) => onChange((current) => ({ ...current, payee }))}
         />
         <AmountField
           id={`capture-review-amount-${draft.id}`}

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { IconMenu2, IconMessage2, IconPlus, type Icon } from "@tabler/icons-react";
+import {
+  IconFileImport,
+  IconMenu2,
+  IconMessage2,
+  IconPlus,
+  type Icon,
+} from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,15 +20,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  getActiveGroupedEntry,
+  getActiveEntryIn,
   getNavEntry,
   isActiveRoute,
   mobileCaptureActions,
+  mobileMenuHrefs,
   mobilePrimaryNav,
   navGroupsExcluding,
   navIcons,
 } from "@/components/navigation/navigation-model";
 import { ThemeToggle } from "@/components/navigation/navigation-brand";
+import { mobileNavSlotClass } from "@/components/navigation/mobile-nav-slot";
 
 function DrawerSection({
   title,
@@ -32,7 +40,7 @@ function DrawerSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-1.5">
+    <section className="grid gap-0.5">
       <div className="px-1 text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
@@ -87,12 +95,17 @@ export function MobileCaptureSheet() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
-          variant="secondary"
-          size="icon"
-          aria-label="Capture transaction"
-          className="size-11 shrink-0 rounded-full bg-primary text-primary-foreground shadow-none hover:bg-primary/90 dark:text-primary-foreground"
+          variant="ghost"
+          aria-label="Add a transaction"
+          className={`${mobileNavSlotClass} text-foreground shadow-none hover:bg-transparent`}
         >
-          <IconPlus className="size-5" />
+          {/* The one control in the bar that acts rather than navigates. The
+              disc says that on its own, so it carries no name under it: the
+              four beside it are places, and a word here would file it with
+              them. The label lives on the button for a screen reader. */}
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <IconPlus className="size-5" />
+          </span>
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -107,7 +120,11 @@ export function MobileCaptureSheet() {
         </SheetHeader>
         <div className="grid flex-1 gap-2 overflow-y-auto overscroll-contain px-6">
           {mobileCaptureActions.map((action) => {
-            const IconComponent = action.label === "Paste text" ? IconMessage2 : IconPlus;
+            const IconComponent = action.secondary
+              ? IconFileImport
+              : action.label === "Paste text"
+                ? IconMessage2
+                : IconPlus;
 
             return (
               <Button
@@ -119,7 +136,11 @@ export function MobileCaptureSheet() {
                 <Link
                   href={action.href}
                   onClick={() => setOpen(false)}
-                  className="flex w-full items-center gap-3 rounded-lg bg-muted/40 px-4 py-3 text-left text-sm font-medium text-foreground"
+                  className={
+                    action.secondary
+                      ? "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                      : "flex w-full items-center gap-3 rounded-lg bg-muted/40 px-4 py-3 text-left text-sm font-medium text-foreground"
+                  }
                 >
                   <IconComponent className="h-4 w-4" />
                   {action.label}
@@ -147,9 +168,12 @@ export function MobileUtilitySheet({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
+      {/* Down from the top and over the whole screen: More is a way out of the
+          page rather than a tray attached to it, and its trigger is up in the
+          corner, so the panel arrives from where it was tapped. */}
       <SheetContent
-        side="bottom"
-        className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        side="top"
+        className="flex h-dvh flex-col border-b-0 px-0 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="px-5 pb-1">
           <SheetTitle className="text-base">More</SheetTitle>
@@ -157,10 +181,12 @@ export function MobileUtilitySheet({
             The rest of Moat, grouped by how often you need it.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid flex-1 gap-3 overflow-y-auto overscroll-contain px-5 pb-2">
+        {/* content-start, or a full-height panel spreads the rows down the
+            screen to fill it and the grouping stops reading. */}
+        <div className="grid flex-1 content-start gap-2 overflow-y-auto overscroll-contain px-5 pb-2">
           {navGroupsExcluding(mobilePrimaryNav).map((group) => (
             <DrawerSection key={group.title} title={group.title}>
-              <div className="grid grid-cols-2 gap-x-1">
+              <div className="grid gap-0.5">
                 {group.hrefs.map((href) => {
                   const item = getNavEntry(href);
                   if (!item) return null;
@@ -180,7 +206,7 @@ export function MobileUtilitySheet({
             </DrawerSection>
           ))}
 
-          <div className="flex items-center justify-between gap-3 px-2.5 py-1">
+          <div className="flex items-center justify-between gap-3 border-t border-border/60 px-2.5 pt-2.5 pb-1">
             <span className="text-sm font-medium text-foreground">Theme</span>
             <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
           </div>
@@ -197,10 +223,17 @@ export function MobileMoreButton({
   pathname: string;
   onToggleTheme: () => void;
 }) {
-  const activeContextItem = getActiveGroupedEntry(pathname);
+  // The button opens the whole menu, so it is called More on every page. It
+  // still lights up when you are inside the menu, and the menu marks which row
+  // you are on, but it never borrows a destination's name for a control that
+  // does not go there.
+  //
+  // It sits in the corner of the header rather than the bar: everything behind
+  // it is somewhere you go now and then, and the bar is for the handful of
+  // places you go every day. A corner control is read as a way out of the
+  // page, which is what this is. The name it cannot show is in the label.
+  const activeContextItem = getActiveEntryIn(pathname, mobileMenuHrefs);
   const isActive = Boolean(activeContextItem);
-  const IconComponent = activeContextItem ? navIcons[activeContextItem.href] : IconMenu2;
-  const label = activeContextItem?.label ?? "More";
 
   return (
     <MobileUtilitySheet
@@ -209,19 +242,18 @@ export function MobileMoreButton({
       trigger={
         <Button
           variant="ghost"
-          aria-label={label}
+          size="icon"
+          aria-label={
+            activeContextItem ? `More. Currently on ${activeContextItem.label}` : "More"
+          }
           className={[
-            "flex h-11 items-center justify-center gap-2 rounded-full px-3 shadow-none",
-            "transition-[background-color,color,padding] duration-200 ease-out",
+            "size-9 shrink-0 rounded-full shadow-none",
             isActive
-              ? "bg-primary pr-4 pl-3.5 text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground",
           ].join(" ")}
         >
-          <IconComponent className="size-5 shrink-0" stroke={isActive ? 2 : 1.7} />
-          {isActive ? (
-            <span className="text-sm font-medium whitespace-nowrap">{label}</span>
-          ) : null}
+          <IconMenu2 className="size-4.5 shrink-0" stroke={isActive ? 2 : 1.7} />
         </Button>
       }
     />

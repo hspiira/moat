@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { IconChevronDown } from "@tabler/icons-react";
 
@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PickOrCreateField } from "@/components/ui/pick-or-create-field";
 import { formatMoneyShort } from "@/lib/currency";
 import { normalizeItemName } from "@/lib/domain/item-normalization";
+import { collectPickOptions } from "@/lib/domain/pick-options";
 import { parseAmountInput } from "@/lib/parse-amount";
 import type { Item } from "@/lib/types";
 
@@ -22,6 +24,7 @@ const emptyDraft = {
   unit: "",
   estimatedUnitPrice: "",
   expectedTotal: "",
+  group: "",
   neededBy: "",
   note: "",
 };
@@ -32,6 +35,7 @@ export type PlannerAddInput = {
   quantity?: number;
   estimatedUnitPrice?: number;
   expectedTotal?: number;
+  group?: string;
   neededBy?: string;
   note?: string;
 };
@@ -50,6 +54,18 @@ export function PlannerAddForm({
   const [draft, setDraft] = useState(emptyDraft);
   const [showDetails, setShowDetails] = useState(false);
 
+  // The units already on this ledger come first, because they are the ones this
+  // shopper actually buys in. The common ones follow, so a new ledger is not
+  // left with an empty list.
+  const groupOptions = useMemo(
+    () => collectPickOptions(items.map((item) => item.group)),
+    [items],
+  );
+  const unitOptions = useMemo(
+    () => collectPickOptions([...items.map((item) => item.unit), ...UNIT_SUGGESTIONS]),
+    [items],
+  );
+
   const matchedItem = items.find(
     (item) => !item.isArchived && normalizeItemName(item.name) === normalizeItemName(draft.name),
   );
@@ -63,6 +79,7 @@ export function PlannerAddForm({
       quantity: parseAmountInput(draft.quantity) ?? undefined,
       estimatedUnitPrice: parseAmountInput(draft.estimatedUnitPrice) ?? undefined,
       expectedTotal: parseAmountInput(draft.expectedTotal) ?? undefined,
+      group: draft.group.trim() || undefined,
       neededBy: draft.neededBy || undefined,
       note: draft.note.trim() || undefined,
     });
@@ -128,19 +145,17 @@ export function PlannerAddForm({
             </div>
 
             <div className="grid gap-1">
-              <Label htmlFor="planner-unit">Unit</Label>
-              <Input
+              <PickOrCreateField
                 id="planner-unit"
-                list="planner-unit-suggestions"
-                value={draft.unit}
+                label="Unit"
                 placeholder={matchedItem?.unit ?? "kg"}
-                onChange={(event) => setDraft({ ...draft, unit: event.target.value })}
+                searchPlaceholder="Search or type a unit"
+                emptyHint="Type a unit to add it."
+                options={unitOptions}
+                value={draft.unit}
+                allowClear
+                onChange={(unit) => setDraft({ ...draft, unit })}
               />
-              <datalist id="planner-unit-suggestions">
-                {UNIT_SUGGESTIONS.map((unit) => (
-                  <option key={unit} value={unit} />
-                ))}
-              </datalist>
             </div>
           </div>
 
@@ -165,6 +180,18 @@ export function PlannerAddForm({
               onChange={(value) => setDraft({ ...draft, neededBy: value })}
             />
           </div>
+
+          <PickOrCreateField
+            id="planner-group"
+            label="Belongs under (optional)"
+            placeholder="Groceries"
+            searchPlaceholder="Search or type a group"
+            emptyHint="Type a group to add it."
+            options={groupOptions}
+            value={draft.group}
+            allowClear
+            onChange={(group) => setDraft({ ...draft, group })}
+          />
 
           <div className="grid gap-1">
             <Label htmlFor="planner-expected-total">Full price if paying in instalments (UGX)</Label>

@@ -37,6 +37,11 @@ const APP_SHELL_URLS = [
   "/month",
   "/settings/rules",
   "/settings/categories",
+  "/settings/security",
+  "/settings/backup",
+  "/settings/capture",
+  "/settings/appearance",
+  "/settings/data",
   "/transactions",
   "/transactions/capture",
   // Where Google returns after a sign-in.

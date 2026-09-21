@@ -32,6 +32,21 @@ async function closePool() {
   await pool?.end();
   pool = null;
 }
+async function withTransaction(run) {
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    const result = await run(client);
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback").catch(() => {
+    });
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
 // src/db/credentials.ts
 import { createHash, randomBytes } from "node:crypto";
@@ -43,11 +58,19 @@ function generateSyncToken() {
 }
 async function mintSyncCredential(userId2, label2) {
   const token = generateSyncToken();
-  await getPool().query(
-    `insert into sync_credentials (token_sha256, user_id, label, created_at)
-     values ($1, $2, $3, $4)`,
-    [hashSyncToken(token), userId2, label2 ?? null, (/* @__PURE__ */ new Date()).toISOString()]
-  );
+  await withTransaction(async (client) => {
+    await client.query(
+      `insert into sync_users (user_id, created_at)
+       values ($1, moat_now_iso())
+       on conflict (user_id) do nothing`,
+      [userId2]
+    );
+    await client.query(
+      `insert into sync_credentials (token_sha256, user_id, label, created_at)
+       values ($1, $2, $3, moat_now_iso())`,
+      [hashSyncToken(token), userId2, label2 ?? null]
+    );
+  });
   return token;
 }
 async function revokeSyncCredentials(userId2) {

@@ -39,30 +39,52 @@ export const navIcons: Record<string, Icon> = {
   "/settings/categories": IconTags,
 };
 
-export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
+// Plan takes the fifth slot. Of everything in the menu it is the one asked
+// most often and on the shortest cycle — what is left to spend, and what is
+// due — where Report and the rest are read now and then.
+export const mobilePrimaryNav = ["/", "/transactions", "/accounts", "/plan"] as const;
 
-// One vocabulary for everything outside the primary slots: when a thing needs
-// you, not which feature it belongs to. Both platforms render these same
-// groups, so a destination cannot be reachable on one and missing on the other.
+// The bar has five fixed slots and no room for "Transactions", so that one slot
+// gets a shorter name. The page it opens keeps its own title: a nav shorthand
+// is allowed to be shorter than a heading, never to mean something else.
+export const mobileNavLabels: Record<string, string> = {
+  "/transactions": "Activity",
+  "/plan": "Plan",
+};
+
+export function getMobileNavLabel(href: string): string {
+  return mobileNavLabels[href] ?? getNavEntry(href)?.label ?? href;
+}
+
+// Three plain groups rather than six cadence-themed ones: what you are here to
+// resolve, what you are here to plan or read, and the machinery. Both platforms
+// render these same groups, so a destination cannot be reachable on one and
+// missing on the other. Rules and categories are configuration, so they live
+// inside Settings rather than taking two rows in a menu of destinations.
 export const navGroups = [
-  { title: "As things arrive", hrefs: ["/inbox"] },
-  { title: "Every month", hrefs: ["/month", "/plan"] },
-  { title: "Look back", hrefs: ["/report", "/projects"] },
-  { title: "Plan ahead", hrefs: ["/goals", "/shopping", "/debt"] },
-  { title: "Set up once", hrefs: ["/settings/rules", "/settings/categories", "/settings"] },
-  { title: "Reference", hrefs: ["/learn"] },
+  { title: "Review", hrefs: ["/inbox", "/month"] },
+  {
+    title: "Planning & analysis",
+    hrefs: ["/plan", "/goals", "/debt", "/shopping", "/projects", "/report"],
+  },
+  { title: "Settings & help", hrefs: ["/settings", "/learn"] },
 ] as const;
+
+// Configuration that Settings owns rather than the menu. These are reached
+// from rows inside Settings, and from the review flows that make you want
+// them, so removing them from the menu must not orphan them.
+export const settingsDestinations = ["/settings/categories", "/settings/rules"] as const;
 
 // Destinations that are not modules in their own right, so they are not in
 // navItems. Everything else takes its label from there rather than repeating it.
 const cadenceEntries: Record<string, { label: string; description: string }> = {
   "/inbox": {
-    label: "Capture review",
-    description: "Transactions read from messages, waiting on your decision.",
+    label: "Capture inbox",
+    description: "Approve entries captured from messages before they count.",
   },
   "/month": {
     label: "Month check",
-    description: "One pass over the month before you put it to bed.",
+    description: "Resolve problems in what is already recorded.",
   },
   "/import": {
     label: "CSV import",
@@ -82,7 +104,16 @@ const cadenceEntries: Record<string, { label: string; description: string }> = {
   },
 };
 
-export const mobileCaptureActions = [
+export type CaptureAction = {
+  href: string;
+  label: string;
+  description: string;
+  // Importing a statement belongs in the same chooser as the other ways in,
+  // but it is a session of work rather than one quick entry.
+  secondary?: boolean;
+};
+
+export const mobileCaptureActions: readonly CaptureAction[] = [
   {
     href: "/transactions/capture?capture=expense&type=expense",
     label: "Expense",
@@ -103,7 +134,13 @@ export const mobileCaptureActions = [
     label: "Paste text",
     description: "Read a transaction from an SMS or notification.",
   },
-] as const;
+  {
+    href: "/transactions/capture?capture=statement",
+    label: "Import statement",
+    description: "Bring in statement rows from a CSV file.",
+    secondary: true,
+  },
+];
 
 export function isActiveRoute(pathname: string, href: string) {
   if (href === "/") {
@@ -126,6 +163,14 @@ export function getNavEntry(href: string): NavEntry | undefined {
 }
 
 export const groupedHrefs = navGroups.flatMap((group) => [...group.hrefs]);
+
+// What the phone's menu actually holds. The groups are shared with the laptop,
+// which shows a different handful in its own bar, so each platform subtracts
+// what it already displays. More lights up for these and not for a page the
+// bar can reach on its own.
+export const mobileMenuHrefs = groupedHrefs.filter(
+  (href) => !(mobilePrimaryNav as readonly string[]).includes(href),
+);
 
 // A destination already sitting in the bar is not repeated in the menu, so each
 // platform hides whatever it shows elsewhere.

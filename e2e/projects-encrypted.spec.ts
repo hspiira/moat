@@ -19,7 +19,7 @@ async function unlock(page: import("@playwright/test").Page) {
 // and a store missing from metadataFields carries no userId to match on: the
 // write succeeds and listByUser finds nothing.
 test("a project survives a reload once records are encrypted", async ({ page }) => {
-  await openSeededApp(page, "/settings");
+  await openSeededApp(page, "/settings/security");
 
   await page.getByRole("button", { name: /^Enable PIN lock$/ }).click();
   await page.locator("#new-pin").fill(PIN);

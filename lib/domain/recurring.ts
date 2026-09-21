@@ -1,4 +1,5 @@
 import { getDebtRepaymentActions, type DebtPayoffStrategy } from "@/lib/domain/debt";
+import { fallsDueInPeriod, resolveInterval } from "@/lib/domain/recurring-interval";
 import type { Account, RecurringObligation, Transaction } from "@/lib/types";
 
 export type SuggestedRecurringObligation = Omit<
@@ -185,14 +186,21 @@ export function buildSuggestedRecurringObligations(
 }
 
 export function isObligationActiveInPeriod(
-  obligation: Pick<RecurringObligation, "startsOn" | "endsOn">,
+  obligation: Pick<RecurringObligation, "startsOn" | "endsOn" | "cadence" | "interval">,
   period: string,
 ): boolean {
   const startsIn = obligation.startsOn?.slice(0, 7);
   const endsIn = obligation.endsOn?.slice(0, 7);
   if (startsIn && startsIn > period) return false;
   if (endsIn && endsIn < period) return false;
-  return true;
+
+  // A bill every three months is not owed in the two between. Before the
+  // interval was carried, everything was treated as owed every month.
+  return fallsDueInPeriod({
+    interval: resolveInterval(obligation),
+    startsOn: obligation.startsOn,
+    period,
+  });
 }
 
 export function evaluateRecurringObligations(

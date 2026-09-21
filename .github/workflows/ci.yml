@@ -30,6 +30,10 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres@localhost:5432/moat_test
       DATABASE_SSL: disable
+      # Baked into the build, so the Google Drive button exists for the drive
+      # recovery tests to click. The value is never used: those tests stub all
+      # of Google, token client and API routes both.
+      NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID: e2e-drive-client-id
 
     steps:
       - uses: actions/checkout@v4

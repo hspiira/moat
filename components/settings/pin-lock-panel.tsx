@@ -121,7 +121,7 @@ export function PinLockPanel() {
                 writeLockTimeout(next);
                 setSuccess(`Moat will lock ${describeLockTimeout(next).toLowerCase()}.`);
               }}
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-base sm:text-sm"
             >
               {LOCK_TIMEOUT_CHOICES.map((choice) => (
                 <option key={choice} value={choice}>

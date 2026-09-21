@@ -278,11 +278,14 @@ function resolveSsl() {
       return { rejectUnauthorized: true };
   }
 }
-async function withUserTransaction(userId, run) {
+async function closePool() {
+  await pool?.end();
+  pool = null;
+}
+async function withTransaction(run) {
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
     const result = await run(client);
     await client.query("commit");
     return result;
@@ -294,6 +297,12 @@ async function withUserTransaction(userId, run) {
     client.release();
   }
 }
+async function withUserTransaction(userId, run) {
+  return withTransaction(async (client) => {
+    await client.query("select set_config('moat.user_id', $1, true)", [userId]);
+    return run(client);
+  });
+}
 
 // src/db/credentials.ts
 function hashSyncToken(token) {
@@ -304,20 +313,38 @@ function generateSyncToken() {
 }
 async function mintSyncCredential(userId, label) {
   const token = generateSyncToken();
-  await getPool().query(
-    `insert into sync_credentials (token_sha256, user_id, label, created_at)
-     values ($1, $2, $3, $4)`,
-    [hashSyncToken(token), userId, label ?? null, (/* @__PURE__ */ new Date()).toISOString()]
-  );
+  await withTransaction(async (client) => {
+    await client.query(
+      `insert into sync_users (user_id, created_at)
+       values ($1, moat_now_iso())
+       on conflict (user_id) do nothing`,
+      [userId]
+    );
+    await client.query(
+      `insert into sync_credentials (token_sha256, user_id, label, created_at)
+       values ($1, $2, $3, moat_now_iso())`,
+      [hashSyncToken(token), userId, label ?? null]
+    );
+  });
   return token;
 }
 async function resolveSyncCredential(token) {
   const result = await getPool().query(
-    `update sync_credentials
-        set last_used_at = $2
-      where token_sha256 = $1
-      returning user_id`,
-    [hashSyncToken(token), (/* @__PURE__ */ new Date()).toISOString()]
+    `with found as (
+       select token_sha256, user_id, last_used_at
+         from sync_credentials
+        where token_sha256 = $1
+     ),
+     stamped as (
+       update sync_credentials c
+          set last_used_at = moat_now_iso()
+         from found
+        where c.token_sha256 = found.token_sha256
+          and (found.last_used_at is null
+               or found.last_used_at < moat_now_iso(now() - interval '5 minutes'))
+     )
+     select user_id from found`,
+    [hashSyncToken(token)]
   );
   return result.rows[0]?.user_id ?? null;
 }
@@ -330,6 +357,20 @@ async function authenticateSyncRequest(authorization) {
     throw new Error("Hosted sync bearer token is not recognised.");
   }
   return { userId };
+}
+
+// src/caller-address.ts
+function trustedProxyCount(env = process.env) {
+  return Math.max(0, Math.trunc(Number(env.MOAT_SYNC_TRUSTED_PROXIES ?? 0)) || 0);
+}
+function callerAddress(request, trustedProxies2) {
+  const socketAddress = (request.socket.remoteAddress ?? "unknown").trim();
+  if (trustedProxies2 === 0) {
+    return socketAddress;
+  }
+  const forwarded = request.headers["x-forwarded-for"];
+  const hops = (Array.isArray(forwarded) ? forwarded.join(",") : forwarded ?? "").split(",").map((hop) => hop.trim()).filter(Boolean);
+  return hops[hops.length - trustedProxies2] ?? socketAddress;
 }
 
 // src/auth/google-clients.ts
@@ -493,14 +534,14 @@ function decideIdentityLink(params) {
 }
 
 // src/db/identities.ts
-async function readState(params) {
-  const linked = await getPool().query(
+async function readState(client, params) {
+  const linked = await client.query(
     "select user_id from sync_identities where issuer = $1 and subject = $2",
     [params.issuer, params.subject]
   );
   let proposedIsClaimed = false;
   if (params.proposedUserId) {
-    const claimed = await getPool().query(
+    const claimed = await client.query(
       `select exists (select 1 from sync_identities where user_id = $1)
            or exists (select 1 from sync_records where user_id = $1) as claimed`,
       [params.proposedUserId]
@@ -515,46 +556,49 @@ async function readState(params) {
 }
 async function resolveIdentity(params) {
   const proposedUserId = params.proposedUserId?.trim() || null;
-  const state = await readState({
-    ...params,
-    proposedUserId,
-    proposedIsProven: params.proposedIsProven === true
+  return withUserTransaction(proposedUserId ?? "", async (client) => {
+    await client.query("select pg_advisory_xact_lock(hashtext($1))", [
+      `${params.issuer}
+${params.subject}`
+    ]);
+    const state = await readState(client, {
+      issuer: params.issuer,
+      subject: params.subject,
+      proposedUserId,
+      proposedIsProven: params.proposedIsProven === true
+    });
+    const decision = decideIdentityLink({ proposedUserId, state });
+    if (decision.outcome === "already_linked_elsewhere") {
+      return { status: "already_linked_elsewhere" };
+    }
+    if (decision.outcome === "proposed_id_taken") {
+      return { status: "proposed_id_taken" };
+    }
+    if (decision.outcome === "sign_in") {
+      return { status: "ok", userId: decision.userId, isNewUser: false };
+    }
+    const userId = decision.outcome === "link" ? decision.userId : `user:${randomUUID()}`;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    await client.query(
+      "insert into sync_users (user_id, created_at) values ($1, $2) on conflict (user_id) do nothing",
+      [userId, now]
+    );
+    await client.query(
+      `insert into sync_identities (issuer, subject, user_id, email, created_at)
+       values ($1, $2, $3, $4, $5)
+       on conflict (issuer, subject) do nothing`,
+      [params.issuer, params.subject, userId, params.email ?? null, now]
+    );
+    return {
+      status: "ok",
+      userId,
+      isNewUser: decision.outcome === "sign_up"
+    };
   });
-  const decision = decideIdentityLink({ proposedUserId, state });
-  if (decision.outcome === "already_linked_elsewhere") {
-    return { status: "already_linked_elsewhere" };
-  }
-  if (decision.outcome === "proposed_id_taken") {
-    return { status: "proposed_id_taken" };
-  }
-  if (decision.outcome === "sign_in") {
-    return { status: "ok", userId: decision.userId, isNewUser: false };
-  }
-  const userId = decision.outcome === "link" ? decision.userId : `user:${randomUUID()}`;
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  await getPool().query(
-    "insert into sync_users (user_id, created_at) values ($1, $2) on conflict (user_id) do nothing",
-    [userId, now]
-  );
-  await getPool().query(
-    `insert into sync_identities (issuer, subject, user_id, email, created_at)
-     values ($1, $2, $3, $4, $5)
-     on conflict (issuer, subject) do nothing`,
-    [params.issuer, params.subject, userId, params.email ?? null, now]
-  );
-  const settled = await getPool().query(
-    "select user_id from sync_identities where issuer = $1 and subject = $2",
-    [params.issuer, params.subject]
-  );
-  const winner = settled.rows[0]?.user_id ?? userId;
-  return {
-    status: "ok",
-    userId: winner,
-    isNewUser: decision.outcome === "sign_up" && winner === userId
-  };
 }
 
 // src/db/postgres-store.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
 function toPullRecord(row) {
   return {
     entityType: row.entity_type,
@@ -566,14 +610,14 @@ function toPullRecord(row) {
   };
 }
 function createServerVersionToken() {
-  return `sv:${crypto.randomUUID()}`;
+  return `sv:${randomUUID2()}`;
 }
 async function ensureUser(client, userId) {
   await client.query(
     `insert into sync_users (user_id, created_at)
-     values ($1, $2)
+     values ($1, moat_now_iso())
      on conflict (user_id) do nothing`,
-    [userId, (/* @__PURE__ */ new Date()).toISOString()]
+    [userId]
   );
 }
 async function writeRecord(client, params) {
@@ -582,7 +626,7 @@ async function writeRecord(client, params) {
        user_id, entity_type, entity_id, payload, deleted,
        updated_at, server_version_token, last_outbox_id, last_device_id
      )
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     values ($1, $2, $3, $4, $5, moat_now_iso(), $6, $7, $8)
      on conflict (user_id, entity_type, entity_id) do update set
        payload = excluded.payload,
        deleted = excluded.deleted,
@@ -597,7 +641,6 @@ async function writeRecord(client, params) {
       params.entityId,
       params.payload,
       params.deleted,
-      (/* @__PURE__ */ new Date()).toISOString(),
       createServerVersionToken(),
       params.outboxId,
       params.deviceId ?? null
@@ -608,9 +651,9 @@ async function writeRecord(client, params) {
 async function markOutboxApplied(client, userId, outboxId) {
   await client.query(
     `insert into sync_applied_outbox (user_id, outbox_id, applied_at)
-     values ($1, $2, $3)
+     values ($1, $2, moat_now_iso())
      on conflict (user_id, outbox_id) do nothing`,
-    [userId, outboxId, (/* @__PURE__ */ new Date()).toISOString()]
+    [userId, outboxId]
   );
 }
 function isBasedOnCurrent(params) {
@@ -726,7 +769,6 @@ async function pullPostgresSyncChanges(request) {
   const cursor = parseCursor(request.since);
   const pageSize = resolvePageSize(request.limit);
   const rows = await withUserTransaction(request.userId, async (client) => {
-    await ensureUser(client, request.userId);
     const result = await client.query(
       `select entity_type, entity_id, payload, deleted, updated_at, server_version_token
          from sync_records
@@ -813,18 +855,31 @@ function applyCors(request, response) {
 }
 
 // src/rate-limit.ts
+var DEFAULT_MAX_KEYS = 1e4;
 function createRateLimiter(rule) {
   const windows = /* @__PURE__ */ new Map();
+  const maxKeys = rule.maxKeys ?? DEFAULT_MAX_KEYS;
+  let nextSweepAt = Number.NEGATIVE_INFINITY;
   function sweep(now) {
     for (const [key, window] of windows) {
       if (window.resetAt <= now) windows.delete(key);
     }
+    nextSweepAt = now + rule.windowMs;
+  }
+  function makeRoom(now) {
+    if (windows.size < maxKeys) return;
+    sweep(now);
+    for (const key of windows.keys()) {
+      if (windows.size < maxKeys) break;
+      windows.delete(key);
+    }
   }
   return {
     check(key, now) {
-      if (windows.size > 1e4) sweep(now);
+      if (now >= nextSweepAt) sweep(now);
       const window = windows.get(key);
       if (!window || window.resetAt <= now) {
+        makeRoom(now);
         windows.set(key, { count: 1, resetAt: now + rule.windowMs });
         return { allowed: true, retryAfterSeconds: 0 };
       }
@@ -850,10 +905,9 @@ var perAddress = createRateLimiter({ limit: 600, windowMs: MINUTE });
 var perUser = createRateLimiter({ limit: 300, windowMs: MINUTE });
 var perFailedAuth = createRateLimiter({ limit: 10, windowMs: MINUTE });
 var perSignIn = createRateLimiter({ limit: 20, windowMs: MINUTE });
-function callerAddress(request) {
-  const forwarded = request.headers["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
-  return (first ?? request.socket.remoteAddress ?? "unknown").trim();
+var trustedProxies = trustedProxyCount();
+function addressOf(request) {
+  return callerAddress(request, trustedProxies);
 }
 function limit(limiter, key, now, message) {
   const verdict = limiter.check(key, now);
@@ -871,19 +925,23 @@ function validate(run) {
   }
 }
 async function checkHealth() {
-  const problems = [];
   try {
-    await getPool().query("select 1");
     const credentials = await getPool().query(
       "select count(*)::text as count from sync_credentials"
     );
-    if (credentials.rows[0]?.count === "0") {
-      problems.push("No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.");
-    }
+    return credentials.rows[0]?.count === "0" ? [
+      200,
+      {
+        status: "ok",
+        notes: [
+          "No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`."
+        ]
+      }
+    ] : [200, { status: "ok" }];
   } catch (error) {
-    problems.push(error instanceof Error ? error.message : "Database is unreachable.");
+    console.error("Health check could not reach the database.", error);
+    return [503, { status: "unhealthy", problems: ["Database is unreachable."] }];
   }
-  return problems.length > 0 ? [503, { status: "unhealthy", problems }] : [200, { status: "ok" }];
 }
 async function authenticate(authorization) {
   try {
@@ -913,7 +971,7 @@ var server = createServer(async (request, response) => {
       throw new HttpError(405, "Method not allowed.");
     }
     if (url.pathname === "/v1/auth/callback") {
-      const address2 = callerAddress(request);
+      const address2 = addressOf(request);
       limit(perAddress, address2, Date.now(), "Too many requests. Try again shortly.");
       limit(perSignIn, address2, Date.now(), "Too many sign-in attempts. Try again shortly.");
       const body = await readJsonBody(request);
@@ -965,7 +1023,7 @@ var server = createServer(async (request, response) => {
       });
       return;
     }
-    const address = callerAddress(request);
+    const address = addressOf(request);
     const now = Date.now();
     limit(perAddress, address, now, "Too many requests. Try again shortly.");
     let principal;
@@ -997,15 +1055,26 @@ var server = createServer(async (request, response) => {
       return;
     }
     console.error("Sync request failed.", error);
-    sendJson(response, 500, { error: "Sync request failed." });
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: "Sync request failed." });
+    }
   }
 });
+server.requestTimeout = 3e4;
+server.headersTimeout = 15e3;
 server.listen(port, () => {
   console.log(`moat sync server listening on ${port}`);
 });
+var stopping = false;
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
-    server.close(() => process.exit(0));
+    if (stopping) return;
+    stopping = true;
+    const giveUp = setTimeout(() => process.exit(1), 1e4);
+    giveUp.unref();
+    server.close(() => {
+      closePool().catch((error) => console.error("Could not close the pool cleanly.", error)).finally(() => process.exit(0));
+    });
   });
 }
 //# sourceMappingURL=server.js.map

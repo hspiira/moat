@@ -97,14 +97,27 @@ export function fulfillPurchase(
   purchase: PlannedPurchase,
   lineItem: TransactionLineItem,
   timestamp: string,
+  /** What has already been paid towards it, when paying in parts. */
+  paidBefore = 0,
 ): PlannedPurchase {
+  const paid = paidBefore + amountOfLine(lineItem);
+  // Something bought in parts is not bought until it is paid off. Leaving it
+  // planned keeps it on the list, where the remaining balance is visible.
+  const settled = purchase.expectedTotal == null || paid >= purchase.expectedTotal;
+
   return {
     ...purchase,
-    status: "purchased",
-    linkedTransactionId: lineItem.transactionId,
-    linkedLineItemId: lineItem.id,
+    status: settled ? "purchased" : "planned",
+    linkedTransactionId: settled ? lineItem.transactionId : purchase.linkedTransactionId,
+    linkedLineItemId: settled ? lineItem.id : purchase.linkedLineItemId,
     updatedAt: timestamp,
   };
+}
+
+function amountOfLine(lineItem: TransactionLineItem): number {
+  if (lineItem.amount != null) return lineItem.amount;
+  if (lineItem.unitPrice != null) return (lineItem.quantity ?? 1) * lineItem.unitPrice;
+  return 0;
 }
 
 export function revertPurchase(purchase: PlannedPurchase, timestamp: string): PlannedPurchase {

@@ -36,16 +36,37 @@ describe("createRateLimiter", () => {
     expect(limiter.check("a", 0).allowed).toBe(false);
   });
 
-  it("does not grow without bound when a caller rotates its key", () => {
-    const limiter = createRateLimiter({ limit: 1, windowMs: 1_000 });
+  /* A sweep only reclaims what expired, so on its own it cannot answer a caller
+     opening keys faster than the window retires them. Before the cap, this grew
+     past the sweep threshold and then walked every key on every later request. */
+  it("holds at the cap while a caller rotates its key inside one window", () => {
+    const limiter = createRateLimiter({ limit: 1, windowMs: 1_000, maxKeys: 100 });
 
-    for (let index = 0; index < 10_002; index += 1) {
+    for (let index = 0; index < 5_000; index += 1) {
       limiter.check(`key-${index}`, 0);
     }
-    expect(limiter.size()).toBeGreaterThan(10_000);
 
-    // A later request past the window clears what expired rather than piling up.
+    expect(limiter.size()).toBeLessThanOrEqual(100);
+  });
+
+  it("clears what expired once the window has passed", () => {
+    const limiter = createRateLimiter({ limit: 1, windowMs: 1_000, maxKeys: 100 });
+
+    for (let index = 0; index < 50; index += 1) {
+      limiter.check(`key-${index}`, 0);
+    }
+
     limiter.check("later", 2_000);
+
     expect(limiter.size()).toBe(1);
+  });
+
+  it("keeps counting a caller that stays on one key while others churn", () => {
+    const limiter = createRateLimiter({ limit: 2, windowMs: 1_000, maxKeys: 100 });
+
+    expect(limiter.check("steady", 0).allowed).toBe(true);
+    expect(limiter.check("steady", 1).allowed).toBe(true);
+
+    expect(limiter.check("steady", 2).allowed).toBe(false);
   });
 });

@@ -89,8 +89,8 @@ export function AccountsWorkspace() {
   }, [requestedEditId, accounts, editingAccountId]);
 
   return (
-    <div className="grid gap-5">
-      <PageHeader title="Accounts" srOnlyTitle />
+    <div className="grid gap-4">
+      <PageHeader title="Accounts" />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading accounts..." /> : null}

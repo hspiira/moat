@@ -18,7 +18,7 @@ test("money received can carry the charge taken off it", async ({ page }) => {
   await page.locator("#tx-fee").fill("2500");
   await page.locator("#tx-account").click();
   await page.getByRole("option", { name: "Momo Wallet" }).click();
-  await page.getByRole("button", { name: /^Add transaction$/ }).click();
+  await page.getByRole("button", { name: /^Add income$/ }).click();
   await page.waitForTimeout(2500);
 
   const after = await expectLedgerIntact(page);

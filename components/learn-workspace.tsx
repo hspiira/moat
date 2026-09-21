@@ -1,6 +1,6 @@
 "use client";
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { IconExternalLink, IconRosetteDiscountCheck } from "@tabler/icons-react";
+import { IconChevronRight, IconExternalLink, IconRosetteDiscountCheck } from "@tabler/icons-react";
 
 import { MetricChip } from "@/components/page-shell/metric-chip";
 import { PageHeader } from "@/components/page-shell/page-header";
@@ -87,10 +87,9 @@ export function LearnWorkspace() {
   const topicEntries = Object.entries(resourcesByTopic);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader
         title="Official sources"
-        srOnlyTitle
         description="Official and research-grade sources behind this app&apos;s Uganda-first assumptions."
         aside={
           <MetricChip
@@ -113,25 +112,6 @@ export function LearnWorkspace() {
 
       {!isLoading ? (
         <div className="grid gap-5">
-          <Card>
-            <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-3 sm:gap-6">
-              {[
-                { kicker: "Official first", value: "Verify before you move money" },
-                { kicker: "Product research", value: "Use data, not promises" },
-                { kicker: "Guidance boundary", value: "Education, not hot picks" },
-              ].map((principle) => (
-                <div key={principle.kicker} className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {principle.kicker}
-                  </p>
-                  <p className="font-display text-base leading-snug font-medium">
-                    {principle.value}
-                  </p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
           {topicEntries.map(([topic, topicResources]) => {
             const copy = topicCopy[topic] ?? {
               title: topic,
@@ -153,14 +133,14 @@ export function LearnWorkspace() {
                       className="group flex items-start justify-between gap-3 rounded-md px-4 py-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
                     >
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                          <span className="truncate">{resource.title}</span>
+                        <div className="flex items-start gap-1.5 text-sm font-medium text-foreground">
+                          <span className="min-w-0">{resource.title}</span>
                           <IconExternalLink
                             aria-hidden
-                            className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                            className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
                           />
                         </div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        <div className="mt-0.5 text-xs text-muted-foreground">
                           {resource.sourceName}
                         </div>
                       </div>
@@ -176,6 +156,30 @@ export function LearnWorkspace() {
               </Card>
             );
           })}
+
+          <details className="group/principles grid gap-3">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+              <IconChevronRight
+                aria-hidden
+                className="size-4 shrink-0 transition-transform group-open/principles:rotate-90"
+              />
+              How these were chosen
+            </summary>
+            <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
+              {[
+                { kicker: "Official first", value: "Verify before you move money" },
+                { kicker: "Product research", value: "Use data, not promises" },
+                { kicker: "Guidance boundary", value: "Education, not hot picks" },
+              ].map((principle) => (
+                <div key={principle.kicker} className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{principle.kicker}</p>
+                  <p className="font-display text-base leading-snug font-medium">
+                    {principle.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
       ) : null}
     </div>

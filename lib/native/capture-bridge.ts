@@ -17,6 +17,7 @@ declare global {
       ingest: (payload: NativeCapturePayload) => void;
     };
     __moatPendingCapturePayloads?: NativeCapturePayload[];
+    __moatPendingCaptureRouteHint?: string;
     __moatNativeCaptureListenerCount?: number;
   }
 }
@@ -26,6 +27,17 @@ function queueNativeCapturePayload(payload: NativeCapturePayload) {
 
   window.__moatPendingCapturePayloads = window.__moatPendingCapturePayloads ?? [];
   window.__moatPendingCapturePayloads.push(payload);
+}
+
+export function enqueueNativeCapturePayload(payload: NativeCapturePayload) {
+  if (typeof window === "undefined") return;
+
+  if (window.moatNativeCapture) {
+    window.moatNativeCapture.ingest(payload);
+    return;
+  }
+
+  queueNativeCapturePayload(payload);
 }
 
 export function emitNativeCapturePayload(payload: NativeCapturePayload) {
@@ -66,12 +78,19 @@ export function syncNativeCaptureSettings(settingsJson: string) {
 
 export function getPendingNativeCaptureRouteHint(): string | null {
   if (typeof window === "undefined") return null;
-  const routeHint = window.moatHostBridge?.getPendingCaptureRouteHint?.();
+  const routeHint =
+    window.__moatPendingCaptureRouteHint ?? window.moatHostBridge?.getPendingCaptureRouteHint?.();
   return typeof routeHint === "string" && routeHint.trim() ? routeHint : null;
+}
+
+export function setPendingNativeCaptureRouteHint(route: string) {
+  if (typeof window === "undefined") return;
+  window.__moatPendingCaptureRouteHint = route;
 }
 
 export function clearPendingNativeCaptureRouteHint() {
   if (typeof window === "undefined") return;
+  window.__moatPendingCaptureRouteHint = undefined;
   window.moatHostBridge?.clearPendingCaptureRouteHint?.();
 }
 

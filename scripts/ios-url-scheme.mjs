@@ -18,6 +18,7 @@ export function withUrlScheme(plist, scheme) {
     "\t\t\t<key>CFBundleURLSchemes</key>",
     "\t\t\t<array>",
     `\t\t\t\t<string>${scheme}</string>`,
+    "\t\t\t\t<string>moat</string>",
     "\t\t\t</array>",
     "\t\t</dict>",
     "\t</array>",

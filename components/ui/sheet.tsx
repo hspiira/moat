@@ -68,7 +68,9 @@ function SheetContent({
         {...props}
       >
         {children}
-        <Dialog.Close className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none">
+        {/* Below the status bar, not level with the clock and battery. The
+            content padding does not move it, since it is positioned. */}
+        <Dialog.Close className="absolute top-[max(1rem,calc(var(--safe-top)+0.5rem))] right-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none">
           <IconX className="size-4" />
           <span className="sr-only">Close</span>
         </Dialog.Close>

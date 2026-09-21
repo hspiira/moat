@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-shell/page-header";
 import {
@@ -10,32 +10,26 @@ import {
 } from "@/components/page-shell/page-state";
 import type { UserProfile } from "@/lib/types";
 
-import { TransactionsSummaryStrip } from "./transactions-summary-strip";
-
 type Props = {
   title: string;
   description?: string;
-  srOnlyTitle?: boolean;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-  summary?: ComponentProps<typeof TransactionsSummaryStrip>;
   children: ReactNode;
 };
 
 export function TransactionsWorkspaceFrame({
   title,
   description,
-  srOnlyTitle,
   profile,
   isLoading,
   error,
-  summary,
   children,
 }: Props) {
   return (
-    <div className="grid gap-5">
-      <PageHeader title={title} description={description} srOnlyTitle={srOnlyTitle} />
+    <div className="grid gap-4">
+      <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading transactions..." /> : null}
@@ -48,10 +42,7 @@ export function TransactionsWorkspaceFrame({
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5">
-          {summary ? <TransactionsSummaryStrip {...summary} /> : null}
-          {children}
-        </div>
+        <div className="grid gap-4">{children}</div>
       ) : null}
     </div>
   );

@@ -59,8 +59,12 @@ function createRepositories() {
     } as unknown as RepositoryBundle["captureEnvelopes"],
     captureReviewItems: {
       listByUser: vi.fn(async () => captureReviewItems),
+      // Replaces by id, as an upsert does. Pushing regardless made an updated
+      // row look like a second row, which is the very thing being tested.
       upsert: vi.fn(async (item: CaptureReviewItem) => {
-        captureReviewItems.push(item);
+        const at = captureReviewItems.findIndex((entry) => entry.id === item.id);
+        if (at === -1) captureReviewItems.push(item);
+        else captureReviewItems[at] = item;
         return item;
       }),
     } as unknown as RepositoryBundle["captureReviewItems"],
@@ -181,5 +185,96 @@ describe("capture persistence", () => {
     expect(captureReviewItems[0]).toMatchObject({
       payee: "Grocery",
     });
+  });
+
+  /* Each shortcut run stamps its own moment, so the same message handed over
+     twice is not the exact retry the envelope check catches. Two rows for it are
+     two chances to approve the same money twice. */
+  it("counts a repeat onto the row already waiting", async () => {
+    const { repositories, captureReviewItems } = createRepositories();
+    const message = "Paid UGX 15,000 to Grocery on 07-04-2026";
+
+    const first = await ingestNativeCapturePayload({
+      repositories,
+      userId: "user:1",
+      accountId: "account:1",
+      payload: {
+        channel: "shared_text",
+        source: "shared_text",
+        rawContent: message,
+        occurredAt: "2026-04-07T10:00:00.000Z",
+      },
+    });
+    const second = await ingestNativeCapturePayload({
+      repositories,
+      userId: "user:1",
+      accountId: "account:1",
+      payload: {
+        channel: "shared_text",
+        source: "shared_text",
+        rawContent: message,
+        occurredAt: "2026-04-07T11:30:00.000Z",
+      },
+    });
+
+    expect(first.persistedReviewCount).toBe(1);
+    expect(second.persistedReviewCount).toBe(0);
+    expect(second.countedAgainstExistingCount).toBe(1);
+    expect(captureReviewItems).toHaveLength(1);
+    expect(captureReviewItems[0].occurrenceCount).toBe(2);
+    expect(captureReviewItems[0].occurrenceCapturedAt).toHaveLength(2);
+  });
+
+  /* Once the first copy has been settled, the message arriving again is news,
+     and the check against the ledger is what speaks to it from then on. */
+  it("adds the row again once the first copy has been settled", async () => {
+    const { repositories, captureReviewItems } = createRepositories();
+    const message = "Paid UGX 15,000 to Grocery on 07-04-2026";
+
+    await ingestNativeCapturePayload({
+      repositories,
+      userId: "user:1",
+      accountId: "account:1",
+      payload: {
+        channel: "shared_text",
+        source: "shared_text",
+        rawContent: message,
+        occurredAt: "2026-04-07T10:00:00.000Z",
+      },
+    });
+    captureReviewItems[0].status = "rejected";
+
+    const second = await ingestNativeCapturePayload({
+      repositories,
+      userId: "user:1",
+      accountId: "account:1",
+      payload: {
+        channel: "shared_text",
+        source: "shared_text",
+        rawContent: message,
+        occurredAt: "2026-04-07T11:30:00.000Z",
+      },
+    });
+
+    expect(second.persistedReviewCount).toBe(1);
+    expect(captureReviewItems).toHaveLength(2);
+  });
+
+  it("keeps two genuinely different messages apart", async () => {
+    const { repositories, captureReviewItems } = createRepositories();
+
+    for (const rawContent of [
+      "Paid UGX 15,000 to Grocery on 07-04-2026",
+      "Paid UGX 4,000 to Fuel on 07-04-2026",
+    ]) {
+      await ingestNativeCapturePayload({
+        repositories,
+        userId: "user:1",
+        accountId: "account:1",
+        payload: { channel: "shared_text", source: "shared_text", rawContent },
+      });
+    }
+
+    expect(captureReviewItems).toHaveLength(2);
   });
 });

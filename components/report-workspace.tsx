@@ -22,7 +22,14 @@ import { planNamedParty, suggestedPartyName } from "@/lib/domain/name-party";
 import { createId } from "@/lib/ids";
 import { Button } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/filter-chips";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PageHeader } from "@/components/page-shell/page-header";
 import { Money } from "@/components/ui/money";
 import { formatMoney } from "@/lib/currency";
 import { reconcileAccountBalances } from "@/lib/domain/accounts";
@@ -70,6 +77,18 @@ function monthLabel(month: string) {
     year: "numeric",
   });
 }
+
+type ReportView = "overview" | "spending" | "calendar";
+
+function isReportView(value: unknown): value is ReportView {
+  return value === "overview" || value === "spending" || value === "calendar";
+}
+
+const REPORT_VIEWS: ReadonlyArray<{ value: ReportView; label: string }> = [
+  { value: "overview", label: "Overview" },
+  { value: "spending", label: "Spending" },
+  { value: "calendar", label: "Calendar" },
+];
 
 export function ReportWorkspace() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -121,6 +140,14 @@ export function ReportWorkspace() {
     });
   }, []);
 
+  // Three questions, three views. Stacked, they were one column of seven
+  // analyses with a period control at the top that did not govern the last of
+  // them.
+  const [view, setView] = usePersistedSelection<ReportView>(
+    "moat.report-view",
+    "overview",
+    isReportView,
+  );
   const series = useMemo(
     () => buildPositionSeries(accounts, transactions, days, new Date()),
     [accounts, transactions, days],
@@ -198,15 +225,21 @@ export function ReportWorkspace() {
   }
 
   return (
-    <div className="grid gap-5">
-      <h1 className="sr-only">Report</h1>
+    <div className="grid gap-4">
+      <PageHeader title="Report" />
 
-      <FilterChips
-        label="Period"
-        options={WINDOWS.map((option) => ({ value: option.days, label: option.label }))}
-        value={days}
-        onChange={setDays}
-      />
+      <FilterChips label="View" options={REPORT_VIEWS} value={view} onChange={setView} />
+
+      {/* The calendar carries its own month control, so the window chips are
+          not shown beside it pretending to govern it. */}
+      {view === "calendar" ? null : (
+        <FilterChips
+          label="Period"
+          options={WINDOWS.map((option) => ({ value: option.days, label: option.label }))}
+          value={days}
+          onChange={setDays}
+        />
+      )}
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading your report..." /> : null}
@@ -220,73 +253,85 @@ export function ReportWorkspace() {
 
       {!isLoading && profile ? (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">What you are worth</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{windowLabel} change</p>
-                <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-[1.1] font-semibold tracking-tight">
-                  <Money amount={series.change} tone="auto" signed className="font-display" />
+          {view === "overview" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Net position</CardTitle>
+                <CardDescription>
+                  Every account you track here, debts and money owed to you included. Anything
+                  you have not recorded is not in this figure.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{windowLabel} change</p>
+                  <div className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-[1.1] font-semibold tracking-tight">
+                    <Money amount={series.change} tone="auto" signed className="font-display" />
+                  </div>
+                  {series.changePercent.kind === "delta" ? (
+                    <AmountIndicator
+                      tone="neutral"
+                      direction={
+                        (series.changePercent.value ?? 0) === 0
+                          ? "flat"
+                          : (series.changePercent.value ?? 0) > 0
+                            ? "up"
+                            : "down"
+                      }
+                      showIcon
+                      value={`${Math.abs(series.changePercent.value ?? 0).toFixed(0)}%`}
+                      className="text-sm text-muted-foreground"
+                      iconClassName="h-3.5 w-3.5"
+                    />
+                  ) : null}
                 </div>
-                {series.changePercent.kind === "delta" ? (
-                  <AmountIndicator
-                    tone="neutral"
-                    direction={
-                      (series.changePercent.value ?? 0) === 0
-                        ? "flat"
-                        : (series.changePercent.value ?? 0) > 0
-                          ? "up"
-                          : "down"
-                    }
-                    showIcon
-                    value={`${Math.abs(series.changePercent.value ?? 0).toFixed(0)}%`}
-                    className="text-sm text-muted-foreground"
-                    iconClassName="h-3.5 w-3.5"
-                  />
-                ) : null}
-              </div>
 
-              <PositionChart points={series.points} />
-            </CardContent>
-          </Card>
+                <PositionChart points={series.points} />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">In and out</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              <FlowTile
-                label="Money in"
-                count={flow.inflowCount}
-                amount={flow.inflow}
-                tone="positive"
-              />
-              <FlowTile
-                label="Money out"
-                count={flow.outflowCount}
-                amount={flow.outflow}
-                tone="negative"
-              />
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">In and out</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <FlowTile
+                  label="Money in"
+                  count={flow.inflowCount}
+                  amount={flow.inflow}
+                  tone="positive"
+                />
+                <FlowTile
+                  label="Money out"
+                  count={flow.outflowCount}
+                  amount={flow.outflow}
+                  tone="negative"
+                />
+              </CardContent>
+            </Card>
+          </>
+          ) : null}
 
-          <WhoMovedIt
-            transactions={windowTransactions}
-            categories={categories}
-            counterparties={counterparties}
-            onName={setNamingPartyKey}
-          />
+          {view === "spending" ? (
+          <>
+            <DashboardTopSpendingCategories
+              categories={windowSpending.topCategories}
+              totalOutflow={windowSpending.outflow}
+            />
 
-          <CostOfMoving accounts={accounts} transactions={windowTransactions} />
+            <WhoMovedIt
+              transactions={windowTransactions}
+              categories={categories}
+              counterparties={counterparties}
+              onName={setNamingPartyKey}
+            />
 
-          <DashboardTopSpendingCategories
-            categories={windowSpending.topCategories}
-            totalOutflow={windowSpending.outflow}
-          />
+            <CostOfMoving accounts={accounts} transactions={windowTransactions} />
+          </>
+          ) : null}
 
-          {allocation.length > 0 ? (
+          {view === "overview" && allocation.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Where it sits</CardTitle>
@@ -323,55 +368,57 @@ export function ReportWorkspace() {
             </Card>
           ) : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Day by day</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Previous month"
-                  onClick={() => setMonth((current) => shiftMonth(current, -1))}
-                >
-                  ‹
-                </Button>
-                <div className="grid justify-items-center gap-0.5">
-                  <span className="text-sm font-medium text-foreground">{monthLabel(month)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    Net <Money amount={monthNet} tone="auto" signed />
-                  </span>
+          {view === "calendar" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Day by day</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Previous month"
+                    onClick={() => setMonth((current) => shiftMonth(current, -1))}
+                  >
+                    ‹
+                  </Button>
+                  <div className="grid justify-items-center gap-0.5">
+                    <span className="text-sm font-medium text-foreground">{monthLabel(month)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Net <Money amount={monthNet} tone="auto" signed />
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Next month"
+                    disabled={month >= monthKey(new Date())}
+                    onClick={() => setMonth((current) => shiftMonth(current, 1))}
+                  >
+                    ›
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Next month"
-                  disabled={month >= monthKey(new Date())}
-                  onClick={() => setMonth((current) => shiftMonth(current, 1))}
-                >
-                  ›
-                </Button>
-              </div>
 
-              <MoneyCalendar
-                cells={calendar}
-                month={month}
-                selectedDate={activeDate}
-                onSelectDate={setSelectedDate}
-              />
-
-              {activeDate ? (
-                <DayTransactions
-                  date={activeDate}
-                  transactions={dayTransactions}
-                  categories={categories}
+                <MoneyCalendar
+                  cells={calendar}
+                  month={month}
+                  selectedDate={activeDate}
+                  onSelectDate={setSelectedDate}
                 />
-              ) : null}
-            </CardContent>
-          </Card>
+
+                {activeDate ? (
+                  <DayTransactions
+                    date={activeDate}
+                    transactions={dayTransactions}
+                    categories={categories}
+                  />
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
         </>
       ) : null}
 

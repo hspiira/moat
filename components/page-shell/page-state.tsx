@@ -70,6 +70,7 @@ export function EmptyStateCard({
   cta,
   icon,
   onAction,
+  children,
 }: {
   title: string;
   message: string;
@@ -77,6 +78,8 @@ export function EmptyStateCard({
   cta?: string;
   icon?: ReactNode;
   onAction?: () => void;
+  /** For an empty state that offers more than one way out. */
+  children?: ReactNode;
 }) {
   return (
     <Card className="bg-muted/20">
@@ -86,6 +89,7 @@ export function EmptyStateCard({
           <p className="font-display text-base font-medium text-foreground">{title}</p>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">{message}</p>
         </div>
+        {children ? <div className="mt-1">{children}</div> : null}
         {cta && onAction ? (
           <Button size="lg" className="mt-1" onClick={onAction}>
             {cta}

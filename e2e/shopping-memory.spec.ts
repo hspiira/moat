@@ -7,7 +7,7 @@ import { seedIndexedDb } from "./seed-indexeddb";
 test("nothing planned shows no total to speak of", async ({ page }) => {
   await openSeededApp(page, "/shopping");
 
-  await expect(page.getByText("This trip will cost about")).toHaveCount(0);
+  await expect(page.getByText("Still to buy")).toHaveCount(0);
   await expect(page.getByText("this page remembers what it cost you last time")).toBeVisible();
 });
 
@@ -19,7 +19,7 @@ test("an item with no price still counts towards the trip", async ({ page }) => 
   await page.getByRole("button", { name: "Add to list" }).click();
   await page.waitForTimeout(1500);
 
-  await expect(page.getByText("This trip will cost about")).toBeVisible();
+  await expect(page.getByText("Still to buy")).toBeVisible();
   await expect(page.getByText("1 item has no price yet")).toBeVisible();
 });
 

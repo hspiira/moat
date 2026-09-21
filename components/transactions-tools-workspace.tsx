@@ -11,13 +11,12 @@ export function TransactionsToolsWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Rules & corrections"
-      srOnlyTitle
       description="Teach the app to make the same fix for you next time."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
-      <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <TransactionRulesPanel
           accounts={workspace.accounts}
           categories={workspace.categories}

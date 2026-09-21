@@ -8,12 +8,13 @@ import {
 } from "@/lib/sync/server-contract";
 
 import { authenticateSyncRequest } from "./auth.js";
+import { callerAddress, trustedProxyCount } from "./caller-address.js";
 import { allowedRedirectUris, validateAuthCallbackRequest } from "./auth/callback-request.js";
 import { exchangeGoogleCode } from "./auth/google.js";
 import { mintSyncCredential } from "./db/credentials.js";
 import { resolveIdentity } from "./db/identities.js";
 
-import { getPool } from "./db/pool.js";
+import { closePool, getPool } from "./db/pool.js";
 import { applyPostgresSyncPush, pullPostgresSyncChanges } from "./db/postgres-store.js";
 import { HttpError, applyCors, readJsonBody, sendJson } from "./http.js";
 import { createRateLimiter } from "./rate-limit.js";
@@ -31,12 +32,10 @@ const perFailedAuth = createRateLimiter({ limit: 10, windowMs: MINUTE });
 // tighter than syncing.
 const perSignIn = createRateLimiter({ limit: 20, windowMs: MINUTE });
 
-function callerAddress(request: IncomingMessage): string {
-  // Behind a proxy the socket is the proxy, so the forwarded address is used
-  // when one is present. It is only a rate-limit key, never an identity.
-  const forwarded = request.headers["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
-  return (first ?? request.socket.remoteAddress ?? "unknown").trim();
+const trustedProxies = trustedProxyCount();
+
+function addressOf(request: IncomingMessage): string {
+  return callerAddress(request, trustedProxies);
 }
 
 function limit(
@@ -62,21 +61,31 @@ function validate<T>(run: () => T): T {
 }
 
 async function checkHealth(): Promise<[number, unknown]> {
-  const problems: string[] = [];
-
   try {
-    await getPool().query("select 1");
     const credentials = await getPool().query<{ count: string }>(
       "select count(*)::text as count from sync_credentials",
     );
-    if (credentials.rows[0]?.count === "0") {
-      problems.push("No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.");
-    }
-  } catch (error) {
-    problems.push(error instanceof Error ? error.message : "Database is unreachable.");
-  }
 
-  return problems.length > 0 ? [503, { status: "unhealthy", problems }] : [200, { status: "ok" }];
+    // A note for whoever is watching, never a failed probe: a platform that
+    // gates routing on health would leave a fresh deployment no way to reach
+    // the sign-in that would create the first one.
+    return credentials.rows[0]?.count === "0"
+      ? [
+          200,
+          {
+            status: "ok",
+            notes: [
+              "No sync credentials exist yet. Mint one with `pnpm --filter @moat/sync-server mint`.",
+            ],
+          },
+        ]
+      : [200, { status: "ok" }];
+  } catch (error) {
+    // Nothing authenticates this endpoint and the driver's own message names the
+    // host, port, database and role.
+    console.error("Health check could not reach the database.", error);
+    return [503, { status: "unhealthy", problems: ["Database is unreachable."] }];
+  }
 }
 
 async function authenticate(authorization: string | undefined): Promise<SyncPrincipal> {
@@ -115,7 +124,7 @@ const server = createServer(async (request, response) => {
     // Sign-in comes before authentication, because it is how a caller gets a
     // token in the first place.
     if (url.pathname === "/v1/auth/callback") {
-      const address = callerAddress(request);
+      const address = addressOf(request);
       limit(perAddress, address, Date.now(), "Too many requests. Try again shortly.");
       limit(perSignIn, address, Date.now(), "Too many sign-in attempts. Try again shortly.");
 
@@ -176,7 +185,7 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const address = callerAddress(request);
+    const address = addressOf(request);
     const now = Date.now();
     limit(perAddress, address, now, "Too many requests. Try again shortly.");
 
@@ -214,16 +223,39 @@ const server = createServer(async (request, response) => {
     }
 
     console.error("Sync request failed.", error);
-    sendJson(response, 500, { error: "Sync request failed." });
+    // Reached when the first send already wrote the head, so there is nothing
+    // left to say and saying it would throw where nothing catches.
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: "Sync request failed." });
+    }
   }
 });
+
+// A body that arrives a byte at a time would otherwise hold a connection for as
+// long as the caller likes.
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
 
 server.listen(port, () => {
   console.log(`moat sync server listening on ${port}`);
 });
 
+let stopping = false;
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
-    server.close(() => process.exit(0));
+    if (stopping) return;
+    stopping = true;
+
+    // A keep-alive connection can keep close() from ever calling back, and the
+    // pool holds transactions that should finish rather than be cut.
+    const giveUp = setTimeout(() => process.exit(1), 10_000);
+    giveUp.unref();
+
+    server.close(() => {
+      closePool()
+        .catch((error) => console.error("Could not close the pool cleanly.", error))
+        .finally(() => process.exit(0));
+    });
   });
 }

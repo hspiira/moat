@@ -18,14 +18,14 @@ import {
 } from "@/components/ui/sheet";
 import { AgainstBudgetNote } from "@/components/shopping/against-budget-note";
 import { PriceTrendsPanel } from "./shopping/price-trends-panel";
-import { estimateBasis } from "@/components/shopping/estimate-basis";
-import { Money } from "@/components/ui/money";
+import { buildShoppingHistory } from "@/lib/domain/shopping-history";
 
 import { CheckOffSheet } from "./shopping/check-off-sheet";
 import { PlannerEditSheet } from "./shopping/planner-edit-sheet";
 import { ItemHistorySheet } from "./shopping/item-history-sheet";
 import { PlannerAddForm } from "./shopping/planner-add-form";
 import { PlannerList } from "./shopping/planner-list";
+import { ShoppingSummary } from "./shopping/shopping-summary";
 import { useShoppingWorkspace } from "./shopping/use-shopping-workspace";
 
 export function ShoppingWorkspace() {
@@ -48,6 +48,18 @@ export function ShoppingWorkspace() {
     () => new Map(workspace.transactions.map((entry) => [entry.id, entry])),
     [workspace.transactions],
   );
+  const shoppingHistory = useMemo(
+    () =>
+      buildShoppingHistory({
+        purchases: workspace.groups.history,
+        itemsById,
+        transactionsById,
+        lineItemsById,
+      }),
+    [workspace.groups.history, itemsById, transactionsById, lineItemsById],
+  );
+  const boughtEntries = shoppingHistory.trips.flatMap((trip) => trip.entries);
+  const boughtTotal = shoppingHistory.trips.reduce((total, trip) => total + trip.total, 0);
   const selectedPurchases = workspace.purchases.filter((purchase) =>
     selectedIds.has(purchase.id),
   );
@@ -64,7 +76,6 @@ export function ShoppingWorkspace() {
   return (
     <FeaturePageShell
       title="Shopping"
-      srOnlyTitle
       description="Plan what to buy and remember what it cost last time."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
@@ -72,21 +83,16 @@ export function ShoppingWorkspace() {
       loadingMessage="Loading your shopping list..."
       setupMessage="Complete onboarding before planning purchases."
     >
-      <div className="grid gap-6">
-        {/* A headline of nought is not a headline. The empty state carries the
-            page until there is something to add up. */}
-        {workspace.estimate.total > 0 || workspace.estimate.unknownCount > 0 ? (
-        <div className="grid gap-1">
-          <p className="text-sm text-muted-foreground">This trip will cost about</p>
-          <div className="font-display text-[clamp(2.25rem,10vw,3rem)] leading-[1.1] font-semibold tracking-tight">
-            <Money
-              amount={workspace.estimate.total}
-              tone="neutral"
-              className="font-display"
-            />
-          </div>
-          <p className="text-sm text-muted-foreground">{estimateBasis(workspace.estimate)}</p>
-        </div>
+      <div className="grid gap-4">
+        {workspace.estimate.total > 0 ||
+        workspace.estimate.unknownCount > 0 ||
+        boughtEntries.length > 0 ? (
+          <ShoppingSummary
+            plannedAmount={workspace.estimate.total}
+            boughtAmount={boughtTotal}
+            boughtCount={boughtEntries.length}
+            basis={workspace.estimate}
+          />
         ) : null}
 
         <AgainstBudgetNote rows={workspace.againstBudget} />
@@ -97,16 +103,6 @@ export function ShoppingWorkspace() {
           <Button onClick={() => setIsAddOpen(true)} className="flex-1 sm:flex-none sm:px-6">
             <IconPlus className="size-4" /> Add an item
           </Button>
-          {selectedPurchases.length > 0 ? (
-            <Button
-              variant="outline"
-              disabled={workspace.isSubmitting}
-              className="flex-1 sm:flex-none sm:px-6"
-              onClick={() => setIsCheckOffOpen(true)}
-            >
-              Bought {selectedPurchases.length}
-            </Button>
-          ) : null}
         </div>
 
         <PlannerList
@@ -116,6 +112,7 @@ export function ShoppingWorkspace() {
           selectedIds={selectedIds}
           transactionsById={transactionsById}
           lineItemsById={lineItemsById}
+          history={shoppingHistory}
           isSubmitting={workspace.isSubmitting}
           onToggleSelect={toggleSelect}
           onDrop={(purchase) => void workspace.dropPurchase(purchase)}
@@ -123,6 +120,32 @@ export function ShoppingWorkspace() {
           onRestore={(purchase) => void workspace.restorePurchase(purchase)}
           onOpenHistory={(itemId) => setHistoryItemId(itemId)}
         />
+
+        {/* Ticking items off happens down the list, and the action used to be
+            above it, so the last thing you did was scroll back up. It rides
+            the bottom of the viewport instead, clear of the nav bar. */}
+        {selectedPurchases.length > 0 ? (
+          <div className="sticky bottom-[calc(4.5rem+max(0.625rem,env(safe-area-inset-bottom)))] z-30 flex items-center gap-3 rounded-xl border border-border/60 bg-background/95 p-2 pl-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+            <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+              {selectedPurchases.length} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+            <Button
+              disabled={workspace.isSubmitting}
+              className="shrink-0"
+              onClick={() => setIsCheckOffOpen(true)}
+            >
+              Bought {selectedPurchases.length}
+            </Button>
+          </div>
+        ) : null}
 
         <PriceTrendsPanel observations={workspace.observations} items={workspace.items} />
       </div>
@@ -166,6 +189,7 @@ export function ShoppingWorkspace() {
         recentExpenses={workspace.recentExpenses}
         accounts={workspace.accounts}
         expenseCategories={workspace.expenseCategories}
+        lineItems={workspace.lineItems}
         isSubmitting={workspace.isSubmitting}
         onConfirm={(target, actuals) => {
           void workspace.checkOff(selectedPurchases, target, actuals).then((succeeded) => {

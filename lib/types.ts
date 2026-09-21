@@ -206,6 +206,8 @@ export type Item = {
   name: string;
   normalizedName: string;
   unit?: string;
+  /** What this belongs under, so a shop reads as groceries then the rest. */
+  group?: string;
   defaultCategoryId?: string;
   isArchived: boolean;
   createdAt: string;
@@ -407,6 +409,16 @@ export type CaptureReviewItem = {
   originalSnapshot: CaptureReviewSnapshot;
   duplicateTransactionId?: string;
   duplicateCaptureReviewItemId?: string;
+  /**
+   * How many times this same message has been handed over.
+   *
+   * A repeat is counted here rather than given a row of its own: two rows are
+   * two chances to approve the same money twice, and dropping the repeat outright
+   * hides that the shortcut is firing more than once.
+   */
+  occurrenceCount?: number;
+  /** When each of those arrived, newest last, so the count can be accounted for. */
+  occurrenceCapturedAt?: string[];
   approvedTransactionId?: string;
   reviewedAt?: string;
   resolvedAt?: string;
@@ -489,7 +501,13 @@ export type RecurringObligationType =
   | "salary"
   | "loan_repayment";
 
+/** Kept so obligations stored before intervals keep working. */
 export type RecurringCadence = "weekly" | "monthly" | "custom";
+
+export type RecurringInterval = {
+  every: number;
+  unit: "week" | "month" | "year";
+};
 
 export type RecurringObligation = {
   id: string;
@@ -499,6 +517,11 @@ export type RecurringObligation = {
   categoryId: string;
   expectedAmount: number;
   cadence: RecurringCadence;
+  /**
+   * What it actually repeats on. Cadence could only say weekly or monthly, and
+   * "custom" carried nothing at all, so anything else was undescribable.
+   */
+  interval?: RecurringInterval;
   dueDay?: number;
   dueDatePattern?: string;
   linkedAccountId?: string;

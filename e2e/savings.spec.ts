@@ -39,7 +39,7 @@ test("a savings contribution is written as a balanced pair", async ({ page }) =>
   await page.getByRole("option", { name: "Town Bank" }).click();
   await page.locator("#tx-dest").click();
   await page.getByRole("option", { name: "Savings Pot" }).click();
-  await page.getByRole("button", { name: /^Add transaction$/ }).click();
+  await page.getByRole("button", { name: /^Record transfer$/ }).click();
   await page.waitForTimeout(2500);
 
   const after = await expectLedgerIntact(page);

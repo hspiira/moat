@@ -13,7 +13,6 @@ import type { UserProfile } from "@/lib/types";
 type Props = {
   title: string;
   description?: string;
-  srOnlyTitle?: boolean;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
@@ -25,7 +24,6 @@ type Props = {
 export function FeaturePageShell({
   title,
   description,
-  srOnlyTitle,
   profile,
   isLoading,
   error,
@@ -34,8 +32,8 @@ export function FeaturePageShell({
   children,
 }: Props) {
   return (
-    <div className="grid gap-5">
-      <PageHeader title={title} description={description} srOnlyTitle={srOnlyTitle} />
+    <div className="grid gap-4">
+      <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message={loadingMessage} /> : null}

@@ -12,15 +12,28 @@ export function TransactionsCaptureReviewWorkspace() {
 
   return (
     <TransactionsWorkspaceFrame
-      title="Capture review"
-      srOnlyTitle
-      description="Check what was read from a message before it counts towards your money."
+      title="Capture inbox"
+      description="Approve entries captured from messages before they count."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
       <>
         <CaptureReviewSectionLinks current="capture" />
+        <CaptureReviewQueue
+          accounts={workspace.accounts}
+          categories={workspace.categories}
+          items={workspace.captureReviewItems}
+          transactions={workspace.transactions}
+          isSubmitting={workspace.isSubmitting}
+          onApprove={workspace.approveItem}
+          onReject={workspace.rejectItem}
+          onMarkDuplicate={workspace.markDuplicate}
+          onClearDuplicate={workspace.clearDuplicate}
+          onUpdateItem={workspace.updateItem}
+        />
+        {/* An offer follows the decision that prompted it. Above the queue it
+            stood between the reader and the work on every visit. */}
         <TrustOfferBanner
           rule={workspace.trustOffer}
           isSubmitting={workspace.isSubmitting}
@@ -37,18 +50,6 @@ export function TransactionsCaptureReviewWorkspace() {
           isSubmitting={workspace.isSubmitting}
           onAccept={() => void workspace.acceptRuleOffer()}
           onDismiss={workspace.dismissRuleOffer}
-        />
-        <CaptureReviewQueue
-          accounts={workspace.accounts}
-          categories={workspace.categories}
-          items={workspace.captureReviewItems}
-          transactions={workspace.transactions}
-          isSubmitting={workspace.isSubmitting}
-          onApprove={workspace.approveItem}
-          onReject={workspace.rejectItem}
-          onMarkDuplicate={workspace.markDuplicate}
-          onClearDuplicate={workspace.clearDuplicate}
-          onUpdateItem={workspace.updateItem}
         />
       </>
     </TransactionsWorkspaceFrame>

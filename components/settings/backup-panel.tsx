@@ -15,6 +15,7 @@ import {
 } from "@/lib/integrations/google-drive-backup";
 import { repositories } from "@/lib/repositories/instance";
 import {
+  hasUnresolvedAutoBackupFailure,
   readGoogleDriveBackupPreferences,
   saveGoogleDriveBackupPreferences,
   type GoogleDriveBackupPreferences,
@@ -580,6 +581,53 @@ export function BackupPanel() {
             Google Drive was connected before, but no recent backup metadata is stored on this device yet. Upload a fresh encrypted backup after reconnecting.
           </p>
         ) : null}
+        {mode === "idle" && drivePreferences.wasConnected && !isDriveHydrating ? (
+          vaultState === "present" ? (
+            <p className="text-xs text-muted-foreground">
+              Recovery key: ready in your Google Drive app folder. Automatic backups can be
+              opened on a new device with your recovery passphrase.
+            </p>
+          ) : vaultState === "absent" ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-destructive">
+              <span>
+                Your Drive backup is not recovery-ready yet: its recovery key was not found.
+              </span>
+              <Button
+                type="button"
+                variant="link"
+                size="xs"
+                className="h-auto px-0 text-destructive"
+                onClick={() => {
+                  setMode("drive");
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                Open Drive backup
+              </Button>
+            </div>
+          ) : vaultState === "unreadable" ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-destructive">
+              <span>
+                Moat found a recovery file it cannot read. Do not overwrite it until you verify
+                which device created it.
+              </span>
+              <Button
+                type="button"
+                variant="link"
+                size="xs"
+                className="h-auto px-0 text-destructive"
+                onClick={() => {
+                  setMode("drive");
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                Review recovery
+              </Button>
+            </div>
+          ) : null
+        ) : null}
         {success ? (
           <p className="text-xs text-muted-foreground">{success}</p>
         ) : null}
@@ -818,6 +866,11 @@ export function BackupPanel() {
                             addSuffix: true,
                           })}
                           .
+                        </p>
+                      ) : null}
+                      {hasUnresolvedAutoBackupFailure(drivePreferences) ? (
+                        <p className="text-xs text-destructive">
+                          The last automatic backup attempt failed. Use “Back up now” to retry.
                         </p>
                       ) : null}
                       <div className="flex flex-wrap gap-2">

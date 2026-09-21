@@ -1,5 +1,5 @@
 import pg from "pg";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SyncPushRequest } from "@/lib/sync/types";
 
@@ -290,5 +290,37 @@ describeDb("postgres sync store", () => {
     const response = await pullPostgresSyncChanges({ userId: "u2" });
 
     expect(response.records.map((record) => record.entityId)).toEqual(["category:9"]);
+  });
+
+  /* updated_at is what the pull cursor pages on, so a machine running behind
+     would stamp records under a cursor clients already hold and those records
+     would never be pulled again. Only Date is faked; pg needs real timers. */
+  it("stamps updated_at from the database clock, not the process clock", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2040-01-01T00:00:00.000Z"));
+
+    try {
+      expect(new Date().toISOString()).toContain("2040");
+
+      await applyPostgresSyncPush(pushRequest("u1", ["category:1"]));
+
+      const stored = await getPool().query<{ updated_at: string }>(
+        "select updated_at from sync_records",
+      );
+
+      expect(stored.rows[0].updated_at).not.toContain("2040");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives one push one timestamp, so a page cannot land inside it", async () => {
+    await applyPostgresSyncPush(pushRequest("u1", ["category:1", "category:2", "category:3"]));
+
+    const stored = await getPool().query<{ updated_at: string }>(
+      "select distinct updated_at from sync_records",
+    );
+
+    expect(stored.rows).toHaveLength(1);
   });
 });

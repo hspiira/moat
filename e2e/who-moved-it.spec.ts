@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { expectNoSidewaysScroll, openSeededApp } from "./harness";
+import { expectNoSidewaysScroll, openReportView } from "./harness";
 
 test("the report says who took money and who paid you", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Spending");
 
   const card = page
     .locator("[data-slot='card']")
@@ -29,7 +29,7 @@ test("the report says who took money and who paid you", async ({ page }) => {
 });
 
 test("a long parsed payee does not push its amount off the card", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Spending");
 
   const card = page
     .locator("[data-slot='card']")

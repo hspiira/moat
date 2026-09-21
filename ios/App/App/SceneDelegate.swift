@@ -8,7 +8,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        let controller = CAPBridgeViewController()
+        // Moat's own controller, because it is what registers Moat's plugins.
+        // Capacitor's plain one leaves them unregistered and the web layer is
+        // told they are not implemented.
+        let controller = MoatViewController()
         window?.rootViewController = controller
         window?.makeKeyAndVisible()
 

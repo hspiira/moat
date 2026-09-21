@@ -8,6 +8,7 @@ import {
   deriveTransactionSourceFromEnvelopeSource,
 } from "@/lib/capture/ingestion";
 import { createCaptureReviewItem, mapReviewItemToTransactionFields } from "@/lib/capture/review-queue";
+import { countAnotherOccurrence } from "@/lib/capture/occurrences";
 import { applyTransactionRules } from "@/lib/domain/rules";
 import type { ParsedCaptureCandidate } from "@/lib/capture/message-parser";
 import type { NativeCapturePayload } from "@/lib/native/capture-bridge";
@@ -25,6 +26,34 @@ function envelopesMatch(left: CaptureEnvelope, right: CaptureEnvelope) {
     (left.sourceApp ?? "") === (right.sourceApp ?? "") &&
     left.capturedAt === right.capturedAt
   );
+}
+
+const awaitingReview = new Set<CaptureReviewItem["status"]>([
+  "new",
+  "needs_review",
+  "duplicate",
+]);
+
+/**
+ * The row already waiting for this same message, if there is one.
+ *
+ * A second row helps nobody: two rows are two chances to approve the same money
+ * twice. The repeat is counted onto the row that is already there instead, so it
+ * shows as one entry that happened five times rather than five entries. A
+ * message repeating one already posted is a different matter and keeps its own
+ * row, flagged, for the reviewer to judge.
+ */
+function findAwaitingDuplicate(
+  candidate: { duplicateCaptureReviewItemId?: string },
+  reviewItems: CaptureReviewItem[],
+) {
+  if (!candidate.duplicateCaptureReviewItemId) return undefined;
+
+  const existing = reviewItems.find(
+    (item) => item.id === candidate.duplicateCaptureReviewItemId,
+  );
+
+  return existing && awaitingReview.has(existing.status) ? existing : undefined;
 }
 
 function createRulePreview(params: {
@@ -88,6 +117,7 @@ export async function persistCaptureEnvelopes(params: {
   const workingEnvelopes = [...existingEnvelopes];
   let persistedEnvelopeCount = 0;
   let persistedReviewCount = 0;
+  let countedAgainstExistingCount = 0;
 
   for (const envelope of params.envelopes) {
     if (workingEnvelopes.some((existingEnvelope) => envelopesMatch(existingEnvelope, envelope))) {
@@ -110,6 +140,15 @@ export async function persistCaptureEnvelopes(params: {
     persistedEnvelopeCount += 1;
 
     for (const candidate of candidates) {
+      const waiting = findAwaitingDuplicate(candidate, workingReviewItems);
+      if (waiting) {
+        const counted = countAnotherOccurrence(waiting, timestamp);
+        await params.repositories.captureReviewItems.upsert(counted);
+        workingReviewItems[workingReviewItems.indexOf(waiting)] = counted;
+        countedAgainstExistingCount += 1;
+        continue;
+      }
+
       const reviewItem = createCaptureReviewItem({
         userId: params.userId,
         envelopeId: envelope.id,
@@ -139,6 +178,7 @@ export async function persistCaptureEnvelopes(params: {
   return {
     persistedEnvelopeCount,
     persistedReviewCount,
+    countedAgainstExistingCount,
     savedAt: timestamp,
   };
 }

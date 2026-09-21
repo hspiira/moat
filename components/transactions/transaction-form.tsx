@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { formatMoney, normalizeAmountToUgx } from "@/lib/currency";
 import type {
@@ -40,6 +40,39 @@ import { Button } from "@/components/ui/button";
 import { IconChevronDown } from "@tabler/icons-react";
 
 export { transactionTypeLabels } from "@/lib/select-options";
+
+// Choosing Expense in the Add sheet is a decision; the screen that follows says
+// it back rather than starting again from "Add transaction".
+export const captureIntents: Record<
+  TransactionType,
+  { title: string; submitLabel: string; description: string }
+> = {
+  expense: {
+    title: "Add expense",
+    submitLabel: "Add expense",
+    description: "Record money spent, against one account.",
+  },
+  income: {
+    title: "Add income",
+    submitLabel: "Add income",
+    description: "Record money received, into one account.",
+  },
+  transfer: {
+    title: "Record transfer",
+    submitLabel: "Record transfer",
+    description: "Move money between two of your accounts.",
+  },
+  savings_contribution: {
+    title: "Add saving",
+    submitLabel: "Add saving",
+    description: "Put money aside, against one account.",
+  },
+  debt_payment: {
+    title: "Record repayment",
+    submitLabel: "Record repayment",
+    description: "Pay down money owed, from one account.",
+  },
+};
 
 export type TransactionFormState = {
   type: TransactionType;
@@ -171,6 +204,11 @@ export function TransactionForm({
   // same account the money landed in.
   const supportsFee =
     form.type === "expense" || form.type === "transfer" || form.type === "income";
+  // Save sits in the shell's footer, outside this element, so it needs the id
+  // to say which form it submits.
+  const formId = useId();
+  const intent = captureIntents[form.type];
+  const submitLabel = intent.submitLabel;
   const [detailsOpen, setDetailsOpen] = useState(hasDetails);
   const [seenHasDetails, setSeenHasDetails] = useState(hasDetails);
   if (hasDetails !== seenHasDetails) {
@@ -179,7 +217,7 @@ export function TransactionForm({
   }
 
   const content = (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+    <form id={formId} className="grid gap-4" onSubmit={onSubmit}>
           <InputField
             id="tx-amount"
             label={`Amount (${form.currency})`}
@@ -458,32 +496,45 @@ export function TransactionForm({
             />
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} type="submit" size="lg" className="w-full sm:w-auto">
-              {isSubmitting ? "Saving..." : editingId ? "Update" : "Add transaction"}
-            </Button>
-            {editingId ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto"
-                onClick={onCancelEdit}
-              >
-                Cancel
-              </Button>
-            ) : null}
-          </div>
     </form>
   );
 
-  const title = editingId ? "Edit transaction" : "Add transaction";
-  const description = editingId
-    ? "Update this transaction."
-    : "Record one money event against one account.";
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        form={formId}
+        disabled={isSubmitting}
+        type="submit"
+        size="lg"
+        className="w-full sm:w-auto"
+      >
+        {isSubmitting ? "Saving..." : editingId ? "Update" : submitLabel}
+      </Button>
+      {editingId ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="w-full sm:w-auto"
+          onClick={onCancelEdit}
+        >
+          Cancel
+        </Button>
+      ) : null}
+    </div>
+  );
+
+  const title = editingId ? "Edit transaction" : intent.title;
+  const description = editingId ? "Update this transaction." : intent.description;
 
   return (
-    <FormCardShell embedded={embedded} plain={bare} title={title} description={description}>
+    <FormCardShell
+      embedded={embedded}
+      plain={bare}
+      title={title}
+      description={description}
+      footer={actions}
+    >
       {content}
     </FormCardShell>
   );

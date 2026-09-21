@@ -82,3 +82,31 @@ test("folds price trends away rather than spending the top of the page on them",
   const trendsBox = await trends.boundingBox();
   expect(trendsBox!.y).toBeGreaterThan(addButton!.y);
 });
+
+test("something part paid stays on the list, and what is bought is crossed out", async ({
+  page,
+}) => {
+  await openStockedShoppingList(page);
+
+  // The sofa is 200,000 into an agreed 500,000, so it is not bought yet. The row
+  // says what is left against the whole, so it reads as a total being paid down
+  // rather than an odd amount outstanding.
+  const sofa = page.locator("li", { hasText: "Sofa set" }).first();
+  await expect(sofa).toBeVisible();
+  await expect(sofa).toContainText("left of");
+
+  // What is genuinely bought is folded away behind its own heading, so the list
+  // stays about what is still to buy. Opening it is what shows the crossing out.
+  const bought = page.getByRole("heading", { name: /^Bought \(\d+\)$/ });
+  await expect(bought).toBeVisible();
+  await bought.click();
+
+  const boughtRow = page.locator("li", { hasText: "Sugar" }).filter({ hasText: "Jun" }).first();
+  await expect(boughtRow).toBeVisible();
+  const decoration = await boughtRow
+    .locator("span.line-through")
+    .first()
+    .evaluate((node) => getComputedStyle(node).textDecorationLine);
+
+  expect(decoration).toContain("line-through");
+});

@@ -11,16 +11,30 @@ export function resolveItem(params: {
   userId: string;
   timestamp: string;
   unit?: string;
+  group?: string;
 }): { item: Item; isNew: boolean } {
   const normalizedName = normalizeItemName(params.rawName);
   const match = params.existing.find(
     (item) => !item.isArchived && item.normalizedName === normalizedName,
   );
   if (match) {
-    // A unit learned later fills a gap, but never overwrites one already known.
+    // A unit or group learned later fills a gap, but never overwrites one
+    // already known: the earlier answer was given deliberately.
     const unit = params.unit?.trim();
-    if (unit && !match.unit) {
-      return { item: { ...match, unit, updatedAt: params.timestamp }, isNew: true };
+    const group = params.group?.trim();
+    const learnedUnit = unit && !match.unit ? unit : undefined;
+    const learnedGroup = group && !match.group ? group : undefined;
+
+    if (learnedUnit || learnedGroup) {
+      return {
+        item: {
+          ...match,
+          unit: learnedUnit ?? match.unit,
+          group: learnedGroup ?? match.group,
+          updatedAt: params.timestamp,
+        },
+        isNew: true,
+      };
     }
     return { item: match, isNew: false };
   }
@@ -32,6 +46,7 @@ export function resolveItem(params: {
       name: params.rawName.trim().replace(/\s+/g, " "),
       normalizedName,
       unit: params.unit?.trim() || undefined,
+      group: params.group?.trim() || undefined,
       isArchived: false,
       createdAt: params.timestamp,
       updatedAt: params.timestamp,
