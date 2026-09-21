@@ -102,7 +102,6 @@ export function TransactionsLedgerWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Transactions"
-      srOnlyTitle
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}

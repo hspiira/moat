@@ -11,7 +11,6 @@ export function TransactionsToolsWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Rules & corrections"
-      srOnlyTitle
       description="Teach the app to make the same fix for you next time."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

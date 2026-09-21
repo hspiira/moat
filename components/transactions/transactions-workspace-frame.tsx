@@ -15,7 +15,6 @@ import { TransactionsSummaryStrip } from "./transactions-summary-strip";
 type Props = {
   title: string;
   description?: string;
-  srOnlyTitle?: boolean;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
@@ -26,7 +25,6 @@ type Props = {
 export function TransactionsWorkspaceFrame({
   title,
   description,
-  srOnlyTitle,
   profile,
   isLoading,
   error,
@@ -35,7 +33,7 @@ export function TransactionsWorkspaceFrame({
 }: Props) {
   return (
     <div className="grid gap-5">
-      <PageHeader title={title} description={description} srOnlyTitle={srOnlyTitle} />
+      <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading transactions..." /> : null}

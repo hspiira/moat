@@ -67,7 +67,7 @@ export function GoalsWorkspace() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader title="Goals" srOnlyTitle />
+      <PageHeader title="Goals" />
 
       {error ? <ErrorStateCard message={error} /> : null}
       {isLoading ? <LoadingStateCard message="Loading goals..." /> : null}

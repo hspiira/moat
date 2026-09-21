@@ -76,7 +76,6 @@ export function ShoppingWorkspace() {
   return (
     <FeaturePageShell
       title="Shopping"
-      srOnlyTitle
       description="Plan what to buy and remember what it cost last time."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

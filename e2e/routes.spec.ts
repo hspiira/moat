@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoSidewaysScroll, openSeededApp } from "./harness";
 
 const DESTINATIONS = [
-  { path: "/inbox", heading: /Capture review/i },
+  { path: "/inbox", heading: /Capture inbox/i },
   { path: "/month", heading: /Month check/i },
   { path: "/settings/rules", heading: /Rules/i },
   { path: "/settings/categories", heading: /Categories/i },

@@ -18,7 +18,6 @@ export function MonthlyPlanWorkspace() {
   return (
     <FeaturePageShell
       title="Monthly plan"
-      srOnlyTitle
       description="What this month already owes, and what you are capping."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

@@ -257,5 +257,14 @@
       background-color: transparent;
       border-block: 1px solid var(--border);
     }
+
+    /* Two sections in a row share one boundary, but each was drawing a rule
+       for it with the stack gap in between, so the pair read as a double
+       line. The second section drops its top rule; the first one's bottom
+       rule closes them both. */
+    [data-slot="card"]:not([data-slot="card"] *):not([data-slot="sheet-content"] *):not([data-slot="popover-content"] *)
+      + [data-slot="card"]:not([data-slot="card"] *):not([data-slot="sheet-content"] *):not([data-slot="popover-content"] *) {
+      border-block-start: 0;
+    }
   }
 }

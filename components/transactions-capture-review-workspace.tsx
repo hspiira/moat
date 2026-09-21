@@ -13,7 +13,6 @@ export function TransactionsCaptureReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Capture review"
-      srOnlyTitle
       description="Check what was read from a message before it counts towards your money."
       profile={workspace.profile}
       isLoading={workspace.isLoading}

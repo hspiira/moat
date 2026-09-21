@@ -19,7 +19,6 @@ export function TransactionsReviewWorkspace() {
   return (
     <TransactionsWorkspaceFrame
       title="Month check"
-      srOnlyTitle
       description="Make sure this month is complete, so its totals can be trusted."
       profile={workspace.profile}
       isLoading={workspace.isLoading}
