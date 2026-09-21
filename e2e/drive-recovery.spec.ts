@@ -106,7 +106,7 @@ async function openSettingsWithPin(page: Page, pin = "246810") {
   await page.clock.install({ time: FIXED_NOW });
   await page.goto("/transactions");
   await seedIndexedDb(page, buildLedgerFixture());
-  await page.goto("/settings");
+  await page.goto("/settings/security");
   await page.waitForTimeout(2000);
 
   await page.getByRole("button", { name: "Enable PIN lock" }).click();
@@ -114,6 +114,12 @@ async function openSettingsWithPin(page: Page, pin = "246810") {
   await page.locator("#confirm-pin").fill(pin);
   await page.getByRole("button", { name: /^Set PIN|Enable PIN|Save PIN/ }).click();
   await page.waitForTimeout(2500);
+
+  // Drive lives with the rest of backup, one page over from the PIN. Walk
+  // there through the app rather than reloading, which would lock it.
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: /Backup & sync/ }).click();
+  await page.waitForTimeout(2000);
 }
 
 async function connectDrive(page: Page) {

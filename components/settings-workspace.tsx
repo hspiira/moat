@@ -3,69 +3,94 @@
 import Link from "next/link";
 import {
   IconChevronRight,
-  IconCloudLock,
   IconDatabaseExport,
   IconLockSquareRounded,
+  IconPalette,
   IconRss,
-  IconTags,
   IconShieldLock,
+  IconTags,
   type Icon,
 } from "@tabler/icons-react";
 
-import { useHasNativeBridge, useIsIosApp } from "@/components/hooks/use-native-bridge";
-import { BackupPanel } from "./settings/backup-panel";
-import { CaptureAutomationPanel } from "./settings/capture-automation-panel";
-import { CaptureShortcutPanel } from "./settings/capture-shortcut-panel";
-import { DataExportPanel } from "./settings/data-export-panel";
-import { DeleteAccountPanel } from "./settings/delete-account-panel";
-import { PasskeyPanel } from "./settings/passkey-panel";
-import { PinLockPanel } from "./settings/pin-lock-panel";
-import { SyncModePanel } from "./settings/sync-mode-panel";
+import { PageHeader } from "@/components/page-shell/page-header";
+import { SettingsStatus } from "@/components/settings/settings-status";
 
-function SettingsSection({
-  icon: IconComponent,
-  title,
-  description,
-  children,
-}: {
-  icon: Icon;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="grid gap-4">
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden
-          className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
-        >
-          <IconComponent className="size-4.5" />
-        </span>
-        <div className="space-y-0.5">
-          <h2 className="font-display text-base font-semibold">{title}</h2>
-          <p className="max-w-2xl text-xs leading-5 text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function SettingsNavRow({
-  href,
-  label,
-  hint,
-}: {
+type SettingsLink = {
   href: string;
+  icon: Icon;
   label: string;
   hint: string;
-}) {
+};
+
+// An index, not a tour. Every visit used to scroll past the whole of security,
+// storage, backup and data management to reach whichever one it was for.
+const GROUPS: { title: string; links: SettingsLink[] }[] = [
+  {
+    title: "This device",
+    links: [
+      {
+        href: "/settings/security",
+        icon: IconShieldLock,
+        label: "Security",
+        hint: "PIN lock and passkeys",
+      },
+      {
+        href: "/settings/backup",
+        icon: IconLockSquareRounded,
+        label: "Backup & sync",
+        hint: "Where your records live, and taking a copy",
+      },
+      {
+        href: "/settings/appearance",
+        icon: IconPalette,
+        label: "Appearance",
+        hint: "Light, dark, or match the device",
+      },
+    ],
+  },
+  {
+    title: "How entries are handled",
+    links: [
+      {
+        href: "/settings/capture",
+        icon: IconRss,
+        label: "Capture",
+        hint: "How money messages reach the inbox",
+      },
+      {
+        href: "/settings/categories",
+        icon: IconTags,
+        label: "Categories",
+        hint: "Rename, merge or retire a category",
+      },
+      {
+        href: "/settings/rules",
+        icon: IconTags,
+        label: "Rules & corrections",
+        hint: "Teach the app to make the same fix next time",
+      },
+    ],
+  },
+  {
+    title: "Everything you have recorded",
+    links: [
+      {
+        href: "/settings/data",
+        icon: IconDatabaseExport,
+        label: "Data management",
+        hint: "Export or delete everything on this device",
+      },
+    ],
+  },
+];
+
+function SettingsRow({ href, icon: IconComponent, label, hint }: SettingsLink) {
   return (
     <Link
       href={href}
-      className="-mx-4 flex items-center gap-3 border-y border-border px-4 py-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="-mx-4 flex min-w-0 items-center gap-3 border-b border-border px-4 py-3 transition-colors first:border-t hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
+      <IconComponent aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <div className="text-sm text-foreground">{label}</div>
         <div className="text-xs text-muted-foreground">{hint}</div>
@@ -76,82 +101,22 @@ function SettingsNavRow({
 }
 
 export function SettingsWorkspace() {
-  const hasNativeBridge = useHasNativeBridge();
-  const isIos = useIsIosApp();
   return (
-    <div className="grid gap-8">
-      <div className="space-y-1">
-        <h1 className="sr-only">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Security, privacy and data management.
-        </p>
-      </div>
+    <div className="grid min-w-0 gap-8">
+      <PageHeader title="Settings" description="Security, privacy and data management." />
 
-      <SettingsSection
-        icon={IconShieldLock}
-        title="Security"
-        description="Your PIN and keys never leave this device."
-      >
-        <PinLockPanel />
-        <PasskeyPanel />
-      </SettingsSection>
+      <SettingsStatus />
 
-      <SettingsSection
-        icon={IconTags}
-        title="Categories"
-        description="What each has cost, and where duplicates crept in."
-      >
-        <SettingsNavRow
-          href="/settings/categories"
-          label="Your categories"
-          hint="Rename, merge or retire a category"
-        />
-      </SettingsSection>
-
-      {hasNativeBridge ? (
-        <SettingsSection
-          icon={IconRss}
-          title="Capture automation"
-          description="Let Moat pick up money messages from your phone and send them to review before they post."
-        >
-          <CaptureAutomationPanel />
-        </SettingsSection>
-      ) : null}
-
-      {isIos ? (
-        <SettingsSection
-          icon={IconRss}
-          title="Capture automation"
-          description="Hand your money messages to Moat with a Shortcut, and review them before they post."
-        >
-          <CaptureShortcutPanel />
-        </SettingsSection>
-      ) : null}
-
-      <SettingsSection
-        icon={IconCloudLock}
-        title="Storage"
-        description="Where your data lives, and how to move it."
-      >
-        <SyncModePanel />
-      </SettingsSection>
-
-      <SettingsSection
-        icon={IconLockSquareRounded}
-        title="Backup and restore"
-        description="Your data lives on this device, so a device reset or browser clear erases it. Download an encrypted backup regularly and keep it somewhere safe."
-      >
-        <BackupPanel />
-      </SettingsSection>
-
-      <SettingsSection
-        icon={IconDatabaseExport}
-        title="Your data"
-        description="Export or delete everything on this device."
-      >
-        <DataExportPanel />
-        <DeleteAccountPanel />
-      </SettingsSection>
+      {GROUPS.map((group) => (
+        <section key={group.title} className="grid min-w-0 gap-2">
+          <h2 className="font-display text-base font-semibold">{group.title}</h2>
+          <div className="grid">
+            {group.links.map((link) => (
+              <SettingsRow key={link.href} {...link} />
+            ))}
+          </div>
+        </section>
+      ))}
 
       <section className="grid gap-2">
         <div className="text-xs text-muted-foreground">

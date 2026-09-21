@@ -10,7 +10,7 @@ test("settings says plainly that no PIN means no encryption", async ({ page }) =
   await page.clock.install({ time: FIXED_NOW });
   await page.goto("/transactions");
   await seedIndexedDb(page, buildLedgerFixture());
-  await page.goto("/settings");
+  await page.goto("/settings/security");
   await page.waitForTimeout(2000);
 
   await expect(page.getByText(/records are stored unencrypted/i).first()).toBeVisible();
