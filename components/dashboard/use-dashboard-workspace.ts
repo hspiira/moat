@@ -2,10 +2,11 @@
 
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 
-import { getAccountTotals, reconcileAccountBalances } from "@/lib/domain/accounts";
-import { getAttentionItems, getBillsDueSoon, getHabitItems } from "@/lib/domain/attention";
+import { reconcileAccountBalances } from "@/lib/domain/accounts";
+import { getAttentionItems, getBillsDueSoon } from "@/lib/domain/attention";
 import { getBudgetCoverage, getBudgetEnvelopes } from "@/lib/domain/budgets";
 import { getSectionOf } from "@/lib/domain/capture-review";
+import { getCoverStatus } from "@/lib/domain/cover";
 import {
   buildPeriodWindow,
   buildDashboardChartSeries,
@@ -16,6 +17,7 @@ import {
   type PeriodFilter,
 } from "@/lib/domain/dashboard";
 import { getMonthlyInsights } from "@/lib/domain/insights";
+import { getPlanPreview } from "@/lib/domain/plan-preview";
 import { evaluateRecurringObligations } from "@/lib/domain/recurring";
 import { getSavingsRate, getSummaryForTransactions } from "@/lib/domain/summaries";
 import { usePersistedSelection } from "@/components/hooks/use-persisted-selection";
@@ -34,8 +36,6 @@ import type {
   UserProfile,
 } from "@/lib/types";
 import { currentMonthIso, todayIso } from "@/lib/today";
-
-const TARGET_COVER_MONTHS = 3;
 
 export function useDashboardWorkspace(profile: UserProfile) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -190,31 +190,61 @@ export function useDashboardWorkspace(profile: UserProfile) {
     () => getBudgetEnvelopes(budgets, categories, monthTransactions).slice(0, 4),
     [budgets, categories, monthTransactions],
   );
-  const { totalBalance } = useMemo(() => getAccountTotals(accounts), [accounts]);
-  const coverMonths = summary.outflow > 0 && totalBalance > 0 ? totalBalance / summary.outflow : 0;
-  const billsDueSoon = useMemo(
-    () =>
-      getBillsDueSoon(
-        evaluateRecurringObligations(obligations, monthTransactions, currentMonth),
-        new Date(),
-      ),
+  // Cover is deliberately blind to `period`: it asks how many months the
+  // reserves would last, so it reads its own monthly baseline rather than
+  // whatever window the chips happen to be showing.
+  const cover = useMemo(
+    () => getCoverStatus({ accounts, transactions, now: new Date() }),
+    [accounts, transactions],
+  );
+  const obligationEvaluations = useMemo(
+    () => evaluateRecurringObligations(obligations, monthTransactions, currentMonth),
     [obligations, monthTransactions, currentMonth],
   );
-  const attentionItems = useMemo(
+  const billsDueSoon = useMemo(
+    () => getBillsDueSoon(obligationEvaluations, new Date()),
+    [obligationEvaluations],
+  );
+  // Counts every budget, not the four the attention items look at, so "2
+  // budgets are over" cannot quietly mean "2 of the first 4".
+  const allEnvelopes = useMemo(
+    () => getBudgetEnvelopes(budgets, categories, monthTransactions),
+    [budgets, categories, monthTransactions],
+  );
+  const planPreview = useMemo(
     () =>
-      getAttentionItems({
-        envelopes: budgetEnvelopes,
+      getPlanPreview({
+        evaluations: obligationEvaluations,
+        envelopes: allEnvelopes,
+        today: new Date(),
+      }),
+    [obligationEvaluations, allEnvelopes],
+  );
+  const recentTransactions = useMemo(
+    () =>
+      [...transactions]
+        .sort((left, right) =>
+          left.occurredOn === right.occurredOn
+            ? right.createdAt.localeCompare(left.createdAt)
+            : right.occurredOn.localeCompare(left.occurredOn),
+        )
+        .slice(0, 3),
+    [transactions],
+  );
+  const attentionItems = useMemo(
+    () => {
+      const items = getAttentionItems({
+        envelopes: allEnvelopes,
         billsDueSoon,
         reviewCount,
-        insights,
-        habits: getHabitItems({
-          savingsRate,
-          hasIncome: summary.inflow > 0,
-          coverMonths,
-          targetCoverMonths: TARGET_COVER_MONTHS,
-        }),
-      }),
-    [budgetEnvelopes, billsDueSoon, reviewCount, insights, savingsRate, summary.inflow, coverMonths],
+        insights: [],
+      });
+      // Urgent bills first, then captured entries and overspent budgets.
+      return [...items.filter((item) => item.id.startsWith("bill-due:")),
+        ...items.filter((item) => item.id === "capture-review"),
+        ...items.filter((item) => item.id.startsWith("overspent:"))];
+    },
+    [allEnvelopes, billsDueSoon, reviewCount],
   );
   const topAccounts = useMemo(
     () =>
@@ -242,11 +272,15 @@ export function useDashboardWorkspace(profile: UserProfile) {
     periodWindow,
     summary,
     savingsRate,
+    cover,
     attentionItems,
+    insights,
     chartLabel,
     chartSeries,
     budgetCoverage,
     budgetEnvelopes,
+    planPreview,
+    recentTransactions,
     topAccounts,
     inflowChange,
     outflowChange,
@@ -254,5 +288,6 @@ export function useDashboardWorkspace(profile: UserProfile) {
     transactions,
     accounts,
     categories,
+    counterparties,
   };
 }

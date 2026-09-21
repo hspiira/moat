@@ -5,7 +5,7 @@ import {
   buildSpendingShare,
   type SpendingCategory,
 } from "@/lib/domain/spending-share";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 
 import { AmountIndicator } from "@/components/amount-indicator";
@@ -30,6 +30,10 @@ import {
 import type { AttentionItem } from "@/lib/domain/attention";
 import type { DashboardChartPoint } from "@/lib/domain/dashboard";
 import { formatMoney } from "@/lib/currency";
+
+// Home shows the most urgent item and at most two others. The rest are still
+// here, one tap away, rather than pushing recent activity off the first screen.
+const ATTENTION_VISIBLE = 3;
 
 const CHART_PERIOD_LABELS_CLASS =
   "flex justify-between text-[11px] text-muted-foreground";
@@ -374,9 +378,14 @@ export function DashboardTopSpendingCategories({
 }
 
 export function DashboardAttentionPanel({ items }: { items: AttentionItem[] }) {
+  const [showAll, setShowAll] = useState(false);
+
   if (items.length === 0) {
     return null;
   }
+
+  const hidden = Math.max(0, items.length - ATTENTION_VISIBLE);
+  const visible = showAll ? items : items.slice(0, ATTENTION_VISIBLE);
 
   return (
     <Card className="shadow-none">
@@ -388,7 +397,7 @@ export function DashboardAttentionPanel({ items }: { items: AttentionItem[] }) {
       </CardHeader>
       <CardContent>
         <ul className="grid gap-1">
-          {items.map((item) => {
+          {visible.map((item) => {
             const body = (
               <>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -406,17 +415,28 @@ export function DashboardAttentionPanel({ items }: { items: AttentionItem[] }) {
                 {item.href ? (
                   <Link
                     href={item.href}
-                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+                    className="-mx-3 flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
                   >
                     {body}
                   </Link>
                 ) : (
-                  <div className="flex items-start gap-3 px-3 py-2.5">{body}</div>
+                  <div className="-mx-3 flex items-start gap-3 px-3 py-2.5">{body}</div>
                 )}
               </li>
             );
           })}
         </ul>
+
+        {hidden > 0 && !showAll ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="-mx-3 mt-1 h-auto w-[calc(100%+1.5rem)] justify-start px-3 py-2.5 text-sm font-medium text-primary"
+            onClick={() => setShowAll(true)}
+          >
+            Show {hidden} more
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

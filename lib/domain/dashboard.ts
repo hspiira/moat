@@ -10,6 +10,8 @@ export type PeriodWindow = {
   currentStart: Date | null;
   title: string;
   caption: string;
+  // Reads inline after a figure's name, as in "Money in · this month".
+  shortLabel: string;
   comparisonLabel: string | null;
   overviewLabel: string;
 };
@@ -33,6 +35,7 @@ type PeriodConfig = {
   overviewLabel: (now: Date) => string;
   title: string;
   caption: string;
+  shortLabel: string;
   comparisonLabel: string | null;
   formatChartPoint: (date: Date) => string;
 };
@@ -43,6 +46,7 @@ const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
     overviewLabel: () => "This week",
     title: "This week's cash flow",
     caption: "Transactions dated in the current calendar week.",
+    shortLabel: "this week",
     comparisonLabel: "last week",
     formatChartPoint: (date) =>
       new Intl.DateTimeFormat("en-UG", { day: "numeric", month: "short" }).format(date),
@@ -53,6 +57,7 @@ const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
       new Intl.DateTimeFormat("en-UG", { month: "long", year: "numeric" }).format(now),
     title: "This month's cash flow",
     caption: "Transactions dated in the current calendar month.",
+    shortLabel: "this month",
     comparisonLabel: "last month",
     formatChartPoint: (date) =>
       new Intl.DateTimeFormat("en-UG", { month: "short" }).format(date),
@@ -62,6 +67,7 @@ const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
     overviewLabel: (now) => now.getFullYear().toString(),
     title: "This year's cash flow",
     caption: "Transactions dated in the current calendar year.",
+    shortLabel: "this year",
     comparisonLabel: "last year",
     formatChartPoint: (date) => String(date.getFullYear()),
   },
@@ -70,6 +76,7 @@ const PERIOD_CONFIG: Record<PeriodFilter, PeriodConfig> = {
     overviewLabel: () => "All lifetime",
     title: "Lifetime cash flow",
     caption: "All recorded transactions since setup.",
+    shortLabel: "all time",
     comparisonLabel: "before this year",
     formatChartPoint: (date) => String(date.getFullYear()),
   },
@@ -151,6 +158,7 @@ export function buildPeriodWindow(
       currentStart: null,
       title: config.title,
       caption: config.caption,
+      shortLabel: config.shortLabel,
       comparisonLabel: config.comparisonLabel,
       overviewLabel: config.overviewLabel(now),
     };
@@ -167,6 +175,7 @@ export function buildPeriodWindow(
     currentStart,
     title: config.title,
     caption: config.caption,
+    shortLabel: config.shortLabel,
     comparisonLabel: config.comparisonLabel,
     overviewLabel: config.overviewLabel(now),
   };
