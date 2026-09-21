@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { openSeededApp } from "./harness";
+import { openReportView } from "./harness";
 
 const CARD = "Who took it, and who paid you";
 
 test("a payee can be named, and the name sticks", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Spending");
 
   const card = page.locator("[data-slot='card']").filter({ hasText: CARD });
   const bodaRow = card.getByRole("listitem").filter({ hasText: "Boda Rider" });

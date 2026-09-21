@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { expectNoSidewaysScroll, openSeededApp } from "./harness";
+import { expectNoSidewaysScroll, openReportView } from "./harness";
 
 test("the calendar opens on today and lists what made up the day", async ({ page }) => {
-  const { errors } = await openSeededApp(page, "/report");
+  const { errors } = await openReportView(page, "Calendar");
 
   // The clock is frozen at 17 August, and the fixture records that day.
   await expect(page.getByRole("heading", { name: /Monday, 17 August/i })).toBeVisible();
@@ -11,7 +11,7 @@ test("the calendar opens on today and lists what made up the day", async ({ page
 });
 
 test("picking another day swaps the list under the calendar", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Calendar");
 
   await page.getByRole("button", { name: /^2026-08-16/ }).click();
   await page.waitForTimeout(600);
@@ -21,7 +21,7 @@ test("picking another day swaps the list under the calendar", async ({ page }) =
 });
 
 test("spending in the day list reads as money out, not in", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Calendar");
 
   await page.getByRole("button", { name: /^2026-08-16/ }).click();
   await page.waitForTimeout(600);
@@ -36,7 +36,7 @@ test("spending in the day list reads as money out, not in", async ({ page }) => 
 });
 
 test("a long parsed payee does not push the calendar sideways", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Calendar");
 
   // The 16th holds the fixture's unbroken parser output. The day list is a grid
   // item, so without min-w-0 it sizes to that text and drags the calendar with it.

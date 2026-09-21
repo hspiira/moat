@@ -29,6 +29,16 @@ export async function openSeededApp(page: Page, path = "/transactions") {
   return { errors };
 }
 
+/**
+ * The report is three views behind one set of chips. A test that wants the
+ * spending drill-downs or the calendar has to say so.
+ */
+export async function openReportView(page: Page, view: "Overview" | "Spending" | "Calendar") {
+  const result = await openSeededApp(page, "/report");
+  await page.getByRole("button", { name: view, exact: true }).click();
+  return result;
+}
+
 export function readTransactions(page: Page): Promise<LedgerRow[]> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

@@ -70,6 +70,7 @@ test("a spending row on the report leads to its transactions", async ({ page }) 
   await seedIndexedDb(page, fixture);
   await page.goto("/report");
   await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "Spending", exact: true }).click();
 
   const breakdown = page.locator("[data-slot='card']").filter({ hasText: "Where it went" });
   await expect(breakdown).toBeVisible();

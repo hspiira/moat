@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { openSeededApp } from "./harness";
+import { openReportView } from "./harness";
 
 test("the report says what each account costs you to move money through", async ({ page }) => {
-  await openSeededApp(page, "/report");
+  await openReportView(page, "Spending");
 
   const card = page
     .locator("[data-slot='card']")
