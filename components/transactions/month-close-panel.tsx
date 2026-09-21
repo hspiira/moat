@@ -115,6 +115,18 @@ export function MonthClosePanel({
   const isClosed = monthClose?.state === "closed";
   const checkedOn = monthClose?.closedAt ? formatDate(monthClose.closedAt) : null;
   const accountName = (id: string) => accounts.find((entry) => entry.id === id)?.name ?? "–";
+  // What still fails is the work; what passed is reassurance. When there is
+  // work, the reassurance folds away so the next issue is the first thing in
+  // the list rather than the seventh.
+  const failedChecks = checks.filter((check) => !check.passed);
+  const passedChecks = checks.filter((check) => check.passed);
+  const hasWork = failedChecks.length > 0;
+  const blockedReason =
+    isClosed || evaluation.isReadyToClose
+      ? null
+      : failedChecks.length > 0
+        ? `Not ready yet: ${failedChecks.map((check) => check.label).join(", ")}.`
+        : "Sort out the items above first.";
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -131,23 +143,34 @@ export function MonthClosePanel({
         </p>
       </div>
 
-      <ul className="grid min-w-0 gap-1.5 rounded-lg bg-muted/30 px-3 py-2.5">
-        {checks.map((check) => (
-          <li key={check.id} className="flex min-w-0 items-start gap-2 text-sm">
-            {check.passed ? (
-              <IconCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-pos" />
-            ) : (
-              <IconAlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-neg" />
-            )}
-            <span className="min-w-0">
-              <span className={check.passed ? "text-foreground" : "font-medium text-foreground"}>
-                {check.label}
-              </span>{" "}
-              <span className="text-muted-foreground">· {check.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="grid min-w-0 gap-1.5 rounded-lg bg-muted/30 px-3 py-2.5">
+        <p className="text-xs font-medium text-muted-foreground">
+          {passedChecks.length} of {checks.length} checks passed
+        </p>
+
+        <ul className="grid min-w-0 gap-1.5">
+          {(hasWork ? failedChecks : checks).map((check) => (
+            <CheckRow key={check.id} check={check} />
+          ))}
+        </ul>
+
+        {hasWork && passedChecks.length > 0 ? (
+          <details className="group/passed min-w-0">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+              <IconChevronRight
+                aria-hidden
+                className="size-3.5 transition-transform group-open/passed:rotate-90"
+              />
+              {passedChecks.length} passed
+            </summary>
+            <ul className="mt-1.5 grid min-w-0 gap-1.5">
+              {passedChecks.map((check) => (
+                <CheckRow key={check.id} check={check} />
+              ))}
+            </ul>
+          </details>
+        ) : null}
+      </div>
 
       {groups.length > 0 ? (
         <div className="min-w-0 divide-y divide-border/60">
@@ -271,26 +294,48 @@ export function MonthClosePanel({
         </div>
       ) : null}
 
-      <div className="grid gap-2 pt-1">
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={onExport}>
-            Download as spreadsheet
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={isSubmitting || isClosed || !evaluation.isReadyToClose}
-            onClick={onClose}
-          >
-            Mark month as checked
-          </Button>
-        </div>
-        {!isClosed && !evaluation.isReadyToClose ? (
-          <p className="text-xs text-muted-foreground">
-            Sort out the items above first.
-          </p>
+      {/* Finishing the month is the point of the page. Taking a copy away is
+          something else you might also want. */}
+      <div className="grid justify-items-start gap-2 pt-1">
+        <Button
+          type="button"
+          disabled={isSubmitting || isClosed || !evaluation.isReadyToClose}
+          onClick={onClose}
+          className="w-full sm:w-auto sm:px-6"
+        >
+          Mark month as checked
+        </Button>
+        {blockedReason ? (
+          <p className="text-xs text-muted-foreground">{blockedReason}</p>
         ) : null}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={onExport}
+          className="-ml-2 text-muted-foreground"
+        >
+          Download as spreadsheet
+        </Button>
       </div>
     </div>
+  );
+}
+
+function CheckRow({ check }: { check: { label: string; detail: string; passed: boolean } }) {
+  return (
+    <li className="flex min-w-0 items-start gap-2 text-sm">
+      {check.passed ? (
+        <IconCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-pos" />
+      ) : (
+        <IconAlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-neg" />
+      )}
+      <span className="min-w-0">
+        <span className={check.passed ? "text-foreground" : "font-medium text-foreground"}>
+          {check.label}
+        </span>{" "}
+        <span className="text-muted-foreground">· {check.detail}</span>
+      </span>
+    </li>
   );
 }

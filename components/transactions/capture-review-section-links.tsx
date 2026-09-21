@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 type CaptureReviewSection = "month-close" | "capture";
 
 const sectionConfig: Record<CaptureReviewSection, { href: string; label: string }> = {
-  capture: { href: "/inbox", label: "Capture review" },
+  capture: { href: "/inbox", label: "Capture inbox" },
   "month-close": { href: "/month", label: "Month check" },
 };
 
