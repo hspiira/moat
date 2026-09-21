@@ -226,6 +226,7 @@ export function TransactionsLedgerWorkspace() {
 
         <TransactionList
           grouped={sort === "recent"}
+          expandAll={Boolean(query.trim())}
           caption={
             sort === "largest"
               ? "Biggest money out first. Transfers show as a matched pair."

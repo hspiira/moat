@@ -32,20 +32,55 @@ test("a link can open the ledger on a period and order", async ({ page }) => {
   );
 });
 
+// The ledger is an accordion now, so the rows on screen are one day's worth
+// whatever the period. What the period changes is how many days there are to
+// open, which is what this counts.
 test("narrowing the period drops what falls outside it", async ({ page }) => {
   await openSeededApp(page, "/transactions");
 
   const ledger = page.locator("[data-slot='card']").filter({ hasText: "Newest first" });
-  const allTime = await ledger.getByRole("listitem").count();
+  const days = ledger.getByRole("button", { name: /records/ });
+  const allTime = await days.count();
 
   await openFilters(page);
   await page.getByRole("button", { name: "7 days" }).click();
   await closeFilters(page);
 
-  const lastWeek = await ledger.getByRole("listitem").count();
+  const lastWeek = await days.count();
 
   expect(lastWeek).toBeLessThan(allTime);
   expect(lastWeek).toBeGreaterThan(0);
+});
+
+test("a day opens on tap and closes the one that was open", async ({ page }) => {
+  await openSeededApp(page, "/transactions");
+
+  const ledger = page.locator("[data-slot='card']").filter({ hasText: "Newest first" });
+  const days = ledger.getByRole("button", { name: /records/ });
+
+  // Today starts open; the rows on screen are its rows.
+  await expect(days.first()).toHaveAttribute("aria-expanded", "true");
+  await expect(days.nth(1)).toHaveAttribute("aria-expanded", "false");
+
+  await days.nth(1).click();
+  await expect(days.nth(1)).toHaveAttribute("aria-expanded", "true");
+  await expect(days.first()).toHaveAttribute("aria-expanded", "false");
+});
+
+// A search that hid its matches behind a closed day would not be a search.
+test("searching opens every day it returns", async ({ page }) => {
+  await openSeededApp(page, "/transactions");
+
+  const ledger = page.locator("[data-slot='card']").filter({ hasText: "Newest first" });
+  await page.getByLabel("Search transactions").fill("boda");
+
+  const days = ledger.getByRole("button", { name: /records/ });
+  const count = await days.count();
+  expect(count).toBeGreaterThan(1);
+
+  for (let index = 0; index < count; index += 1) {
+    await expect(days.nth(index)).toHaveAttribute("aria-expanded", "true");
+  }
 });
 
 test("biggest out really orders by size, and skips your own transfers", async ({ page }) => {
