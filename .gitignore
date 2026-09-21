@@ -43,3 +43,11 @@ server/*.js.map
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Per-developer agent harness config. The Claude equivalents under .claude/
+# are committed because the whole team shares them; these are whichever tool
+# an individual happens to drive the repo with, so they stay on disk and
+# readable without standing in every git status.
+/.agents/
+/.codex/
+/opencode.json
