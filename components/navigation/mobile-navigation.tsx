@@ -61,17 +61,22 @@ export function MobileNavigation({
             <MoatMark className="h-9 w-9" />
           </Link>
 
-          {hasProfile && hasPinLock && lockState.status === "unlocked" ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Lock Moat now"
-              className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
-              onClick={lock}
-            >
-              <IconLock className="h-4.5 w-4.5" />
-            </Button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {hasProfile && hasPinLock && lockState.status === "unlocked" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Lock Moat now"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={lock}
+              >
+                <IconLock className="h-4.5 w-4.5" />
+              </Button>
+            ) : null}
+            {hasProfile ? (
+              <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -87,7 +92,6 @@ export function MobileNavigation({
             {mobilePrimaryNav.slice(0, 2).map(renderNavButton)}
             <MobileCaptureSheet />
             {mobilePrimaryNav.slice(2).map(renderNavButton)}
-            <MobileMoreButton pathname={pathname} onToggleTheme={onToggleTheme} />
           </nav>
         </div>
       ) : null}

@@ -39,13 +39,17 @@ export const navIcons: Record<string, Icon> = {
   "/settings/categories": IconTags,
 };
 
-export const mobilePrimaryNav = ["/", "/transactions", "/accounts"] as const;
+// Plan takes the fifth slot. Of everything in the menu it is the one asked
+// most often and on the shortest cycle — what is left to spend, and what is
+// due — where Report and the rest are read now and then.
+export const mobilePrimaryNav = ["/", "/transactions", "/accounts", "/plan"] as const;
 
 // The bar has five fixed slots and no room for "Transactions", so that one slot
 // gets a shorter name. The page it opens keeps its own title: a nav shorthand
 // is allowed to be shorter than a heading, never to mean something else.
 export const mobileNavLabels: Record<string, string> = {
   "/transactions": "Activity",
+  "/plan": "Plan",
 };
 
 export function getMobileNavLabel(href: string): string {
@@ -159,6 +163,14 @@ export function getNavEntry(href: string): NavEntry | undefined {
 }
 
 export const groupedHrefs = navGroups.flatMap((group) => [...group.hrefs]);
+
+// What the phone's menu actually holds. The groups are shared with the laptop,
+// which shows a different handful in its own bar, so each platform subtracts
+// what it already displays. More lights up for these and not for a page the
+// bar can reach on its own.
+export const mobileMenuHrefs = groupedHrefs.filter(
+  (href) => !(mobilePrimaryNav as readonly string[]).includes(href),
+);
 
 // A destination already sitting in the bar is not repeated in the menu, so each
 // platform hides whatever it shows elsewhere.

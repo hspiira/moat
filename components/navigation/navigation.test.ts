@@ -15,6 +15,7 @@ import {
   getNavEntry,
   groupedHrefs,
   mobileCaptureActions,
+  mobileMenuHrefs,
   mobileNavLabels,
   mobilePrimaryNav,
   navGroups,
@@ -78,7 +79,7 @@ describe("the grouped menu", () => {
 
   it("never repeats a destination the bar already shows", () => {
     for (const href of mobilePrimaryNav) {
-      expect(groupedHrefs, `${href} would render twice on a phone`).not.toContain(href);
+      expect(mobileMenuHrefs, `${href} would render twice on a phone`).not.toContain(href);
     }
 
     for (const href of [...desktopPrimaryNav, ...desktopShortcutNav]) {
@@ -117,8 +118,20 @@ describe("the grouped menu", () => {
 });
 
 describe("the mobile bar", () => {
-  it("fills five fixed slots: three destinations, Add and More", () => {
-    expect(mobilePrimaryNav.length).toBe(3);
+  it("fills five fixed slots: four destinations and Add", () => {
+    expect(mobilePrimaryNav.length).toBe(4);
+  });
+
+  // More left the bar for the header corner. The bar is the places you go
+  // every day; the menu behind More is everywhere else, and a corner control
+  // reads as a way out of the page rather than a fifth destination.
+  it("keeps More out of the bar and in the header", () => {
+    const bar = readFileSync(new URL("./mobile-navigation.tsx", import.meta.url), "utf8");
+    const header = bar.slice(bar.indexOf("<header"), bar.indexOf("</header>"));
+    const nav = bar.slice(bar.indexOf("<nav"), bar.indexOf("</nav>"));
+
+    expect(header, "More is not in the header").toContain("MobileMoreButton");
+    expect(nav, "More is still taking a slot in the bar").not.toContain("MobileMoreButton");
   });
 
   it("gives every slot a name and an icon", () => {

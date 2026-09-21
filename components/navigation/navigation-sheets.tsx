@@ -20,20 +20,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  getActiveGroupedEntry,
+  getActiveEntryIn,
   getNavEntry,
   isActiveRoute,
   mobileCaptureActions,
+  mobileMenuHrefs,
   mobilePrimaryNav,
   navGroupsExcluding,
   navIcons,
 } from "@/components/navigation/navigation-model";
 import { ThemeToggle } from "@/components/navigation/navigation-brand";
-import {
-  mobileNavLabelClass,
-  mobileNavSlotClass,
-  mobileNavToneClass,
-} from "@/components/navigation/mobile-nav-slot";
+import { mobileNavSlotClass } from "@/components/navigation/mobile-nav-slot";
 
 function DrawerSection({
   title,
@@ -43,7 +40,7 @@ function DrawerSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-1.5">
+    <section className="grid gap-0.5">
       <div className="px-1 text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
@@ -102,12 +99,13 @@ export function MobileCaptureSheet() {
           aria-label="Add a transaction"
           className={`${mobileNavSlotClass} text-foreground shadow-none hover:bg-transparent`}
         >
-          {/* The one control in the bar that acts rather than navigates, so it
-              keeps the filled disc that set it apart before. */}
-          <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <IconPlus className="size-4.5" />
+          {/* The one control in the bar that acts rather than navigates. The
+              disc says that on its own, so it carries no name under it: the
+              four beside it are places, and a word here would file it with
+              them. The label lives on the button for a screen reader. */}
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <IconPlus className="size-5" />
           </span>
-          <span className={mobileNavLabelClass}>Add</span>
         </Button>
       </SheetTrigger>
       <SheetContent
@@ -170,9 +168,12 @@ export function MobileUtilitySheet({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
+      {/* Down from the top and over the whole screen: More is a way out of the
+          page rather than a tray attached to it, and its trigger is up in the
+          corner, so the panel arrives from where it was tapped. */}
       <SheetContent
-        side="bottom"
-        className="flex max-h-[85vh] flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        side="top"
+        className="flex h-dvh flex-col border-b-0 px-0 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="px-5 pb-1">
           <SheetTitle className="text-base">More</SheetTitle>
@@ -180,7 +181,9 @@ export function MobileUtilitySheet({
             The rest of Moat, grouped by how often you need it.
           </SheetDescription>
         </SheetHeader>
-        <div className="grid flex-1 gap-3 overflow-y-auto overscroll-contain px-5 pb-2">
+        {/* content-start, or a full-height panel spreads the rows down the
+            screen to fill it and the grouping stops reading. */}
+        <div className="grid flex-1 content-start gap-2 overflow-y-auto overscroll-contain px-5 pb-2">
           {navGroupsExcluding(mobilePrimaryNav).map((group) => (
             <DrawerSection key={group.title} title={group.title}>
               <div className="grid gap-0.5">
@@ -203,7 +206,7 @@ export function MobileUtilitySheet({
             </DrawerSection>
           ))}
 
-          <div className="flex items-center justify-between gap-3 px-2.5 py-1">
+          <div className="flex items-center justify-between gap-3 border-t border-border/60 px-2.5 pt-2.5 pb-1">
             <span className="text-sm font-medium text-foreground">Theme</span>
             <ThemeToggle onClick={onToggleTheme} className="h-9 w-9" />
           </div>
@@ -224,7 +227,12 @@ export function MobileMoreButton({
   // still lights up when you are inside the menu, and the menu marks which row
   // you are on, but it never borrows a destination's name for a control that
   // does not go there.
-  const activeContextItem = getActiveGroupedEntry(pathname);
+  //
+  // It sits in the corner of the header rather than the bar: everything behind
+  // it is somewhere you go now and then, and the bar is for the handful of
+  // places you go every day. A corner control is read as a way out of the
+  // page, which is what this is. The name it cannot show is in the label.
+  const activeContextItem = getActiveEntryIn(pathname, mobileMenuHrefs);
   const isActive = Boolean(activeContextItem);
 
   return (
@@ -234,13 +242,18 @@ export function MobileMoreButton({
       trigger={
         <Button
           variant="ghost"
+          size="icon"
           aria-label={
             activeContextItem ? `More. Currently on ${activeContextItem.label}` : "More"
           }
-          className={`${mobileNavSlotClass} ${mobileNavToneClass(isActive)} shadow-none`}
+          className={[
+            "size-9 shrink-0 rounded-full shadow-none",
+            isActive
+              ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+              : "bg-muted/60 text-muted-foreground hover:text-foreground",
+          ].join(" ")}
         >
-          <IconMenu2 className="size-5 shrink-0" stroke={isActive ? 2 : 1.7} />
-          <span className={mobileNavLabelClass}>More</span>
+          <IconMenu2 className="size-4.5 shrink-0" stroke={isActive ? 2 : 1.7} />
         </Button>
       }
     />
