@@ -9,7 +9,7 @@ import { categoryMatchesType } from "@/lib/domain/transaction-classification";
 import type { TransactionType } from "@/lib/types";
 import { CsvImportPanel } from "./transactions/csv-import-panel";
 import { TextCapturePanel } from "./transactions/text-capture-panel";
-import { TransactionForm } from "./transactions/transaction-form";
+import { TransactionForm, captureIntents } from "./transactions/transaction-form";
 import { useTransactionsWorkspace } from "./transactions/use-transactions-workspace";
 import { TransactionsWorkspaceFrame } from "./transactions/transactions-workspace-frame";
 
@@ -20,6 +20,18 @@ const methods: { id: CaptureMethod; label: string }[] = [
   { id: "message", label: "Message" },
   { id: "statement", label: "Statement" },
 ];
+
+const methodTitles: Record<Exclude<CaptureMethod, "manual">, { title: string; description: string }> =
+  {
+    message: {
+      title: "Paste text",
+      description: "Read a transaction out of an SMS or notification.",
+    },
+    statement: {
+      title: "Import statement",
+      description: "Bring in statement rows from a CSV file.",
+    },
+  };
 
 function methodFromCaptureParam(param: string | null): CaptureMethod | null {
   if (param === "text") return "message";
@@ -40,12 +52,18 @@ export function TransactionsCaptureWorkspace() {
   const [method, setMethod] = useState<CaptureMethod>(
     () => methodFromCaptureParam(captureParam) ?? "manual",
   );
+  // Arriving through the Add sheet is a choice already made, so the method
+  // switcher steps back rather than asking it again at the top of the screen.
+  const [arrivedWithIntent, setArrivedWithIntent] = useState(
+    () => methodFromCaptureParam(captureParam) !== null,
+  );
   const [seenCaptureParam, setSeenCaptureParam] = useState<string | null>(null);
   if (captureParam !== seenCaptureParam) {
     setSeenCaptureParam(captureParam);
     const nextMethod = methodFromCaptureParam(captureParam);
     if (nextMethod) {
       setMethod(nextMethod);
+      setArrivedWithIntent(true);
     }
     const intent = typeFromCaptureParam(captureParam);
     if (intent) {
@@ -66,37 +84,47 @@ export function TransactionsCaptureWorkspace() {
     }
   }
 
+  const heading =
+    method === "manual"
+      ? captureIntents[workspace.transactionForm.type]
+      : methodTitles[method];
+  const switcherIsSecondary = arrivedWithIntent;
+  const otherMethods = methods.filter((entry) => entry.id !== method);
+
   return (
     <TransactionsWorkspaceFrame
-      title="Capture"
+      title={heading.title}
+      description={heading.description}
       profile={workspace.profile}
       isLoading={workspace.isLoading}
       error={workspace.error}
     >
       <div className="grid gap-4">
-        <div
-          role="tablist"
-          aria-label="Capture method"
-          className="grid grid-cols-3 gap-1 rounded-lg bg-muted/30 p-0.5"
-        >
-          {methods.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              role="tab"
-              aria-selected={method === entry.id}
-              onClick={() => setMethod(entry.id)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                method === entry.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
+        {switcherIsSecondary ? null : (
+          <div
+            role="tablist"
+            aria-label="Capture method"
+            className="grid grid-cols-3 gap-1 rounded-lg bg-muted/30 p-0.5"
+          >
+            {methods.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                role="tab"
+                aria-selected={method === entry.id}
+                onClick={() => setMethod(entry.id)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  method === entry.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {method === "manual" ? (
           <TransactionForm
@@ -137,6 +165,26 @@ export function TransactionsCaptureWorkspace() {
             onSaveCaptured={workspace.saveCapturedTransactions}
           />
         )}
+
+        {switcherIsSecondary ? (
+          <div
+            role="group"
+            aria-label="Other ways to add"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-sm text-muted-foreground"
+          >
+            <span>Another way to add:</span>
+            {otherMethods.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => setMethod(entry.id)}
+                className="rounded-md px-1 py-1 font-medium text-foreground underline underline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </TransactionsWorkspaceFrame>
   );
