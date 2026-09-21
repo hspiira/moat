@@ -60,7 +60,7 @@ export function MonthlyPlanWorkspace() {
       loadingMessage="Loading this month's plan..."
       setupMessage="Complete onboarding and add at least one account before planning a month."
     >
-      <div className="grid min-w-0 gap-5">
+      <div className="grid min-w-0 gap-4">
         <MonthlyPlanHeadline
           month={workspace.closePeriod}
           budgets={workspace.budgets}

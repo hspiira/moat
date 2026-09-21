@@ -17,7 +17,7 @@ export function SettingsDetailShell({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-w-0 gap-6">
+    <div className="grid min-w-0 gap-4">
       <div className="grid min-w-0 gap-2">
         <Link
           href="/settings"

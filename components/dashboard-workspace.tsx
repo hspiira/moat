@@ -18,7 +18,7 @@ import type { UserProfile } from "@/lib/types";
 
 function DashboardSkeleton() {
   return (
-    <div className="grid gap-6" aria-busy="true">
+    <div className="grid gap-4" aria-busy="true">
       <span className="sr-only" role="status">Loading your money overview…</span>
       <Skeleton className="h-52 rounded-2xl" />
       <Skeleton className="h-24 rounded-xl" />
@@ -44,7 +44,7 @@ export function DashboardWorkspace({ profile }: { profile: UserProfile }) {
   const insight = insights[0];
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl min-w-0 gap-6 sm:gap-8">
+    <div className="mx-auto grid w-full max-w-5xl min-w-0 gap-4 sm:gap-6">
       <header className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           {/* The balance below is the heading in practice, so the page keeps its
@@ -101,8 +101,8 @@ export function DashboardWorkspace({ profile }: { profile: UserProfile }) {
             <p className="flex items-center gap-2 text-sm text-muted-foreground"><IconCheck aria-hidden className="size-4 text-primary" />You’re up to date. No flagged items need your attention.</p>
           )}
 
-          <div className="grid min-w-0 gap-7 lg:grid-cols-[1.1fr_1fr] lg:gap-x-10">
-            <div className="grid min-w-0 content-start gap-7">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[1.1fr_1fr] lg:gap-x-8">
+            <div className="grid min-w-0 content-start gap-4">
               <DashboardPlanPreview preview={planPreview} budgetCoverage={budgetCoverage} budgetCount={budgets.length} />
               <DashboardCoverSummary cover={cover} />
             </div>

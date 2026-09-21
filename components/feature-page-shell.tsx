@@ -32,7 +32,7 @@ export function FeaturePageShell({
   children,
 }: Props) {
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}

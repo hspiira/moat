@@ -87,7 +87,7 @@ export function LearnWorkspace() {
   const topicEntries = Object.entries(resourcesByTopic);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader
         title="Official sources"
         description="Official and research-grade sources behind this app&apos;s Uganda-first assumptions."

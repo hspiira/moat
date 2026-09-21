@@ -66,7 +66,7 @@ export function GoalsWorkspace() {
   const emergencyPercent = Math.min(999, Math.round(emergencyProgress * 100));
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader title="Goals" />
 
       {error ? <ErrorStateCard message={error} /> : null}

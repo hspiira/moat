@@ -83,7 +83,7 @@ export function ShoppingWorkspace() {
       loadingMessage="Loading your shopping list..."
       setupMessage="Complete onboarding before planning purchases."
     >
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {workspace.estimate.total > 0 ||
         workspace.estimate.unknownCount > 0 ||
         boughtEntries.length > 0 ? (

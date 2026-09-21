@@ -31,7 +31,7 @@ export function CategoriesWorkspace() {
     workspace.allUses.find((use) => use.category.id === openId) ?? null;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader
         title="Categories"
         description="Where every transaction gets filed. Rename one, fold a duplicate into another, or clear out what you never use."

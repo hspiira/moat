@@ -28,7 +28,7 @@ export function TransactionsWorkspaceFrame({
   children,
 }: Props) {
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <PageHeader title={title} description={description} />
 
       {error ? <ErrorStateCard message={error} /> : null}
@@ -42,7 +42,7 @@ export function TransactionsWorkspaceFrame({
       ) : null}
 
       {!isLoading && profile ? (
-        <div className="grid gap-5">{children}</div>
+        <div className="grid gap-4">{children}</div>
       ) : null}
     </div>
   );

@@ -102,7 +102,7 @@ function SettingsRow({ href, icon: IconComponent, label, hint }: SettingsLink) {
 
 export function SettingsWorkspace() {
   return (
-    <div className="grid min-w-0 gap-8">
+    <div className="grid min-w-0 gap-4">
       <PageHeader title="Settings" description="Security, privacy and data management." />
 
       <SettingsStatus />
